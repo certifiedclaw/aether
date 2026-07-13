@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-07-13 17:59 UTC
+Generated: 2026-07-13 19:07 UTC
+
+## #3 — 2026-07-13 19:07 UTC — Claude Code
+
+Stage 1 of remote-access build: created security/ package (capabilities, audit, tokens, first_run, policy, middleware) and extended .gitignore. All 7 files compile and 13/13 smoke tests pass. Aether's existing code (main.py, dashboard/server.py, app.html, login.html, etc.) is UNTOUCHED. data/security/ and logs/security.log are gitignored.
+
+**Touched:** `security/__init__.py`, `security/capabilities.py`, `security/audit.py`, `security/tokens.py`, `security/first_run.py`, `security/policy.py`, `security/middleware.py`, `.gitignore`
+
+**Next steps:** Wait for user approval to start Stage 2: dashboard/api_secure.py (new router) + 1 opt-in include_router line in dashboard/server.py. After Stage 2: Stage 3 PWA, Stage 4 tunnel scripts, Stage 5 React Native Expo source. No edits to existing Aether source in any stage — all new files.
+
+---
 
 ## #2 — 2026-07-13 17:59 UTC — Claude (claude.ai chat, Claude Sonnet 5)
 

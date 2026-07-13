@@ -3,12 +3,38 @@ __pycache__/
 
 logs/
 *.log
+logs/security.log
+logs/security.log.*
 
 
 
 config/api_keys.json
 config/certs/*.key
+config/certs/*.crt
+config/certs/*.pem
 
 .env
 venv/
 .venv/
+
+# Aether data + memory (may contain personal content, history, embeddings)
+data/
+data/memory.db
+data/rag_index/
+data/screenshots/
+data/security/
+memory/long_term.json
+
+# Remote tunnel binaries + credentials
+remote/bin/
+remote/.ngrok_token
+remote/.cloudflared/
+
+# React Native / Expo build artifacts
+mobile/aether_app/node_modules/
+mobile/aether_app/ios/
+mobile/aether_app/android/
+mobile/aether_app/.expo/
+.expo/
+*.ipa
+*.apk
