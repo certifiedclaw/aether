@@ -1,0 +1,835 @@
+{
+  "todos": [
+    {
+      "file": "tools\\maintenance\\health_check.py",
+      "line": 157,
+      "tag": "TODO",
+      "text": "/ FIXME / XXX\")"
+    }
+  ],
+  "large_files": [
+    {
+      "file": "main.py",
+      "lines": 2297
+    },
+    {
+      "file": "ui.py",
+      "lines": 2392
+    },
+    {
+      "file": "actions\\browser_control.py",
+      "lines": 893
+    },
+    {
+      "file": "actions\\computer_settings.py",
+      "lines": 673
+    },
+    {
+      "file": "actions\\extra_tools.py",
+      "lines": 1005
+    },
+    {
+      "file": "actions\\file_processor.py",
+      "lines": 834
+    },
+    {
+      "file": "actions\\game_updater.py",
+      "lines": 1048
+    },
+    {
+      "file": "actions\\osint_tools.py",
+      "lines": 1180
+    },
+    {
+      "file": "core\\llm_client.py",
+      "lines": 703
+    },
+    {
+      "file": "dashboard\\server.py",
+      "lines": 853
+    }
+  ],
+  "large_functions": [
+    {
+      "file": "main.py",
+      "function": "main",
+      "lines": 88,
+      "at_line": 2206
+    },
+    {
+      "file": "main.py",
+      "function": "_execute_tool",
+      "lines": 294,
+      "at_line": 1141
+    },
+    {
+      "file": "main.py",
+      "function": "_process_message_inner",
+      "lines": 328,
+      "at_line": 1457
+    },
+    {
+      "file": "main.py",
+      "function": "_init_new_subsystems",
+      "lines": 158,
+      "at_line": 1934
+    },
+    {
+      "file": "main.py",
+      "function": "run",
+      "lines": 101,
+      "at_line": 2098
+    },
+    {
+      "file": "ui.py",
+      "function": "paintEvent",
+      "lines": 140,
+      "at_line": 409
+    },
+    {
+      "file": "ui.py",
+      "function": "__init__",
+      "lines": 88,
+      "at_line": 709
+    },
+    {
+      "file": "ui.py",
+      "function": "__init__",
+      "lines": 333,
+      "at_line": 1085
+    },
+    {
+      "file": "ui.py",
+      "function": "__init__",
+      "lines": 85,
+      "at_line": 1569
+    },
+    {
+      "file": "ui.py",
+      "function": "_build_right_panel",
+      "lines": 84,
+      "at_line": 2029
+    },
+    {
+      "file": "actions\\browser_control.py",
+      "function": "browser_control",
+      "lines": 82,
+      "at_line": 804
+    },
+    {
+      "file": "actions\\browser_control.py",
+      "function": "_launch",
+      "lines": 104,
+      "at_line": 409
+    },
+    {
+      "file": "actions\\code_helper.py",
+      "function": "_screen_debug_action",
+      "lines": 87,
+      "at_line": 370
+    },
+    {
+      "file": "actions\\computer_control.py",
+      "function": "computer_control",
+      "lines": 155,
+      "at_line": 353
+    },
+    {
+      "file": "actions\\computer_settings.py",
+      "function": "computer_settings",
+      "lines": 83,
+      "at_line": 590
+    },
+    {
+      "file": "actions\\desktop.py",
+      "function": "set_wallpaper",
+      "lines": 81,
+      "at_line": 130
+    },
+    {
+      "file": "actions\\dev_agent.py",
+      "function": "_build_project",
+      "lines": 139,
+      "at_line": 348
+    },
+    {
+      "file": "actions\\extra_tools.py",
+      "function": "run_extra_tool",
+      "lines": 140,
+      "at_line": 865
+    },
+    {
+      "file": "actions\\file_processor.py",
+      "function": "_process_image",
+      "lines": 90,
+      "at_line": 81
+    },
+    {
+      "file": "actions\\file_processor.py",
+      "function": "_process_data",
+      "lines": 95,
+      "at_line": 313
+    },
+    {
+      "file": "actions\\file_processor.py",
+      "function": "_process_video",
+      "lines": 127,
+      "at_line": 582
+    },
+    {
+      "file": "actions\\game_updater.py",
+      "function": "game_updater",
+      "lines": 115,
+      "at_line": 926
+    },
+    {
+      "file": "actions\\osint_tools.py",
+      "function": "github_user_osint",
+      "lines": 81,
+      "at_line": 777
+    },
+    {
+      "file": "actions\\osint_tools.py",
+      "function": "extract_metadata",
+      "lines": 88,
+      "at_line": 883
+    },
+    {
+      "file": "actions\\reminder.py",
+      "function": "_write_notify_script",
+      "lines": 98,
+      "at_line": 41
+    },
+    {
+      "file": "agent\\executor.py",
+      "function": "execute",
+      "lines": 119,
+      "at_line": 295
+    },
+    {
+      "file": "core\\llm_client.py",
+      "function": "call_llm",
+      "lines": 111,
+      "at_line": 273
+    },
+    {
+      "file": "core\\llm_client.py",
+      "function": "_stream_openai",
+      "lines": 126,
+      "at_line": 445
+    },
+    {
+      "file": "core\\llm_client.py",
+      "function": "call_llm_stream",
+      "lines": 129,
+      "at_line": 574
+    },
+    {
+      "file": "core\\smart_context.py",
+      "function": "compress_if_needed",
+      "lines": 93,
+      "at_line": 34
+    },
+    {
+      "file": "dashboard\\server.py",
+      "function": "_ensure_network_access",
+      "lines": 208,
+      "at_line": 96
+    },
+    {
+      "file": "dashboard\\server.py",
+      "function": "_build_app",
+      "lines": 306,
+      "at_line": 450
+    }
+  ],
+  "bare_except": [],
+  "print_calls": [
+    {
+      "file": "config_validator.py",
+      "line": 197
+    },
+    {
+      "file": "agent\\error_handler.py",
+      "line": 58
+    },
+    {
+      "file": "agent\\error_handler.py",
+      "line": 96
+    },
+    {
+      "file": "agent\\error_handler.py",
+      "line": 100
+    },
+    {
+      "file": "agent\\error_handler.py",
+      "line": 141
+    },
+    {
+      "file": "agent\\executor.py",
+      "line": 77
+    },
+    {
+      "file": "agent\\executor.py",
+      "line": 130
+    },
+    {
+      "file": "agent\\executor.py",
+      "line": 142
+    },
+    {
+      "file": "agent\\executor.py",
+      "line": 145
+    },
+    {
+      "file": "agent\\executor.py",
+      "line": 196
+    },
+    {
+      "file": "agent\\executor.py",
+      "line": 283
+    },
+    {
+      "file": "agent\\executor.py",
+      "line": 301
+    },
+    {
+      "file": "agent\\executor.py",
+      "line": 330
+    },
+    {
+      "file": "agent\\executor.py",
+      "line": 342
+    },
+    {
+      "file": "agent\\executor.py",
+      "line": 348
+    },
+    {
+      "file": "agent\\executor.py",
+      "line": 363
+    },
+    {
+      "file": "agent\\executor.py",
+      "line": 389
+    },
+    {
+      "file": "agent\\planner.py",
+      "line": 84
+    },
+    {
+      "file": "agent\\planner.py",
+      "line": 252
+    },
+    {
+      "file": "agent\\planner.py",
+      "line": 256
+    },
+    {
+      "file": "agent\\planner.py",
+      "line": 258
+    },
+    {
+      "file": "agent\\planner.py",
+      "line": 262
+    },
+    {
+      "file": "agent\\planner.py",
+      "line": 265
+    },
+    {
+      "file": "agent\\planner.py",
+      "line": 270
+    },
+    {
+      "file": "agent\\planner.py",
+      "line": 309
+    },
+    {
+      "file": "agent\\planner.py",
+      "line": 312
+    },
+    {
+      "file": "agent\\task_queue.py",
+      "line": 65
+    },
+    {
+      "file": "agent\\task_queue.py",
+      "line": 71
+    },
+    {
+      "file": "agent\\task_queue.py",
+      "line": 97
+    },
+    {
+      "file": "agent\\task_queue.py",
+      "line": 111
+    },
+    {
+      "file": "agent\\task_queue.py",
+      "line": 175
+    },
+    {
+      "file": "agent\\task_queue.py",
+      "line": 196
+    },
+    {
+      "file": "agent\\task_queue.py",
+      "line": 198
+    },
+    {
+      "file": "agent\\task_queue.py",
+      "line": 205
+    },
+    {
+      "file": "core\\diagnostics.py",
+      "line": 113
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 120
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 122
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 125
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 143
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 150
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 153
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 160
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 163
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 184
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 203
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 206
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 223
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 226
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 312
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 334
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 342
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 689
+    },
+    {
+      "file": "core\\llm_client.py",
+      "line": 702
+    },
+    {
+      "file": "core\\observability.py",
+      "line": 31
+    },
+    {
+      "file": "core\\stt.py",
+      "line": 17
+    },
+    {
+      "file": "core\\stt.py",
+      "line": 31
+    },
+    {
+      "file": "core\\stt.py",
+      "line": 40
+    },
+    {
+      "file": "core\\stt.py",
+      "line": 56
+    },
+    {
+      "file": "core\\stt.py",
+      "line": 65
+    },
+    {
+      "file": "core\\stt.py",
+      "line": 72
+    },
+    {
+      "file": "core\\tts.py",
+      "line": 169
+    },
+    {
+      "file": "core\\tts.py",
+      "line": 188
+    },
+    {
+      "file": "core\\tts.py",
+      "line": 256
+    },
+    {
+      "file": "core\\tts.py",
+      "line": 263
+    },
+    {
+      "file": "core\\tts.py",
+      "line": 279
+    },
+    {
+      "file": "core\\tts.py",
+      "line": 287
+    },
+    {
+      "file": "core\\tts.py",
+      "line": 292
+    },
+    {
+      "file": "core\\tts.py",
+      "line": 294
+    },
+    {
+      "file": "core\\tts.py",
+      "line": 398
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 186
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 198
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 199
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 213
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 214
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 216
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 217
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 219
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 248
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 274
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 276
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 289
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 291
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 300
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 302
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 312
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 314
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 316
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 317
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 771
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 776
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 777
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 797
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 798
+    },
+    {
+      "file": "dashboard\\server.py",
+      "line": 839
+    },
+    {
+      "file": "memory\\config_manager.py",
+      "line": 43
+    },
+    {
+      "file": "memory\\memory_manager.py",
+      "line": 44
+    },
+    {
+      "file": "memory\\memory_manager.py",
+      "line": 67
+    },
+    {
+      "file": "memory\\memory_manager.py",
+      "line": 117
+    },
+    {
+      "file": "tools\\maintenance\\dep_watcher.py",
+      "line": 176
+    },
+    {
+      "file": "tools\\maintenance\\dep_watcher.py",
+      "line": 178
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 40
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 41
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 44
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 46
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 52
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 54
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 59
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 61
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 63
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 65
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 66
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 67
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 68
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 69
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 70
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 71
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 72
+    },
+    {
+      "file": "tools\\maintenance\\git_setup.py",
+      "line": 73
+    },
+    {
+      "file": "tools\\maintenance\\handoff.py",
+      "line": 60
+    },
+    {
+      "file": "tools\\maintenance\\handoff.py",
+      "line": 67
+    },
+    {
+      "file": "tools\\maintenance\\handoff.py",
+      "line": 110
+    },
+    {
+      "file": "tools\\maintenance\\handoff.py",
+      "line": 112
+    },
+    {
+      "file": "tools\\maintenance\\health_check.py",
+      "line": 176
+    },
+    {
+      "file": "tools\\maintenance\\health_check.py",
+      "line": 178
+    },
+    {
+      "file": "tools\\maintenance\\project_state.py",
+      "line": 165
+    },
+    {
+      "file": "tools\\maintenance\\project_state.py",
+      "line": 167
+    },
+    {
+      "file": "tools\\maintenance\\publish.py",
+      "line": 99
+    },
+    {
+      "file": "tools\\maintenance\\roadmap.py",
+      "line": 96
+    },
+    {
+      "file": "tools\\maintenance\\roadmap.py",
+      "line": 106
+    },
+    {
+      "file": "tools\\maintenance\\roadmap.py",
+      "line": 108
+    },
+    {
+      "file": "tools\\maintenance\\roadmap.py",
+      "line": 125
+    },
+    {
+      "file": "tools\\maintenance\\roadmap.py",
+      "line": 164
+    },
+    {
+      "file": "tools\\maintenance\\roadmap.py",
+      "line": 166
+    },
+    {
+      "file": "tools\\maintenance\\run_all.py",
+      "line": 32
+    },
+    {
+      "file": "tools\\maintenance\\run_all.py",
+      "line": 35
+    },
+    {
+      "file": "tools\\maintenance\\run_all.py",
+      "line": 40
+    },
+    {
+      "file": "tools\\maintenance\\run_all.py",
+      "line": 45
+    },
+    {
+      "file": "tools\\maintenance\\run_all.py",
+      "line": 48
+    },
+    {
+      "file": "tools\\maintenance\\run_all.py",
+      "line": 50
+    },
+    {
+      "file": "tools\\maintenance\\run_all.py",
+      "line": 53
+    },
+    {
+      "file": "tools\\maintenance\\run_all.py",
+      "line": 89
+    },
+    {
+      "file": "tools\\maintenance\\run_all.py",
+      "line": 91
+    },
+    {
+      "file": "tools\\maintenance\\run_all.py",
+      "line": 94
+    },
+    {
+      "file": "tools\\maintenance\\run_all.py",
+      "line": 96
+    },
+    {
+      "file": "tools\\maintenance\\run_all.py",
+      "line": 98
+    }
+  ],
+  "syntax_errors": [],
+  "unreadable": [],
+  "_meta": {
+    "generated": "2026-07-13T18:07:17.253408+00:00",
+    "files_scanned": 75
+  }
+}

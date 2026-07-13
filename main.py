@@ -138,7 +138,7 @@ except ImportError:
 # ── NEW v4: crash logger, self-test, memory tools, config validator ────────
 try:
     from crash_logger  import log_crash, get_recent_crashes
-    from self_test     import run_self_test
+    from self_test     import run_self_test, run_self_test_async
     from memory_tools  import backup_memory, export_memory, import_memory, prune_memory, memory_stats
     from config_validator import validate_config
     _V4_OK = True
@@ -147,6 +147,9 @@ except ImportError as _v4_err:
     def log_crash(exc, **kw): pass
     def get_recent_crashes(n=5): return "Crash logger not available."
     def run_self_test(aether=None, config=None): return None
+    def run_self_test_async(callback, aether=None, config=None):
+        callback(None)
+        return None
     def backup_memory(**kw): return "Memory tools not available."
     def export_memory(**kw): return "Memory tools not available."
     def import_memory(**kw): return "Memory tools not available."
@@ -1469,10 +1472,18 @@ class AetherLocal:
             self.speak("History cleared.")
             return
         if user_text.strip().lower() in ("/selftest", "run self test", "self test"):
-            result = run_self_test(aether=self)
-            report = result.format() if result else "Self-test module not available."
-            self.ui.write_log(report)
-            self.speak("Self-test complete. Check the log for results.")
+            # Backgrounded: self-test hits Ollama/LLM/audio devices with
+            # real timeouts (up to ~30s for the LLM check alone), and this
+            # handler runs on the shared command loop — running it inline
+            # would stall every other command until it finished.
+            self.ui.write_log("SYS: Running self-test in the background…")
+
+            def _on_done(result):
+                report = result.format() if result else "Self-test module not available."
+                self.ui.write_log(report)
+                self.speak("Self-test complete. Check the log for results.")
+
+            run_self_test_async(_on_done, aether=self)
             return
         if user_text.strip().lower() in ("/crashes", "show crashes", "crash report", "recent crashes"):
             report = get_recent_crashes(5)
@@ -1544,7 +1555,14 @@ class AetherLocal:
 
         MAX_HISTORY = int(self._config.get("memory.chat_history_limit", 12))
         if len(self._conversation) > MAX_HISTORY:
-            self._conversation = self._conversation[-MAX_HISTORY:]
+            trimmed = self._conversation[-MAX_HISTORY:]
+            # Never let the trim start on a dangling "tool" message — it must
+            # stay paired with the preceding assistant message that issued the
+            # tool_calls, or the next LLM request has an invalid message
+            # sequence (API error / stuck round).
+            while trimmed and trimmed[0].get("role") == "tool":
+                trimmed = trimmed[1:]
+            self._conversation = trimmed
 
         messages = [
             {"role": "system", "content": self._build_system_prompt(user_text)}
@@ -1585,6 +1603,8 @@ class AetherLocal:
                         _llm_stats       = event.get("stats", {})
             except RuntimeError as e:
                 self.speak_error("LLM", e)
+                if not self.ui.muted:
+                    self.ui.set_state("LISTENING")
                 return
             _round_elapsed = time.monotonic() - _round_start
 
@@ -2190,6 +2210,40 @@ def main() -> None:
         except Exception:
             pass
     threading.Thread(target=_preload_torch, daemon=True).start()
+
+    def _refresh_maintenance_snapshot():
+        # Regenerates PROJECT_STATE.md / HEALTH_REPORT.md / ROADMAP.md / HANDOFF.md
+        # so they never go as stale as the old IMPROVEMENTS_V*.md files did, then
+        # auto-commits + pushes them to origin (certifiedclaw/aether) so the
+        # repo on GitHub reflects current state too.
+        #
+        # Safe by design for "every launch": write_if_changed() ignores the
+        # volatile "Generated: ..." timestamp lines, so a launch where
+        # nothing substantive changed produces no diff -> no commit -> no
+        # push. Uses your own local git credentials; if you're not
+        # authenticated for that remote it just logs a failure and moves on.
+        #
+        # DEPENDENCY_REPORT.md is NOT refreshed here (needs internet, slower,
+        # and less useful to check on every single launch) — run
+        # `python -m tools.maintenance.dep_watcher` for that separately.
+        #
+        # Env vars:
+        #   AETHER_SKIP_MAINTENANCE=1  disables this entirely
+        #   AETHER_NO_AUTOPUSH=1        still refreshes reports, commits locally, skips push
+        if _os.environ.get("AETHER_SKIP_MAINTENANCE"):
+            return
+        try:
+            import argparse as _argparse
+            from tools.maintenance import project_state, health_check, roadmap, handoff, publish
+            project_state.main()
+            health_check.main()
+            roadmap.cmd_render(_argparse.Namespace())
+            handoff.cmd_render(_argparse.Namespace())
+            ok, status = publish.commit_and_push(push=not _os.environ.get("AETHER_NO_AUTOPUSH"))
+            print(f"[Aether] maintenance publish: {status}")
+        except Exception as e:
+            print(f"[Aether] maintenance snapshot skipped: {e}")
+    threading.Thread(target=_refresh_maintenance_snapshot, daemon=True).start()
 
     # Ensure runtime directories exist
     for d in ["data", "data/screenshots", "data/rag_index", "logs", "plugins"]:

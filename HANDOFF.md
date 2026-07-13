@@ -1,0 +1,25 @@
+# Aether — Session Handoff Log
+
+> **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
+
+Generated: 2026-07-13 17:59 UTC
+
+## #2 — 2026-07-13 17:59 UTC — Claude (claude.ai chat, Claude Sonnet 5)
+
+Verified the previous session's handoff.py fix: confirmed via actual compile + execution (not just reading) that tools/maintenance/handoff.py, run_all.py, and publish.py are correctly wired, imports resolve, and run_all --skip-deps is idempotent (second run reports 'unchanged' everywhere, no infinite-commit-loop regression). Found and fixed a real gap: this zip (and likely prior ones) has no .git directory at all, since git history doesn't survive a zip round-trip -- meaning publish.py silently no-ops with 'Not a git repository' with no actionable guidance. Added tools/maintenance/git_setup.py, which git-inits the checkout and points origin at https://github.com/certifiedclaw/aether.git in one command, and improved publish.py's error message to point at it. Verified end-to-end: ran git_setup on this exact checkout (had no .git), then ran run_all --publish --no-push twice -- first commit succeeded, second run correctly detected no changes.
+
+**Touched:** `tools/maintenance/git_setup.py`, `tools/maintenance/publish.py`
+
+**Next steps:** Ian: run 'python -m tools.maintenance.git_setup' on your real local checkout of the repo (the one with actual history, not a zip round-trip) if 'git remote -v' there doesn't already show certifiedclaw/aether -- then do a normal 'git push' once by hand so the full source tree (agent/, actions/, memory/, integrations/, dashboard/ -- currently missing from GitHub) is actually up there, since the auto-push hook only ever pushes the 5 report files, never source. After that one-time sync, the auto-push-on-launch should work untouched.
+
+---
+
+## #1 — 2026-07-13 17:48 UTC — Claude (claude.ai chat)
+
+Fixed the handoff system itself: handoff.py (plus newer versions of run_all.py and publish.py that wire it in) had been written to the project root instead of into tools/maintenance/, so 'from tools.maintenance import ... handoff ...' threw ImportError and the whole maintenance run was broken — HANDOFF.md, the one continuity file this project depends on, was never actually being generated. Moved handoff.py into tools/maintenance/, replaced the stale in-package run_all.py/publish.py with the versions that include handoff rendering + HANDOFF.md/handoff.json in the tracked-files list, deleted the redundant root copies, and wired handoff.cmd_render() into main.py's launch-time maintenance snapshot so HANDOFF.md can't silently drift out of sync with handoff.json again. Verified the import resolves and a full run_all --skip-deps produces HANDOFF.md correctly.
+
+**Touched:** `tools/maintenance/handoff.py`, `tools/maintenance/run_all.py`, `tools/maintenance/publish.py`, `main.py`, `CLAUDE.md`
+
+**Next steps:** Nothing blocking — system is verified working end to end. If you add entries by hand rather than via this CLI, run 'python -m tools.maintenance.handoff render' afterward so HANDOFF.md stays in sync with handoff.json.
+
+---

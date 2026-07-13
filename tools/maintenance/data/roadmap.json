@@ -1,0 +1,59 @@
+{
+  "next_id": 7,
+  "items": [
+    {
+      "id": 1,
+      "title": "Audit agent/executor.py",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Flagged 'not yet audited' in PERFORMANCE_NOTES.md.",
+      "created": "2026-07-13",
+      "updated": "2026-07-13"
+    },
+    {
+      "id": 2,
+      "title": "Audit agent/planner.py",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Flagged 'not yet audited' in PERFORMANCE_NOTES.md.",
+      "created": "2026-07-13",
+      "updated": "2026-07-13"
+    },
+    {
+      "id": 3,
+      "title": "Second pass on agent/task_queue.py",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Prior session fixed a memory leak in TaskQueue.cancel(); worth revisiting given how much of agent/ is unaudited.",
+      "created": "2026-07-13",
+      "updated": "2026-07-13"
+    },
+    {
+      "id": 4,
+      "title": "Audit core/observability.py and core/task_scheduler.py",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "Flagged 'not yet audited' in PERFORMANCE_NOTES.md.",
+      "created": "2026-07-13",
+      "updated": "2026-07-13"
+    },
+    {
+      "id": 5,
+      "title": "Check plugin_watcher.py poll interval and rescan scope",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Hot-reload watcher polls the filesystem \u2014 confirm it only rescans changed files, not everything.",
+      "created": "2026-07-13",
+      "updated": "2026-07-13"
+    },
+    {
+      "id": 6,
+      "title": "Check memory/semantic_memory.py for full-rebuild-on-write issue",
+      "priority": "high",
+      "status": "backlog",
+      "notes": "Same sqlite/embedding shape as hybrid_memory.py had before that fix \u2014 likely has the same bug.",
+      "created": "2026-07-13",
+      "updated": "2026-07-13"
+    }
+  ]
+}

@@ -110,7 +110,7 @@ def ensure_ollama_running(timeout: int = 15) -> bool:
     url, _   = get_llm_settings()
     provider = get_llm_provider()
 
-    if provider == "ollama":
+    if provider != "ollama":
         # OpenAI-compatible servers (LM Studio, LocalAI, etc.) must be started
         # by the user — we just check if they're reachable.
         health = f"{url}/v1/models"
@@ -188,7 +188,7 @@ def warmup_model(system_prompt: str | None = None) -> bool:
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": "hi"})
 
-    if provider == "ollama":
+    if provider != "ollama":
         # OpenAI-compatible: just fire a minimal request to ensure the model is loaded.
         # No keep_alive or KV-cache priming available — server manages this internally.
         payload = {
@@ -212,6 +212,7 @@ def warmup_model(system_prompt: str | None = None) -> bool:
         "messages":   messages,
         "stream":     False,
         "keep_alive": -1,
+        "think":      False,  # reasoning models (qwen3, deepseek-r1, …) skip <think> — see call_llm
         # num_gpu:99 → push ALL transformer layers to GPU (Ollama caps at available)
         # This is safe even without a GPU — Ollama silently ignores if n_gpu_layers=0
         "options":    {"num_predict": 1, "num_gpu": 99},
@@ -290,6 +291,9 @@ def call_llm(
             "messages":   messages,
             "stream":     False,
             "keep_alive": -1,
+            "think":      False,  # reasoning models (qwen3, deepseek-r1, …) otherwise burn
+                                   # the whole num_predict budget on a hidden <think> block
+                                   # and never reach the actual answer/tool call.
             "options":    {"num_predict": 150, "num_gpu": 99},
         }
         if tools:
@@ -304,8 +308,39 @@ def call_llm(
                 "content":    (msg.get("content") or "").strip(),
                 "tool_calls": msg.get("tool_calls") or [],
             }
+        except requests.exceptions.ConnectionError as e:
+            print(f"[LLM] ConnectionError — trying to restart Ollama… ({e})")
+            if ensure_ollama_running():
+                try:
+                    resp = requests.post(endpoint, json=payload, timeout=timeout)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    msg  = data.get("message", {})
+                    return {
+                        "content":    (msg.get("content") or "").strip(),
+                        "tool_calls": msg.get("tool_calls") or [],
+                    }
+                except Exception:
+                    pass
+            raise RuntimeError(
+                f"Cannot connect to Ollama at {url}. "
+                "Make sure Ollama is installed and run: ollama serve"
+            )
+        except requests.exceptions.Timeout:
+            raise RuntimeError("Ollama request timed out after 120 s.")
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code
+            body   = e.response.text[:400]
+            print(f"[LLM] HTTPError: {status} — {body}")
+            if status == 404 or "model not found" in body.lower() or "pull" in body.lower():
+                raise RuntimeError(
+                    f"Model '{model}' not found in Ollama.\n"
+                    f"Fix: ollama pull {model}"
+                )
+            raise RuntimeError(f"Ollama HTTP error: {status}")
         except Exception as e:
-            raise RuntimeError(f"Ollama LLM call failed: {e}")
+            print(f"[LLM] Unexpected error: {type(e).__name__}: {e}")
+            raise RuntimeError(f"LLM call failed: {e}")
 
     # ── OpenAI-compatible ───────────────────────────────────────────────────
     endpoint = f"{url}/v1/chat/completions"
@@ -347,60 +382,6 @@ def call_llm(
         }
     except Exception as e:
         raise RuntimeError(f"OpenAI-compatible LLM call failed: {e}")
-    endpoint = f"{url}/api/chat"
-    payload = {
-        "model":      model,
-        "messages":   messages,
-        "stream":     False,
-        "keep_alive": -1,
-        "options":    {"num_predict": 150, "num_gpu": 99},
-    }
-    if tools:
-        payload["tools"] = tools
-
-    try:
-        resp = requests.post(endpoint, json=payload, timeout=timeout)
-        resp.raise_for_status()
-        data = resp.json()
-        msg  = data.get("message", {})
-        return {
-            "content":    (msg.get("content") or "").strip(),
-            "tool_calls": msg.get("tool_calls") or [],
-        }
-    except requests.exceptions.ConnectionError as e:
-        print(f"[LLM] ConnectionError — trying to restart Ollama… ({e})")
-        if ensure_ollama_running():
-            try:
-                resp = requests.post(endpoint, json=payload, timeout=timeout)
-                resp.raise_for_status()
-                data = resp.json()
-                msg  = data.get("message", {})
-                return {
-                    "content":    (msg.get("content") or "").strip(),
-                    "tool_calls": msg.get("tool_calls") or [],
-                }
-            except Exception:
-                pass
-        raise RuntimeError(
-            f"Cannot connect to Ollama at {url}. "
-            "Make sure Ollama is installed and run: ollama serve"
-        )
-    except requests.exceptions.Timeout:
-        raise RuntimeError("Ollama request timed out after 120 s.")
-    except requests.exceptions.HTTPError as e:
-        status = e.response.status_code
-        body   = e.response.text[:400]
-        print(f"[LLM] HTTPError: {status} — {body}")
-        # Ollama returns 404 with "model not found" when the model hasn't been pulled
-        if status == 404 or "model not found" in body.lower() or "pull" in body.lower():
-            raise RuntimeError(
-                f"Model '{model}' not found in Ollama.\n"
-                f"Fix: ollama pull {model}"
-            )
-        raise RuntimeError(f"Ollama HTTP error: {status}")
-    except Exception as e:
-        print(f"[LLM] Unexpected error: {type(e).__name__}: {e}")
-        raise RuntimeError(f"LLM call failed: {e}")
 
 
 def call_llm_text(
@@ -439,7 +420,7 @@ def call_llm_text(
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
 
-    payload = {"model": m, "messages": messages, "stream": False, "keep_alive": -1, "options": {"num_predict": num_predict}}
+    payload = {"model": m, "messages": messages, "stream": False, "keep_alive": -1, "think": False, "options": {"num_predict": num_predict}}
 
     try:
         resp = requests.post(endpoint, json=payload, timeout=timeout)
@@ -575,6 +556,7 @@ def _stream_openai(
                 "tool_calls": tool_calls,
                 "stats":      stats,
             }
+            return
 
     except requests.exceptions.ConnectionError:
         raise RuntimeError(
@@ -608,7 +590,7 @@ def call_llm_stream(
     Tool calls always appear in the final "done" event.
     """
     provider = get_llm_provider()
-    if provider == "ollama":
+    if provider != "ollama":
         yield from _stream_openai(messages, tools, timeout)
         return
 
@@ -620,6 +602,10 @@ def call_llm_stream(
         "messages":   messages,
         "stream":     True,
         "keep_alive": -1,
+        "think":      False,  # reasoning models (qwen3, deepseek-r1, …) otherwise burn
+                               # the whole num_predict budget on a hidden <think> block,
+                               # so the generator finishes with no content/tool_calls
+                               # and the UI is left stuck on "Thinking".
         # 150 tokens ≈ 100 words ≈ 3-4 sentences — enough for any voice reply.
         # num_gpu:99 pushes all layers to GPU; num_thread removed (Ollama auto-tunes).
         "options":    {"num_predict": 150, "num_gpu": 99},
@@ -682,6 +668,20 @@ def call_llm_stream(
                         "stats":      stats,
                     }
                     return
+
+            # Fallback: connection closed without Ollama ever sending a
+            # final "done": true chunk. Without this, the caller's loop
+            # ends silently with no "done" event, and the UI is left
+            # stuck showing "Thinking" forever.
+            if buf.strip():
+                yield {"type": "sentence", "text": buf.strip()}
+            yield {
+                "type":       "done",
+                "content":    full_content.strip(),
+                "tool_calls": tool_calls,
+                "stats":      {"model": model, "prompt_tokens": None, "output_tokens": None,
+                                "eval_duration": None, "total_duration": None},
+            }
 
     try:
         yield from _do_stream()

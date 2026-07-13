@@ -5,6 +5,18 @@
 
 ---
 
+## Maintenance toolkit
+
+Start-of-session orientation lives in **[`MAINTENANCE.md`](MAINTENANCE.md)** — auto-generated, always current. Regenerate it (and everything it links to) with:
+
+```
+python -m tools.maintenance.run_all
+```
+
+This replaces the old habit of writing a new `IMPROVEMENTS_V*.md` snapshot every few sessions. See `tools/maintenance/__init__.py` for details.
+
+---
+
 ## Screenshots
 
 <p align="center">
