@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Do not hand-edit — rerun `python -m tools.maintenance.project_state` (or `run_all`) to refresh. This is meant to be the one file a new session (human or Claude) reads first to get oriented.
 
-Generated: 2026-10-04 21:26 UTC
+Generated: 2026-10-04 22:25 UTC
 Version: Aether v1.0.0
 
 ## Entry points
@@ -17,11 +17,11 @@ Version: Aether v1.0.0
 
 | Directory | .py files | Total lines |
 |---|---|---|
-| `./` | 12 | 5,474 |
+| `./` | 12 | 5,479 |
 | `actions/` | 22 | 10,758 |
 | `agent/` | 4 | 1,144 |
 | `config/` | 1 | 27 |
-| `core/` | 36 | 8,022 |
+| `core/` | 36 | 8,052 |
 | `dashboard/` | 3 | 1,093 |
 | `dev_tools/` | 1 | 78 |
 | `integrations/` | 4 | 997 |
@@ -30,7 +30,7 @@ Version: Aether v1.0.0
 | `security/` | 7 | 1,338 |
 | `tests/` | 4 | 2,486 |
 | `tools/` | 10 | 1,240 |
-| **Total** | **111** | **33,873** |
+| **Total** | **111** | **33,908** |
 
 ## Modules with docstrings (top-level summary)
 
@@ -71,7 +71,7 @@ Version: Aether v1.0.0
 - `core\__init__.py` (2 lines, 0 classes, 0 functions)
 - `core\chat_commands.py` (128 lines, 1 classes, 0 functions) — core/chat_commands.py — Aether Built-in Chat Commands
 - `core\config_validator.py` (201 lines, 2 classes, 9 functions) — core/config_validator.py — Aether Configuration Validator
-- `core\conversation_core.py` (662 lines, 1 classes, 1 functions) — core/conversation_core.py — Aether Conversation Core
+- `core\conversation_core.py` (669 lines, 1 classes, 1 functions) — core/conversation_core.py — Aether Conversation Core
 - `core\crash_logger.py` (141 lines, 0 classes, 4 functions) — core/crash_logger.py — Aether Crash Recovery Logging
 - `core\device_specs.py` (149 lines, 2 classes, 4 functions) — device_specs.py — best-effort local hardware detection + Ollama model
 - `core\diagnostics.py` (135 lines, 1 classes, 2 functions) — diagnostics.py — Aether System Diagnostics
@@ -80,10 +80,10 @@ Version: Aether v1.0.0
 - `core\goal_state.py` (308 lines, 5 classes, 0 functions) — core/goal_state.py — Aether Goal & State Manager
 - `core\headless_ui.py` (165 lines, 2 classes, 1 functions) — headless_ui.py — Headless drop-in replacement for ui.py's AetherUI.
 - `core\hotkey_manager.py` (61 lines, 1 classes, 0 functions) — hotkey_commands.py — Aether Global Hotkey Manager (stub)
-- `core\installer.py` (158 lines, 0 classes, 3 functions) — Aether — Dependency auto-installer.
+- `core\installer.py` (164 lines, 0 classes, 3 functions) — Aether — Dependency auto-installer.
 - `core\listen_loops.py` (211 lines, 2 classes, 0 functions) — core/listen_loops.py — AetherLocal's microphone/STT background loops.
 - `core\live_report.py` (211 lines, 0 classes, 6 functions) — core/live_report.py — Live per-turn usage dump.
-- `core\llm_client.py` (896 lines, 0 classes, 16 functions) — Local LLM client for Aether.
+- `core\llm_client.py` (913 lines, 0 classes, 17 functions) — Local LLM client for Aether.
 - `core\loop_guard.py` (85 lines, 2 classes, 0 functions) — core/loop_guard.py — Aether Loop Guard
 - `core\mcp_bridge.py` (212 lines, 2 classes, 0 functions) — mcp_bridge.py — Aether v4.1 MCP (Model Context Protocol) Bridge
 - `core\memory_tools.py` (379 lines, 0 classes, 5 functions) — memory/memory_tools.py — Aether Memory Backup, Export, Import & Pruning

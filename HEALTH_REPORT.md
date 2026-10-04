@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.health_check` (or `run_all`) to refresh. Fix things here, don't edit this file directly.
 
-Generated: 2026-10-04T21:26:28.592185+00:00
+Generated: 2026-10-04T22:25:45.567239+00:00
 Files scanned: 111
 
 ## Summary
@@ -21,33 +21,33 @@ Files scanned: 111
 - `ui.py` — 2639 lines
 - `tests\test_all_critical.py` — 2009 lines
 - `actions\osint_tools.py` — 1184 lines
-- `main.py` — 1064 lines
+- `main.py` — 1069 lines
 - `actions\game_updater.py` — 1048 lines
 - `actions\extra_tools.py` — 1005 lines
 - `dashboard\server.py` — 965 lines
+- `core\llm_client.py` — 912 lines
 - `actions\browser_control.py` — 911 lines
-- `core\llm_client.py` — 895 lines
 - `actions\file_processor.py` — 834 lines
 - `actions\computer_settings.py` — 673 lines
-- `core\conversation_core.py` — 661 lines
+- `core\conversation_core.py` — 668 lines
 - `actions\file_controller.py` — 618 lines
 
 ## Functions over 80 lines
-- `core\conversation_core.py:270` — `_process_message_inner()` (291 lines)
+- `core\conversation_core.py:277` — `_process_message_inner()` (291 lines)
 - `actions\computer_control.py:353` — `computer_control()` (155 lines)
-- `core\llm_client.py:743` — `call_llm_stream()` (152 lines)
-- `core\llm_client.py:598` — `_stream_openai()` (142 lines)
+- `core\llm_client.py:760` — `call_llm_stream()` (152 lines)
+- `core\llm_client.py:615` — `_stream_openai()` (142 lines)
 - `ui.py:409` — `paintEvent()` (140 lines)
 - `actions\extra_tools.py:865` — `run_extra_tool()` (140 lines)
 - `ui.py:1299` — `_build_llm_section()` (139 lines)
 - `actions\dev_agent.py:348` — `_build_project()` (139 lines)
-- `main.py:924` — `main()` (137 lines)
+- `main.py:929` — `main()` (137 lines)
 - `actions\file_processor.py:582` — `_process_video()` (127 lines)
 - `agent\executor.py:295` — `execute()` (123 lines)
-- `main.py:795` — `run()` (122 lines)
 - `dashboard\server.py:130` — `_ensure_network_access_windows()` (120 lines)
 - `actions\game_updater.py:926` — `game_updater()` (115 lines)
-- `core\llm_client.py:404` — `call_llm()` (111 lines)
+- `core\llm_client.py:421` — `call_llm()` (111 lines)
+- `main.py:814` — `run()` (108 lines)
 - `actions\browser_control.py:421` — `_launch()` (104 lines)
 - `tests\test_all_critical.py:1046` — `test_confirm_blocking_dialog_thread_safety()` (102 lines)
 - `actions\reminder.py:41` — `_write_notify_script()` (98 lines)
@@ -62,7 +62,7 @@ Files scanned: 111
 - `actions\osint_tools.py:887` — `extract_metadata()` (88 lines)
 - `core\chat_commands.py:38` — `_handle_chat_command()` (88 lines)
 - `actions\code_helper.py:370` — `_screen_debug_action()` (87 lines)
-- `main.py:972` — `runner()` (86 lines)
+- `main.py:977` — `runner()` (86 lines)
 - `ui.py:1759` — `__init__()` (85 lines)
 - `memory\hybrid_memory.py:291` — `_retrieve()` (85 lines)
 - `ui.py:2235` — `_build_right_panel()` (84 lines)
@@ -112,15 +112,15 @@ Found outside of scripts/tests — consider routing through `core/observability.
 - `core\headless_ui.py:70`
 - `core\listen_loops.py:131`
 - `core\listen_loops.py:166`
-- `core\llm_client.py:157`
-- `core\llm_client.py:159`
-- `core\llm_client.py:162`
-- `core\llm_client.py:180`
-- `core\llm_client.py:187`
-- `core\llm_client.py:190`
-- `core\llm_client.py:197`
-- `core\llm_client.py:200`
-- `core\llm_client.py:221`
-- `core\llm_client.py:241`
-- `core\llm_client.py:244`
+- `core\llm_client.py:173`
+- `core\llm_client.py:175`
+- `core\llm_client.py:178`
+- `core\llm_client.py:196`
+- `core\llm_client.py:203`
+- `core\llm_client.py:206`
+- `core\llm_client.py:213`
+- `core\llm_client.py:216`
+- `core\llm_client.py:237`
+- `core\llm_client.py:257`
+- `core\llm_client.py:260`
 - ...and 133 more
