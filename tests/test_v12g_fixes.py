@@ -127,6 +127,13 @@ def test_run_python_uses_the_current_interpreter_in_isolated_mode():
     assert sys.executable in out and "1" in out.splitlines()[-1]
 
 
+def test_run_python_rejects_code_larger_than_approval_preview(monkeypatch):
+    from actions import extra_tools as et
+    monkeypatch.setattr(et.subprocess, "run", lambda *a, **k: pytest.fail("must not execute"))
+    out = et.run_python("x" * 4001)
+    assert out == "Code too long (maximum 4000 characters)."
+
+
 def test_run_python_clamps_a_model_chosen_timeout(monkeypatch):
     from actions import extra_tools as et
     seen = {}

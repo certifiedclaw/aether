@@ -215,7 +215,8 @@ def tier_for(tool: str, action: str = "") -> str:
 
 # parameters that are code/commands the user is approving: show them (almost) whole
 _FULL_SHOW_PARAMS = frozenset({"code", "command", "script"})
-_FULL_SHOW_LIMIT = 4000
+APPROVAL_CODE_LIMIT = 4000
+_FULL_SHOW_LIMIT = APPROVAL_CODE_LIMIT
 _SECRETISH = re.compile(r"pass(word|phrase)?|secret|token|api_?key|credential|^pin$", re.I)
 
 
@@ -349,6 +350,10 @@ def _escalates_to_ask(tool: str, params: dict) -> bool:
 
 def check(tool: str, action: str, params: dict) -> str | None:
     """Apply the tier. Returns None if the call may proceed, else the message to return."""
+    if tool == "extra_tool" and action == "run_python":
+        code = (params or {}).get("code", "")
+        if not isinstance(code, str) or len(code) > APPROVAL_CODE_LIMIT:
+            return f"Code too long or invalid (maximum {APPROVAL_CODE_LIMIT} characters)."
     tier = tier_for(tool, action)
     if _escalates_to_ask(tool, params):
         tier = strictest(tier, ASK)

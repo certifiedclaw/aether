@@ -30,6 +30,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Callable
 
+from core.risk import APPROVAL_CODE_LIMIT
+
 logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -636,6 +638,9 @@ def run_python(code: str, timeout: int = 10) -> str:
     key or token, and a timeout clamped to 1-60 s (the model chooses the value).
     """
     import tempfile
+    code = str(code or "")
+    if len(code) > APPROVAL_CODE_LIMIT:
+        return f"Code too long (maximum {APPROVAL_CODE_LIMIT} characters)."
     try:
         secs = max(1, min(int(timeout), 60))
     except (TypeError, ValueError):

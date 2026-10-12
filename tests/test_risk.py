@@ -230,6 +230,14 @@ def test_extra_tool_run_python_does_not_execute_without_approval(ui, tmp_path):
     assert marker.exists()
 
 
+def test_oversized_python_is_rejected_before_approval_or_execution(ui, monkeypatch):
+    import actions.extra_tools as et
+    monkeypatch.setattr(et, "run_python", lambda *a, **k: pytest.fail("must not execute"))
+    out = et.run_extra_tool("run_python", {"action": "run_python", "code": "x" * 4001})
+    assert out == "Code too long or invalid (maximum 4000 characters)."
+    assert ui.asked == []
+
+
 def test_extra_tool_harmless_actions_do_not_ask(ui):
     import actions.extra_tools as et
     assert "4" in et.run_extra_tool("calculate", {"action": "calculate", "expression": "2+2"})
