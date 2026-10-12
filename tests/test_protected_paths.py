@@ -15,6 +15,8 @@ def test_secret_files_are_protected():
     assert pp.is_protected(ROOT / "data" / "security" / "anything")
     assert pp.is_protected("/somewhere/else/api_keys.json")
     assert pp.is_protected("/x/id.pem") and pp.is_protected("/x/k.key")
+    assert pp.is_protected(ROOT / ".env")
+    assert pp.is_protected(ROOT / "config" / ".env.production")
 
 
 def test_ordinary_files_are_not_protected(tmp_path):

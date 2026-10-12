@@ -22,7 +22,9 @@ def is_protected(path) -> bool:
     """True if `path` is (or resolves to) a secrets file. Fails closed on any error."""
     try:
         p = Path(os.path.expanduser(str(path))).resolve()
-        if p.name.lower() in _PROTECTED_NAMES or p.suffix.lower() in _PROTECTED_SUFFIXES:
+        name = p.name.lower()
+        if (name in _PROTECTED_NAMES or name == ".env" or name.startswith(".env.")
+                or p.suffix.lower() in _PROTECTED_SUFFIXES):
             return True
         for rel in _PROTECTED_FILES:
             if p == (_ROOT / rel).resolve():
