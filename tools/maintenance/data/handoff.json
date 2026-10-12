@@ -1,5 +1,5 @@
 {
-  "next_id": 37,
+  "next_id": 48,
   "entries": [
     {
       "id": 1,
@@ -441,6 +441,168 @@
         "main.py"
       ],
       "next_steps": "main.py is now 1044 lines. Per current HEALTH_REPORT.md the remaining oversized functions are all in the entry-point tail: main() (137 lines) and run() (102 lines), plus _init_dashboard_and_integrations and _do_reconfigure. These are less separable than TOOL_DECLARATIONS or the listen loops were -- run()/main() interleave real startup-sequencing logic (thread launches, ordered waits on _warmup_done/_stt_done, the HEADLESS stdin test-driver) rather than being a self-contained, cleanly-bounded block, so further cuts here trade mechanical safety for a real (if still probably mixin-shaped) refactor -- closer in risk to the original _process_message_inner/_execute_tool() extractions (handoffs #7/#8) than the last two passes. ui.py (2639 lines, same no-import-test risk profile, still untouched) remains the largest oversized file in the repo and hasn't been started. The headless stdin live-report driver noted in handoff #35 still hasn't been exercised -- still the best candidate for getting this project's first-ever real execution evidence instead of static analysis, if that becomes the priority instead of continuing the file-size grind."
+    },
+    {
+      "id": 37,
+      "timestamp": "2026-10-04 22:37 UTC",
+      "by": "Claude (claude.ai chat)",
+      "summary": "First session driven by real execution logs (earlier sessions were static audits). Aether launched with Whisper, qwen3:8b and the dashboard working; 6 of 13 test prompts passed. Fixes (cumulative zips v3 then v4): (1) TTS: Kokoro only supports Python 3.10-3.12 and the user runs 3.14, so core/tts.py now falls back to EdgeTTS (cloud, internet needed -- conflicts with local-only, user must decide) when the configured engine fails, overriding the Kokoro voice af_heart with an Edge voice; install hint now quotes 'kokoro>=0.9' (unquoted >= is a cmd redirect) and states the Python limit; installer skips Kokoro on 3.13+ and the fallback also applies on settings reconfigure. (2) core/prompt.txt held the original author's few-shot examples ('my name is Fatih', 'I live in Istanbul'); the model copied them verbatim into saved memory and the clock timezone. Replaced with <NAME>/<CITY> placeholders plus a rule against saving values the user did not state. (3) llm.num_ctx (8192 in config) was never sent to Ollama, so it ran at its default (often 4096) while tool schemas alone are ~6100 tokens, causing truncated prompts and junk answers. core/llm_client.py now sends options.num_ctx via _num_ctx() on every Ollama path and the UI shows the real window. (4) open_interpreter was offered to the model every turn; the off-by-default flag only gated pip install. Now filtered in core/conversation_core.py unless integrations.open_interpreter is true. (5) Gemini warmup URL corrected. Verified with py_compile, pyflakes and mocked-HTTP payload capture; nothing could be run against real Ollama or audio from the sandbox.",
+      "files": [
+        "core/tts.py",
+        "core/installer.py",
+        "core/prompt.txt",
+        "core/llm_client.py",
+        "core/conversation_core.py",
+        "main.py"
+      ],
+      "next_steps": "OPEN, needs user go-ahead: 4 of 7 failing prompts (volume x2, name correction, desktop listing) printed raw <tool_call>{...}</tool_call> text because Ollama's parser missed the call. Fix is a client-side parser in the streaming path, which makes model text executable, so get explicit approval first and check 'ollama --version' for an update that fixes it. User cleanup: delete identity.name and identity.city from memory/long_term.json, and check data/memory.db chat history for 'Fatih'. Verify with 'ollama ps' that CONTEXT matches num_ctx; if the 'clamping' warning persists set llm.num_ctx to 16384 in config/api_keys.json (optionally OLLAMA_CONTEXT_LENGTH server-wide, since code_helper and computer_control call Ollama directly). User config is broken: qwen2.5:7b is not pulled (ollama pull qwen2.5:7b or set model back to qwen3:8b), and Gemini has no API key. Design issues noted, not fixed: GPU-usage alerts are injected as user messages and triggered a spurious save_memory; maintenance push rejected non-fast-forward (git pull --rebase) and the checkout is a zip with no git repo (python -m tools.maintenance.git_setup); consider HF_HUB_OFFLINE=1 after first model download to stop launch-time huggingface.co contact. Decide Python 3.12 venv (offline Kokoro) vs EdgeTTS fallback. Offered next: voice-timing recorder for comparing against Mark."
+    },
+    {
+      "id": 38,
+      "timestamp": "2026-10-04 22:41 UTC",
+      "by": "Claude (claude.ai chat)",
+      "summary": "Fixed the open items from #37. (1) Raw <tool_call> text: the existing _parse_fake_tool_call only matched name(k=v) text, never the <tool_call>{json}</tool_call> form qwen emits, so volume/name-correction/desktop-listing calls were displayed. Added _parse_tagged_tool_calls in core/conversation_core.py: only a reply that is NOTHING but valid tool_call JSON blocks is recovered, and every name must be in _TOOL_DISPATCH or the goal/save_memory/shutdown allowlist, otherwise the text is discarded; prose or malformed JSON is never reinterpreted. core/llm_client.py (_is_tool_tag_prefix) now holds back streamed sentences while the reply looks like a tool tag, so it is not spoken aloud before recovery. (2) System-monitor alerts were injected as user messages via _process_message (triggered a spurious save_memory); SystemMonitor.check(plain=True) now returns a plain notice that main.py logs and speaks directly with no LLM turn. check() default is unchanged. (3) HF offline: stt.py/tts.py popped HF_HUB_OFFLINE for a first download and never restored it; new core/hf_offline.py allow_online() restores env and huggingface_hub constants afterward. (4) main.speak_error now says why the LLM failed (404 model not installed, 400/401/403 bad model/API key, unreachable Ollama) instead of the generic 'LLM encountered an error'. (5) Added tools/fix_local_state.py (dry run by default, --apply) to remove hallucinated identity.name/city from memory/long_term.json with a backup and report matching rows in data/memory.db. Added tests/test_tool_call_recovery.py (7 tests). Suite: 83 pass, 4 fail -- the same 4 fail on the untouched zip in the sandbox (missing fastapi etc.), so not regressions. Not run against real Ollama or audio.",
+      "files": [
+        "core/conversation_core.py",
+        "core/llm_client.py",
+        "core/hf_offline.py",
+        "core/stt.py",
+        "core/tts.py",
+        "actions/system_monitor.py",
+        "main.py",
+        "tools/fix_local_state.py",
+        "tests/test_tool_call_recovery.py"
+      ],
+      "next_steps": "User verification on real Ollama: ask for volume/desktop listing and confirm 'executing it anyway' appears in the log instead of raw tags. Run tools/fix_local_state.py then --apply. ollama pull qwen2.5:7b or set model back to qwen3:8b; add Gemini key or stay on Ollama. Optional: GPU alert fires when Aether's own model drives GPU load -- consider suppressing while generating. Decide Python 3.12 venv vs EdgeTTS fallback."
+    },
+    {
+      "id": 39,
+      "timestamp": "2026-10-05 22:05 UTC",
+      "by": "Claude (claude.ai chat)",
+      "summary": "Review pass over the whole tree (pyflakes + bandit + manual triage), user asked 'look through if you see anything'. Fixed two real vulnerabilities, each with tests (tests/test_security_fixes.py): (1) actions/extra_tools.calculate used eval() with a character filter that still allowed '_' and '.', so (1).__class__.__base__.__subclasses__() ran (returned 225 classes) and 9**9**9 hung the process; replaced with an ast evaluator (numbers, + - * / // % **, math functions, pi/e/tau/inf; power size capped; 300-char limit). (2) actions/open_app.py Windows launcher passed model-supplied app names to shell=True twice: shutil.which(app_name.split('.')[0]) matched 'calc.exe & cmd' by prefix and then the whole string ran under cmd.exe, and f'start {app_name}' for names containing ':'; now launches the resolved path as a list and only os.startfile()s strict URI-scheme names. Triaged as not bugs: file_processor '_R' (string annotation), memory_tools SQL (only builds ? placeholders), MD5 in loop_guard (not security use), most f-string/unused-variable warnings. NOT fixed, added to roadmap: desktop.py exec() sandbox is escapable (getattr + Path/time objects expose __globals__; ctypes on Windows) and runs without confirmation; stray root copies of loop_guard/memory_tools/self_test/dump. Noted only: dashboard binds 0.0.0.0 by design (phone remote, AES + self-signed cert); dev_agent/dashboard shell=True calls take no model-controlled input; self_test.py:151 requests call has no timeout. Suite: 87 pass, same 4 sandbox-only failures as the untouched zip (missing fastapi).",
+      "files": [
+        "actions/extra_tools.py",
+        "actions/open_app.py",
+        "tests/test_security_fixes.py"
+      ],
+      "next_steps": "Decide how to handle actions/desktop.py exec (roadmap, high). Confirm and delete stray root .py copies. Still pending from #38: run tools/fix_local_state.py, ollama pull / model config, and real-Ollama check of the <tool_call> recovery."
+    },
+    {
+      "id": 40,
+      "timestamp": "2026-10-05 22:10 UTC",
+      "by": "Claude (claude.ai chat)",
+      "summary": "User reported asking Aether to change the volume: it replied with the tool call text and did nothing. Two causes found and fixed. (1) actions/computer_settings.volume_set on Windows silently did nothing: newer pycaw's AudioUtilities.GetSpeakers() returns a wrapper with no .Activate, so the call raised, and the keypress fallback pressed volumemute twice (a no-op) yet the tool still returned 'Volume set to X%'. Now uses dev.EndpointVolume.SetMasterVolumeLevelScalar (old Activate path kept as second try), then a real fallback (50x volumedown, then value/2 x volumeup, 2% per key), and raises RuntimeError on failure so the tool never reports success for a no-op; mac/Linux check the command return code. (2) Recovery in core/conversation_core.py was too narrow: it required the whole reply to be only tool_call tag blocks and discarded any tool name not in _TOOL_DISPATCH. _parse_tagged_tool_calls now also accepts prose around tags (not inside a code fence), a bare {name, arguments} JSON object, and a single json-fenced object; every block must parse; invented volume names (set_volume, volume_control, volume, change_volume, adjust_volume, volume_set, system_volume) map to computer_settings volume_set/volume_up/volume_down/mute. Reply text that looks like a call but cannot be parsed is now logged as 'WRN: reply looks like a tool call but could not be parsed: <first 200 chars>' so the exact format can be diagnosed. Tests updated/added in the two new test files; suite otherwise unchanged. Not run against real Ollama or Windows audio -- I never saw the exact text the model produced.",
+      "files": [
+        "actions/computer_settings.py",
+        "core/conversation_core.py",
+        "tests/test_tool_call_recovery.py",
+        "tests/test_security_fixes.py"
+      ],
+      "next_steps": "If volume still fails on the user's machine: get the exact 'WRN: reply looks like a tool call...' log line and any '[Settings] pycaw failed' line, and check pip show pycaw comtypes on their Python 3.14. Pending from earlier: desktop exec sandbox (roadmap, high), stray root .py copies, fix_local_state.py run, model/config fixes."
+    },
+    {
+      "id": 41,
+      "timestamp": "2026-10-06 01:03 UTC",
+      "by": "Claude (claude.ai chat)",
+      "summary": "Re-applied fixes lost between v6 and v7. (1) core/tier_router.py: TOOL_INTENT_PATTERNS was too narrow, so 'Turn the volume down a little' and 'List the files on my desktop' (<=6 words, no matching verb) went to the QUICK tier which gets zero tools; the model then wrote raw tool-call text. Pattern now covers volume/files/desktop/weather/memory/arithmetic words etc. (2) core/tool_router.py: file category now matches files/desktop/list; open_app category matches louder/mute/turn up|down. (3) New core/known_folders.py (SHGetKnownFolderPath) wired into file_controller, desktop, code_helper, dev_agent, flight_finder, youtube_video, browser_control, computer_control so a OneDrive-redirected Desktop is found. (4) actions/open_app.py: Start-menu/Spotlight fallbacks returned True after merely typing, so unknown apps reported 'Opened'; now verified by _window_appeared (pygetwindow), and Linux xdg-open checks returncode. (5) actions/weather_report.py now returns real conditions from wttr.in (8s timeout) and only falls back to opening a browser. Added tests/test_routing_and_paths.py (18 tests) and tests/live_test_prompts_v2.txt. Suite: 109 pass, same 4 sandbox-only failures as untouched v7 (fastapi missing, undo test). All changed files py_compile clean. NOT run on Windows, real Ollama, or against live wttr.in (sandbox network blocks it; requests mocked).",
+      "files": [
+        "core/tier_router.py",
+        "core/tool_router.py",
+        "core/known_folders.py",
+        "actions/file_controller.py",
+        "actions/desktop.py",
+        "actions/code_helper.py",
+        "actions/dev_agent.py",
+        "actions/flight_finder.py",
+        "actions/youtube_video.py",
+        "actions/browser_control.py",
+        "actions/computer_control.py",
+        "actions/open_app.py",
+        "actions/weather_report.py",
+        "tests/test_routing_and_paths.py"
+      ],
+      "next_steps": "Ian: run the 15 live prompts headless and send logs/live_report.md. Still pending: roadmap #23 (desktop exec sandbox), delete stray root .py copies (#24), tools/fix_local_state.py --apply, real-Ollama check of <tool_call> recovery, investigate the undo test failure (create_file new-file undo) which fails on untouched v7 too."
+    },
+    {
+      "id": 42,
+      "timestamp": "2026-10-06 01:36 UTC",
+      "by": "Claude (claude.ai chat)",
+      "summary": "Ported MARK LV pieces into Aether, keeping local inference default. (1) core/echo.py (EchoGuard + new OutputTap/pcm_level/get_guard): core/tts.py now taps playback (_play_np, _play_audio_bytes, stop) and core/listen_loops._listen_whisper uses the guard for barge-in (replaces loudness-only RMS test that self-interrupted on speakers) and drops our own voice tail after speech ends (0.45 s). Config echo_guard, default true; false restores old behavior. (2) core/wake_word.py (openwakeword detector + new pure WakeGate), config wake_word_enabled default false; missing model -> warning + stays awake. (3) Opt-in Gemini for tool turns: tier_router.wants_gemini_for_tools + hook in conversation_core, config gemini_for_tools default false, logged per turn, never for QUICK tier or when Gemini is already primary. llm_client.get_config_flag added. MARK LV is CC BY-NC 4.0: attribution headers kept, see docs/MARK_LV_PORTS.md. Tests: tests/test_mark_lv_ports.py (16 tests incl. synthetic echo-vs-voice, real _listen_whisper callback driven by a fake mic with a no-guard control). Suite 126 pass, same 4 sandbox-only failures as untouched v7. NOT validated on real speakers/mic/openwakeword -- echo thresholds are MARK LV's and its author left voice barge-in off pending real-hardware tests.",
+      "files": [
+        "core/echo.py",
+        "core/wake_word.py",
+        "core/tts.py",
+        "core/listen_loops.py",
+        "core/tier_router.py",
+        "core/conversation_core.py",
+        "core/llm_client.py",
+        "tests/test_mark_lv_ports.py",
+        "docs/MARK_LV_PORTS.md"
+      ],
+      "next_steps": "Ian: try on real hardware with speakers: ask for a long answer, confirm it does not answer itself after finishing and that talking over it interrupts. If it interrupts itself or never interrupts, set echo_guard=false and send the log. Optional next ports: push-to-talk, audio device picker, action_loader."
+    },
+    {
+      "id": 43,
+      "timestamp": "2026-10-06 01:39 UTC",
+      "by": "Claude (claude.ai chat)",
+      "summary": "Full-Gemini (primary provider) mode check. llm_provider=gemini already worked for text; found ensure_ollama_running pinged {gemini_base}/v1/models (404 on Gemini's /v1beta/openai base) so a healthy Gemini looked down; now uses /models for gemini. Test added. STT (Whisper) and TTS (Edge/Kokoro) remain local in this mode; Gemini Live native-audio mode (MARK LV) is NOT ported.",
+      "files": [
+        "core/llm_client.py",
+        "tests/test_mark_lv_ports.py"
+      ],
+      "next_steps": "Decide whether to port Gemini Live native audio (big: websocket audio in/out, tool-schema translation, session continuity) or stay on text Gemini + local STT/TTS."
+    },
+    {
+      "id": 44,
+      "timestamp": "2026-10-06 18:33 UTC",
+      "by": "Claude (claude.ai chat)",
+      "summary": "Added tools/verify_local.py: model-free one-shot check for a real install (env + package versions + Ollama reachability, py_compile all, pytest, headless replay of tests/live_test_prompts_v2.txt) -> logs/verify_report.txt. Never writes API key values (only set/not set). Observed: config/api_keys.json ships inside the zips with non-empty gemini_api_key and elevenlabs_api_key fields -- do not share zips or push that file; rotate keys if exposed.",
+      "files": [
+        "tools/verify_local.py"
+      ],
+      "next_steps": "Ian: run python tools\\verify_local.py and upload logs/verify_report.txt."
+    },
+    {
+      "id": 45,
+      "timestamp": "2026-10-06 19:15 UTC",
+      "by": "Claude (claude.ai chat)",
+      "summary": "Analysed Ian's first real verify run (Python 3.14.7, Windows 11, qwen2.5:7b). The run was CONTAMINATED: events.jsonl shows 3 Aether sessions (ids ...3024/...3149/...3617) running at once (leftover harness runs), sharing memory/logs, so replies were scrambled across prompts. Real findings: (1) computer_settings got invented actions set_volume/web_search -> 'Unknown action' (volume never changed). (2) Model answered 'list files' with a FAKE file list and 'latest Python is 3.11.0' without calling any tool. (3) 'Compare SQLite...' routed to Gemini -> HTTP 400 and no reply (key looks invalid, no local fallback). (4) tool schema ~5.9k tokens vs num_ctx 8192 -> smart_context clamps budget; suspect truncation causing 'How can I assist you?' non-answers. (5) 'Fatih'/'Istanbul' leak from memory/long_term.json + 3 rows in data/memory.db. (6) weather via wttr.in worked. Fixes: new core/quick_intents.py (deterministic shortcuts for volume up/down/set/mute, weather, list files, web search, open app; compound 'X, then Y' only if every clause matches; hooked in conversation_core._try_quick_intent before tier routing); computer_settings alias normalization + unknown-action message lists valid actions; Gemini failure now retries the turn on the local model; weather desc strip; tools/fix_local_state.py --purge-db; verify_local flags missing llm_model and concurrent Aether processes. Tests: 177 pass. NOT run on real hardware after these changes.",
+      "files": [
+        "core/quick_intents.py",
+        "core/conversation_core.py",
+        "actions/computer_settings.py",
+        "actions/weather_report.py",
+        "tools/fix_local_state.py",
+        "tools/verify_local.py",
+        "tests/test_quick_intents.py"
+      ],
+      "next_steps": "Ian: close all python/Aether processes, unzip v10, run python tools\\verify_local.py once. Consider llm.num_ctx=16384 in config. Replace/verify gemini_api_key (400). Open question: add a guard so tool-intent turns where the model answers WITHOUT calling a tool are re-tried or flagged."
+    },
+    {
+      "id": 46,
+      "timestamp": "2026-10-06 19:38 UTC",
+      "by": "Claude (claude.ai chat)",
+      "summary": "Second real verify run (clean single session). Working: quick intents (volume up/down, weather, web search -> Python 3.14.8, list desktop, compound volume+weather, honest 'Could not confirm' for fake app), Gemini 400 -> local retry. Found: (1) every quick-intent turn cost a 120s wait in the headless driver because it waits on live_report.turn_count(), which the shortcut path never incremented -> run hit 900s timeout (harness artifact, not user latency); quick intents now record a QUICK_INTENT turn. (2) 3 non-tool prompts (240x17, hash table, teal) still returned filler: data/memory.db held POISONED exchanges (filler replies, raw <tool_call> text, SYSTEM_ALERT chats) that retrieval fed back and the 7B model copied. Fixes: core/memory_hygiene.py (is_storable_exchange gate in _finalize_response; stored_row_is_poisoned), fix_local_state.py --purge-db now also deletes failed-turn rows (12 of 21 removed in shipped copy), verify_local isolates memory during replay and restores it after (--keep-memory to disable). (3) file listing read 69 items aloud; now spoken summary. Tests 189 pass. Open: HARD-tier Gemini fallback still sends 31 tools to the local model (schema ~5.9k tokens); gemini_api_key returns 400.",
+      "files": [
+        "core/memory_hygiene.py",
+        "core/conversation_core.py",
+        "core/quick_intents.py",
+        "tools/fix_local_state.py",
+        "tools/verify_local.py",
+        "tests/test_quick_intents.py"
+      ],
+      "next_steps": "Ian: close all python procs, unzip v11, python tools\\verify_local.py (should take ~3-5 min now), upload logs\\verify_report.txt. Fix or remove gemini_api_key."
+    },
+    {
+      "id": 47,
+      "timestamp": "2026-10-07 23:45 UTC",
+      "by": "Claude (claude.ai chat)",
+      "summary": "Verified fixes18 on Windows: 324 pytest pass, replay 24/24 in 53s. hard_long_context passed via local fallback after a Gemini 503, so the gemini_max_tokens=2048 cap is not directly exercised for that case (other Gemini turns returned complete replies). Remaining warnings: watchdog and keyboard not installed, Gemini 503 has no retry before local fallback, Zorblax message wording.",
+      "files": [
+        "core/llm_client.py",
+        "tests/test_invariants.py"
+      ],
+      "next_steps": "Add .gitignore (config/api_keys.json, config/certs/, data/memory.db, logs/); pip install watchdog keyboard; add one retry on Gemini 503; run tools/clean_memory.py dry run; then roadmap #23 (desktop.py exec sandbox)."
     }
   ]
 }

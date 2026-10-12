@@ -2,8 +2,8 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.health_check` (or `run_all`) to refresh. Fix things here, don't edit this file directly.
 
-Generated: 2026-10-04T22:25:45.567239+00:00
-Files scanned: 111
+Generated: 2026-10-12T01:03:19.008891+00:00
+Files scanned: 148
 
 ## Summary
 
@@ -11,116 +11,121 @@ Files scanned: 111
 |---|---|
 | Files that fail to parse | 0 |
 | Bare `except:` clauses | 0 |
-| Files over 600 lines | 13 |
-| Functions over 80 lines | 37 |
-| Stray `print()` calls (outside scripts) | 183 |
+| Files over 600 lines | 15 |
+| Functions over 80 lines | 40 |
+| Stray `print()` calls (outside scripts) | 224 |
 | TODO / FIXME / XXX comments | 0 |
 | Unreadable files | 0 |
 
 ## Files over 600 lines
 - `ui.py` — 2639 lines
-- `tests\test_all_critical.py` — 2009 lines
-- `actions\osint_tools.py` — 1184 lines
-- `main.py` — 1069 lines
-- `actions\game_updater.py` — 1048 lines
-- `actions\extra_tools.py` — 1005 lines
-- `dashboard\server.py` — 965 lines
-- `core\llm_client.py` — 912 lines
-- `actions\browser_control.py` — 911 lines
-- `actions\file_processor.py` — 834 lines
-- `actions\computer_settings.py` — 673 lines
-- `core\conversation_core.py` — 668 lines
-- `actions\file_controller.py` — 618 lines
+- `tests/test_all_critical.py` — 2082 lines
+- `actions/osint_tools.py` — 1184 lines
+- `core/llm_client.py` — 1163 lines
+- `main.py` — 1082 lines
+- `actions/game_updater.py` — 1050 lines
+- `actions/extra_tools.py` — 1041 lines
+- `dashboard/server.py` — 965 lines
+- `actions/browser_control.py` — 913 lines
+- `core/conversation_core.py` — 906 lines
+- `actions/file_processor.py` — 836 lines
+- `actions/computer_settings.py` — 734 lines
+- `actions/file_controller.py` — 647 lines
+- `tests/test_invariants.py` — 645 lines
+- `actions/desktop.py` — 614 lines
 
 ## Functions over 80 lines
-- `core\conversation_core.py:277` — `_process_message_inner()` (291 lines)
-- `actions\computer_control.py:353` — `computer_control()` (155 lines)
-- `core\llm_client.py:760` — `call_llm_stream()` (152 lines)
-- `core\llm_client.py:615` — `_stream_openai()` (142 lines)
+- `core/conversation_core.py:418` — `_process_message_inner()` (387 lines)
+- `core/llm_client.py:680` — `_stream_openai_once()` (159 lines)
+- `core/llm_client.py:1005` — `call_llm_stream()` (158 lines)
+- `actions/computer_control.py:355` — `computer_control()` (155 lines)
+- `actions/dev_agent.py:349` — `_build_project()` (154 lines)
 - `ui.py:409` — `paintEvent()` (140 lines)
-- `actions\extra_tools.py:865` — `run_extra_tool()` (140 lines)
-- `ui.py:1299` — `_build_llm_section()` (139 lines)
-- `actions\dev_agent.py:348` — `_build_project()` (139 lines)
-- `main.py:929` — `main()` (137 lines)
-- `actions\file_processor.py:582` — `_process_video()` (127 lines)
-- `agent\executor.py:295` — `execute()` (123 lines)
-- `dashboard\server.py:130` — `_ensure_network_access_windows()` (120 lines)
-- `actions\game_updater.py:926` — `game_updater()` (115 lines)
-- `core\llm_client.py:421` — `call_llm()` (111 lines)
-- `main.py:814` — `run()` (108 lines)
-- `actions\browser_control.py:421` — `_launch()` (104 lines)
-- `tests\test_all_critical.py:1046` — `test_confirm_blocking_dialog_thread_safety()` (102 lines)
-- `actions\reminder.py:41` — `_write_notify_script()` (98 lines)
-- `dashboard\server.py:540` — `_register_auth_routes()` (98 lines)
-- `actions\file_processor.py:313` — `_process_data()` (95 lines)
-- `core\smart_context.py:55` — `compress_if_needed()` (93 lines)
-- `ui.py:1440` — `_build_tts_section()` (92 lines)
-- `core\diagnostics.py:22` — `run_all()` (91 lines)
-- `actions\file_processor.py:81` — `_process_image()` (90 lines)
+- `actions/extra_tools.py:901` — `run_extra_tool()` (140 lines)
+- `ui.py:1300` — `_build_llm_section()` (139 lines)
+- `main.py:942` — `main()` (137 lines)
+- `actions/file_processor.py:582` — `_process_video()` (127 lines)
+- `agent/executor.py:295` — `execute()` (123 lines)
+- `dashboard/server.py:130` — `_ensure_network_access_windows()` (120 lines)
+- `actions/game_updater.py:928` — `game_updater()` (115 lines)
+- `core/llm_client.py:485` — `call_llm()` (112 lines)
+- `core/listen_loops.py:84` — `_listen_whisper()` (111 lines)
+- `main.py:827` — `run()` (108 lines)
+- `actions/browser_control.py:421` — `_launch()` (104 lines)
+- `tests/test_all_critical.py:1119` — `test_confirm_blocking_dialog_thread_safety()` (102 lines)
+- `actions/reminder.py:41` — `_write_notify_script()` (98 lines)
+- `dashboard/server.py:540` — `_register_auth_routes()` (98 lines)
+- `core/smart_context.py:55` — `compress_if_needed()` (96 lines)
+- `actions/file_processor.py:313` — `_process_data()` (95 lines)
+- `core/echo.py:197` — `is_user_speech()` (94 lines)
+- `ui.py:1441` — `_build_tts_section()` (92 lines)
+- `core/diagnostics.py:22` — `run_all()` (91 lines)
+- `actions/file_processor.py:81` — `_process_image()` (90 lines)
 - `ui.py:709` — `__init__()` (88 lines)
-- `actions\browser_control.py:816` — `browser_control()` (88 lines)
-- `actions\osint_tools.py:887` — `extract_metadata()` (88 lines)
-- `core\chat_commands.py:38` — `_handle_chat_command()` (88 lines)
-- `actions\code_helper.py:370` — `_screen_debug_action()` (87 lines)
-- `main.py:977` — `runner()` (86 lines)
-- `ui.py:1759` — `__init__()` (85 lines)
-- `memory\hybrid_memory.py:291` — `_retrieve()` (85 lines)
-- `ui.py:2235` — `_build_right_panel()` (84 lines)
-- `actions\computer_settings.py:590` — `computer_settings()` (83 lines)
-- `ui.py:1883` — `__init__()` (81 lines)
-- `actions\desktop.py:130` — `set_wallpaper()` (81 lines)
-- `actions\osint_tools.py:781` — `github_user_osint()` (81 lines)
+- `actions/browser_control.py:818` — `browser_control()` (88 lines)
+- `actions/osint_tools.py:887` — `extract_metadata()` (88 lines)
+- `core/chat_commands.py:38` — `_handle_chat_command()` (88 lines)
+- `actions/code_helper.py:377` — `_screen_debug_action()` (87 lines)
+- `actions/computer_settings.py:647` — `computer_settings()` (87 lines)
+- `main.py:990` — `runner()` (86 lines)
+- `ui.py:1760` — `__init__()` (85 lines)
+- `core/conversation_core.py:202` — `_prepare_conversation_messages()` (85 lines)
+- `memory/hybrid_memory.py:291` — `_retrieve()` (85 lines)
+- `ui.py:2236` — `_build_right_panel()` (84 lines)
+- `ui.py:1884` — `__init__()` (81 lines)
+- `actions/osint_tools.py:781` — `github_user_osint()` (81 lines)
+- `actions/desktop.py:288` — `set_wallpaper()` (81 lines)
 
 ## Stray `print()` calls
 Found outside of scripts/tests — consider routing through `core/observability.py` or logging instead.
 - `config_validator.py:197`
-- `agent\error_handler.py:58`
-- `agent\error_handler.py:96`
-- `agent\error_handler.py:100`
-- `agent\error_handler.py:141`
-- `agent\executor.py:77`
-- `agent\executor.py:130`
-- `agent\executor.py:142`
-- `agent\executor.py:145`
-- `agent\executor.py:196`
-- `agent\executor.py:283`
-- `agent\executor.py:301`
-- `agent\executor.py:330`
-- `agent\executor.py:342`
-- `agent\executor.py:348`
-- `agent\executor.py:363`
-- `agent\executor.py:389`
-- `agent\planner.py:82`
-- `agent\planner.py:241`
-- `agent\planner.py:245`
-- `agent\planner.py:247`
-- `agent\planner.py:251`
-- `agent\planner.py:254`
-- `agent\planner.py:259`
-- `agent\planner.py:300`
-- `agent\planner.py:303`
-- `agent\task_queue.py:67`
-- `agent\task_queue.py:73`
-- `agent\task_queue.py:99`
-- `agent\task_queue.py:122`
-- `agent\task_queue.py:203`
-- `agent\task_queue.py:225`
-- `agent\task_queue.py:227`
-- `agent\task_queue.py:235`
-- `core\config_validator.py:197`
-- `core\diagnostics.py:134`
-- `core\headless_ui.py:70`
-- `core\listen_loops.py:131`
-- `core\listen_loops.py:166`
-- `core\llm_client.py:173`
-- `core\llm_client.py:175`
-- `core\llm_client.py:178`
-- `core\llm_client.py:196`
-- `core\llm_client.py:203`
-- `core\llm_client.py:206`
-- `core\llm_client.py:213`
-- `core\llm_client.py:216`
-- `core\llm_client.py:237`
-- `core\llm_client.py:257`
-- `core\llm_client.py:260`
-- ...and 133 more
+- `agent/executor.py:77`
+- `agent/executor.py:130`
+- `agent/executor.py:142`
+- `agent/executor.py:145`
+- `agent/executor.py:196`
+- `agent/executor.py:283`
+- `agent/executor.py:301`
+- `agent/executor.py:330`
+- `agent/executor.py:342`
+- `agent/executor.py:348`
+- `agent/executor.py:363`
+- `agent/executor.py:389`
+- `agent/task_queue.py:67`
+- `agent/task_queue.py:73`
+- `agent/task_queue.py:99`
+- `agent/task_queue.py:122`
+- `agent/task_queue.py:203`
+- `agent/task_queue.py:225`
+- `agent/task_queue.py:227`
+- `agent/task_queue.py:235`
+- `agent/error_handler.py:58`
+- `agent/error_handler.py:96`
+- `agent/error_handler.py:100`
+- `agent/error_handler.py:141`
+- `agent/planner.py:82`
+- `agent/planner.py:241`
+- `agent/planner.py:245`
+- `agent/planner.py:247`
+- `agent/planner.py:251`
+- `agent/planner.py:254`
+- `agent/planner.py:259`
+- `agent/planner.py:300`
+- `agent/planner.py:303`
+- `tests/stress_test.py:38`
+- `tests/stress_test.py:325`
+- `tests/stress_test.py:326`
+- `tests/stress_test.py:327`
+- `tests/stress_test.py:328`
+- `tests/stress_test.py:329`
+- `tests/stress_test.py:334`
+- `tests/stress_test.py:342`
+- `tests/stress_test.py:345`
+- `tests/stress_test.py:346`
+- `tests/stress_test.py:347`
+- `tests/stress_test.py:364`
+- `tools/apply_handoff_v12.py:165`
+- `tools/live_grader.py:221`
+- `tools/live_grader.py:223`
+- `tools/apply_roadmap_v12.py:105`
+- ...and 174 more

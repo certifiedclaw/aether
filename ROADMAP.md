@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap add/start/done`.
 
-Generated: 2026-07-28 20:45 UTC
+Generated: 2026-10-12 01:03 UTC
 
 ## In progress
 
@@ -11,6 +11,14 @@ Generated: 2026-07-28 20:45 UTC
 
 ## Backlog
 
+- [ ] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option `high`
+  - Live Gemini key is inside full-folder zips. Verify git history never contained it; rotate if it did.
+- [ ] **#26** Retry once (about 1s backoff) on Gemini 503/429 before falling back to local `medium`
+  - Seen in two consecutive verify runs; local HARD fallback costs 2-4s more.
+- [ ] **#27** Execution timeout for AI-generated desktop code `medium`
+  - exec() cannot be killed in-process; approved code with an infinite loop hangs its thread. Run in a worker with a deadline.
+- [ ] **#28** verify_local.py: flag packages declared in requirements.txt but not installed `medium`
+  - watchdog and keyboard were missing for several runs, disabling plugin hot-reload and the ctrl+alt+j hotkey without any verify warning.
 - [ ] **#14** Route the 174 stray print() calls through core/observability.py `low`
   - Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules — actions/ is intentionally exempt (CLI-facing tool output).
 - [ ] **#16** Decide fate of the vestigial session_memory param across actions/ `low`
@@ -21,6 +29,16 @@ Generated: 2026-07-28 20:45 UTC
   - core/notify.send_ntfy() is fire-and-forget -- if the push fails (network blip, ntfy down), the approval still shows up in the dashboard's Pending Approvals list, but the operator isn't proactively re-notified and may not know to check. Consider a retry with backoff, or re-pushing once if unresolved after N seconds.
 - [ ] **#21** dashboard/server.py has no standalone entrypoint `low`
   - Noted since the original headless-mode work: start_dashboard_server() only ever gets called from AetherLocal._init_dashboard_and_integrations(), itself only reachable after the full AetherLocal boot sequence runs. Fine for the current headless design (still boots AetherLocal, just skips the GUI), but if a lighter API-only deployment (dashboard + approvals + LLM status, nothing else) is ever wanted, this coupling needs breaking.
+- [ ] **#24** Delete stray root copies: loop_guard.py, memory_tools.py, self_test.py (stale vs core/), dump.py (vs dev_tools/) `low`
+  - Nothing imports them; self_test.py and dump.py have drifted from their real copies. Confirm no external script uses them, then delete.
+- [ ] **#29** Review shell=True call sites (dev_agent._open_vscode, computer_settings, dashboard/server) `low`
+  - dev_agent passes a project-derived path with shell=True on Windows: metacharacters in a project name could inject. computer_settings strings are constant.
+- [ ] **#30** Make test_create_file_new_file_undo_removes_it pass on Linux `low`
+  - Only failing test in a Linux sandbox run; passes on Windows.
+- [ ] **#31** Fix dep_watcher lookups for Ollama, faster-whisper and Kokoro `low`
+  - DEPENDENCY_REPORT.md shows lookup failed for all three upstream checks.
+- [ ] **#32** Investigate long_term.json identity entries missing value `low`
+  - Handoff guesses user redaction; unconfirmed.
 
 ## Done
 
@@ -54,3 +72,7 @@ Generated: 2026-07-28 20:45 UTC
   - core/headless_ui.py drop-in for ui.AetherUI with no PyQt6 dependency; main.py gates the PyQt6 bootstrap/import and defensively wraps the sounddevice import on AETHER_HEADLESS=1. core/llm_client.get_llm_settings() gained dual-host resolution -- prefers llm_remote_url (e.g. a home PC's GPU-backed Ollama) when reachable (cached health-check, default 20s interval / 2.5s timeout), falls back to llm_local_url (CPU on this machine) otherwise; unchanged behavior with no llm_remote_url configured. Verified via 9 tests + full suite.
 - [x] **#18** Remote-approval flow for headless confirm_blocking() + dashboard LLM backend status 
   - core/pending_approvals.py (thread-safe ApprovalStore, event-based blocking, fails closed on timeout) + core/notify.py (ntfy push -- new integration, no ntfy setup existed in this codebase before; ntfy_base_url/ntfy_topic added as new config keys). confirm_blocking() registers a pending approval, fires the push, and blocks until dashboard/server.py's new POST /api/approvals/{id}/approve|deny resolves it or times out. AETHER_HEADLESS_AUTO_CONFIRM=1 bypass unchanged. Dashboard also gained GET /api/llm-status surfacing core.llm_client.get_llm_backend_status() (active backend + real IP/host, including the fallback IP), polled in app.html. Verified via 9 tests + full suite; caught and fixed an old test that started blocking for the real 120s default timeout once confirm_blocking() became a genuine blocking call.
+- [x] **#22** Client-side parser for raw <tool_call> text from Ollama (needs user approval) 
+  - 4 of 7 failed prompts showed raw <tool_call>{...}</tool_call> instead of acting. Touches streaming path and makes model text executable, so get explicit go-ahead; check ollama --version first. See handoff #37.
+- [x] **#23** actions/desktop.py exec() sandbox is escapable and runs model-written code without a confirmation 
+  - safe_builtins exposes getattr and the sandbox passes Path/time objects, so getattr(Path.__init__,'__globals__') reaches os/sys; Windows also exposes ctypes. Needs a design decision: confirmation via core/safety, or a real allowlist DSL instead of exec. See handoff #39.

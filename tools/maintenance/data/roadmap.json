@@ -1,5 +1,5 @@
 {
-  "next_id": 22,
+  "next_id": 33,
   "items": [
     {
       "id": 1,
@@ -189,6 +189,105 @@
       "notes": "Noted since the original headless-mode work: start_dashboard_server() only ever gets called from AetherLocal._init_dashboard_and_integrations(), itself only reachable after the full AetherLocal boot sequence runs. Fine for the current headless design (still boots AetherLocal, just skips the GUI), but if a lighter API-only deployment (dashboard + approvals + LLM status, nothing else) is ever wanted, this coupling needs breaking.",
       "created": "2026-07-28",
       "updated": "2026-07-28"
+    },
+    {
+      "id": 22,
+      "title": "Client-side parser for raw <tool_call> text from Ollama (needs user approval)",
+      "priority": "medium",
+      "status": "done",
+      "notes": "4 of 7 failed prompts showed raw <tool_call>{...}</tool_call> instead of acting. Touches streaming path and makes model text executable, so get explicit go-ahead; check ollama --version first. See handoff #37.",
+      "created": "2026-10-04",
+      "updated": "2026-10-04"
+    },
+    {
+      "id": 23,
+      "title": "actions/desktop.py exec() sandbox is escapable and runs model-written code without a confirmation",
+      "priority": "high",
+      "status": "done",
+      "notes": "safe_builtins exposes getattr and the sandbox passes Path/time objects, so getattr(Path.__init__,'__globals__') reaches os/sys; Windows also exposes ctypes. Needs a design decision: confirmation via core/safety, or a real allowlist DSL instead of exec. See handoff #39.",
+      "created": "2026-10-05",
+      "updated": "2026-10-07"
+    },
+    {
+      "id": 24,
+      "title": "Delete stray root copies: loop_guard.py, memory_tools.py, self_test.py (stale vs core/), dump.py (vs dev_tools/)",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "Nothing imports them; self_test.py and dump.py have drifted from their real copies. Confirm no external script uses them, then delete.",
+      "created": "2026-10-05",
+      "updated": "2026-10-05"
+    },
+    {
+      "id": 25,
+      "title": "Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option",
+      "priority": "high",
+      "status": "backlog",
+      "notes": "Live Gemini key is inside full-folder zips. Verify git history never contained it; rotate if it did.",
+      "created": "2026-10-07",
+      "updated": "2026-10-07"
+    },
+    {
+      "id": 26,
+      "title": "Retry once (about 1s backoff) on Gemini 503/429 before falling back to local",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Seen in two consecutive verify runs; local HARD fallback costs 2-4s more.",
+      "created": "2026-10-07",
+      "updated": "2026-10-07"
+    },
+    {
+      "id": 27,
+      "title": "Execution timeout for AI-generated desktop code",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "exec() cannot be killed in-process; approved code with an infinite loop hangs its thread. Run in a worker with a deadline.",
+      "created": "2026-10-07",
+      "updated": "2026-10-07"
+    },
+    {
+      "id": 28,
+      "title": "verify_local.py: flag packages declared in requirements.txt but not installed",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "watchdog and keyboard were missing for several runs, disabling plugin hot-reload and the ctrl+alt+j hotkey without any verify warning.",
+      "created": "2026-10-07",
+      "updated": "2026-10-07"
+    },
+    {
+      "id": 29,
+      "title": "Review shell=True call sites (dev_agent._open_vscode, computer_settings, dashboard/server)",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "dev_agent passes a project-derived path with shell=True on Windows: metacharacters in a project name could inject. computer_settings strings are constant.",
+      "created": "2026-10-07",
+      "updated": "2026-10-07"
+    },
+    {
+      "id": 30,
+      "title": "Make test_create_file_new_file_undo_removes_it pass on Linux",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "Only failing test in a Linux sandbox run; passes on Windows.",
+      "created": "2026-10-07",
+      "updated": "2026-10-07"
+    },
+    {
+      "id": 31,
+      "title": "Fix dep_watcher lookups for Ollama, faster-whisper and Kokoro",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "DEPENDENCY_REPORT.md shows lookup failed for all three upstream checks.",
+      "created": "2026-10-07",
+      "updated": "2026-10-07"
+    },
+    {
+      "id": 32,
+      "title": "Investigate long_term.json identity entries missing value",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "Handoff guesses user redaction; unconfirmed.",
+      "created": "2026-10-07",
+      "updated": "2026-10-07"
     }
   ]
 }
