@@ -1,5 +1,5 @@
 {
-  "next_id": 33,
+  "next_id": 36,
   "items": [
     {
       "id": 1,
@@ -288,6 +288,33 @@
       "notes": "Handoff guesses user redaction; unconfirmed.",
       "created": "2026-10-07",
       "updated": "2026-10-07"
+    },
+    {
+      "id": 33,
+      "title": "Dashboard: replace AES-CBC (no MAC, key = SHA-256 of the 6-char session code) with AES-GCM and a random per-session key",
+      "priority": "high",
+      "status": "backlog",
+      "notes": "dashboard/server.py _aes_key/decrypt: anyone who captures one ciphertext can brute-force the ~30-bit code offline in seconds, and CBC without a MAC is malleable. Needs a matching change in the CryptoJS client in dashboard/static, so it must be tested with a real phone/browser. Over plain HTTP (no config/certs) the traffic is also sniffable.",
+      "created": "2026-10-12",
+      "updated": "2026-10-12"
+    },
+    {
+      "id": 34,
+      "title": "Dashboard: rate-limit the one-time connect key and bind to the LAN interface only",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "No attempt limiting on /connect key checks; 6-char key, 10 min window. Server binds 0.0.0.0 (intentional for phone remote) - consider per-IP lockout after N bad keys.",
+      "created": "2026-10-12",
+      "updated": "2026-10-12"
+    },
+    {
+      "id": 35,
+      "title": "Audit remaining tools that take arbitrary paths against core/protected_paths (screen_process, game_updater, reminder, send_message attachments)",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "v12f routed extra_tool diff/word_count, file_processor and pdf_tool through is_protected(); the others were not read.",
+      "created": "2026-10-12",
+      "updated": "2026-10-12"
     }
   ]
 }

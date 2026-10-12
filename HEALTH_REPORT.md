@@ -2,8 +2,8 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.health_check` (or `run_all`) to refresh. Fix things here, don't edit this file directly.
 
-Generated: 2026-10-12T01:03:19.008891+00:00
-Files scanned: 148
+Generated: 2026-10-12T01:34:08.192378+00:00
+Files scanned: 150
 
 ## Summary
 
@@ -20,15 +20,15 @@ Files scanned: 148
 ## Files over 600 lines
 - `ui.py` — 2639 lines
 - `tests/test_all_critical.py` — 2082 lines
-- `actions/osint_tools.py` — 1184 lines
+- `actions/osint_tools.py` — 1200 lines
 - `core/llm_client.py` — 1163 lines
 - `main.py` — 1082 lines
 - `actions/game_updater.py` — 1050 lines
-- `actions/extra_tools.py` — 1041 lines
+- `actions/extra_tools.py` — 1047 lines
 - `dashboard/server.py` — 965 lines
 - `actions/browser_control.py` — 913 lines
 - `core/conversation_core.py` — 906 lines
-- `actions/file_processor.py` — 836 lines
+- `actions/file_processor.py` — 839 lines
 - `actions/computer_settings.py` — 734 lines
 - `actions/file_controller.py` — 647 lines
 - `tests/test_invariants.py` — 645 lines
@@ -41,7 +41,7 @@ Files scanned: 148
 - `actions/computer_control.py:355` — `computer_control()` (155 lines)
 - `actions/dev_agent.py:349` — `_build_project()` (154 lines)
 - `ui.py:409` — `paintEvent()` (140 lines)
-- `actions/extra_tools.py:901` — `run_extra_tool()` (140 lines)
+- `actions/extra_tools.py:907` — `run_extra_tool()` (140 lines)
 - `ui.py:1300` — `_build_llm_section()` (139 lines)
 - `main.py:942` — `main()` (137 lines)
 - `actions/file_processor.py:582` — `_process_video()` (127 lines)
@@ -63,7 +63,7 @@ Files scanned: 148
 - `actions/file_processor.py:81` — `_process_image()` (90 lines)
 - `ui.py:709` — `__init__()` (88 lines)
 - `actions/browser_control.py:818` — `browser_control()` (88 lines)
-- `actions/osint_tools.py:887` — `extract_metadata()` (88 lines)
+- `actions/osint_tools.py:903` — `extract_metadata()` (88 lines)
 - `core/chat_commands.py:38` — `_handle_chat_command()` (88 lines)
 - `actions/code_helper.py:377` — `_screen_debug_action()` (87 lines)
 - `actions/computer_settings.py:647` — `computer_settings()` (87 lines)
@@ -73,7 +73,7 @@ Files scanned: 148
 - `memory/hybrid_memory.py:291` — `_retrieve()` (85 lines)
 - `ui.py:2236` — `_build_right_panel()` (84 lines)
 - `ui.py:1884` — `__init__()` (81 lines)
-- `actions/osint_tools.py:781` — `github_user_osint()` (81 lines)
+- `actions/osint_tools.py:797` — `github_user_osint()` (81 lines)
 - `actions/desktop.py:288` — `set_wallpaper()` (81 lines)
 
 ## Stray `print()` calls

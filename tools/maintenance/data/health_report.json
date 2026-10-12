@@ -11,7 +11,7 @@
     },
     {
       "file": "actions/extra_tools.py",
-      "lines": 1041
+      "lines": 1047
     },
     {
       "file": "actions/browser_control.py",
@@ -23,7 +23,7 @@
     },
     {
       "file": "actions/file_processor.py",
-      "lines": 836
+      "lines": 839
     },
     {
       "file": "actions/file_controller.py",
@@ -35,7 +35,7 @@
     },
     {
       "file": "actions/osint_tools.py",
-      "lines": 1184
+      "lines": 1200
     },
     {
       "file": "actions/desktop.py",
@@ -139,7 +139,7 @@
       "file": "actions/extra_tools.py",
       "function": "run_extra_tool",
       "lines": 140,
-      "at_line": 901
+      "at_line": 907
     },
     {
       "file": "actions/dev_agent.py",
@@ -193,13 +193,13 @@
       "file": "actions/osint_tools.py",
       "function": "github_user_osint",
       "lines": 81,
-      "at_line": 781
+      "at_line": 797
     },
     {
       "file": "actions/osint_tools.py",
       "function": "extract_metadata",
       "lines": 88,
-      "at_line": 887
+      "at_line": 903
     },
     {
       "file": "actions/desktop.py",
@@ -1206,7 +1206,7 @@
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-10-12T01:03:19.008891+00:00",
-    "files_scanned": 148
+    "generated": "2026-10-12T01:34:08.192378+00:00",
+    "files_scanned": 150
   }
 }

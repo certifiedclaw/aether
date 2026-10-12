@@ -244,7 +244,9 @@ class ToolDispatchMixin:
             # authorization warnings on this tool's schema in TOOL_DECLARATIONS.
             gate_op = {"port_scan": "osint_port_scan", "breach_check": "osint_breach_check"}.get(action)
             if gate_op and self._safety.requires_confirmation(gate_op):
-                detail = (f"Action: {action}\nTarget: {target}\n\n"
+                detail = (f"Action: {action}\nTarget: {target}\n"
+                          + (f"Ports: {args.get('ports') or '80,443,22,21,8080'}\n"
+                             if action == "port_scan" else "") + "\n"
                           + ("Only scan systems you own or are explicitly authorized to test."
                              if action == "port_scan" else
                              "Returns whether this email appears in known breach datasets — "

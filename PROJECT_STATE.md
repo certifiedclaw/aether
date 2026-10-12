@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Do not hand-edit — rerun `python -m tools.maintenance.project_state` (or `run_all`) to refresh. This is meant to be the one file a new session (human or Claude) reads first to get oriented.
 
-Generated: 2026-10-12 01:03 UTC
+Generated: 2026-10-12 01:34 UTC
 Version: Aether v1.0.0
 
 ## Entry points
@@ -18,19 +18,19 @@ Version: Aether v1.0.0
 | Directory | .py files | Total lines |
 |---|---|---|
 | `./` | 12 | 5,492 |
-| `actions/` | 23 | 11,288 |
+| `actions/` | 23 | 11,316 |
 | `agent/` | 4 | 1,144 |
 | `config/` | 1 | 27 |
-| `core/` | 45 | 10,263 |
+| `core/` | 46 | 10,305 |
 | `dashboard/` | 3 | 1,093 |
 | `dev_tools/` | 1 | 78 |
 | `integrations/` | 4 | 996 |
 | `memory/` | 6 | 1,172 |
 | `plugins/` | 1 | 44 |
 | `security/` | 7 | 1,338 |
-| `tests/` | 23 | 5,886 |
+| `tests/` | 24 | 5,959 |
 | `tools/` | 18 | 2,517 |
-| **Total** | **148** | **41,338** |
+| **Total** | **150** | **41,481** |
 
 ## Modules with docstrings (top-level summary)
 
@@ -42,14 +42,14 @@ Version: Aether v1.0.0
 - `actions/desktop.py` (614 lines, 0 classes, 20 functions)
 - `actions/desktop_runner.py` (43 lines, 0 classes, 1 functions) — actions/desktop_runner.py -- child process that runs approved AI-generated desktop code.
 - `actions/dev_agent.py` (529 lines, 1 classes, 15 functions)
-- `actions/extra_tools.py` (1042 lines, 0 classes, 46 functions) — extra_tools.py — Aether v3 Extended Capabilities
+- `actions/extra_tools.py` (1048 lines, 0 classes, 46 functions) — extra_tools.py — Aether v3 Extended Capabilities
 - `actions/file_controller.py` (647 lines, 0 classes, 26 functions)
-- `actions/file_processor.py` (836 lines, 0 classes, 15 functions) — file_processor.py — Aether Universal File Processor
+- `actions/file_processor.py` (839 lines, 0 classes, 15 functions) — file_processor.py — Aether Universal File Processor
 - `actions/flight_finder.py` (348 lines, 0 classes, 9 functions)
 - `actions/game_updater.py` (1050 lines, 0 classes, 39 functions)
 - `actions/open_app.py` (358 lines, 0 classes, 8 functions)
-- `actions/osint_tools.py` (1185 lines, 0 classes, 22 functions) — osint_tools.py — Aether v3 OSINT Toolkit
-- `actions/pdf_tools.py` (110 lines, 0 classes, 6 functions) — pdf_tools.py — Aether v3 PDF Tools (PyMuPDF)
+- `actions/osint_tools.py` (1201 lines, 0 classes, 22 functions) — osint_tools.py — Aether v3 OSINT Toolkit
+- `actions/pdf_tools.py` (113 lines, 0 classes, 6 functions) — pdf_tools.py — Aether v3 PDF Tools (PyMuPDF)
 - `actions/proactive.py` (117 lines, 1 classes, 0 functions) — ProactiveEngine 2.0 - context-aware, time-aware, non-repetitive background prompts.
 - `actions/reminder.py` (332 lines, 0 classes, 9 functions)
 - `actions/screen_processor.py` (275 lines, 0 classes, 13 functions) — Aether — Screen / Camera Processor
@@ -100,6 +100,7 @@ Version: Aether v1.0.0
 - `core/plugin_watcher.py` (108 lines, 0 classes, 1 functions) — plugin_watcher.py — Aether v4.1 Plugin Hot-Reload
 - `core/plugins.py` (201 lines, 1 classes, 1 functions) — plugins.py - Aether plugin system.
 - `core/prompt_builder.py` (110 lines, 1 classes, 0 functions) — core/prompt_builder.py — Aether System Prompt Assembly
+- `core/protected_paths.py` (40 lines, 0 classes, 1 functions) — core/protected_paths.py -- files the model must never be able to read through any tool.
 - `core/quick_intents.py` (169 lines, 0 classes, 4 functions) — core/quick_intents.py -- run simple voice commands without asking the LLM.
 - `core/risk.py` (381 lines, 0 classes, 15 functions) — core/risk.py -- one declarative table of what each tool/action is allowed to do.
 - `core/safety.py` (118 lines, 2 classes, 2 functions) — safety.py — Aether v4.1 Safety & Verification Layer
@@ -109,7 +110,7 @@ Version: Aether v1.0.0
 - `core/task_scheduler.py` (105 lines, 2 classes, 0 functions) — task_scheduler.py — Aether v3 Task Scheduler (stub / minimal implementation)
 - `core/tier_router.py` (181 lines, 2 classes, 6 functions) — Tier-based LLM routing for Aether.
 - `core/tool_declarations.py` (571 lines, 0 classes, 3 functions) — core/tool_declarations.py — Aether's built-in tool schema.
-- `core/tool_dispatch.py` (461 lines, 1 classes, 0 functions) — core/tool_dispatch.py — Aether Tool Dispatch
+- `core/tool_dispatch.py` (463 lines, 1 classes, 0 functions) — core/tool_dispatch.py — Aether Tool Dispatch
 - `core/tool_router.py` (128 lines, 0 classes, 4 functions) — tool_router.py — per-turn tool subset selection for EVERYDAY-tier turns.
 - `core/tts.py` (442 lines, 4 classes, 6 functions) — Text-to-Speech engines for Aether.
 - `core/undo.py` (103 lines, 2 classes, 4 functions) — core/undo.py — Aether Undo Stack
@@ -165,6 +166,7 @@ Version: Aether v1.0.0
 - `tests/test_invariants.py` (646 lines, 1 classes, 49 functions) — Whole-codebase invariants: properties that must hold across ALL tools / ALL inputs.
 - `tests/test_live_grader.py` (117 lines, 0 classes, 17 functions) — The grader must FAIL on the real bad replies seen in logs and PASS on the good ones.
 - `tests/test_mark_lv_ports.py` (288 lines, 2 classes, 23 functions) — Tests for the MARK LV ports: EchoGuard/OutputTap, WakeGate, Gemini opt-in route.
+- `tests/test_protected_paths.py` (73 lines, 0 classes, 7 functions) — Secrets files must not be readable through any tool; port scans are bounded.
 - `tests/test_quick_intents.py` (195 lines, 0 classes, 15 functions) — Quick-intent shortcuts: the 15 live prompts plus false-positive guards.
 - `tests/test_req_check.py` (79 lines, 0 classes, 6 functions) — verify_local must flag packages that requirements.txt declares but are missing.
 - `tests/test_risk.py` (283 lines, 0 classes, 28 functions) — core/risk.py: one declarative tier table, enforced at the entry function of every tool
@@ -195,7 +197,8 @@ Version: Aether v1.0.0
 - `tools/verify_local.py` (323 lines, 1 classes, 11 functions) — tools/verify_local.py -- one-shot health check for a real Aether install.
 
 ## Recent history (git log)
-_No git history available in this checkout._
+- 7bc7b37 2026-10-11 Add Aether source tree (v11 + v12e review fixes)
+- 22768e5 2026-10-11 Refresh maintenance reports and roadmap/handoff data (2026-10-11 run_all)
 
 ## See also
 - `HEALTH_REPORT.md` — automated code health scan

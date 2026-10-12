@@ -782,6 +782,9 @@ def file_processor(parameters: dict, player=None, speak=None) -> str:
         return "No file path provided."
 
     path = Path(file_path_str)
+    from core.protected_paths import is_protected, DENIED
+    if is_protected(path):
+        return DENIED
     if not path.exists():
         return f"File not found: {file_path_str}"
     if not path.is_file():

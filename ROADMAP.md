@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap add/start/done`.
 
-Generated: 2026-10-12 01:03 UTC
+Generated: 2026-10-12 01:34 UTC
 
 ## In progress
 
@@ -13,12 +13,18 @@ Generated: 2026-10-12 01:03 UTC
 
 - [ ] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option `high`
   - Live Gemini key is inside full-folder zips. Verify git history never contained it; rotate if it did.
+- [ ] **#33** Dashboard: replace AES-CBC (no MAC, key = SHA-256 of the 6-char session code) with AES-GCM and a random per-session key `high`
+  - dashboard/server.py _aes_key/decrypt: anyone who captures one ciphertext can brute-force the ~30-bit code offline in seconds, and CBC without a MAC is malleable. Needs a matching change in the CryptoJS client in dashboard/static, so it must be tested with a real phone/browser. Over plain HTTP (no config/certs) the traffic is also sniffable.
 - [ ] **#26** Retry once (about 1s backoff) on Gemini 503/429 before falling back to local `medium`
   - Seen in two consecutive verify runs; local HARD fallback costs 2-4s more.
 - [ ] **#27** Execution timeout for AI-generated desktop code `medium`
   - exec() cannot be killed in-process; approved code with an infinite loop hangs its thread. Run in a worker with a deadline.
 - [ ] **#28** verify_local.py: flag packages declared in requirements.txt but not installed `medium`
   - watchdog and keyboard were missing for several runs, disabling plugin hot-reload and the ctrl+alt+j hotkey without any verify warning.
+- [ ] **#34** Dashboard: rate-limit the one-time connect key and bind to the LAN interface only `medium`
+  - No attempt limiting on /connect key checks; 6-char key, 10 min window. Server binds 0.0.0.0 (intentional for phone remote) - consider per-IP lockout after N bad keys.
+- [ ] **#35** Audit remaining tools that take arbitrary paths against core/protected_paths (screen_process, game_updater, reminder, send_message attachments) `medium`
+  - v12f routed extra_tool diff/word_count, file_processor and pdf_tool through is_protected(); the others were not read.
 - [ ] **#14** Route the 174 stray print() calls through core/observability.py `low`
   - Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules — actions/ is intentionally exempt (CLI-facing tool output).
 - [ ] **#16** Decide fate of the vestigial session_memory param across actions/ `low`

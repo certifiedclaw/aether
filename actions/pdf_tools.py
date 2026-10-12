@@ -7,6 +7,9 @@ from pathlib import Path
 
 
 def _open(path: str):
+    from core.protected_paths import is_protected, DENIED
+    if is_protected(path):
+        raise PermissionError(DENIED)
     try:
         import fitz
     except ImportError:

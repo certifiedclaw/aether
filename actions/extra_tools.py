@@ -389,6 +389,9 @@ def diff_files(file1: str, file2: str) -> str:
     """Show line-by-line diff of two text files."""
     try:
         import difflib
+        from core.protected_paths import is_protected, DENIED
+        if is_protected(file1) or is_protected(file2):
+            return DENIED
         a = Path(os.path.expanduser(file1)).read_text(encoding="utf-8", errors="replace").splitlines()
         b = Path(os.path.expanduser(file2)).read_text(encoding="utf-8", errors="replace").splitlines()
         diff = list(difflib.unified_diff(a, b,
@@ -430,6 +433,9 @@ def word_count(text_or_path: str) -> str:
     """Count words, lines, and characters in text or a file."""
     try:
         p = Path(os.path.expanduser(text_or_path))
+        from core.protected_paths import is_protected, DENIED
+        if p.exists() and p.is_file() and is_protected(p):
+            return DENIED
         if p.exists() and p.is_file():
             text = p.read_text(encoding="utf-8", errors="replace")
             source = p.name

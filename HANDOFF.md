@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-07 23:45 UTC
+Generated: 2026-10-12 01:34 UTC
+
+## #48 — 2026-10-12 01:34 UTC — Claude (claude.ai Claude Code session)
+
+v12e review + v12f fixes. Reviewed v12/v12b/v12d; patched: desktop validator now rejects match statements (dunder attrs via class-pattern keywords bypassed the allowlist), approval dialog shows all code (was first 1500 of up to 4000 chars), file_controller refuses the install folder, risk dialog no longer hides hotkey keys and shows 600 chars, config_io backs up a corrupt config to .corrupt, secrets_cli migrate never overwrites a different keyring value. Then: new core/protected_paths.py so extra_tool diff/word_count, file_processor and pdf_tool cannot read config/api_keys.json (was readable via the SAFE-tier diff tool; confirmed on old code), osint port_scan bounded to 1-65535 and 2048 ports per call and the range shown in the confirm dialog. Reviewed with no defect found: begin_turn wiring, tts key lookup, ui settings save path, shell=True sites (dev_agent project name is sanitised, computer_settings strings are constant). Dashboard crypto/rate-limit issues logged to the roadmap, not patched. VERIFIED: py_compile on every changed file; full pytest in a Linux sandbox 562 passed, 3 skipped, 1 failed (test_create_file_new_file_undo_removes_it, same failure on untouched v11, roadmap #30). NOT VERIFIED: anything on Windows, real Ollama/Gemini, the PyQt confirmation dialogs; ui.py and conversation_core.py were only grepped, not read line by line.
+
+**Touched:** `actions/desktop.py`, `actions/file_controller.py`, `actions/extra_tools.py`, `actions/file_processor.py`, `actions/pdf_tools.py`, `actions/osint_tools.py`, `core/risk.py`, `core/config_io.py`, `core/safety.py`, `core/tool_dispatch.py`, `core/protected_paths.py`, `tools/secrets_cli.py`, `tests/test_v12e_fixes.py`, `tests/test_protected_paths.py`, `tests/test_risk.py`
+
+**Next steps:** Run python tools\verify_local.py on Windows and upload logs\verify_report.txt; fix roadmap #30; plan the dashboard AES-GCM change with a real phone test; finish the path-tool audit (roadmap).
+
+---
 
 ## #47 — 2026-10-07 23:45 UTC — Claude (claude.ai chat)
 
