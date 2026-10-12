@@ -58,6 +58,7 @@ def test_unknown_tool_and_unlisted_action_mean_ask():
     ("dev_agent", "", ASK), ("code_helper", "build", ASK),
     ("code_helper", "write", ASK), ("code_helper", "edit", ASK),
     ("code_helper", "optimize", ASK), ("code_helper", "screen_debug", ASK),
+    ("extra_tool", "unzip", ASK),
 ])
 def test_table_values(tool, action, expected):
     assert risk.tier_for(tool, action) == expected

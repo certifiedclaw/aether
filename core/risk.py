@@ -132,7 +132,7 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
         "": SAFE,
         "run_python": ASK,                # arbitrary model-written code
         "kill_process": ASK, "batch_rename": ASK,
-        "delete_note": MONITOR, "type_text": MONITOR, "unzip": MONITOR, "zip": MONITOR,
+        "delete_note": MONITOR, "type_text": MONITOR, "unzip": ASK, "zip": MONITOR,
         "play_file": MONITOR, "set_volume": MONITOR, "focus_window": MONITOR,
         "type": MONITOR, "auto_type": MONITOR,       # keystrokes into the focused window
         "clipboard_read": MONITOR,                   # clipboard can hold secrets

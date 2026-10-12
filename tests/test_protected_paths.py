@@ -81,6 +81,29 @@ def test_zip_refuses_protected_input_and_output_paths(tmp_path):
     assert not (tmp_path / "x.zip").exists() and not (tmp_path / ".env").exists()
 
 
+def test_unzip_refuses_secrets_and_executable_plugin_destinations(tmp_path):
+    import zipfile
+    from actions import extra_tools as et
+    archive = tmp_path / "bundle.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr(".env.local", "SECRET=value")
+    destination = tmp_path / "out"
+    assert et.unzip_file(str(archive), str(destination)) == pp.DENIED
+    assert not destination.exists()
+    assert "plugin" in et.unzip_file(str(archive), str(ROOT / "plugins")).lower()
+
+
+def test_unzip_rejects_archive_path_traversal(tmp_path):
+    import zipfile
+    from actions import extra_tools as et
+    archive = tmp_path / "traversal.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("../escaped.txt", "not extracted")
+    destination = tmp_path / "out"
+    assert "unsafe path" in et.unzip_file(str(archive), str(destination)).lower()
+    assert not (tmp_path / "escaped.txt").exists()
+
+
 @pytest.mark.parametrize("ports", ["1-999999999", "0-10", "1-70000", "abc", "1-5000", "70000", ""])
 def test_port_scan_rejects_unbounded_or_invalid_ranges(ports):
     from actions import osint_tools as ot

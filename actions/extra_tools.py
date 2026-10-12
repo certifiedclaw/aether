@@ -380,11 +380,30 @@ def unzip_file(path: str, dest: str = "") -> str:
     """Extract a zip file."""
     try:
         import zipfile
+        from core.protected_paths import DENIED, is_protected
         path = os.path.expanduser(path)
         dest = os.path.expanduser(dest) if dest else str(Path(path).parent)
+        if is_protected(path):
+            return DENIED
+        dest_root = Path(dest).resolve()
+        plugin_dir = (Path(__file__).resolve().parent.parent / "plugins").resolve()
+        if is_protected(dest_root):
+            return DENIED
+        if dest_root == plugin_dir or plugin_dir in dest_root.parents:
+            return "Access denied: archives cannot be extracted into the executable plugin directory."
         with zipfile.ZipFile(path, "r") as zf:
-            zf.extractall(dest)
             names = zf.namelist()
+            for name in names:
+                target = (dest_root / name).resolve()
+                try:
+                    target.relative_to(dest_root)
+                except ValueError:
+                    return "Unzip error: archive contains an unsafe path."
+                if is_protected(target):
+                    return DENIED
+                if target == plugin_dir or plugin_dir in target.parents:
+                    return "Access denied: archives cannot install executable plugin files."
+            zf.extractall(dest_root)
         return f"📂 Extracted {len(names)} file(s) to {dest}"
     except Exception as e:
         return f"Unzip error: {e}"
