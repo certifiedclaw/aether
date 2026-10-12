@@ -1,7 +1,10 @@
 """Tools that execute model-written or model-chosen code must be approved by the USER
 first, on every path that reaches them (voice tool, agent executor, plugin)."""
 import pytest
+from pathlib import Path
+from types import SimpleNamespace
 
+import agent.executor as agent_executor
 import actions.code_helper as ch
 import actions.dev_agent as da
 import core.safety as safety
@@ -29,6 +32,79 @@ def test_confirm_action_denies_with_no_ui_callback_registered():
     if layer is None:
         pytest.skip("SafetyLayer not importable in this environment")
     assert layer.request_confirmation("anything", "d") is False
+
+
+@pytest.mark.parametrize("tool", ["generated_code", "unknown_tool"])
+def test_agent_generated_code_requires_approval_before_temp_file_or_execution(
+        monkeypatch, tool):
+    code = "print('review this exact code')"
+    seen = []
+    temp_calls = []
+    monkeypatch.setattr(agent_executor, "call_llm_text", lambda *a, **k: code)
+    monkeypatch.setattr(safety, "confirm_action",
+                        lambda op, detail="": seen.append((op, detail)) or False)
+    original_temp = agent_executor.tempfile.NamedTemporaryFile
+    monkeypatch.setattr(agent_executor.tempfile, "NamedTemporaryFile",
+                        lambda *a, **k: temp_calls.append(True) or original_temp(*a, **k))
+    monkeypatch.setattr(agent_executor.subprocess, "run",
+                        lambda *a, **k: pytest.fail("generated code must not run"))
+
+    with pytest.raises(agent_executor.GeneratedCodeNotRun, match="Cancelled"):
+        agent_executor._call_tool(tool, {"description": "inspect files"}, None)
+
+    assert len(seen) == 1
+    assert seen[0][0] == "run model-generated Python code"
+    assert "inspect files" in seen[0][1]
+    assert code in seen[0][1]
+    assert temp_calls == []
+
+
+def test_agent_generated_code_runs_only_after_approval_of_exact_code(monkeypatch):
+    code = "print('approved code')"
+    seen = []
+    executed = []
+    monkeypatch.setattr(agent_executor, "call_llm_text", lambda *a, **k: code)
+    monkeypatch.setattr(safety, "confirm_action",
+                        lambda op, detail="": seen.append((op, detail)) or True)
+
+    def run(command, **kwargs):
+        executed.append(Path(command[1]).read_text(encoding="utf-8"))
+        return SimpleNamespace(returncode=0, stdout="completed", stderr="")
+
+    monkeypatch.setattr(agent_executor.subprocess, "run", run)
+    result = agent_executor._call_tool("generated_code", {"description": "do task"}, None)
+
+    assert result == "completed"
+    assert code in seen[0][1]
+    assert executed == [code]
+
+
+def test_agent_generated_code_over_review_limit_is_never_approved_or_run(monkeypatch):
+    seen = []
+    monkeypatch.setattr(agent_executor, "call_llm_text",
+                        lambda *a, **k: "x" * (agent_executor._MAX_GENERATED_CODE + 1))
+    monkeypatch.setattr(safety, "confirm_action",
+                        lambda *a, **k: seen.append(True) or True)
+    monkeypatch.setattr(agent_executor.subprocess, "run",
+                        lambda *a, **k: pytest.fail("oversized code must not run"))
+
+    with pytest.raises(agent_executor.GeneratedCodeNotRun, match="review limit"):
+        agent_executor._call_tool("generated_code", {"description": "do task"}, None)
+    assert seen == []
+
+
+def test_agent_executor_reports_generated_code_denial_as_cancelled(monkeypatch):
+    monkeypatch.setattr(agent_executor, "create_plan", lambda goal: {
+        "steps": [{"step": 1, "tool": "generated_code", "description": "run code",
+                   "parameters": {"description": "do task"}}]})
+    monkeypatch.setattr(agent_executor, "call_llm_text", lambda *a, **k: "print('no')")
+    monkeypatch.setattr(safety, "confirm_action", lambda *a, **k: False)
+    monkeypatch.setattr(agent_executor.AgentExecutor, "_summarize",
+                        lambda *a, **k: pytest.fail("denied tasks must not be summarized as success"))
+
+    result = agent_executor.AgentExecutor().execute("goal")
+
+    assert result.startswith("Cancelled")
 
 
 # ── code_helper ──────────────────────────────────────────────────────────────
