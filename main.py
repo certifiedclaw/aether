@@ -190,8 +190,15 @@ except ImportError as _v4_err:
 
 # ── NEW v3: integration modules (lazy — graceful if not installed) ─────────
 try:
-    from integrations.langchain_tools import langchain_tool, LANGCHAIN_TOOL_DECLARATION
-    _LANGCHAIN_OK = True
+    from integrations.langchain_tools import (
+        langchain_tool, LANGCHAIN_TOOL_DECLARATION, langchain_available,
+    )
+    # The wrapper module imports fine even without langchain installed (all
+    # langchain imports are lazy), so probe the real dependencies too --
+    # otherwise the tool is offered to the model and can only fail.
+    _LANGCHAIN_OK = langchain_available()
+    if not _LANGCHAIN_OK:
+        LANGCHAIN_TOOL_DECLARATION = None
 except ImportError:
     _LANGCHAIN_OK = False
     LANGCHAIN_TOOL_DECLARATION = None
@@ -925,7 +932,14 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             threading.Thread(target=self._proactive_loop,          daemon=True).start()
             threading.Thread(target=self._system_monitor_loop,     daemon=True).start()
 
-            if stt_engine == "vosk":
+            _stdin_replay = HEADLESS and _os.environ.get(
+                "AETHER_HEADLESS_STDIN", "").strip().lower() in ("1", "true", "yes")
+            if _stdin_replay:
+                # Scripted replay: the open mic only adds noise (music/room
+                # sound transcribed as prompts, barge-in interrupting replies).
+                self.ui.write_log("SYS: Mic disabled (headless stdin replay).")
+                threading.Event().wait()   # the stdin driver ends the process
+            elif stt_engine == "vosk":
                 self._listen_vosk()
             else:
                 self._listen_whisper()

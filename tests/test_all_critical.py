@@ -2046,7 +2046,11 @@ def test_hybrid_memory_preload_thread_starts_and_completes():
     # Give the daemon thread a moment; sentence-transformers isn't
     # installed in this environment so it resolves via ImportError almost
     # immediately either way.
-    for _ in range(50):
+    # Where sentence-transformers IS installed the preload really loads the
+    # encoder and cross-encoder (seconds, longer on a cold disk), so allow
+    # generous time; it exits as soon as both flags flip.
+    deadline = time.monotonic() + 60
+    while time.monotonic() < deadline:
         if hm._enc_tried and hm._re_tried:
             break
         time.sleep(0.02)
@@ -2059,6 +2063,13 @@ def test_hybrid_memory_nonblocking_load_returns_immediately_when_locked():
     loader instead of bailing out -- that would reintroduce the exact
     stall this fix removes, just moved behind a lock."""
     hm = _make_hybrid_memory()
+    # Let the real preload thread finish first: with sentence-transformers
+    # installed it loads the encoder in the background, which would make the
+    # "didn't do the load itself" check below meaningless.
+    deadline = time.monotonic() + 60
+    while time.monotonic() < deadline and not (hm._enc_tried and hm._re_tried):
+        time.sleep(0.02)
+    hm._encoder = None
     hm._enc_tried = False  # simulate: preload hasn't finished yet
     hm._enc_lock.acquire()  # simulate: another thread is mid-load
     try:

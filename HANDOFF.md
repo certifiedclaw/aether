@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-12 01:34 UTC
+Generated: 2026-10-12 02:15 UTC
+
+## #49 — 2026-10-12 02:15 UTC — Claude Code
+
+v12f: LangChain tool no longer reports success when unavailable (real dependency probe, UNAVAILABLE result, langchain_classic import fallback); fixed 2 env-dependent hybrid_memory tests; mic disabled in headless stdin replay; tests no longer write to real logs/live_turns.jsonl
+
+**Touched:** `integrations/langchain_tools.py`, `main.py`, `core/tool_dispatch.py`, `tests/conftest.py`, `tests/test_all_critical.py`, `tests/test_v12f_fixes.py`
+
+**Next steps:** Re-run tools/verify_local.py on Windows; pip install langchain langchain-community langchain-ollama ddgs wikipedia if research agent wanted; review ui.py and conversation_core.py; roadmap #25-28, #33-35
+
+---
 
 ## #48 — 2026-10-12 01:34 UTC — Claude (claude.ai Claude Code session)
 

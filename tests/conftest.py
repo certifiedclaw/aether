@@ -44,3 +44,20 @@ def _reset_risk_state():
     risk.reset_state()
     yield
     risk.reset_state()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_live_report(tmp_path, monkeypatch):
+    """core.live_report appends to the REAL logs/live_turns.jsonl and rewrites
+    logs/live_report.md. Tests that drive a turn used to leave mock rows
+    ("15 degrees", 2 ms) in the owner's live log, which then showed up in
+    audit reads of it. Point it at tmp for every test."""
+    try:
+        import core.live_report as lr
+    except Exception:  # noqa: BLE001
+        yield
+        return
+    monkeypatch.setattr(lr, "_LOG_DIR", tmp_path / "logs", raising=False)
+    monkeypatch.setattr(lr, "_JSONL_PATH", tmp_path / "logs" / "live_turns.jsonl", raising=False)
+    monkeypatch.setattr(lr, "_REPORT_PATH", tmp_path / "logs" / "live_report.md", raising=False)
+    yield

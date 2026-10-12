@@ -376,9 +376,12 @@ class ToolDispatchMixin:
                 args=args,
             )
         return (
-            "LangChain not installed.\n"
-            "Fix: pip install langchain langchain-community "
-            "langchain-ollama duckduckgo-search wikipedia"
+            "UNAVAILABLE: the langchain tool is not usable on this machine "
+            "(LangChain or one of its dependencies is missing). Nothing was "
+            "searched. Do NOT say you researched anything; answer from your "
+            "own knowledge and say it is unverified, or use web_search.\n"
+            "Owner fix: pip install langchain langchain-community "
+            "langchain-ollama ddgs wikipedia"
         )
 
     # ── NEW v3: Open Interpreter ───────────────────────────────

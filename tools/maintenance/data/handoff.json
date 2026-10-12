@@ -1,5 +1,5 @@
 {
-  "next_id": 49,
+  "next_id": 50,
   "entries": [
     {
       "id": 1,
@@ -627,6 +627,21 @@
         "tests/test_risk.py"
       ],
       "next_steps": "Run python tools\\verify_local.py on Windows and upload logs\\verify_report.txt; fix roadmap #30; plan the dashboard AES-GCM change with a real phone test; finish the path-tool audit (roadmap)."
+    },
+    {
+      "id": 49,
+      "timestamp": "2026-10-12 02:15 UTC",
+      "by": "Claude Code",
+      "summary": "v12f: LangChain tool no longer reports success when unavailable (real dependency probe, UNAVAILABLE result, langchain_classic import fallback); fixed 2 env-dependent hybrid_memory tests; mic disabled in headless stdin replay; tests no longer write to real logs/live_turns.jsonl",
+      "files": [
+        "integrations/langchain_tools.py",
+        "main.py",
+        "core/tool_dispatch.py",
+        "tests/conftest.py",
+        "tests/test_all_critical.py",
+        "tests/test_v12f_fixes.py"
+      ],
+      "next_steps": "Re-run tools/verify_local.py on Windows; pip install langchain langchain-community langchain-ollama ddgs wikipedia if research agent wanted; review ui.py and conversation_core.py; roadmap #25-28, #33-35"
     }
   ]
 }

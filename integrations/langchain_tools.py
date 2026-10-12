@@ -29,6 +29,80 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+# ── Availability probe ────────────────────────────────────────────────────
+# `import integrations.langchain_tools` only proves THIS file imports (every
+# langchain import below is lazy). main.py used that to print "LangChain ✓"
+# and to offer the tool to the model even when langchain was missing or too
+# new for the ReAct imports -- so the model called it, got an install hint,
+# and then answered "based on the research" with no research done.
+
+UNAVAILABLE_PREFIX = "UNAVAILABLE"
+
+
+def _unavailable(what: str, missing: str = "") -> str:
+    """Tool result for a LangChain feature that cannot run. Written for the
+    model to read: it must not claim the feature produced anything."""
+    detail = f" (missing: {missing})" if missing else ""
+    return (
+        f"{UNAVAILABLE_PREFIX}: LangChain {what} could not run{detail}. "
+        "Nothing was searched or fetched. Do NOT say you researched anything; "
+        "answer from your own knowledge and say it is unverified, or use the "
+        "web_search tool instead."
+    )
+
+
+def _agent_imports():
+    """(AgentExecutor, create_react_agent, hub-or-None). langchain >= 1.0 moved
+    the classic agent API to `langchain_classic`; accept either layout."""
+    try:
+        from langchain.agents import AgentExecutor, create_react_agent
+    except ImportError:
+        from langchain_classic.agents import AgentExecutor, create_react_agent
+    try:
+        from langchain import hub
+    except ImportError:
+        try:
+            from langchain_classic import hub
+        except ImportError:
+            hub = None
+    return AgentExecutor, create_react_agent, hub
+
+
+def _prompt_template_cls():
+    try:
+        from langchain_core.prompts import PromptTemplate
+    except ImportError:
+        from langchain.prompts import PromptTemplate
+    return PromptTemplate
+
+
+def missing_dependencies() -> list[str]:
+    """Names of what the research agent needs but cannot import right now."""
+    import importlib.util as _u
+    missing: list[str] = []
+    for mod, label in (("langchain_community", "langchain-community"),
+                       ("wikipedia", "wikipedia")):
+        if _u.find_spec(mod) is None:
+            missing.append(label)
+    if _u.find_spec("ddgs") is None and _u.find_spec("duckduckgo_search") is None:
+        missing.append("ddgs")
+    if _u.find_spec("langchain_ollama") is None and _u.find_spec("langchain_community") is None:
+        missing.append("langchain-ollama")
+    try:
+        _agent_imports()
+    except ImportError:
+        missing.append("langchain (ReAct agent API)")
+    return missing
+
+
+def langchain_available() -> bool:
+    """True only if the research agent can really be built."""
+    try:
+        return not missing_dependencies()
+    except Exception:
+        return False
+
+
 # ── Lazy Ollama LLM (shared across all LangChain calls) ───────────────────
 
 @lru_cache(maxsize=1)
@@ -70,7 +144,7 @@ def lc_web_search(query: str, num_results: int = 5) -> str:
         tool = DuckDuckGoSearchRun()
         return tool.run(query)
     except ImportError:
-        return "Install: pip install langchain-community duckduckgo-search"
+        return _unavailable("tool", "langchain-community duckduckgo-search")
     except Exception as e:
         return f"Web search error: {e}"
 
@@ -87,7 +161,7 @@ def lc_wikipedia(query: str, sentences: int = 5) -> str:
         ))
         return wiki.run(query)
     except ImportError:
-        return "Install: pip install langchain-community wikipedia"
+        return _unavailable("tool", "langchain-community wikipedia")
     except Exception as e:
         return f"Wikipedia error: {e}"
 
@@ -141,7 +215,7 @@ def lc_summarize(text: str, style: str = "concise") -> str:
         return chain.invoke({"input_documents": docs})["output_text"]
 
     except ImportError:
-        return "Install: pip install langchain"
+        return _unavailable("tool", "langchain")
     except Exception as e:
         return f"Summarisation error: {e}"
 
@@ -159,11 +233,10 @@ def lc_research_agent(task: str, extra_context: str = "") -> str:
     budget isn't consumed.
     """
     try:
-        from langchain.agents import AgentExecutor, create_react_agent
+        AgentExecutor, create_react_agent, hub = _agent_imports()
         from langchain_community.tools import DuckDuckGoSearchRun, WikipediaQueryRun
         from langchain_community.utilities import WikipediaAPIWrapper
-        from langchain.prompts import PromptTemplate
-        from langchain import hub
+        PromptTemplate = _prompt_template_cls()
 
         llm   = _llm_from_config()
         try:
@@ -184,13 +257,20 @@ def lc_research_agent(task: str, extra_context: str = "") -> str:
         ]
 
         # Use the standard ReAct prompt from LangChain hub, fall back to inline
-        try:
-            prompt = hub.pull("hwchase17/react")
-        except Exception:
+        prompt = None
+        if hub is not None:
+            try:
+                prompt = hub.pull("hwchase17/react")
+            except Exception:
+                prompt = None
+        if prompt is None:
             prompt = PromptTemplate.from_template(
                 "Answer the following question using the tools provided.\n\n"
                 "Tools: {tools}\n\nTool names: {tool_names}\n\n"
-                "Question: {input}\n\nScratchpad:\n{agent_scratchpad}"
+                "Use this format:\nThought: ...\nAction: one of [{tool_names}]\n"
+                "Action Input: ...\nObservation: ...\n(repeat) \n"
+                "Final Answer: ...\n\n"
+                "Question: {input}\n\nThought:{agent_scratchpad}"
             )
 
         agent    = create_react_agent(llm, tools, prompt)
@@ -203,11 +283,12 @@ def lc_research_agent(task: str, extra_context: str = "") -> str:
         result    = executor.invoke({"input": full_task})
         return result.get("output", str(result))
 
-    except ImportError:
-        return "Install: pip install langchain langchain-community duckduckgo-search wikipedia"
+    except ImportError as e:
+        logger.warning("LangChain research agent unavailable: %s", e)
+        return _unavailable("research agent", ", ".join(missing_dependencies()) or str(e))
     except Exception as e:
         logger.warning("LangChain ReAct agent error: %s", e)
-        return f"Research agent error: {e}"
+        return _unavailable("research agent", f"error: {e}")
 
 
 # ── Smart context compression (replaces smart_context.compress_if_needed) ─
@@ -300,7 +381,7 @@ def lc_load_document(path: str) -> str:
             docs = TextLoader(str(p), encoding="utf-8", autodetect_encoding=True).load()
         return "\n\n".join(d.page_content for d in docs)
     except ImportError:
-        return "Install: pip install langchain-community"
+        return _unavailable("tool", "langchain-community")
     except Exception as e:
         return f"Load error: {e}"
 
