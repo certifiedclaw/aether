@@ -134,6 +134,9 @@ def _resource_snapshot() -> None:
         pass
 
 
+ENV_BLOCKER: str | None = None   # set by check_env(): a problem that makes the live replay pointless
+
+
 def check_env() -> None:
     section("1. ENVIRONMENT")
     line(f"Python   : {sys.version.split()[0]}  ({sys.executable})")
@@ -148,31 +151,54 @@ def check_env() -> None:
     line("Requirements :")
     for _l in req_check.render(req_check.missing_requirements(ROOT / "requirements.txt")):
         line(_l)
+    global ENV_BLOCKER
+    ENV_BLOCKER = None
     cfg_path = ROOT / "config" / "api_keys.json"
     line("Config    :")
+    cfg: dict = {}
     try:
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        if not isinstance(cfg, dict):
+            raise ValueError("not a JSON object")
         for k in SAFE_CONFIG_KEYS:
             line(f"  {k:20s} {cfg.get(k, '(default)')}")
+    except FileNotFoundError:
+        cfg = {}
+        ENV_BLOCKER = (f"config/{cfg_path.name} is MISSING. Zips leave it out on purpose (it holds your keys): "
+                       "copy it over from your previous Aether folder. Aether is running on built-in defaults.")
+        line(f"  !! {ENV_BLOCKER}")
+    except Exception as e:  # noqa: BLE001
+        cfg = {}
+        line(f"  could not read {cfg_path.name}: {type(e).__name__}")
+    try:                               # where each key comes from -- shown even with no config file
         from core import credentials as _cred
         for _n in _cred.SECRET_NAMES:
             _src = _cred.source_of(_n, cfg)
             line(f"  {_n:20s} {'set (' + _src + ')' if _src else 'not set'}")
     except Exception as e:  # noqa: BLE001
-        line(f"  could not read {cfg_path.name}: {type(e).__name__}")
+        line(f"  (could not check keys: {type(e).__name__})")
     line("Ollama   :")
     try:
         with urllib.request.urlopen("http://localhost:11434/api/tags", timeout=4) as r:
             models = [m.get("name") for m in json.load(r).get("models", [])]
         line(f"  reachable, {len(models)} model(s): {', '.join(models) or 'none'}")
-        try:
-            want = json.loads(cfg_path.read_text(encoding="utf-8")).get("llm_model")
+        if str(cfg.get("llm_provider", "ollama")).lower() == "ollama":
+            try:
+                from core.llm_client import _DEFAULTS as _D
+                default_model = _D.get("llm_model", "")
+            except Exception:  # noqa: BLE001
+                default_model = ""
+            want = cfg.get("llm_model") or default_model
             if want and want not in models and f"{want}:latest" not in models:
-                line(f"  !! configured llm_model '{want}' is NOT pulled -- run: ollama pull {want}")
-        except Exception:  # noqa: BLE001
-            pass
+                close = [m for m in models if m and m.split(":")[0] == want.split(":")[0]]
+                hint = (f"installed variants: {', '.join(close)} -- set llm_model to one of them" if close
+                        else f"run: ollama pull {want}")
+                msg = f"the model Aether will use, '{want}', is NOT installed ({hint})"
+                line(f"  !! {msg}")
+                ENV_BLOCKER = ENV_BLOCKER or msg
     except Exception as e:  # noqa: BLE001
         line(f"  NOT reachable ({type(e).__name__}) -- start Ollama before the replay")
+        ENV_BLOCKER = ENV_BLOCKER or "Ollama is not reachable"
     _resource_snapshot()
     others = _other_aether_processes()
     if others:
@@ -254,7 +280,7 @@ class _MemoryIsolation:
         return False
 
 
-def check_replay(timeout: int, isolate: bool = True) -> bool:
+def check_replay(timeout: int, isolate: bool = True, force: bool = False) -> bool:
     """Run the headless replay and grade it. Returns True if every check passed."""
     cases = None
     prompts = PROMPTS
@@ -262,6 +288,11 @@ def check_replay(timeout: int, isolate: bool = True) -> bool:
         cases = live_grader.load_cases()
         prompts = live_grader.write_prompts(cases, ROOT / "logs" / "live_prompts_v3.txt")
     section(f"4. HEADLESS REPLAY ({len(cases) if cases else 15} live prompts)")
+    if ENV_BLOCKER and not force:
+        line(f"SKIPPED: {ENV_BLOCKER}")
+        line("Fix that and re-run (or pass --force-replay to run anyway). Without it every turn fails and "
+             "the run just waits for the timeout.")
+        return False
     if not prompts.exists():
         line(f"missing {prompts} -- skipped")
         return True
@@ -311,7 +342,8 @@ def main() -> int:
     check_pytest()
     ok = True
     if "--skip-replay" not in args:
-        ok = check_replay(timeout, isolate="--keep-memory" not in args)
+        ok = check_replay(timeout, isolate="--keep-memory" not in args,
+                          force="--force-replay" in args)
     REPORT.parent.mkdir(exist_ok=True)
     REPORT.write_text("\n".join(out), encoding="utf-8")
     print(f"\nDone. Upload this file: {REPORT}")

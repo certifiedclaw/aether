@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-10-12T01:34:17.030919+00:00",
+    "generated": "2026-10-12T21:05:11.933795+00:00",
     "pip_packages": 46
   },
   "pip": [
@@ -186,7 +186,7 @@
     },
     {
       "package": "langchain",
-      "latest": "1.4.4",
+      "latest": "1.4.5",
       "note": "Fast-moving API; pin a version once Aether's LangChain tool wiring is stable."
     },
     {

@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap add/start/done`.
 
-Generated: 2026-10-12 01:34 UTC
+Generated: 2026-10-12 21:05 UTC
 
 ## In progress
 
@@ -15,6 +15,8 @@ Generated: 2026-10-12 01:34 UTC
   - Live Gemini key is inside full-folder zips. Verify git history never contained it; rotate if it did.
 - [ ] **#33** Dashboard: replace AES-CBC (no MAC, key = SHA-256 of the 6-char session code) with AES-GCM and a random per-session key `high`
   - dashboard/server.py _aes_key/decrypt: anyone who captures one ciphertext can brute-force the ~30-bit code offline in seconds, and CBC without a MAC is malleable. Needs a matching change in the CryptoJS client in dashboard/static, so it must be tested with a real phone/browser. Over plain HTTP (no config/certs) the traffic is also sniffable.
+- [ ] **#36** Plugins: write down the trust model (plugins/ *.py are hot-loaded and run fully trusted) and consider an explicit enable/hash allowlist `high`
+  - Raised by an external audit of the v12 tree. core/plugins.py exec_module's every plugins/*.py; file_controller now refuses the install folder, so the model cannot drop one in, but nothing else vets them.
 - [ ] **#26** Retry once (about 1s backoff) on Gemini 503/429 before falling back to local `medium`
   - Seen in two consecutive verify runs; local HARD fallback costs 2-4s more.
 - [ ] **#27** Execution timeout for AI-generated desktop code `medium`
@@ -25,6 +27,8 @@ Generated: 2026-10-12 01:34 UTC
   - No attempt limiting on /connect key checks; 6-char key, 10 min window. Server binds 0.0.0.0 (intentional for phone remote) - consider per-IP lockout after N bad keys.
 - [ ] **#35** Audit remaining tools that take arbitrary paths against core/protected_paths (screen_process, game_updater, reminder, send_message attachments) `medium`
   - v12f routed extra_tool diff/word_count, file_processor and pdf_tool through is_protected(); the others were not read.
+- [ ] **#37** run_python is not a sandbox: decide keep (ASK + full-code dialog + scrubbed env, as of v12g) or replace with a real isolation layer `medium`
+  - v12g: same interpreter, -I, scratch cwd, secret env stripped, timeout clamped 1-60s, dialog shows whole code. Still runs as the user.
 - [ ] **#14** Route the 174 stray print() calls through core/observability.py `low`
   - Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules — actions/ is intentionally exempt (CLI-facing tool output).
 - [ ] **#16** Decide fate of the vestigial session_memory param across actions/ `low`

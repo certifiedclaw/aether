@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-12 02:15 UTC
+Generated: 2026-10-12 21:05 UTC
+
+## #50 — 2026-10-12 21:05 UTC — Claude (claude.ai Claude Code session)
+
+v12g. Windows verify run 1 failed every turn with 'Ollama HTTP error: 404': the new folder had no config/api_keys.json (zips omit it), so the default model 'llama3.2' (= llama3.2:latest) was used while only llama3.2:3b is pulled; the replay then waited 120s per prompt and timed out. Fixes: streaming path now raises the helpful 'model not found, installed variants: ...' message (was a bare 404); verify_local reports a missing config as a blocker, still reports where each key comes from without a config file (this was the third pytest failure), checks the model Aether will ACTUALLY use (default included), and skips the replay instead of waiting out the timeout (--force-replay overrides). run_python hardened (sys.executable -I, scratch cwd, secret-looking env vars stripped, timeout clamped 1-60s, docstring no longer claims a sandbox) and approval dialogs show code/command/script params in full (up to 4000 chars). Mic-in-replay was already fixed in v12f. VERIFIED: py_compile; full pytest in a Linux sandbox. NOT VERIFIED: Windows/real Ollama for these changes.
+
+**Touched:** `core/llm_client.py`, `tools/verify_local.py`, `actions/extra_tools.py`, `core/risk.py`, `tests/test_v12g_fixes.py`
+
+**Next steps:** Re-run python tools\verify_local.py with config\api_keys.json in place; test a confirmation dialog in the real UI; decide on plugin trust model and dashboard (#33-34).
+
+---
 
 ## #49 — 2026-10-12 02:15 UTC — Claude Code
 

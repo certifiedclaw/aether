@@ -155,6 +155,27 @@ _config_cache: dict | None = None
 _config_mtime: float | None = None
 
 
+def _ollama_missing_model_message(model: str, url: str) -> str:
+    """Actionable text for an Ollama 404: which model, what is installed, how to fix it.
+
+    A bare name like 'llama3.2' means 'llama3.2:latest' to Ollama, so having only
+    'llama3.2:3b' pulled is a 404 -- the case that scrambled a whole verify run."""
+    msg = f"Model '{model}' not found in Ollama."
+    try:
+        r = requests.get(f"{url}/api/tags", timeout=3)
+        installed = [m.get("name", "") for m in r.json().get("models", [])]
+    except Exception:  # noqa: BLE001 - the hint is best-effort
+        installed = []
+    if installed:
+        base = model.split(":")[0]
+        close = [n for n in installed if n.split(":")[0] == base]
+        if close:
+            msg += f" Installed variants: {', '.join(close)} -- set llm_model to one of them in config/api_keys.json."
+        else:
+            msg += f" Installed: {', '.join(installed)}."
+    return msg + f" Or run: ollama pull {model}"
+
+
 def _load_config() -> dict:
     """Reads config/api_keys.json, cached and invalidated on file change.
 
@@ -545,10 +566,7 @@ def call_llm(
             body   = e.response.text[:400]
             print(f"[LLM] HTTPError: {status} — {body}")
             if status == 404 or "model not found" in body.lower() or "pull" in body.lower():
-                raise RuntimeError(
-                    f"Model '{model}' not found in Ollama.\n"
-                    f"Fix: ollama pull {model}"
-                )
+                raise RuntimeError(_ollama_missing_model_message(model, url))
             raise RuntimeError(f"Ollama HTTP error: {status}")
         except Exception as e:
             print(f"[LLM] Unexpected error: {type(e).__name__}: {e}")
@@ -1157,6 +1175,8 @@ def call_llm_stream(
     except requests.exceptions.Timeout:
         raise RuntimeError("Ollama stream timed out.")
     except requests.exceptions.HTTPError as e:
+        if e.response is not None and e.response.status_code == 404:
+            raise RuntimeError(_ollama_missing_model_message(model, url))
         raise RuntimeError(f"Ollama HTTP error: {e.response.status_code}")
     except Exception as e:
         print(f"[LLM] Stream error: {type(e).__name__}: {e}")

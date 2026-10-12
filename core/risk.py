@@ -210,6 +210,9 @@ def tier_for(tool: str, action: str = "") -> str:
     return strictest(base, *[t for t in extra if t is not None])
 
 
+# parameters that are code/commands the user is approving: show them (almost) whole
+_FULL_SHOW_PARAMS = frozenset({"code", "command", "script"})
+_FULL_SHOW_LIMIT = 4000
 _SECRETISH = re.compile(r"pass(word|phrase)?|secret|token|api_?key|credential|^pin$", re.I)
 
 
@@ -219,8 +222,9 @@ def _detail(tool: str, action: str, params: dict) -> str:
         if k == "action":
             continue
         shown = "(hidden)" if _SECRETISH.search(str(k)) else str(v)
-        if len(shown) > 600:
-            shown = shown[:600] + "…"
+        limit = _FULL_SHOW_LIMIT if k in _FULL_SHOW_PARAMS else 600
+        if len(shown) > limit:
+            shown = shown[:limit] + "…  [truncated: " + str(len(str(v))) + " chars in all]"
         lines.append(f"  {k}: {shown}")
     return "\n".join(lines[:12])
 
