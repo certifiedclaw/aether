@@ -1,5 +1,5 @@
 {
-  "next_id": 36,
+  "next_id": 38,
   "items": [
     {
       "id": 1,
@@ -313,6 +313,24 @@
       "priority": "medium",
       "status": "backlog",
       "notes": "v12f routed extra_tool diff/word_count, file_processor and pdf_tool through is_protected(); the others were not read.",
+      "created": "2026-10-12",
+      "updated": "2026-10-12"
+    },
+    {
+      "id": 36,
+      "title": "Plugins: write down the trust model (plugins/ *.py are hot-loaded and run fully trusted) and consider an explicit enable/hash allowlist",
+      "priority": "high",
+      "status": "backlog",
+      "notes": "Raised by an external audit of the v12 tree. core/plugins.py exec_module's every plugins/*.py; file_controller now refuses the install folder, so the model cannot drop one in, but nothing else vets them.",
+      "created": "2026-10-12",
+      "updated": "2026-10-12"
+    },
+    {
+      "id": 37,
+      "title": "run_python is not a sandbox: decide keep (ASK + full-code dialog + scrubbed env, as of v12g) or replace with a real isolation layer",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "v12g: same interpreter, -I, scratch cwd, secret env stripped, timeout clamped 1-60s, dialog shows whole code. Still runs as the user.",
       "created": "2026-10-12",
       "updated": "2026-10-12"
     }

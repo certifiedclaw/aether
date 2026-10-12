@@ -3,7 +3,7 @@
   "large_files": [
     {
       "file": "main.py",
-      "lines": 1082
+      "lines": 1096
     },
     {
       "file": "ui.py",
@@ -11,7 +11,7 @@
     },
     {
       "file": "actions/extra_tools.py",
-      "lines": 1047
+      "lines": 1064
     },
     {
       "file": "actions/browser_control.py",
@@ -47,7 +47,7 @@
     },
     {
       "file": "tests/test_all_critical.py",
-      "lines": 2082
+      "lines": 2093
     },
     {
       "file": "dashboard/server.py",
@@ -55,7 +55,7 @@
     },
     {
       "file": "core/llm_client.py",
-      "lines": 1163
+      "lines": 1183
     },
     {
       "file": "core/conversation_core.py",
@@ -67,19 +67,19 @@
       "file": "main.py",
       "function": "main",
       "lines": 137,
-      "at_line": 942
+      "at_line": 956
     },
     {
       "file": "main.py",
       "function": "run",
-      "lines": 108,
-      "at_line": 827
+      "lines": 115,
+      "at_line": 834
     },
     {
       "file": "main.py",
       "function": "runner",
       "lines": 86,
-      "at_line": 990
+      "at_line": 1004
     },
     {
       "file": "ui.py",
@@ -139,7 +139,7 @@
       "file": "actions/extra_tools.py",
       "function": "run_extra_tool",
       "lines": 140,
-      "at_line": 907
+      "at_line": 924
     },
     {
       "file": "actions/dev_agent.py",
@@ -246,20 +246,20 @@
     {
       "file": "core/llm_client.py",
       "function": "call_llm",
-      "lines": 112,
-      "at_line": 485
+      "lines": 109,
+      "at_line": 506
     },
     {
       "file": "core/llm_client.py",
       "function": "_stream_openai_once",
       "lines": 159,
-      "at_line": 680
+      "at_line": 698
     },
     {
       "file": "core/llm_client.py",
       "function": "call_llm_stream",
-      "lines": 158,
-      "at_line": 1005
+      "lines": 160,
+      "at_line": 1023
     },
     {
       "file": "core/echo.py",
@@ -548,7 +548,7 @@
     },
     {
       "file": "tools/verify_local.py",
-      "line": 317
+      "line": 349
     },
     {
       "file": "tools/fix_local_state.py",
@@ -780,15 +780,7 @@
     },
     {
       "file": "core/llm_client.py",
-      "line": 237
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 239
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 242
+      "line": 258
     },
     {
       "file": "core/llm_client.py",
@@ -796,19 +788,23 @@
     },
     {
       "file": "core/llm_client.py",
-      "line": 267
+      "line": 263
     },
     {
       "file": "core/llm_client.py",
-      "line": 270
+      "line": 281
     },
     {
       "file": "core/llm_client.py",
-      "line": 277
+      "line": 288
     },
     {
       "file": "core/llm_client.py",
-      "line": 280
+      "line": 291
+    },
+    {
+      "file": "core/llm_client.py",
+      "line": 298
     },
     {
       "file": "core/llm_client.py",
@@ -816,47 +812,51 @@
     },
     {
       "file": "core/llm_client.py",
-      "line": 321
+      "line": 322
     },
     {
       "file": "core/llm_client.py",
-      "line": 324
+      "line": 342
     },
     {
       "file": "core/llm_client.py",
-      "line": 341
+      "line": 345
     },
     {
       "file": "core/llm_client.py",
-      "line": 344
+      "line": 362
     },
     {
       "file": "core/llm_client.py",
-      "line": 419
+      "line": 365
     },
     {
       "file": "core/llm_client.py",
-      "line": 421
+      "line": 440
     },
     {
       "file": "core/llm_client.py",
-      "line": 524
+      "line": 442
     },
     {
       "file": "core/llm_client.py",
-      "line": 546
+      "line": 545
     },
     {
       "file": "core/llm_client.py",
-      "line": 554
+      "line": 567
     },
     {
       "file": "core/llm_client.py",
-      "line": 1149
+      "line": 572
     },
     {
       "file": "core/llm_client.py",
-      "line": 1162
+      "line": 1167
+    },
+    {
+      "file": "core/llm_client.py",
+      "line": 1182
     },
     {
       "file": "core/headless_ui.py",
@@ -1206,7 +1206,7 @@
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-10-12T01:34:08.192378+00:00",
-    "files_scanned": 150
+    "generated": "2026-10-12T21:05:08.302368+00:00",
+    "files_scanned": 152
   }
 }

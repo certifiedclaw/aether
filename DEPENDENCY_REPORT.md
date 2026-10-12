@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.dep_watcher` (or `run_all`) to refresh. Requires internet access.
 
-Generated: 2026-10-12T01:03:26.906801+00:00
+Generated: 2026-10-12T21:05:11.933795+00:00
 
 Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 3 versions behind" — it reports the latest available so you can decide whether to pin and bump.
 
@@ -54,7 +54,7 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 | watchdog | 6.0.0 |  |
 | keyboard | 0.13.5 |  |
 | python-docx | 1.2.0 |  |
-| langchain | 1.4.4 | Fast-moving API; pin a version once Aether's LangChain tool wiring is stable. |
+| langchain | 1.4.5 | Fast-moving API; pin a version once Aether's LangChain tool wiring is stable. |
 | langchain-community | 0.4.2 |  |
 | langchain-ollama | 1.1.0 |  |
 | llama-index | 0.14.25 | Splits into many llama-index-* subpackages frequently; check changelog before bumping. |
