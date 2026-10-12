@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-12 21:58 UTC
+Generated: 2026-10-12 23:13 UTC
+
+## #52 — 2026-10-12 23:13 UTC — Codex
+
+Pushed six focused security fixes: code-helper write approvals and protected paths, Python approval-size limit, dotenv protection, archive source/extraction guards, and dashboard loopback/TLS binding. Combined regression checks passed 84 tests with 1 skipped; three unrelated subprocess tests were blocked by sandbox temp permissions.
+
+**Touched:** `actions/code_helper.py`, `actions/extra_tools.py`, `core/risk.py`, `core/protected_paths.py`, `dashboard/server.py`, `tests/test_execution_gates.py`, `tests/test_risk.py`, `tests/test_protected_paths.py`, `tests/test_v12g_fixes.py`, `tests/test_dashboard_security.py`
+
+**Next steps:** Review and merge the pushed codex/security-audit-fixes branch; continue remaining security audit findings and verify GUI/network behavior on the target Windows install.
+
+---
 
 ## #51 — 2026-10-12 21:58 UTC — Claude Code
 

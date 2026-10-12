@@ -1,5 +1,5 @@
 {
-  "next_id": 52,
+  "next_id": 53,
   "entries": [
     {
       "id": 1,
@@ -673,6 +673,25 @@
         "tests/test_risk_task.py"
       ],
       "next_steps": "Bind/HTTPS option (new roadmap item); plugin trust model #36; review ui.py and conversation_core.py line by line"
+    },
+    {
+      "id": 52,
+      "timestamp": "2026-10-12 23:13 UTC",
+      "by": "Codex",
+      "summary": "Pushed six focused security fixes: code-helper write approvals and protected paths, Python approval-size limit, dotenv protection, archive source/extraction guards, and dashboard loopback/TLS binding. Combined regression checks passed 84 tests with 1 skipped; three unrelated subprocess tests were blocked by sandbox temp permissions.",
+      "files": [
+        "actions/code_helper.py",
+        "actions/extra_tools.py",
+        "core/risk.py",
+        "core/protected_paths.py",
+        "dashboard/server.py",
+        "tests/test_execution_gates.py",
+        "tests/test_risk.py",
+        "tests/test_protected_paths.py",
+        "tests/test_v12g_fixes.py",
+        "tests/test_dashboard_security.py"
+      ],
+      "next_steps": "Review and merge the pushed codex/security-audit-fixes branch; continue remaining security audit findings and verify GUI/network behavior on the target Windows install."
     }
   ]
 }
