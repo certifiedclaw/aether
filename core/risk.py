@@ -153,7 +153,10 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
     # ── enforced INSIDE the function (richer dialog); see SELF_GATED ─────────
     "computer_settings": {"shutdown": ASK, "restart": ASK, "*": SAFE},
     "desktop_control":   {"task": ASK, "*": SAFE},
-    "code_helper":       {"run": ASK, "build": ASK, "*": SAFE},
+    "code_helper":       {
+        "run": ASK, "build": ASK, "write": ASK, "edit": ASK,
+        "optimize": ASK, "screen_debug": ASK, "*": SAFE,
+    },
     "dev_agent":         ASK,
     "osint_lookup":      {"port_scan": ASK, "breach_check": ASK, "*": MONITOR},
 }

@@ -39,7 +39,7 @@ def test_strictest_ordering_and_invalid_values_fail_closed():
 def test_unknown_tool_and_unlisted_action_mean_ask():
     assert risk.tier_for("brand_new_tool", "x") == ASK
     assert risk.tier_for("file_controller", "format_c_drive") == ASK     # no "*" default
-    assert risk.tier_for("code_helper", "write") == SAFE                 # "*" default
+    assert risk.tier_for("code_helper", "write") == ASK
     assert risk.tier_for("send_message", "") == ASK
     assert risk.tier_for("  EXTRA_tool".strip(), " Run_Python ") in (ASK,)  # case/space-insensitive action
     assert risk.tier_for("extra_tool", " Run_Python ") == ASK
@@ -56,6 +56,8 @@ def test_unknown_tool_and_unlisted_action_mean_ask():
     ("browser_control", "go_to", MONITOR), ("browser_control", "get_text", SAFE),
     ("computer_settings", "shutdown", ASK), ("desktop_control", "task", ASK),
     ("dev_agent", "", ASK), ("code_helper", "build", ASK),
+    ("code_helper", "write", ASK), ("code_helper", "edit", ASK),
+    ("code_helper", "optimize", ASK), ("code_helper", "screen_debug", ASK),
 ])
 def test_table_values(tool, action, expected):
     assert risk.tier_for(tool, action) == expected
