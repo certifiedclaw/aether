@@ -51,7 +51,7 @@
     },
     {
       "file": "dashboard/server.py",
-      "lines": 965
+      "lines": 1044
     },
     {
       "file": "core/llm_client.py",
@@ -59,7 +59,7 @@
     },
     {
       "file": "core/conversation_core.py",
-      "lines": 906
+      "lines": 910
     }
   ],
   "large_functions": [
@@ -229,13 +229,13 @@
       "file": "dashboard/server.py",
       "function": "_ensure_network_access_windows",
       "lines": 120,
-      "at_line": 130
+      "at_line": 189
     },
     {
       "file": "dashboard/server.py",
       "function": "_register_auth_routes",
-      "lines": 98,
-      "at_line": 540
+      "lines": 115,
+      "at_line": 602
     },
     {
       "file": "core/diagnostics.py",
@@ -282,7 +282,7 @@
     {
       "file": "core/conversation_core.py",
       "function": "_process_message_inner",
-      "lines": 387,
+      "lines": 391,
       "at_line": 418
     },
     {
@@ -656,39 +656,31 @@
     },
     {
       "file": "dashboard/server.py",
-      "line": 208
+      "line": 267
     },
     {
       "file": "dashboard/server.py",
-      "line": 220
+      "line": 279
     },
     {
       "file": "dashboard/server.py",
-      "line": 221
+      "line": 280
     },
     {
       "file": "dashboard/server.py",
-      "line": 235
+      "line": 294
     },
     {
       "file": "dashboard/server.py",
-      "line": 236
+      "line": 295
     },
     {
       "file": "dashboard/server.py",
-      "line": 238
+      "line": 297
     },
     {
       "file": "dashboard/server.py",
-      "line": 239
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 241
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 272
+      "line": 298
     },
     {
       "file": "dashboard/server.py",
@@ -696,67 +688,75 @@
     },
     {
       "file": "dashboard/server.py",
-      "line": 302
+      "line": 331
     },
     {
       "file": "dashboard/server.py",
-      "line": 315
+      "line": 359
     },
     {
       "file": "dashboard/server.py",
-      "line": 317
+      "line": 361
     },
     {
       "file": "dashboard/server.py",
-      "line": 326
+      "line": 374
     },
     {
       "file": "dashboard/server.py",
-      "line": 328
+      "line": 376
     },
     {
       "file": "dashboard/server.py",
-      "line": 338
+      "line": 385
     },
     {
       "file": "dashboard/server.py",
-      "line": 340
+      "line": 387
     },
     {
       "file": "dashboard/server.py",
-      "line": 342
+      "line": 397
     },
     {
       "file": "dashboard/server.py",
-      "line": 343
+      "line": 399
     },
     {
       "file": "dashboard/server.py",
-      "line": 499
+      "line": 401
     },
     {
       "file": "dashboard/server.py",
-      "line": 883
+      "line": 402
     },
     {
       "file": "dashboard/server.py",
-      "line": 888
+      "line": 561
     },
     {
       "file": "dashboard/server.py",
-      "line": 889
+      "line": 962
     },
     {
       "file": "dashboard/server.py",
-      "line": 909
+      "line": 967
     },
     {
       "file": "dashboard/server.py",
-      "line": 910
+      "line": 968
     },
     {
       "file": "dashboard/server.py",
-      "line": 951
+      "line": 988
+    },
+    {
+      "file": "dashboard/server.py",
+      "line": 989
+    },
+    {
+      "file": "dashboard/server.py",
+      "line": 1030
     },
     {
       "file": "core/diagnostics.py",
@@ -1206,7 +1206,7 @@
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-10-12T21:05:08.302368+00:00",
-    "files_scanned": 152
+    "generated": "2026-10-12T21:59:00.951468+00:00",
+    "files_scanned": 153
   }
 }

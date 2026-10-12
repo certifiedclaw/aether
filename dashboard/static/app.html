@@ -190,11 +190,12 @@
 
     // ── AES-256-CBC encryption (CryptoJS) ────────────────────────────────────
     const _AES_SALT = 'AETHER-DASHBOARD-v1';
-    let _aesKey = null;
+    let _aesKey = null, _macKey = null;
 
     function _initCrypto(key) {
       if (typeof CryptoJS === 'undefined') return false;
       _aesKey = CryptoJS.SHA256(key + _AES_SALT);
+      _macKey = CryptoJS.SHA256('MAC|' + key + _AES_SALT);
       return true;
     }
 
@@ -208,7 +209,9 @@
         );
         const ivHex = iv.toString(CryptoJS.enc.Hex);
         const ctHex = enc.ciphertext.toString(CryptoJS.enc.Hex);
-        const hex   = ivHex + ctHex;
+        const tag   = CryptoJS.HmacSHA256(CryptoJS.enc.Hex.parse(ivHex + ctHex), _macKey)
+                              .toString(CryptoJS.enc.Hex);
+        const hex   = ivHex + ctHex + tag;
         const bytes = new Uint8Array(hex.length / 2);
         for (let i = 0; i < bytes.length; i++)
           bytes[i] = parseInt(hex.substr(i * 2, 2), 16);

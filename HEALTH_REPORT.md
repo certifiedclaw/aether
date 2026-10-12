@@ -2,8 +2,8 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.health_check` (or `run_all`) to refresh. Fix things here, don't edit this file directly.
 
-Generated: 2026-10-12T21:05:08.302368+00:00
-Files scanned: 152
+Generated: 2026-10-12T21:59:00.951468+00:00
+Files scanned: 153
 
 ## Summary
 
@@ -25,9 +25,9 @@ Files scanned: 152
 - `main.py` — 1096 lines
 - `actions/extra_tools.py` — 1064 lines
 - `actions/game_updater.py` — 1050 lines
-- `dashboard/server.py` — 965 lines
+- `dashboard/server.py` — 1044 lines
 - `actions/browser_control.py` — 913 lines
-- `core/conversation_core.py` — 906 lines
+- `core/conversation_core.py` — 910 lines
 - `actions/file_processor.py` — 839 lines
 - `actions/computer_settings.py` — 734 lines
 - `actions/file_controller.py` — 647 lines
@@ -35,7 +35,7 @@ Files scanned: 152
 - `actions/desktop.py` — 614 lines
 
 ## Functions over 80 lines
-- `core/conversation_core.py:418` — `_process_message_inner()` (387 lines)
+- `core/conversation_core.py:418` — `_process_message_inner()` (391 lines)
 - `core/llm_client.py:1023` — `call_llm_stream()` (160 lines)
 - `core/llm_client.py:698` — `_stream_openai_once()` (159 lines)
 - `actions/computer_control.py:355` — `computer_control()` (155 lines)
@@ -46,15 +46,15 @@ Files scanned: 152
 - `main.py:956` — `main()` (137 lines)
 - `actions/file_processor.py:582` — `_process_video()` (127 lines)
 - `agent/executor.py:295` — `execute()` (123 lines)
-- `dashboard/server.py:130` — `_ensure_network_access_windows()` (120 lines)
+- `dashboard/server.py:189` — `_ensure_network_access_windows()` (120 lines)
 - `main.py:834` — `run()` (115 lines)
 - `actions/game_updater.py:928` — `game_updater()` (115 lines)
+- `dashboard/server.py:602` — `_register_auth_routes()` (115 lines)
 - `core/listen_loops.py:84` — `_listen_whisper()` (111 lines)
 - `core/llm_client.py:506` — `call_llm()` (109 lines)
 - `actions/browser_control.py:421` — `_launch()` (104 lines)
 - `tests/test_all_critical.py:1119` — `test_confirm_blocking_dialog_thread_safety()` (102 lines)
 - `actions/reminder.py:41` — `_write_notify_script()` (98 lines)
-- `dashboard/server.py:540` — `_register_auth_routes()` (98 lines)
 - `core/smart_context.py:55` — `compress_if_needed()` (96 lines)
 - `actions/file_processor.py:313` — `_process_data()` (95 lines)
 - `core/echo.py:197` — `is_user_speech()` (94 lines)

@@ -419,14 +419,18 @@ class ConversationCoreMixin:
         # ── NEW v2: reset loop guard for new request ──────────────────
         if self._loop_guard:
             self._loop_guard.reset()
-        # New user request: ends any tool approvals granted for the previous one
-        # (core/risk.py "task" tier). System alerts are not user requests.
-        if not str(user_text).lstrip().startswith("[SYSTEM_ALERT]"):
-            try:
-                from core import risk as _risk
+        # New request: ends any tool approvals granted for the previous one (core/risk.py
+        # "task" tier). "[SYSTEM_ALERT]" is only a text prefix that the dashboard, a mic
+        # transcript or pasted text can also produce, so an alert turn must NOT inherit
+        # the user's earlier approval: it starts its own turn, labelled as an alert.
+        try:
+            from core import risk as _risk
+            if str(user_text).lstrip().startswith("[SYSTEM_ALERT]"):
+                _risk.begin_turn("[system alert - not a user request]")
+            else:
                 _risk.begin_turn(user_text)
-            except Exception:  # noqa: BLE001 - never let this break a turn
-                pass
+        except Exception:  # noqa: BLE001 - never let this break a turn
+            pass
         # Track message in observability
         self._obs.count("messages.received")
         # ── NEW: handle built-in chat commands ────────────────────────
@@ -589,7 +593,7 @@ class ConversationCoreMixin:
                 _tagged = _parse_tagged_tool_calls(final_content)
                 if _tagged:
                     _always_ok = (
-                        "save_memory", "shutdown_aether", "goal_create",
+                        "save_memory", "goal_create",
                         "goal_update", "goal_complete", "goal_cancel",
                         "goal_list", "goal_add_subtask",
                     )
@@ -627,7 +631,7 @@ class ConversationCoreMixin:
                     _known_tool = (
                         _fname in getattr(self, "_TOOL_DISPATCH", {})
                         or _fname in (
-                            "save_memory", "shutdown_aether", "goal_create",
+                            "save_memory", "goal_create",
                             "goal_update", "goal_complete", "goal_cancel",
                             "goal_list", "goal_add_subtask",
                         )

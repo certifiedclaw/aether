@@ -335,9 +335,20 @@ def _check_task(tool: str, action: str, params: dict, label: str) -> str | None:
         return f"Cancelled: you did not approve {label}, so nothing was done."
 
 
+def _escalates_to_ask(tool: str, params: dict) -> bool:
+    """A parameter can make a monitored call dangerous: game_updater's
+    shutdown_when_done=true powers the PC off later (same as computer_settings.shutdown)."""
+    if tool == "game_updater":
+        v = (params or {}).get("shutdown_when_done")
+        return str(v).strip().lower() in ("true", "1", "yes")
+    return False
+
+
 def check(tool: str, action: str, params: dict) -> str | None:
     """Apply the tier. Returns None if the call may proceed, else the message to return."""
     tier = tier_for(tool, action)
+    if _escalates_to_ask(tool, params):
+        tier = strictest(tier, ASK)
     label = f"{tool}.{action}" if action else tool
     if tier == SAFE:
         return None

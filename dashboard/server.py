@@ -89,16 +89,75 @@ def _derive_key(session_key: str) -> bytes:
     return hashlib.sha256(session_key.encode('utf-8') + _AES_SALT).digest()
 
 
-def _decrypt_cbc(aes_key: bytes, enc_b64: str) -> str:
-    """Decrypt base64(IV[16] ‖ ciphertext) with AES-256-CBC + PKCS7."""
+def _new_session_key() -> str:
+    """Random 256-bit per-session key. The 6-char pairing code only authorises a login;
+    it is never used as key material (it has ~29 bits, so it could be brute-forced
+    offline from a captured message)."""
+    return secrets.token_urlsafe(32)
+
+
+def _derive_mac_key(session_key: str) -> bytes:
+    """Independent HMAC-SHA256 key (domain-separated from the AES key)."""
+    return hashlib.sha256(b'MAC|' + session_key.encode('utf-8') + _AES_SALT).digest()
+
+
+def _decrypt_cbc(aes_key: bytes, enc_b64: str, mac_key: bytes) -> str:
+    """Verify-then-decrypt base64(IV[16] || ciphertext || HMAC[32]).
+
+    The MAC covers IV||ciphertext and is checked (constant time) BEFORE any decryption,
+    so tampered or padding-oracle probes are rejected. mac_key is required."""
+    import hmac
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
     from cryptography.hazmat.primitives import padding as sym_pad
-    raw      = base64.b64decode(enc_b64)
-    iv, ct   = raw[:16], raw[16:]
+    if not mac_key:
+        raise ValueError("mac_key required")
+    raw = base64.b64decode(enc_b64, validate=True)
+    if len(raw) < 16 + 16 + 32 or (len(raw) - 48) % 16:
+        raise ValueError("bad length")
+    body, tag = raw[:-32], raw[-32:]
+    if not hmac.compare_digest(hmac.new(mac_key, body, hashlib.sha256).digest(), tag):
+        raise ValueError("bad MAC")
+    iv, ct   = body[:16], body[16:]
     dec      = Cipher(algorithms.AES(aes_key), modes.CBC(iv)).decryptor()
     padded   = dec.update(ct) + dec.finalize()
     unpadder = sym_pad.PKCS7(128).unpadder()
     return (unpadder.update(padded) + unpadder.finalize()).decode('utf-8')
+
+
+# ── login brute-force limiter ─────────────────────────────────────────────────
+_MAX_FAILS   = 5
+_LOCKOUT_S   = 900.0     # 15 min
+_FAIL_WINDOW = 600.0     # 10 min
+
+
+class _LoginLimiter:
+    """5 bad pairing codes from one IP in 10 min -> locked out for 15 min."""
+
+    def __init__(self, clock=time.time):
+        self._clock = clock
+        self._fails: dict[str, list[float]] = {}
+        self._locked: dict[str, float] = {}
+
+    def locked(self, ip: str) -> float:
+        """Seconds of lockout remaining (0 = allowed)."""
+        left = self._locked.get(ip, 0.0) - self._clock()
+        if left <= 0:
+            self._locked.pop(ip, None)
+            return 0.0
+        return left
+
+    def fail(self, ip: str) -> None:
+        now = self._clock()
+        recent = [t for t in self._fails.get(ip, []) if now - t < _FAIL_WINDOW] + [now]
+        self._fails[ip] = recent
+        if len(recent) >= _MAX_FAILS:
+            self._locked[ip] = now + _LOCKOUT_S
+            self._fails.pop(ip, None)
+        if len(self._fails) > 1000:          # bound memory
+            self._fails.clear()
+
+    def ok(self, ip: str) -> None:
+        self._fails.pop(ip, None)
 
 
 # ── CryptoJS (auto-download once, served locally) ─────────────────────────────
@@ -395,7 +454,8 @@ class DashboardServer:
         self._ip                          = _local_ip()
         self._tokens: set[str]            = set()
         self._token_keys: dict[str, str]  = {}   # auth_token → session_key
-        self._aes_cache:  dict[str, bytes]= {}   # session_key → AES bytes
+        self._aes_cache:  dict[str, tuple]= {}   # session_key → (AES key, MAC key)
+        self._limiter = _LoginLimiter()
         self._clients: set[WebSocket]     = set()
         self._history: list[dict]         = []
         # Thread-safe (not asyncio.Queue) so Aether's threaded main.py can
@@ -435,9 +495,10 @@ class DashboardServer:
             return f"{self._ip}:{PORT + 1}"
         return f"{self._ip}:{PORT}"
 
-    def _aes_key(self, session_key: str) -> bytes:
+    def _keys(self, session_key: str) -> tuple:
         if session_key not in self._aes_cache:
-            self._aes_cache[session_key] = _derive_key(session_key)
+            self._aes_cache[session_key] = (_derive_key(session_key),
+                                            _derive_mac_key(session_key))
         return self._aes_cache[session_key]
 
     def _decrypt(self, token: str, enc_b64: str) -> str | None:
@@ -445,7 +506,8 @@ class DashboardServer:
         if not sk:
             return None
         try:
-            return _decrypt_cbc(self._aes_key(sk), enc_b64)
+            aes, mac = self._keys(sk)
+            return _decrypt_cbc(aes, enc_b64, mac)
         except Exception:
             return None
 
@@ -540,30 +602,45 @@ class DashboardServer:
     def _register_auth_routes(self, app: "FastAPI") -> None:
         @app.post("/login")
         async def login(req: Request):
-            body    = await req.json()
-            entered = str(body.get("pin", "")).strip().upper()
+            ip = req.client.host if req.client else "?"
+            wait = self._limiter.locked(ip)
+            if wait > 0:
+                return JSONResponse({"ok": False, "error": "Too many attempts. Try again later."},
+                                    status_code=429, headers={"Retry-After": str(int(wait) + 1)})
+            try:
+                body = await req.json()
+            except Exception:
+                body = {}
+            entered = str(body.get("pin", "")).strip().upper() if isinstance(body, dict) else ""
             now     = time.time()
             if entered in self._pending_keys and self._pending_keys[entered] > now:
                 del self._pending_keys[entered]          # one-time use
+                self._limiter.ok(ip)
+                skey = _new_session_key()                # random; NOT the pairing code
                 tok = secrets.token_urlsafe(32)
                 self._tokens.add(tok)
-                self._token_keys[tok] = entered
-                self._aes_key(entered)                   # pre-derive & cache
+                self._token_keys[tok] = skey
+                self._keys(skey)                         # pre-derive & cache
                 if self._connect_callback:
                     self._connect_callback()
                 asyncio.create_task(self.broadcast(
                     {"type": "sys", "text": "Remote connection established."}
                 ))
                 # Bearer token in response body — no cookies needed (works on any browser/HTTP)
-                return JSONResponse({"ok": True, "token": tok})
+                return JSONResponse({"ok": True, "token": tok, "key": skey})
+            self._limiter.fail(ip)
             return JSONResponse({"ok": False, "error": "Invalid or expired key"},
                                 status_code=401)
 
         @app.get("/auto-login")
-        async def auto_login(key: str = ""):
+        async def auto_login(req: Request, key: str = ""):
             """QR code target — validates one-time key, creates session, redirects phone."""
             now = time.time()
+            ip = req.client.host if req.client else "?"
+            if self._limiter.locked(ip):
+                return HTMLResponse("Too many attempts.", status_code=429)
             if not key or key not in self._pending_keys or self._pending_keys[key] <= now:
+                self._limiter.fail(ip)
                 return HTMLResponse("""<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width">
 <style>
@@ -576,12 +653,14 @@ class DashboardServer:
 </div></body></html>""")
 
             del self._pending_keys[key]
+            self._limiter.ok(ip)
+            skey    = _new_session_key()
             tok     = secrets.token_urlsafe(32)
             dev_tok = secrets.token_urlsafe(32)
             self._tokens.add(tok)
-            self._token_keys[tok] = key
-            self._aes_key(key)
-            self._device_sessions[dev_tok] = {"session_key": key}
+            self._token_keys[tok] = skey
+            self._keys(skey)
+            self._device_sessions[dev_tok] = {"session_key": skey}
 
             if self._connect_callback:
                 self._connect_callback()
@@ -599,7 +678,7 @@ class DashboardServer:
 <body>
 <script>
   sessionStorage.setItem('aether_token','{tok}');
-  sessionStorage.setItem('aether_key','{key}');
+  sessionStorage.setItem('aether_key','{skey}');
   localStorage.setItem('aether_device_token','{dev_tok}');
   setTimeout(function(){{location.replace('/')}},400);
 </script>
@@ -620,7 +699,7 @@ class DashboardServer:
             tok = secrets.token_urlsafe(32)
             self._tokens.add(tok)
             self._token_keys[tok] = session_key
-            self._aes_key(session_key)
+            self._keys(session_key)
             if self._connect_callback:
                 self._connect_callback()
             asyncio.create_task(self.broadcast(

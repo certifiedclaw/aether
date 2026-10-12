@@ -280,3 +280,14 @@ def test_table_covers_every_action_the_tool_implements(tool):
     assert len(acts) >= 10, "extraction regex stopped matching: fix the test, not the table"
     missing = sorted(a for a in acts if a not in risk.RISK_TABLE[tool])
     assert missing == [], f"{tool}: implemented but unclassified actions: {missing}"
+
+
+def test_game_updater_shutdown_when_done_asks(ui):
+    """game_updater is MONITOR, but shutdown_when_done powers the PC off later."""
+    ui.answer = False
+    out = risk.check("game_updater", "download", {"shutdown_when_done": True})
+    assert out and out.startswith("Cancelled") and len(ui.asked) == 1
+    ui.asked.clear()
+    assert risk.check("game_updater", "download", {"shutdown_when_done": "false"}) is None
+    assert risk.check("game_updater", "download", {}) is None
+    assert ui.asked == []

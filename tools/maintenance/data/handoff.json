@@ -1,5 +1,5 @@
 {
-  "next_id": 51,
+  "next_id": 52,
   "entries": [
     {
       "id": 1,
@@ -656,6 +656,23 @@
         "tests/test_v12g_fixes.py"
       ],
       "next_steps": "Re-run python tools\\verify_local.py with config\\api_keys.json in place; test a confirmation dialog in the real UI; decide on plugin trust model and dashboard (#33-34)."
+    },
+    {
+      "id": 51,
+      "timestamp": "2026-10-12 21:58 UTC",
+      "by": "Claude Code",
+      "summary": "Finished dashboard hardening started by another session: random 256-bit session key (pairing code no longer key material), encrypt-then-MAC (HMAC-SHA256 verified before decrypt), per-IP login lockout (5 fails/10min -> 15min, also on /auto-login), client app.html/login.html updated. SYSTEM_ALERT turns no longer inherit user approvals; shutdown_aether no longer text-recoverable; game_updater shutdown_when_done now asks. Path-tool audit #35: no path params, nothing to block. E2E verified via TestClient. ui.py edits from the other session were not recoverable and were not reproduced.",
+      "files": [
+        "dashboard/server.py",
+        "dashboard/static/app.html",
+        "dashboard/static/login.html",
+        "core/conversation_core.py",
+        "core/risk.py",
+        "tests/test_dashboard_security.py",
+        "tests/test_risk.py",
+        "tests/test_risk_task.py"
+      ],
+      "next_steps": "Bind/HTTPS option (new roadmap item); plugin trust model #36; review ui.py and conversation_core.py line by line"
     }
   ]
 }
