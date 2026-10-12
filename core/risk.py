@@ -120,9 +120,8 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
         "press": TASK, "fill_form": TASK,
     },
     "file_processor": {
-        # "run" executes a .py file: the same hole code_helper had. Every other action
-        # is analysis/conversion (and any unrecognised action text is treated by the
-        # tool as a free-form instruction for the model), so it is only recorded.
+        # "run" executes a .py file: the same hole code_helper had. Other actions
+        # are analysis/conversion or perform their own operation-specific check.
         "run": ASK, "*": MONITOR,
     },
     "memory_tool": {

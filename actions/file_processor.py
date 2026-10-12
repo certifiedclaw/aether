@@ -730,15 +730,118 @@ def _process_archive(path: Path, action: str, params: dict, speak=None) -> str:
             return f"List failed: {e}"
 
     if action == "extract":
-        dest = Path(params.get("destination", str(path.parent / path.stem)))
-        dest.mkdir(parents=True, exist_ok=True)
         try:
-            shutil.unpack_archive(path, dest)
-            return f"Extracted to: {dest}"
+            import stat
+            import tarfile
+            import zipfile
+            from core.protected_paths import DENIED, is_protected
+
+            if is_protected(path):
+                return DENIED
+
+            dest = Path(params.get("destination") or path.parent / path.stem).expanduser()
+            dest_root = dest.resolve()
+            if is_protected(dest_root):
+                return DENIED
+
+            plugin_root = _active_plugin_dir()
+            if _is_within(dest_root, plugin_root):
+                return "Access denied: archives cannot be extracted into the executable plugin directory."
+
+            if zipfile.is_zipfile(path):
+                with zipfile.ZipFile(path) as archive:
+                    entries = archive.infolist()
+                    for entry in entries:
+                        _, problem = _archive_target(dest_root, entry.filename, plugin_root, is_protected)
+                        if problem:
+                            return problem
+                        mode_type = stat.S_IFMT(entry.external_attr >> 16)
+                        if mode_type not in (0, stat.S_IFREG, stat.S_IFDIR):
+                            return "Unzip error: archive contains an unsupported file type."
+                    if not _approve_archive_extraction(path, dest_root, len(entries)):
+                        return "Cancelled: you did not approve extracting this archive."
+                    dest_root.mkdir(parents=True, exist_ok=True)
+                    archive.extractall(dest_root)
+            elif tarfile.is_tarfile(path):
+                with tarfile.open(path, "r:*") as archive:
+                    entries = archive.getmembers()
+                    for entry in entries:
+                        _, problem = _archive_target(dest_root, entry.name, plugin_root, is_protected)
+                        if problem:
+                            return problem
+                        if not (entry.isdir() or entry.isfile()):
+                            return "Unzip error: archive contains an unsupported file type."
+                    if not _approve_archive_extraction(path, dest_root, len(entries)):
+                        return "Cancelled: you did not approve extracting this archive."
+                    dest_root.mkdir(parents=True, exist_ok=True)
+                    directory_modes = []
+                    for entry in entries:
+                        target, _ = _archive_target(dest_root, entry.name, plugin_root, is_protected)
+                        if entry.isdir():
+                            target.mkdir(parents=True, exist_ok=True)
+                            directory_modes.append((target, entry.mode & 0o777))
+                            continue
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        source = archive.extractfile(entry)
+                        if source is None:
+                            raise OSError(f"Could not read archive member: {entry.name}")
+                        with source, target.open("wb") as output:
+                            shutil.copyfileobj(source, output)
+                        target.chmod(entry.mode & 0o777)
+                    for target, mode in reversed(directory_modes):
+                        target.chmod(mode)
+            else:
+                return f"Unsupported archive format: {path.suffix.lower()}"
+
+            return f"Extracted to: {dest_root}"
         except Exception as e:
             return f"Extract failed: {e}"
 
     return f"Unknown archive action: '{action}'. Try: list, extract"
+
+
+def _active_plugin_dir() -> Path:
+    from memory.config_manager import get_mark_config
+    configured = get_mark_config().get("plugins.plugin_dir", "./plugins")
+    return Path(configured).expanduser().resolve()
+
+
+def _approve_archive_extraction(archive: Path, destination: Path, member_count: int) -> bool:
+    from core.safety import confirm_action
+    return confirm_action(
+        "extract archive",
+        f"Archive: {archive}\nDestination: {destination}\nMembers: {member_count}",
+    )
+
+
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _archive_target(dest_root: Path, member_name: str, plugin_root: Path, is_protected) -> tuple[Path | None, str | None]:
+    from pathlib import PurePosixPath, PureWindowsPath
+    normalized = str(member_name).replace("\\", "/")
+    posix_name = PurePosixPath(normalized)
+    windows_name = PureWindowsPath(member_name)
+    if (not normalized or "\x00" in normalized or posix_name.is_absolute()
+            or windows_name.is_absolute() or windows_name.drive
+            or ".." in posix_name.parts
+            or any(part.endswith((".", " ")) for part in posix_name.parts)):
+        return None, "Unzip error: archive contains an unsafe path."
+
+    target = (dest_root / Path(*posix_name.parts)).resolve()
+    if not _is_within(target, dest_root):
+        return None, "Unzip error: archive contains an unsafe path."
+    if is_protected(target):
+        from core.protected_paths import DENIED
+        return None, DENIED
+    if _is_within(target, plugin_root):
+        return None, "Access denied: archives cannot install executable plugin files."
+    return target, None
 
 def _process_pptx(path: Path, action: str, params: dict, speak=None) -> str:
     action = action or "summarize"

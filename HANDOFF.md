@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-12 23:30 UTC
+Generated: 2026-10-12 23:42 UTC
+
+## #54 — 2026-10-12 23:42 UTC — Codex
+
+Secured file_processor archive extraction: require per-extraction approval without changing JSON extract analysis policy; preflight ZIP/tar members for traversal, Windows trailing-dot/space aliases, protected paths and the configured plugin directory; reject ZIP links/special types and all tar links/special members; preserve tar file/directory modes. Added extraction authorization, safe ZIP/tar, alias, protected-path, plugin, traversal, and tar-link/mode regression tests. Focused tests: 84 passed, 1 skipped; py_compile and diff check passed.
+
+**Touched:** `actions/file_processor.py`, `core/risk.py`, `tests/test_protected_paths.py`, `tests/test_risk.py`
+
+**Next steps:** Continue the next independently verified fix; keep plugin trust-model changes and release-archive packaging policy bounded by their explicit compatibility decisions.
+
+---
 
 ## #53 — 2026-10-12 23:30 UTC — Codex
 

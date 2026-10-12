@@ -1,5 +1,5 @@
 {
-  "next_id": 54,
+  "next_id": 55,
   "entries": [
     {
       "id": 1,
@@ -703,6 +703,19 @@
         "tests/test_execution_gates.py"
       ],
       "next_steps": "Continue with another concrete confirmed finding; preserve this commit boundary. Reassess plugin trust and full-folder release packaging only if their compatibility/workflow boundaries are source-verified."
+    },
+    {
+      "id": 54,
+      "timestamp": "2026-10-12 23:42 UTC",
+      "by": "Codex",
+      "summary": "Secured file_processor archive extraction: require per-extraction approval without changing JSON extract analysis policy; preflight ZIP/tar members for traversal, Windows trailing-dot/space aliases, protected paths and the configured plugin directory; reject ZIP links/special types and all tar links/special members; preserve tar file/directory modes. Added extraction authorization, safe ZIP/tar, alias, protected-path, plugin, traversal, and tar-link/mode regression tests. Focused tests: 84 passed, 1 skipped; py_compile and diff check passed.",
+      "files": [
+        "actions/file_processor.py",
+        "core/risk.py",
+        "tests/test_protected_paths.py",
+        "tests/test_risk.py"
+      ],
+      "next_steps": "Continue the next independently verified fix; keep plugin trust-model changes and release-archive packaging policy bounded by their explicit compatibility decisions."
     }
   ]
 }

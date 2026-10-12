@@ -104,6 +104,88 @@ def test_unzip_rejects_archive_path_traversal(tmp_path):
     assert not (tmp_path / "escaped.txt").exists()
 
 
+@pytest.mark.parametrize("member", ["../escaped.txt", r"..\\escaped.txt", ".env.local", ".env. ", "api_keys.json"])
+def test_file_processor_archive_extract_rejects_unsafe_or_protected_members(tmp_path, member):
+    import zipfile
+    from actions import file_processor as fp
+    archive = tmp_path / "malicious.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr(member, "must not be written")
+    destination = tmp_path / "out"
+
+    result = fp._process_archive(archive, "extract", {"destination": str(destination)})
+
+    if member in (".env.local", "api_keys.json"):
+        assert result == pp.DENIED
+    else:
+        assert "unsafe path" in result.lower()
+    assert not destination.exists()
+
+
+@pytest.mark.parametrize("member", ["plugins/evil.py", "plugins. /evil.py"])
+def test_file_processor_archive_extract_rejects_plugin_destination_and_members(tmp_path, monkeypatch, member):
+    import zipfile
+    from actions import file_processor as fp
+    archive = tmp_path / "plugin.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr(member, "raise RuntimeError('executed')")
+    destination = tmp_path / "out"
+    plugin_dir = destination / "plugins"
+    monkeypatch.setattr(fp, "_active_plugin_dir", lambda: plugin_dir)
+
+    result = fp._process_archive(archive, "extract", {"destination": str(destination)})
+
+    assert "plugin" in result.lower() or "unsafe path" in result.lower()
+    assert not destination.exists()
+    plugin_result = fp._process_archive(
+        archive, "extract", {"destination": str(plugin_dir)})
+    assert "plugin" in plugin_result.lower() or "unsafe path" in plugin_result.lower()
+    assert not plugin_dir.exists()
+
+
+def test_file_processor_archive_extract_rejects_tar_links_and_allows_safe_tar(tmp_path, monkeypatch):
+    import io
+    import tarfile
+    from actions import file_processor as fp
+    malicious = tmp_path / "link.tar"
+    with tarfile.open(malicious, "w") as archive:
+        link = tarfile.TarInfo("link")
+        link.type = tarfile.SYMTYPE
+        link.linkname = "../outside"
+        archive.addfile(link)
+        payload = b"must not be written"
+        member = tarfile.TarInfo("link/file.txt")
+        member.size = len(payload)
+        archive.addfile(member, io.BytesIO(payload))
+    destination = tmp_path / "tar-out"
+
+    result = fp._process_archive(malicious, "extract", {"destination": str(destination)})
+
+    assert "unsupported file type" in result.lower()
+    assert not destination.exists()
+
+    safe = tmp_path / "safe.tar.gz"
+    with tarfile.open(safe, "w:gz") as archive:
+        payload = b"safe contents"
+        member = tarfile.TarInfo("folder/readme.txt")
+        member.size = len(payload)
+        member.mode = 0o751
+        archive.addfile(member, io.BytesIO(payload))
+    safe_destination = tmp_path / "safe-out"
+    monkeypatch.setattr(fp, "_approve_archive_extraction", lambda *a: True)
+    chmods = []
+    original_chmod = Path.chmod
+    def record_chmod(path, mode, *args, **kwargs):
+        if path.name == "readme.txt":
+            chmods.append(mode)
+        return original_chmod(path, mode, *args, **kwargs)
+    monkeypatch.setattr(Path, "chmod", record_chmod)
+    result = fp._process_archive(safe, "extract", {"destination": str(safe_destination)})
+    assert "Extracted to" in result
+    assert (safe_destination / "folder" / "readme.txt").read_bytes() == payload
+    assert chmods == [0o751]
+
+
 @pytest.mark.parametrize("ports", ["1-999999999", "0-10", "1-70000", "abc", "1-5000", "70000", ""])
 def test_port_scan_rejects_unbounded_or_invalid_ranges(ports):
     from actions import osint_tools as ot

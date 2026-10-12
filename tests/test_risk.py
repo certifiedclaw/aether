@@ -48,7 +48,8 @@ def test_unknown_tool_and_unlisted_action_mean_ask():
 @pytest.mark.parametrize("tool,action,expected", [
     ("extra_tool", "run_python", ASK), ("extra_tool", "kill_process", ASK),
     ("extra_tool", "calculate", SAFE),
-    ("file_processor", "run", ASK), ("file_processor", "describe the picture", MONITOR),
+    ("file_processor", "run", ASK), ("file_processor", "extract", MONITOR),
+    ("file_processor", "describe the picture", MONITOR),
     ("memory_tool", "prune", ASK), ("memory_tool", "import", ASK), ("memory_tool", "stats", SAFE),
     ("send_message", "", ASK), ("file_controller", "delete", MONITOR),
     ("file_controller", "organize_desktop", ASK),
@@ -220,6 +221,44 @@ def test_file_processor_run_does_not_execute_without_approval(ui, tmp_path):
     fp.file_processor({"file_path": str(script), "action": "run"})
     assert marker.exists()                                               # runs once approved
     assert "evil.py" in ui.asked[-1][1]                                  # dialog names the file
+
+
+def test_file_processor_extract_requires_approval(ui, tmp_path):
+    import zipfile
+    import actions.file_processor as fp
+    archive = tmp_path / "bundle.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("notes.txt", "ordinary")
+    destination = tmp_path / "extracted"
+
+    ui.answer = False
+    out = fp.file_processor({"file_path": str(archive), "action": "extract",
+                             "destination": str(destination)})
+    assert out.startswith("Cancelled") and not destination.exists()
+    assert ui.asked[-1][0] == "extract archive"
+
+    ui.answer = True
+    out = fp.file_processor({"file_path": str(archive), "action": "extract",
+                             "destination": str(destination)})
+    assert "Extracted to" in out
+    assert (destination / "notes.txt").read_text(encoding="utf-8") == "ordinary"
+
+
+def test_json_extract_remains_analysis_without_archive_confirmation(ui, monkeypatch, tmp_path):
+    import actions.file_processor as fp
+    class Result:
+        text = "JSON fields summarized"
+    class Model:
+        def generate_content(self, prompt):
+            return Result()
+    source = tmp_path / "data.json"
+    source.write_text('{"name":"Aether"}', encoding="utf-8")
+    monkeypatch.setattr(fp, "_gemini_client", lambda: Model())
+
+    result = fp.file_processor({"file_path": str(source), "action": "extract"})
+
+    assert result == "JSON fields summarized"
+    assert ui.asked == []
 
 
 def test_extra_tool_run_python_does_not_execute_without_approval(ui, tmp_path):
