@@ -51,10 +51,13 @@ def test_unknown_tool_and_unlisted_action_mean_ask():
     ("file_processor", "run", ASK), ("file_processor", "describe the picture", MONITOR),
     ("memory_tool", "prune", ASK), ("memory_tool", "import", ASK), ("memory_tool", "stats", SAFE),
     ("send_message", "", ASK), ("file_controller", "delete", MONITOR),
+    ("file_controller", "organize_desktop", ASK),
     ("file_controller", "list", SAFE), ("computer_control", "click", TASK),
     ("computer_control", "screenshot", SAFE), ("browser_control", "fill_form", TASK),
     ("browser_control", "go_to", MONITOR), ("browser_control", "get_text", SAFE),
     ("computer_settings", "shutdown", ASK), ("desktop_control", "task", ASK),
+    ("desktop_control", "wallpaper", ASK), ("desktop_control", "wallpaper_url", ASK),
+    ("desktop_control", "organize", ASK), ("desktop_control", "clean", ASK),
     ("dev_agent", "", ASK), ("code_helper", "build", ASK),
     ("code_helper", "write", ASK), ("code_helper", "edit", ASK),
     ("code_helper", "optimize", ASK), ("code_helper", "screen_debug", ASK),
@@ -243,6 +246,18 @@ def test_extra_tool_harmless_actions_do_not_ask(ui):
     import actions.extra_tools as et
     assert "4" in et.run_extra_tool("calculate", {"action": "calculate", "expression": "2+2"})
     assert ui.asked == []
+
+
+def test_file_controller_organize_desktop_requires_approval(ui, monkeypatch):
+    import actions.file_controller as fc
+    called = []
+    monkeypatch.setattr(fc, "organize_desktop", lambda: called.append(True) or "organized")
+    ui.answer = False
+    assert fc.file_controller({"action": "organize_desktop"}).startswith("Cancelled")
+    assert called == []
+    ui.answer = True
+    assert fc.file_controller({"action": "organize_desktop"}) == "organized"
+    assert called == [True]
 
 
 def test_send_message_denied_never_reaches_the_sender(ui, monkeypatch):

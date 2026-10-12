@@ -132,3 +132,53 @@ def test_markdown_fences_unsafe_marker_and_size_limit(approve):
 def test_llm_error_string_is_not_executed(approve):
     out = d._execute_generated_code("ERROR: connection refused")
     assert out.startswith("Blocked") and approve == []
+
+
+@pytest.mark.parametrize("action,params,needle", [
+    ("wallpaper", {"path": "C:/pictures/wallpaper.png"}, "C:/pictures/wallpaper.png"),
+    ("wallpaper_url", {"url": "https://example.invalid/wallpaper.png"}, "https://example.invalid/wallpaper.png"),
+    ("organize", {"mode": "by_type"}, "file type"),
+    ("clean", {}, "Desktop Archive"),
+])
+def test_desktop_mutations_require_explicit_approval(monkeypatch, action, params, needle):
+    import core.safety as safety
+    seen = []
+    monkeypatch.setattr(safety, "confirm_action",
+                        lambda operation, detail="": seen.append((operation, detail)) or False)
+    monkeypatch.setattr(d, "set_wallpaper", lambda *a, **k: pytest.fail("wallpaper must not change"))
+    monkeypatch.setattr(d, "set_wallpaper_from_url", lambda *a, **k: pytest.fail("URL must not be fetched"))
+    monkeypatch.setattr(d, "organize_desktop", lambda *a, **k: pytest.fail("files must not move"))
+    monkeypatch.setattr(d, "clean_desktop", lambda *a, **k: pytest.fail("files must not move"))
+    out = d.desktop_control({"action": action, **params})
+    assert out.startswith("Cancelled")
+    assert len(seen) == 1 and needle in seen[0][1]
+
+
+@pytest.mark.parametrize("action,params,helper,result", [
+    ("wallpaper", {"path": "C:/pictures/wallpaper.png"}, "set_wallpaper", "wallpaper set"),
+    ("wallpaper_url", {"url": "https://example.invalid/wallpaper.png"}, "set_wallpaper_from_url", "wallpaper downloaded"),
+    ("organize", {"mode": "by_type"}, "organize_desktop", "organized"),
+    ("clean", {}, "clean_desktop", "cleaned"),
+])
+def test_desktop_mutations_proceed_once_after_approval(monkeypatch, tmp_path, action, params, helper, result):
+    import core.safety as safety
+    asked = []
+    calls = []
+    monkeypatch.setattr(safety, "confirm_action",
+                        lambda operation, detail="": asked.append((operation, detail)) or True)
+    monkeypatch.setattr(d, "_get_desktop", lambda: tmp_path)
+    def perform(*args, **kwargs):
+        calls.append((args, kwargs))
+        return result
+    monkeypatch.setattr(d, helper, perform)
+    assert d.desktop_control({"action": action, **params}) == result
+    assert len(asked) == 1 and len(calls) == 1
+
+
+def test_missing_desktop_mutation_arguments_and_read_only_actions_do_not_prompt(monkeypatch):
+    import core.safety as safety
+    monkeypatch.setattr(safety, "confirm_action", lambda *a, **k: pytest.fail("must not ask"))
+    monkeypatch.setattr(d, "list_desktop", lambda: "listed")
+    assert d.desktop_control({"action": "wallpaper"}) == "No image path provided."
+    assert d.desktop_control({"action": "wallpaper_url"}) == "No URL provided."
+    assert d.desktop_control({"action": "list"}) == "listed"

@@ -121,6 +121,11 @@ def _confirm_generated_code(code: str) -> bool:
         return False
 
 
+def _confirm_desktop_action(operation: str, detail: str) -> bool:
+    from core.safety import confirm_action
+    return confirm_action(f"desktop {operation}", detail)
+
+
 def _ns(**members) -> object:
     """Namespace exposing ONLY the given members (no module reachable from it)."""
     return types.SimpleNamespace(**members)
@@ -570,19 +575,39 @@ def desktop_control(
     try:
         if action == "wallpaper":
             path = params.get("path", "")
+            if path and not _confirm_desktop_action(
+                    "set wallpaper", f"Image file: {path}\nThis changes the desktop wallpaper."):
+                return "Cancelled: the wallpaper was not changed."
             return set_wallpaper(path) if path else "No image path provided."
 
         elif action == "wallpaper_url":
             url = params.get("url", "")
+            if url and not _confirm_desktop_action(
+                    "download and set wallpaper",
+                    f"Image URL: {url}\nAether will download this image and set it as the desktop wallpaper."):
+                return "Cancelled: no image was downloaded or applied."
             return set_wallpaper_from_url(url) if url else "No URL provided."
 
         elif action == "current_wallpaper":
             return get_current_wallpaper()
 
         elif action == "organize":
-            return organize_desktop(params.get("mode", "by_type"))
+            mode = params.get("mode", "by_type")
+            mode_description = "modified month" if mode == "by_date" else "file type"
+            if not _confirm_desktop_action(
+                    "organize desktop files",
+                    f"Desktop: {_get_desktop()}\nOrganization: {mode_description}\n"
+                    "Aether will move non-hidden top-level files into folders. File contents are not deleted."):
+                return "Cancelled: no desktop files were moved."
+            return organize_desktop(mode)
 
         elif action == "clean":
+            if not _confirm_desktop_action(
+                    "archive desktop files",
+                    f"Desktop: {_get_desktop()}\n"
+                    "Aether will move non-hidden top-level files into a dated Desktop Archive folder. "
+                    "File contents are not deleted."):
+                return "Cancelled: no desktop files were moved."
             return clean_desktop()
 
         elif action == "list":

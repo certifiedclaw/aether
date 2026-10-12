@@ -94,10 +94,11 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
     "file_controller": {
         "": SAFE, "list": SAFE, "find": SAFE, "info": SAFE, "read": SAFE,
         "disk_usage": SAFE, "largest": SAFE,
-        # mutating, but reversible through the undo tool / Recycle Bin
+        # Mutations here remain reversible through undo or the Recycle Bin.
         "create_file": MONITOR, "create_folder": MONITOR, "write": MONITOR,
         "copy": MONITOR, "move": MONITOR, "rename": MONITOR,
-        "delete": MONITOR, "organize_desktop": MONITOR,
+        "delete": MONITOR,
+        "organize_desktop": ASK,  # batch-moves desktop files; show an approval prompt
     },
     "computer_control": {
         "": SAFE, "screenshot": SAFE, "screen_find": SAFE, "wait": SAFE, "focus_window": SAFE,
@@ -152,7 +153,10 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
 
     # ── enforced INSIDE the function (richer dialog); see SELF_GATED ─────────
     "computer_settings": {"shutdown": ASK, "restart": ASK, "*": SAFE},
-    "desktop_control":   {"task": ASK, "*": SAFE},
+    "desktop_control":   {
+        "task": ASK, "wallpaper": ASK, "wallpaper_url": ASK,
+        "organize": ASK, "clean": ASK, "*": SAFE,
+    },
     "code_helper":       {
         "run": ASK, "build": ASK, "write": ASK, "edit": ASK,
         "optimize": ASK, "screen_debug": ASK, "*": SAFE,
