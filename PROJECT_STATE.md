@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Do not hand-edit — rerun `python -m tools.maintenance.project_state` (or `run_all`) to refresh. This is meant to be the one file a new session (human or Claude) reads first to get oriented.
 
-Generated: 2026-10-12 21:05 UTC
+Generated: 2026-10-12 21:58 UTC
 Version: Aether v1.0.0
 
 ## Entry points
@@ -21,16 +21,16 @@ Version: Aether v1.0.0
 | `actions/` | 23 | 11,333 |
 | `agent/` | 4 | 1,144 |
 | `config/` | 1 | 27 |
-| `core/` | 46 | 10,332 |
-| `dashboard/` | 3 | 1,093 |
+| `core/` | 46 | 10,347 |
+| `dashboard/` | 3 | 1,172 |
 | `dev_tools/` | 1 | 78 |
 | `integrations/` | 4 | 1,077 |
 | `memory/` | 6 | 1,172 |
 | `plugins/` | 1 | 44 |
 | `security/` | 7 | 1,338 |
-| `tests/` | 26 | 6,180 |
+| `tests/` | 27 | 6,288 |
 | `tools/` | 18 | 2,549 |
-| **Total** | **152** | **41,873** |
+| **Total** | **153** | **42,075** |
 
 ## Modules with docstrings (top-level summary)
 
@@ -73,7 +73,7 @@ Version: Aether v1.0.0
 - `core/chat_commands.py` (128 lines, 1 classes, 0 functions) — core/chat_commands.py — Aether Built-in Chat Commands
 - `core/config_io.py` (88 lines, 0 classes, 4 functions) — core/config_io.py -- save the settings dialog's values WITHOUT destroying the rest.
 - `core/config_validator.py` (201 lines, 2 classes, 9 functions) — core/config_validator.py — Aether Configuration Validator
-- `core/conversation_core.py` (907 lines, 1 classes, 5 functions) — core/conversation_core.py — Aether Conversation Core
+- `core/conversation_core.py` (911 lines, 1 classes, 5 functions) — core/conversation_core.py — Aether Conversation Core
 - `core/crash_logger.py` (141 lines, 0 classes, 4 functions) — core/crash_logger.py — Aether Crash Recovery Logging
 - `core/credentials.py` (149 lines, 0 classes, 11 functions) — core/credentials.py -- one place to ask "what is the API key for X?".
 - `core/device_specs.py` (149 lines, 2 classes, 4 functions) — device_specs.py — best-effort local hardware detection + Ollama model
@@ -102,7 +102,7 @@ Version: Aether v1.0.0
 - `core/prompt_builder.py` (110 lines, 1 classes, 0 functions) — core/prompt_builder.py — Aether System Prompt Assembly
 - `core/protected_paths.py` (40 lines, 0 classes, 1 functions) — core/protected_paths.py -- files the model must never be able to read through any tool.
 - `core/quick_intents.py` (169 lines, 0 classes, 4 functions) — core/quick_intents.py -- run simple voice commands without asking the LLM.
-- `core/risk.py` (385 lines, 0 classes, 15 functions) — core/risk.py -- one declarative table of what each tool/action is allowed to do.
+- `core/risk.py` (396 lines, 0 classes, 16 functions) — core/risk.py -- one declarative table of what each tool/action is allowed to do.
 - `core/safety.py` (118 lines, 2 classes, 2 functions) — safety.py — Aether v4.1 Safety & Verification Layer
 - `core/self_test.py` (471 lines, 2 classes, 22 functions) — core/self_test.py — Aether Self-Test Mode
 - `core/smart_context.py` (152 lines, 0 classes, 3 functions) — smart_context.py — Aether v3 Context Compression (stub / implementation)
@@ -119,7 +119,7 @@ Version: Aether v1.0.0
 ### `dashboard/`
 - `dashboard/__init__.py` (1 lines, 0 classes, 0 functions)
 - `dashboard/api_secure.py` (126 lines, 2 classes, 4 functions) — dashboard/api_secure.py — Stage 2 of the remote-access build (see HANDOFF.md #3).
-- `dashboard/server.py` (966 lines, 1 classes, 12 functions) — dashboard/server.py — AETHER Local HTTP Dashboard
+- `dashboard/server.py` (1045 lines, 2 classes, 14 functions) — dashboard/server.py — AETHER Local HTTP Dashboard
 
 ### `dev_tools/`
 - `dev_tools/dump.py` (78 lines, 0 classes, 1 functions) — dump.py — MARK XL Codebase Exporter
@@ -160,6 +160,7 @@ Version: Aether v1.0.0
 - `tests/test_core.py` (90 lines, 1 classes, 7 functions)
 - `tests/test_credentials.py` (328 lines, 1 classes, 31 functions) — core/credentials.py + tools/secrets_cli.py: env > OS keyring > config file, never logged,
 - `tests/test_dangerous_confirmation.py` (74 lines, 0 classes, 7 functions) — Shutdown/restart must be approved by the USER (UI dialog), never by a model-supplied
+- `tests/test_dashboard_security.py` (94 lines, 0 classes, 10 functions) — Dashboard: encrypt-then-MAC, random session keys, login lockout (roadmap #33/#34).
 - `tests/test_desktop_sandbox.py` (135 lines, 0 classes, 10 functions) — Roadmap #23: the desktop task sandbox must not be escapable, and model-
 - `tests/test_desktop_timeout.py` (121 lines, 0 classes, 14 functions) — Approved desktop code runs in a child process with a deadline: `while True: pass`
 - `tests/test_execution_gates.py` (120 lines, 0 classes, 11 functions) — Tools that execute model-written or model-chosen code must be approved by the USER
@@ -169,8 +170,8 @@ Version: Aether v1.0.0
 - `tests/test_protected_paths.py` (73 lines, 0 classes, 7 functions) — Secrets files must not be readable through any tool; port scans are bounded.
 - `tests/test_quick_intents.py` (195 lines, 0 classes, 15 functions) — Quick-intent shortcuts: the 15 live prompts plus false-positive guards.
 - `tests/test_req_check.py` (79 lines, 0 classes, 6 functions) — verify_local must flag packages that requirements.txt declares but are missing.
-- `tests/test_risk.py` (283 lines, 0 classes, 28 functions) — core/risk.py: one declarative tier table, enforced at the entry function of every tool
-- `tests/test_risk_task.py` (257 lines, 2 classes, 24 functions) — The TASK tier: ask once per user request (quoting the user), cover that tool for that
+- `tests/test_risk.py` (294 lines, 0 classes, 29 functions) — core/risk.py: one declarative tier table, enforced at the entry function of every tool
+- `tests/test_risk_task.py` (260 lines, 2 classes, 24 functions) — The TASK tier: ask once per user request (quoting the user), cover that tool for that
 - `tests/test_routing_and_paths.py` (85 lines, 0 classes, 10 functions) — Regression tests for tier routing, known folders, weather and open_app honesty.
 - `tests/test_security_fixes.py` (61 lines, 0 classes, 5 functions) — calculate() must not allow attribute/dunder escapes or runaway powers; open_app must not shell out.
 - `tests/test_tool_call_recovery.py` (83 lines, 0 classes, 10 functions) — Recovery of raw <tool_call> text, held-back streaming, plain monitor alerts, HF offline restore.
@@ -199,14 +200,14 @@ Version: Aether v1.0.0
 - `tools/verify_local.py` (355 lines, 1 classes, 11 functions) — tools/verify_local.py -- one-shot health check for a real Aether install.
 
 ## Recent history (git log)
+- 9ac4372 2026-10-12 Merge v12g (review-fixes-3) into master
+- e63b48d 2026-10-12 v12g: actionable model-not-found error, verify_local blocker checks, harden run_python, full code in approval dialogs
 - cb040a5 2026-10-11 v12f: honest LangChain unavailability, fix env-dependent tests, no mic in headless replay, isolate live logs in tests
 - e2eafad 2026-10-11 Merge v12e source + review fixes + maintenance reports into master
 - 4a53c11 2026-10-11 Block secrets reads via path tools, bound port_scan, log review in roadmap/handoff
 - 7bc7b37 2026-10-11 Add Aether source tree (v11 + v12e review fixes)
 - 22768e5 2026-10-11 Refresh maintenance reports and roadmap/handoff data (2026-10-11 run_all)
 - 18db815 2026-07-13 Add Aether phase 1
-- 816cd23 2026-07-13 Upgrade Aether with latest ZIP handoff
-- cdd1575 2026-07-09 Fix syntax errors in llm_client.py, improve STT accuracy to 'small' model, add Gemini AI support, create installer scripts, update documentation
 
 ## See also
 - `HEALTH_REPORT.md` — automated code health scan

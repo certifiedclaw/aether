@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-12 21:05 UTC
+Generated: 2026-10-12 21:58 UTC
+
+## #51 — 2026-10-12 21:58 UTC — Claude Code
+
+Finished dashboard hardening started by another session: random 256-bit session key (pairing code no longer key material), encrypt-then-MAC (HMAC-SHA256 verified before decrypt), per-IP login lockout (5 fails/10min -> 15min, also on /auto-login), client app.html/login.html updated. SYSTEM_ALERT turns no longer inherit user approvals; shutdown_aether no longer text-recoverable; game_updater shutdown_when_done now asks. Path-tool audit #35: no path params, nothing to block. E2E verified via TestClient. ui.py edits from the other session were not recoverable and were not reproduced.
+
+**Touched:** `dashboard/server.py`, `dashboard/static/app.html`, `dashboard/static/login.html`, `core/conversation_core.py`, `core/risk.py`, `tests/test_dashboard_security.py`, `tests/test_risk.py`, `tests/test_risk_task.py`
+
+**Next steps:** Bind/HTTPS option (new roadmap item); plugin trust model #36; review ui.py and conversation_core.py line by line
+
+---
 
 ## #50 — 2026-10-12 21:05 UTC — Claude (claude.ai Claude Code session)
 
