@@ -61,6 +61,26 @@ def test_file_processor_and_pdf_refuse_secrets():
     assert "Access denied" in pdf_tools.extract_text(str(ROOT / "config" / "api_keys.json"))
 
 
+def test_zip_refuses_protected_source_without_creating_archive(tmp_path):
+    from actions import extra_tools as et
+    source = tmp_path / "bundle"
+    source.mkdir()
+    (source / "notes.txt").write_text("ordinary", encoding="utf-8")
+    (source / ".env.local").write_text("SECRET=value", encoding="utf-8")
+    archive = tmp_path / "bundle.zip"
+    assert et.zip_files([str(source)], str(archive)) == pp.DENIED
+    assert not archive.exists()
+
+
+def test_zip_refuses_protected_input_and_output_paths(tmp_path):
+    from actions import extra_tools as et
+    ordinary = tmp_path / "notes.txt"
+    ordinary.write_text("ordinary", encoding="utf-8")
+    assert et.zip_files([str(tmp_path / "api_keys.json")], str(tmp_path / "x.zip")) == pp.DENIED
+    assert et.zip_files([str(ordinary)], str(tmp_path / ".env")) == pp.DENIED
+    assert not (tmp_path / "x.zip").exists() and not (tmp_path / ".env").exists()
+
+
 @pytest.mark.parametrize("ports", ["1-999999999", "0-10", "1-70000", "abc", "1-5000", "70000", ""])
 def test_port_scan_rejects_unbounded_or_invalid_ranges(ports):
     from actions import osint_tools as ot

@@ -339,21 +339,37 @@ def zip_files(paths: list | str, output: str = "") -> str:
     """Zip one or more files/folders."""
     try:
         import zipfile
+        from core.protected_paths import DENIED, is_protected
         if isinstance(paths, str):
             paths = [p.strip() for p in paths.split(",") if p.strip()]
+        if not paths:
+            return "Zip error: no input paths provided."
         if not output:
             output = paths[0].rstrip("/\\") + ".zip"
         output = os.path.expanduser(output)
+        if is_protected(output):
+            return DENIED
+
+        entries = []
+        for source in paths:
+            source = os.path.expanduser(str(source).strip())
+            if is_protected(source):
+                return DENIED
+            if os.path.isdir(source):
+                for root, _, files in os.walk(source):
+                    for name in files:
+                        file_path = os.path.join(root, name)
+                        if is_protected(file_path):
+                            return DENIED
+                        entries.append((file_path, os.path.relpath(file_path, os.path.dirname(source))))
+            else:
+                if not os.path.isfile(source):
+                    return f"Zip error: input not found: {source}"
+                entries.append((source, os.path.basename(source)))
+
         with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zf:
-            for p in paths:
-                p = os.path.expanduser(p.strip())
-                if os.path.isdir(p):
-                    for root, _, files in os.walk(p):
-                        for f in files:
-                            fp = os.path.join(root, f)
-                            zf.write(fp, os.path.relpath(fp, os.path.dirname(p)))
-                else:
-                    zf.write(p, os.path.basename(p))
+            for file_path, archive_name in entries:
+                zf.write(file_path, archive_name)
         size = Path(output).stat().st_size
         return f"📦 Created {output}  ({size:,} bytes)"
     except Exception as e:
