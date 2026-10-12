@@ -13,7 +13,8 @@ def get_base_dir():
 
 
 BASE_DIR         = get_base_dir()
-PROJECTS_DIR     = Path.home() / "Desktop" / "AetherProjects"
+from core.known_folders import desktop_dir as _desktop_dir
+PROJECTS_DIR     = _desktop_dir() / "AetherProjects"
 MAX_FIX_ATTEMPTS = 5
 
 from core.llm_client import call_llm_text as _llm
@@ -421,6 +422,21 @@ def _build_project(
 
     if not file_codes:
         msg = "I could not write any project files, sir."
+        if speak: speak(msg)
+        return msg
+
+    # Nothing below this line (pip install, running the project) happens unless the
+    # user approves THIS plan: the packages and the command both come from the model.
+    from core.safety import confirm_action
+    if not confirm_action(
+            "install packages and run a generated project",
+            f"Project: {proj_name}\nFolder: {project_dir}\n"
+            f"Packages to pip install: {', '.join(map(str, dependencies)) or '(none)'}\n"
+            f"Command to run: {run_command}\n\n"
+            "If the run fails, Aether may also pip install modules named in the error "
+            "and retry."):
+        msg = (f"I wrote the project to {project_dir} but did not install anything or "
+               f"run it, since you did not approve.")
         if speak: speak(msg)
         return msg
 

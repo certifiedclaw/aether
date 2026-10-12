@@ -1,0 +1,5 @@
+{
+  "_comment": "Copy to api_keys.json and fill in. api_keys.json is git-ignored; do not put real keys in this example file or in any zip you share.",
+  "gemini_api_key": "",
+  "elevenlabs_api_key": ""
+}

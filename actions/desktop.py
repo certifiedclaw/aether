@@ -1,11 +1,14 @@
 #desktop.py
+import ast
 import os
 import sys
+import types
 import json
 import shutil
 import subprocess
 import tempfile
 import platform
+from core.known_folders import known_folder as _known_folder
 from pathlib import Path
 from datetime import datetime
 
@@ -24,11 +27,104 @@ def _get_base_dir() -> Path:
     return Path(__file__).resolve().parent.parent
 
 def _get_desktop() -> Path:
+    _kf = _known_folder("desktop")
+    if _kf:
+        return _kf
     if _OS == "Linux":
         xdg = os.environ.get("XDG_DESKTOP_DIR", "")
         if xdg and Path(xdg).exists():
             return Path(xdg)
     return Path.home() / "Desktop"
+
+# ── Generated-code sandbox (roadmap #23) ────────────────────────────────────
+# Model-written code is (1) statically validated against an ALLOWLIST, then
+# (2) shown to the user for confirmation via core/safety (denied by default
+# when no UI callback is registered), and only then (3) exec'd with a
+# minimal namespace. Each layer is independent; none relies on the prompt.
+
+_MAX_GENERATED_CODE = 4000
+
+# Attribute names generated code may touch. Anything not listed is rejected,
+# so a surprise module-valued attribute (e.g. Path(...).parser on 3.13+, which
+# is the ntpath module and leads to os.system) can never be reached.
+_ALLOWED_ATTRS = frozenset({
+    # pathlib.Path (read / list / mkdir only: no write, rename, replace, unlink)
+    "joinpath", "exists", "is_file", "is_dir", "name", "stem", "suffix",
+    "suffixes", "parent", "parents", "parts", "home", "iterdir", "glob",
+    "rglob", "stat", "mkdir", "read_text", "resolve", "expanduser", "absolute",
+    "st_size", "st_mtime", "st_ctime",
+    # proxies exposed below
+    "copy2", "copytree", "disk_usage", "sleep", "time", "strftime",
+    "join", "isfile", "isdir", "basename", "dirname", "splitext", "getsize",
+    "click", "doubleClick", "rightClick", "moveTo", "moveRel", "dragTo",
+    "typewrite", "write", "press", "hotkey", "scroll", "size", "position",
+    # plain str / list / dict methods
+    "append", "extend", "items", "keys", "values", "get", "sort", "split",
+    "lower", "upper", "strip", "lstrip", "rstrip", "startswith", "endswith",
+    "count", "index", "title", "pop", "setdefault", "update",
+    # used on disk_usage() result
+    "total", "used", "free",
+})
+
+_FORBIDDEN_NODES = (
+    ast.Import, ast.ImportFrom, ast.ClassDef, ast.Global, ast.Nonlocal,
+    ast.Await, ast.AsyncFunctionDef, ast.AsyncFor, ast.AsyncWith,
+    ast.Yield, ast.YieldFrom,
+    # `match` class patterns look attributes up BY STRING (case str(__class__=c)), which
+    # skips the ast.Attribute / ast.Name checks below. No generated task needs match.
+    *(getattr(ast, n) for n in ("Match", "MatchClass") if hasattr(ast, n)),
+)
+_FORBIDDEN_NAMES = frozenset({
+    "exec", "eval", "compile", "open", "input", "globals", "locals", "vars",
+    "getattr", "setattr", "delattr", "hasattr", "type", "super", "object",
+    "breakpoint", "memoryview", "bytearray",
+})
+
+
+def _validate_generated_code(code: str) -> str | None:
+    """Return None if the code passes the allowlist, else a short reason."""
+    if len(code) > _MAX_GENERATED_CODE:
+        return f"generated code is too long ({len(code)} > {_MAX_GENERATED_CODE} chars)"
+    try:
+        tree = ast.parse(code, "<aether_desktop>", "exec")
+    except SyntaxError as e:
+        return f"syntax error: {e.msg}"
+    for node in ast.walk(tree):
+        if isinstance(node, _FORBIDDEN_NODES):
+            return f"{type(node).__name__} is not allowed"
+        if isinstance(node, ast.Attribute):
+            if not isinstance(node.ctx, ast.Load):
+                return "assigning to attributes is not allowed"
+            if node.attr.startswith("_"):
+                return f"access to '{node.attr}' is not allowed"
+            if node.attr not in _ALLOWED_ATTRS:
+                return f"attribute '.{node.attr}' is not on the allowlist"
+        elif isinstance(node, ast.Name):
+            if node.id.startswith("_") or node.id in _FORBIDDEN_NAMES:
+                return f"name '{node.id}' is not allowed"
+        elif isinstance(node, (ast.FunctionDef, ast.Lambda)):
+            if isinstance(node, ast.FunctionDef) and node.name.startswith("_"):
+                return f"function name '{node.name}' is not allowed"
+    return None
+
+
+def _confirm_generated_code(code: str) -> bool:
+    """Ask the user to approve the exact code. Denied if anything goes wrong."""
+    try:
+        from core.safety import get_safety
+        return bool(get_safety().request_confirmation(
+            "desktop task (AI-generated code)",
+            "Aether generated this code to run on your desktop (all of it is shown):\n\n" + code,
+        ))
+    except Exception as e:
+        print(f"[Desktop] confirmation unavailable, denying: {e}")
+        return False
+
+
+def _ns(**members) -> object:
+    """Namespace exposing ONLY the given members (no module reachable from it)."""
+    return types.SimpleNamespace(**members)
+
 
 def _build_sandbox() -> dict:
     import time
@@ -38,7 +134,7 @@ def _build_sandbox() -> dict:
         "len": len, "str": str, "int": int, "float": float,
         "bool": bool, "list": list, "dict": dict, "tuple": tuple,
         "range": range, "enumerate": enumerate, "sorted": sorted,
-        "isinstance": isinstance, "hasattr": hasattr, "getattr": getattr,
+        "isinstance": isinstance,
         "max": max, "min": min, "sum": sum, "abs": abs,
         "zip": zip, "map": map, "filter": filter,
     }
@@ -46,65 +142,121 @@ def _build_sandbox() -> dict:
     sandbox = {
         "__builtins__": safe_builtins,
         "Path": Path,
-        "time": time,
-        "shutil": type("shutil", (), {
-            "copy2":      shutil.copy2,
-            "copytree":   shutil.copytree,
-            "disk_usage": shutil.disk_usage,
-        })(),
-        "os_path": os.path,  
+        "time": _ns(sleep=time.sleep, time=time.time, strftime=time.strftime),
+        "shutil": _ns(copy2=shutil.copy2, copytree=shutil.copytree,
+                      disk_usage=shutil.disk_usage),
+        "os_path": _ns(join=os.path.join, exists=os.path.exists,
+                       isfile=os.path.isfile, isdir=os.path.isdir,
+                       basename=os.path.basename, dirname=os.path.dirname,
+                       splitext=os.path.splitext, getsize=os.path.getsize,
+                       expanduser=os.path.expanduser),
     }
 
     if _PYAUTOGUI:
-        sandbox["pyautogui"] = pyautogui
+        sandbox["pyautogui"] = _ns(**{
+            n: getattr(pyautogui, n)
+            for n in ("click", "doubleClick", "rightClick", "moveTo", "moveRel",
+                      "dragTo", "typewrite", "write", "press", "hotkey",
+                      "scroll", "size", "position")
+            if hasattr(pyautogui, n)
+        })
 
-    if _OS == "Windows":
-        try:
-            import ctypes
-            import winreg
-            sandbox["ctypes"] = ctypes
-            sandbox["winreg"] = type("winreg", (), {
-                # Sadece okuma
-                "OpenKey":      winreg.OpenKey,
-                "QueryValueEx": winreg.QueryValueEx,
-                "HKEY_CURRENT_USER": winreg.HKEY_CURRENT_USER,
-            })()
-        except ImportError:
-            pass
-
+    # ctypes / winreg are intentionally NOT exposed: ctypes is arbitrary native
+    # code, and registry reads leak data. Use the dedicated tools instead.
     return sandbox
+
+
+_RESULT_TAG = "\x00AETHER_DESKTOP_RESULT\x00"     # keep in sync with actions/desktop_runner.py
+_MAX_OUTPUT = 4000
+
+
+def desktop_task_timeout() -> int:
+    """Seconds an approved desktop task may run (config "desktop_task_timeout", 5-300)."""
+    try:
+        from core.llm_client import _load_config
+        v = int(_load_config().get("desktop_task_timeout", 30))
+    except Exception:  # noqa: BLE001
+        v = 30
+    return max(5, min(v, 300))
+
+
+def _exec_in_process(code: str) -> tuple[bool, str]:
+    """Run already-validated, already-approved code in the minimal sandbox."""
+    sandbox      = _build_sandbox()
+    output_lines = []
+    sandbox["__builtins__"]["print"] = (
+        lambda *a, **k: output_lines.append(" ".join(str(x) for x in a)))
+    try:
+        exec(compile(code, "<aether_desktop>", "exec"), sandbox)
+        return True, "\n".join(output_lines) if output_lines else "Done."
+    except Exception as e:  # noqa: BLE001
+        print(f"[Desktop] Exec error: {e}\nCode:\n{code[:300]}")
+        return False, f"Execution error: {e}"
+
+
+def _parse_child_result(stdout: str) -> dict | None:
+    """The last tagged JSON line of the child's stdout; anything else is noise."""
+    for line in reversed((stdout or "").splitlines()):
+        if line.startswith(_RESULT_TAG):
+            try:
+                r = json.loads(line[len(_RESULT_TAG):])
+                if isinstance(r, dict) and isinstance(r.get("output"), str):
+                    return r
+            except ValueError:
+                return None
+    return None
+
+
+def _run_isolated(code: str, timeout: int | None = None) -> str:
+    """Run approved code in a child process that is killed after `timeout` seconds."""
+    timeout = timeout or desktop_task_timeout()
+    if getattr(sys, "frozen", False):          # packaged exe: no separate interpreter to start
+        return _exec_in_process(code)[1]
+    runner = Path(__file__).resolve().with_name("desktop_runner.py")
+    env = dict(os.environ, PYTHONIOENCODING="utf-8")
+    kwargs = {}
+    if sys.platform == "win32":
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(runner)], input=code, capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=timeout, env=env, **kwargs)
+    except subprocess.TimeoutExpired:
+        print(f"[Desktop] Task exceeded {timeout}s and was stopped.")
+        return f"The desktop task ran longer than {timeout} seconds and was stopped."
+    except Exception as e:  # noqa: BLE001
+        return f"Execution error: could not start the task ({e})."
+    result = _parse_child_result(proc.stdout)
+    if result is None:
+        tail = (proc.stderr or "").strip().splitlines()[-1:] or ["no output"]
+        return f"Execution error: the task produced no result ({tail[0][:200]})."
+    return result["output"][:_MAX_OUTPUT]
 
 
 def _execute_generated_code(code: str, player=None) -> str:
     if not code or code.strip() == "UNSAFE":
         return "This action cannot be performed safely."
 
-    # Kod temizleme
+    code = code.strip()
     if code.startswith("```"):
         lines = code.split("\n")
         code  = "\n".join(lines[1:-1]).strip()
 
-    sandbox      = _build_sandbox()
-    output_lines = []
-    sandbox["__builtins__"]["print"] = lambda *a: output_lines.append(" ".join(str(x) for x in a))
+    problem = _validate_generated_code(code)
+    if problem:
+        print(f"[Desktop] Rejected generated code: {problem}")
+        return f"Blocked: the generated code was not allowed ({problem})."
 
-    try:
-        exec(compile(code, "<aether_desktop>", "exec"), sandbox)
-        return "\n".join(output_lines) if output_lines else "Done."
-    except Exception as e:
-        print(f"[Desktop] Exec error: {e}\nCode:\n{code[:300]}")
-        return f"Execution error: {e}"
+    if not _confirm_generated_code(code):
+        return "Cancelled: the desktop task was not approved."
+
+    return _run_isolated(code)
 
 
 def _ask_gemini_for_desktop_action(task: str) -> str:
     from core.llm_client import call_llm_text
 
-    desktop     = str(_get_desktop())
-    os_specific = ""
-    if _OS == "Windows":
-        os_specific = "- ctypes (Windows API calls, read-only)\n- winreg (registry READ only)"
-    else:
-        os_specific = "- subprocess is NOT available; use pyautogui or Path only"
+    desktop = str(_get_desktop())
 
     system = (
         "You are a desktop automation code generator. "
@@ -112,10 +264,16 @@ def _ask_gemini_for_desktop_action(task: str) -> str:
     )
     prompt = (
         f"Current OS: {_OS}\nDesktop path: {desktop}\n\n"
-        f"Allowed modules: pyautogui, pathlib.Path, shutil.copy2, shutil.disk_usage, time.sleep\n"
-        f"{os_specific}\n\n"
-        f"Rules: NO deletion, NO subprocess, NO exec/eval, NO imports.\n"
-        f"If unsafe, output exactly: UNSAFE\n\n"
+        "Available names (nothing else exists, no imports): "
+        "Path (read/list/mkdir only), shutil.copy2/copytree/disk_usage, "
+        "os_path.join/exists/isfile/isdir/basename/dirname/splitext/getsize, "
+        "time.sleep/time/strftime, "
+        "pyautogui.click/moveTo/typewrite/press/hotkey/scroll/size/position.\n"
+        "Use print() to report results. Attributes starting with an underscore "
+        "are forbidden.\n\n"
+        "Rules: NO deletion, NO writing or renaming files, NO subprocess, "
+        "NO exec/eval, NO imports. The user will review your code before it runs.\n"
+        "If unsafe, output exactly: UNSAFE\n\n"
         f"Task: {task}"
     )
     try:

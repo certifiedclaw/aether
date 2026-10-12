@@ -85,9 +85,19 @@ def web_search(
     session_memory=None,
 ) -> str:
     params = parameters or {}
-    query  = params.get("query", "").strip()
-    mode   = params.get("mode",  "search").lower().strip()
+    query  = params.get("query", "")
+    mode   = str(params.get("mode",  "search")).lower().strip()
     items  = params.get("items", [])
+    # Small models often pass a list as `query` (e.g. for compare mode).
+    # Treat that as items instead of crashing on .strip().
+    if isinstance(query, (list, tuple)):
+        if not items:
+            items = [str(q) for q in query if str(q).strip()]
+        query = ""
+    query = str(query or "").strip()
+    if isinstance(items, str):
+        items = [items]
+    items = [str(i) for i in (items or []) if str(i).strip()]
     aspect = params.get("aspect", "general").strip() or "general"
 
     if not query and not items:

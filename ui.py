@@ -26,7 +26,7 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QApplication, QComboBox, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QLabel,
-    QLineEdit, QMainWindow, QPushButton, QScrollArea, QSizePolicy, QTextEdit,
+    QLineEdit, QMainWindow, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QTextEdit,
     QVBoxLayout, QWidget, QProgressBar,
 )
 
@@ -1095,7 +1095,7 @@ class SetupOverlay(QWidget):
             }}
         """)
 
-        _INPUT = f"""
+        self._INPUT_STYLE = f"""
             QLineEdit {{
                 background: #000d12; color: {C.TEXT};
                 border: 1px solid {C.BORDER}; border-radius: 3px; padding: 3px 7px;
@@ -1106,88 +1106,138 @@ class SetupOverlay(QWidget):
 
         self._sel_stt          = _init.get("stt_engine",    "whisper")
         self._sel_tts          = _init.get("tts_engine",    "edgetts")
-        self._sel_llm_provider = _init.get("llm_provider",  "ollama")
 
-        layout = QVBoxLayout(self)
+        _prov_init = _init.get("llm_provider", "ollama")
+        self._sel_llm_provider = _prov_init if _prov_init in ("ollama", "openai", "gemini") else "ollama"
+        # Which local backend to fall back to if the user switches from Gemini back to Local
+        self._sel_local_sub = self._sel_llm_provider if self._sel_llm_provider in ("ollama", "openai") else "ollama"
+        self._sel_engine = "gemini" if self._sel_llm_provider == "gemini" else "local"
+
+        # Best-effort local hardware detection, used to recommend Ollama models.
+        # Never allowed to break setup if it fails (missing psutil, sandboxed host, etc).
+        try:
+            from core.device_specs import get_device_specs, recommend_models
+            self._device_specs = get_device_specs()
+            self._model_recs   = recommend_models(self._device_specs)
+        except Exception:
+            self._device_specs = None
+            self._model_recs   = []
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setStyleSheet(f"""
+            QScrollArea {{ background: transparent; border: none; }}
+            QScrollBar:vertical {{ background: transparent; width: 8px; margin: 0; }}
+            QScrollBar::handle:vertical {{ background: {C.BORDER_B}; border-radius: 4px; min-height: 24px; }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
+        """)
+        content = QWidget()
+        content.setStyleSheet("background: transparent;")
+        scroll.setWidget(content)
+        outer.addWidget(scroll)
+
+        layout = QVBoxLayout(content)
         layout.setContentsMargins(22, 16, 22, 16)
         layout.setSpacing(6)
 
-        def _lbl(txt, sz=9, bold=False, col=C.PRI, align=Qt.AlignmentFlag.AlignCenter):
-            w = QLabel(txt); w.setAlignment(align)
-            w.setFont(QFont(FONT_BODY, sz,
-                            QFont.Weight.Bold if bold else QFont.Weight.Normal))
-            w.setStyleSheet(f"color: {col}; background: transparent;")
-            return w
-
-        def _sep():
-            s = QFrame(); s.setFrameShape(QFrame.Shape.HLine)
-            s.setStyleSheet(f"color: {C.BORDER}; margin: 2px 0;")
-            return s
-
-        def _input(placeholder="", pw=False, fixed_h=28):
-            w = QLineEdit()
-            w.setPlaceholderText(placeholder)
-            w.setFixedHeight(fixed_h)
-            if pw:
-                w.setEchoMode(QLineEdit.EchoMode.Password)
-            w.setStyleSheet(_INPUT)
-            return w
-
-        def _toggle_row(keys_labels: list, getter, setter):
-            row = QHBoxLayout(); row.setSpacing(5)
-            btns: dict[str, QPushButton] = {}
-            def _click(k):
-                setter(k)
-                for bk, b in btns.items():
-                    _style_btn(b, bk == k)
-            for k, lbl in keys_labels:
-                b = QPushButton(lbl)
-                b.setFixedHeight(26)
-                b.setFont(QFont(FONT_BODY, 8, QFont.Weight.Bold))
-                b.setCursor(Qt.CursorShape.PointingHandCursor)
-                b.clicked.connect(lambda _, kk=k: _click(kk))
-                row.addWidget(b)
-                btns[k] = b
-            _click(getter())
-            return row, btns
-
-        def _style_btn(btn: QPushButton, active: bool):
-            if active:
-                btn.setStyleSheet(f"""
-                    QPushButton {{
-                        background: {C.PRI}; color: #001a22;
-                        border: none; border-radius: 3px; font-weight: bold;
-                    }}
-                """)
-            else:
-                btn.setStyleSheet(f"""
-                    QPushButton {{
-                        background: #000d12; color: {C.TEXT_DIM};
-                        border: 1px solid {C.BORDER}; border-radius: 3px;
-                    }}
-                    QPushButton:hover {{ color: {C.TEXT}; border: 1px solid {C.BORDER_B}; }}
-                """)
-
         # ── Header ──────────────────────────────────────────────────── #
         if mode == "config":
-            layout.addWidget(_lbl("◈  CONFIGURATION", 12, True))
-            layout.addWidget(_lbl("Update Aether’s settings and click Apply.", 8, col=C.PRI_DIM))
+            layout.addWidget(self._lbl("◈  CONFIGURATION", 12, True))
+            layout.addWidget(self._lbl("Update Aether\u2019s settings and click Apply.", 8, col=C.PRI_DIM))
         else:
-            layout.addWidget(_lbl("◈  INITIALISATION REQUIRED", 12, True))
-            layout.addWidget(_lbl("Configure Aether before first boot.", 8, col=C.PRI_DIM))
-        layout.addWidget(_sep())
+            layout.addWidget(self._lbl("◈  INITIALISATION REQUIRED", 12, True))
+            layout.addWidget(self._lbl("Configure Aether before first boot.", 8, col=C.PRI_DIM))
+        layout.addWidget(self._sep())
 
-        # ── STT ──────────────────────────────────────────────────────── #
-        layout.addWidget(_lbl("SPEECH-TO-TEXT ENGINE", 7, col=C.TEXT_DIM,
+        self._build_stt_section(layout, _init)
+        self._build_llm_section(layout, _init)
+        self._build_tts_section(layout, _init)
+
+        # Set correct initial state for TTS UI
+        self._update_tts_ui(self._sel_tts)
+
+        self._build_action_buttons(layout, mode)
+
+    # ------------------------------------------------------------------ #
+    # Shared widget-builder helpers (formerly local closures in __init__)
+    # ------------------------------------------------------------------ #
+
+    def _lbl(self, txt, sz=9, bold=False, col=C.PRI, align=Qt.AlignmentFlag.AlignCenter):
+        w = QLabel(txt); w.setAlignment(align)
+        w.setFont(QFont(FONT_BODY, sz,
+                        QFont.Weight.Bold if bold else QFont.Weight.Normal))
+        w.setStyleSheet(f"color: {col}; background: transparent;")
+        return w
+
+    def _sep(self):
+        s = QFrame(); s.setFrameShape(QFrame.Shape.HLine)
+        s.setStyleSheet(f"color: {C.BORDER}; margin: 2px 0;")
+        return s
+
+    def _input(self, placeholder="", pw=False, fixed_h=28):
+        w = QLineEdit()
+        w.setPlaceholderText(placeholder)
+        w.setFixedHeight(fixed_h)
+        if pw:
+            w.setEchoMode(QLineEdit.EchoMode.Password)
+        w.setStyleSheet(self._INPUT_STYLE)
+        return w
+
+    def _toggle_row(self, keys_labels: list, getter, setter):
+        row = QHBoxLayout(); row.setSpacing(5)
+        btns: dict[str, QPushButton] = {}
+        def _click(k):
+            setter(k)
+            for bk, b in btns.items():
+                self._style_btn(b, bk == k)
+        for k, lbl in keys_labels:
+            b = QPushButton(lbl)
+            b.setFixedHeight(26)
+            b.setFont(QFont(FONT_BODY, 8, QFont.Weight.Bold))
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.clicked.connect(lambda _, kk=k: _click(kk))
+            row.addWidget(b)
+            btns[k] = b
+        _click(getter())
+        return row, btns
+
+    def _style_btn(self, btn: QPushButton, active: bool):
+        if active:
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: {C.PRI}; color: #001a22;
+                    border: none; border-radius: 3px; font-weight: bold;
+                }}
+            """)
+        else:
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: #000d12; color: {C.TEXT_DIM};
+                    border: 1px solid {C.BORDER}; border-radius: 3px;
+                }}
+                QPushButton:hover {{ color: {C.TEXT}; border: 1px solid {C.BORDER_B}; }}
+            """)
+
+    # ------------------------------------------------------------------ #
+    # Section builders (formerly inline in __init__)
+    # ------------------------------------------------------------------ #
+
+    def _build_stt_section(self, layout, _init) -> None:
+        layout.addWidget(self._lbl("SPEECH-TO-TEXT ENGINE", 7, col=C.TEXT_DIM,
                                align=Qt.AlignmentFlag.AlignLeft))
-        stt_row, self._stt_btns = _toggle_row(
+        stt_row, self._stt_btns = self._toggle_row(
             [("whisper","🎙 Whisper"), ("vosk","🔊 Vosk")],
             lambda: self._sel_stt,
             self._set_stt,
         )
         layout.addLayout(stt_row)
 
-        _COMBO_STYLE = f"""
+        self._COMBO_STYLE = f"""
             QComboBox {{
                 background: #000d12; color: {C.TEXT};
                 border: 1px solid {C.BORDER}; border-radius: 3px; padding: 3px 7px;
@@ -1204,13 +1254,13 @@ class SetupOverlay(QWidget):
         """
 
         stt_detail = QHBoxLayout(); stt_detail.setSpacing(5)
-        stt_detail.addWidget(_lbl("Model:", 7, col=C.TEXT_MED,
+        stt_detail.addWidget(self._lbl("Model:", 7, col=C.TEXT_MED,
                                    align=Qt.AlignmentFlag.AlignRight))
 
         # Whisper: dropdown with predefined sizes
         self._whisper_combo = QComboBox()
         self._whisper_combo.setFixedHeight(28)
-        self._whisper_combo.setStyleSheet(_COMBO_STYLE)
+        self._whisper_combo.setStyleSheet(self._COMBO_STYLE)
         for m in ["tiny", "base", "small", "medium", "large-v3"]:
             self._whisper_combo.addItem(m)
         _cur_model = _init.get("stt_model", "small")
@@ -1219,7 +1269,7 @@ class SetupOverlay(QWidget):
         stt_detail.addWidget(self._whisper_combo)
 
         # Vosk: free-text path input
-        self._vosk_model_input = _input("model dir path  (leave empty for auto-download)")
+        self._vosk_model_input = self._input("model dir path  (leave empty for auto-download)")
         self._vosk_model_input.setText(_init.get("vosk_model_path", ""))
         stt_detail.addWidget(self._vosk_model_input)
 
@@ -1230,62 +1280,168 @@ class SetupOverlay(QWidget):
         self._vosk_model_input.setVisible(self._sel_stt == "vosk")
 
         stt_lang_row = QHBoxLayout(); stt_lang_row.setSpacing(5)
-        stt_lang_row.addWidget(_lbl("Language:", 7, col=C.TEXT_MED,
+        stt_lang_row.addWidget(self._lbl("Language:", 7, col=C.TEXT_MED,
                                     align=Qt.AlignmentFlag.AlignRight))
-        self._stt_lang_input = _input("auto  (or: tr / en / de / fr / es / zh …)")
+        self._stt_lang_input = self._input("auto  (or: tr / en / de / fr / es / zh …)")
         self._stt_lang_input.setText(_init.get("stt_language", "auto"))
         stt_lang_row.addWidget(self._stt_lang_input)
         layout.addLayout(stt_lang_row)
-        layout.addWidget(_sep())
+        layout.addWidget(self._sep())
 
-        # ── LLM ──────────────────────────────────────────────────────── #
-        layout.addWidget(_lbl("LOCAL LLM", 7, col=C.TEXT_DIM,
+    _GEMINI_MODELS = [
+        ("gemini-3.8-flash",      "Gemini 3.8 Flash — fast & cheap (recommended)"),
+        ("gemini-2.5-flash",      "Gemini 2.5 Flash — retired for new keys"),
+        ("gemini-2.5-pro",        "Gemini 2.5 Pro — strongest reasoning"),
+        ("gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite — fastest / cheapest"),
+        ("gemini-2.0-flash",      "Gemini 2.0 Flash — previous gen"),
+    ]
+    GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
+
+    def _build_llm_section(self, layout, _init) -> None:
+        layout.addWidget(self._lbl("AI ENGINE", 7, col=C.TEXT_DIM,
                                align=Qt.AlignmentFlag.AlignLeft))
 
-        # Provider toggle: Ollama vs LM Studio / OpenAI-compatible
-        llm_prov_row, self._llm_prov_btns = _toggle_row(
+        # Top-level choice: run models locally, or use Gemini in the cloud.
+        engine_row, self._engine_btns = self._toggle_row(
+            [
+                ("local",  "🖥  Local (Ollama / LM Studio)"),
+                ("gemini", "✨  Gemini (cloud API key)"),
+            ],
+            lambda: self._sel_engine,
+            self._set_engine,
+        )
+        layout.addLayout(engine_row)
+
+        # ── Local panel (Ollama / LM Studio + device-based recommendations) ──
+        self._llm_local_widget = QWidget()
+        self._llm_local_widget.setStyleSheet("background: transparent;")
+        local_lay = QVBoxLayout(self._llm_local_widget)
+        local_lay.setContentsMargins(0, 6, 0, 0)
+        local_lay.setSpacing(5)
+
+        llm_prov_row, self._llm_prov_btns = self._toggle_row(
             [
                 ("ollama", "🦙 Ollama"),
                 ("openai", "🔌 LM Studio / OpenAI"),
             ],
-            lambda: self._sel_llm_provider,
+            lambda: self._sel_local_sub,
             self._set_llm_provider,
         )
-        layout.addLayout(llm_prov_row)
+        local_lay.addLayout(llm_prov_row)
 
-        # Hint label — changes based on provider
         _ollama_hint = "ollama.com  ·  run: ollama pull qwen2.5:3b"
         _openai_hint = "lmstudio.ai  ·  start Local Server first, then pick model"
-        self._llm_hint_lbl = _lbl(
-            _openai_hint if self._sel_llm_provider == "openai" else _ollama_hint,
+        self._llm_hint_lbl = self._lbl(
+            _openai_hint if self._sel_local_sub == "openai" else _ollama_hint,
             7, col=C.TEXT_DIM, align=Qt.AlignmentFlag.AlignLeft
         )
-        layout.addWidget(self._llm_hint_lbl)
+        local_lay.addWidget(self._llm_hint_lbl)
+
+        # Best-effort device spec line + clickable Ollama model recommendations
+        specs = self._device_specs
+        if specs and specs.detected_ok:
+            _gpu = f"  ·  GPU: {specs.gpu_name} ({specs.gpu_vram_gb:.0f}GB)" if specs.gpu_name and specs.gpu_vram_gb else ""
+            _spec_txt = f"Detected: {specs.ram_gb:.0f}GB RAM  ·  {specs.cpu_cores} cores{_gpu}"
+        else:
+            _spec_txt = "Couldn't read hardware specs — showing safe defaults"
+        local_lay.addWidget(self._lbl(_spec_txt, 7, col=C.TEXT_DIM, align=Qt.AlignmentFlag.AlignLeft))
+
+        reco_row = QHBoxLayout(); reco_row.setSpacing(4)
+        self._reco_btns: list[QPushButton] = []
+        for rec in self._model_recs:
+            label = f"★ {rec.tag}" if rec.recommended else rec.tag
+            b = QPushButton(label)
+            b.setFixedHeight(24)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setFont(QFont(FONT_BODY, 7, QFont.Weight.Bold if rec.recommended else QFont.Weight.Normal))
+            b.setToolTip(f"{rec.note}   (~{rec.approx_gb:.1f}GB, needs {rec.min_ram_gb:.0f}GB+ RAM)")
+            if rec.recommended:
+                b.setStyleSheet(f"""
+                    QPushButton {{ background: {C.PRI}; color: #001a22; border: none;
+                                   border-radius: 3px; padding: 0 6px; }}
+                """)
+            else:
+                b.setStyleSheet(f"""
+                    QPushButton {{ background: #000d12; color: {C.TEXT_DIM};
+                                   border: 1px solid {C.BORDER}; border-radius: 3px; padding: 0 6px; }}
+                    QPushButton:hover {{ color: {C.TEXT}; border: 1px solid {C.BORDER_B}; }}
+                """)
+            b.clicked.connect(lambda _, t=rec.tag: self._apply_model_reco(t))
+            reco_row.addWidget(b)
+            self._reco_btns.append(b)
+        reco_row.addStretch(1)
+        local_lay.addLayout(reco_row)
 
         llm_row = QHBoxLayout(); llm_row.setSpacing(5)
-        llm_row.addWidget(_lbl("URL:", 7, col=C.TEXT_MED,
+        llm_row.addWidget(self._lbl("URL:", 7, col=C.TEXT_MED,
                                 align=Qt.AlignmentFlag.AlignRight))
-        _default_url = _init.get("llm_url",
-                                  "http://localhost:1234" if self._sel_llm_provider == "openai"
-                                  else "http://localhost:11434")
-        self._llm_url_input = _input(
-            "http://localhost:1234" if self._sel_llm_provider == "openai"
+        _local_default_url = "http://localhost:1234" if self._sel_local_sub == "openai" else "http://localhost:11434"
+        # Don't prefill the local URL box with the Gemini endpoint if the saved config was Gemini.
+        _default_url = _local_default_url if self._sel_llm_provider == "gemini" else _init.get("llm_url", _local_default_url)
+        self._llm_url_input = self._input(
+            "http://localhost:1234" if self._sel_local_sub == "openai"
             else "http://localhost:11434"
         )
         self._llm_url_input.setText(_default_url)
         llm_row.addWidget(self._llm_url_input, stretch=2)
-        llm_row.addWidget(_lbl("Model:", 7, col=C.TEXT_MED,
+        llm_row.addWidget(self._lbl("Model:", 7, col=C.TEXT_MED,
                                 align=Qt.AlignmentFlag.AlignRight))
-        self._llm_model_input = _input("e.g.  qwen2.5:3b  /  llama3.2  /  mistral")
-        self._llm_model_input.setText(_init.get("llm_model", ""))
+        self._llm_model_input = self._input("e.g.  qwen2.5:3b  /  llama3.2  /  mistral")
+        self._llm_model_input.setText(_init.get("llm_model", "") if self._sel_llm_provider != "gemini" else "")
         llm_row.addWidget(self._llm_model_input, stretch=2)
-        layout.addLayout(llm_row)
-        layout.addWidget(_sep())
+        local_lay.addLayout(llm_row)
 
-        # ── TTS ──────────────────────────────────────────────────────── #
-        layout.addWidget(_lbl("TEXT-TO-SPEECH ENGINE", 7, col=C.TEXT_DIM,
+        layout.addWidget(self._llm_local_widget)
+
+        # ── Gemini panel (cloud, just needs an API key + model) ────────────
+        self._llm_gemini_widget = QWidget()
+        self._llm_gemini_widget.setStyleSheet("background: transparent;")
+        gem_lay = QVBoxLayout(self._llm_gemini_widget)
+        gem_lay.setContentsMargins(0, 6, 0, 0)
+        gem_lay.setSpacing(5)
+
+        gem_lay.addWidget(self._lbl(
+            "aistudio.google.com/app/apikey  ·  free tier available",
+            7, col=C.TEXT_DIM, align=Qt.AlignmentFlag.AlignLeft
+        ))
+
+        gem_key_row = QHBoxLayout(); gem_key_row.setSpacing(5)
+        gem_key_row.addWidget(self._lbl("API Key:", 7, col=C.TEXT_MED,
+                                    align=Qt.AlignmentFlag.AlignRight))
+        self._gemini_key_input = self._input("AIza…", pw=True)
+        self._gemini_key_input.setText(_init.get("gemini_api_key", ""))
+        gem_key_row.addWidget(self._gemini_key_input)
+        gem_lay.addLayout(gem_key_row)
+
+        gem_model_row = QHBoxLayout(); gem_model_row.setSpacing(5)
+        gem_model_row.addWidget(self._lbl("Model:", 7, col=C.TEXT_MED,
+                                    align=Qt.AlignmentFlag.AlignRight))
+        self._gemini_model_combo = QComboBox()
+        self._gemini_model_combo.setFixedHeight(28)
+        self._gemini_model_combo.setStyleSheet(self._COMBO_STYLE)
+        for val, disp in self._GEMINI_MODELS:
+            self._gemini_model_combo.addItem(disp, userData=val)
+        _cur_gem_model = _init.get("llm_model", "gemini-3.8-flash") if self._sel_llm_provider == "gemini" else "gemini-3.8-flash"
+        for i in range(self._gemini_model_combo.count()):
+            if self._gemini_model_combo.itemData(i) == _cur_gem_model:
+                self._gemini_model_combo.setCurrentIndex(i)
+                break
+        gem_model_row.addWidget(self._gemini_model_combo)
+        gem_lay.addLayout(gem_model_row)
+
+        layout.addWidget(self._llm_gemini_widget)
+        layout.addWidget(self._sep())
+
+        # Apply initial visibility now that both panels exist
+        self._llm_local_widget.setVisible(self._sel_engine == "local")
+        self._llm_gemini_widget.setVisible(self._sel_engine == "gemini")
+        for k, btn in self._engine_btns.items():
+            self._style_btn(btn, k == self._sel_engine)
+
+    def _build_tts_section(self, layout, _init) -> None:
+        layout.addWidget(self._lbl("TEXT-TO-SPEECH ENGINE", 7, col=C.TEXT_DIM,
                                align=Qt.AlignmentFlag.AlignLeft))
-        tts_row, self._tts_btns = _toggle_row(
+        tts_row, self._tts_btns = self._toggle_row(
             [("edgetts","🔈 EdgeTTS"), ("kokoro","🤖 Kokoro"), ("elevenlabs","⚡ ElevenLabs")],
             lambda: self._sel_tts,
             self._set_tts,
@@ -1299,14 +1455,14 @@ class SetupOverlay(QWidget):
         self._voice_lbl.setStyleSheet(f"color: {C.TEXT_MED}; background: transparent;")
         voice_row.addWidget(self._voice_lbl)
 
-        self._tts_voice_input = _input("en-US-GuyNeural")
+        self._tts_voice_input = self._input("en-US-GuyNeural")
         self._tts_voice_input.setText(_init.get("tts_voice", "en-US-GuyNeural"))
         voice_row.addWidget(self._tts_voice_input)
 
         # Kokoro: dropdown with predefined voices (hidden unless Kokoro selected)
         self._kokoro_combo = QComboBox()
         self._kokoro_combo.setFixedHeight(28)
-        self._kokoro_combo.setStyleSheet(_COMBO_STYLE)
+        self._kokoro_combo.setStyleSheet(self._COMBO_STYLE)
         _KOKORO_VOICES = [
             ("af_heart",    "af_heart  — EN-F warm (recommended)"),
             ("af_sky",      "af_sky  — EN-F clear"),
@@ -1339,11 +1495,11 @@ class SetupOverlay(QWidget):
         ks_row = QHBoxLayout(self._kokoro_speed_widget)
         ks_row.setContentsMargins(0, 0, 0, 0)
         ks_row.setSpacing(5)
-        ks_row.addWidget(_lbl("Speed:", 7, col=C.TEXT_MED,
+        ks_row.addWidget(self._lbl("Speed:", 7, col=C.TEXT_MED,
                                align=Qt.AlignmentFlag.AlignRight))
         self._kokoro_speed_combo = QComboBox()
         self._kokoro_speed_combo.setFixedHeight(28)
-        self._kokoro_speed_combo.setStyleSheet(_COMBO_STYLE)
+        self._kokoro_speed_combo.setStyleSheet(self._COMBO_STYLE)
         for val, label in [
             ("0.8",  "0.8×  — Slow"),
             ("1.0",  "1.0×  — Normal"),
@@ -1367,18 +1523,16 @@ class SetupOverlay(QWidget):
         el_row = QHBoxLayout(self._el_key_widget)
         el_row.setContentsMargins(0, 0, 0, 0)
         el_row.setSpacing(5)
-        el_row.addWidget(_lbl("API Key:", 7, col=C.TEXT_MED,
+        el_row.addWidget(self._lbl("API Key:", 7, col=C.TEXT_MED,
                                align=Qt.AlignmentFlag.AlignRight))
-        self._el_key_input = _input("ElevenLabs API key", pw=True)
+        self._el_key_input = self._input("ElevenLabs API key", pw=True)
         self._el_key_input.setText(_init.get("elevenlabs_api_key", ""))
         el_row.addWidget(self._el_key_input)
         layout.addWidget(self._el_key_widget)
 
-        layout.addWidget(_sep())
+        layout.addWidget(self._sep())
 
-        # Set correct initial state for TTS UI
-        self._update_tts_ui(self._sel_tts)
-
+    def _build_action_buttons(self, layout, mode) -> None:
         # ── Action buttons ─────────────────────────────────────────────── #
         btn_row = QHBoxLayout(); btn_row.setSpacing(8)
 
@@ -1449,8 +1603,30 @@ class SetupOverlay(QWidget):
         if hasattr(self, "_el_key_widget"):
             self._el_key_widget.setVisible(key == "elevenlabs")
 
+    def _set_engine(self, key: str):
+        """Top-level toggle: Local (Ollama/LM Studio) vs Gemini (cloud API)."""
+        self._sel_engine = key
+        self._sel_llm_provider = self._sel_local_sub if key == "local" else "gemini"
+        if hasattr(self, "_engine_btns"):
+            for k, btn in self._engine_btns.items():
+                self._style_btn(btn, k == key)
+        if hasattr(self, "_llm_local_widget"):
+            self._llm_local_widget.setVisible(key == "local")
+        if hasattr(self, "_llm_gemini_widget"):
+            self._llm_gemini_widget.setVisible(key == "gemini")
+
+    def _apply_model_reco(self, tag: str):
+        """Clicking a recommended model fills the model field and switches to Ollama."""
+        if hasattr(self, "_llm_model_input"):
+            self._llm_model_input.setText(tag)
+            self._llm_model_input.setStyleSheet(self._INPUT_STYLE)
+        self._set_llm_provider("ollama")
+
     def _set_llm_provider(self, key: str):
-        self._sel_llm_provider = key
+        """Sub-toggle within the Local panel: Ollama vs LM Studio / OpenAI-compatible."""
+        self._sel_local_sub = key
+        if self._sel_engine == "local":
+            self._sel_llm_provider = key
         if not hasattr(self, "_llm_prov_btns"):
             return
         for k, btn in self._llm_prov_btns.items():
@@ -1522,13 +1698,23 @@ class SetupOverlay(QWidget):
         self._update_tts_ui(key)
 
     def _submit(self):
-        llm_model = self._llm_model_input.text().strip()
-        if not llm_model:
-            self._llm_model_input.setStyleSheet(
-                self._llm_model_input.styleSheet() +
-                f" QLineEdit {{ border: 1px solid {C.RED}; }}"
-            )
-            return
+        _provider = getattr(self, "_sel_llm_provider", "ollama")
+
+        if _provider == "gemini":
+            llm_model = self._gemini_model_combo.currentData() or "gemini-3.8-flash"
+            if not self._gemini_key_input.text().strip():
+                self._gemini_key_input.setStyleSheet(
+                    self._INPUT_STYLE + f" QLineEdit {{ border: 1px solid {C.RED}; }}"
+                )
+                return
+        else:
+            llm_model = self._llm_model_input.text().strip()
+            if not llm_model:
+                self._llm_model_input.setStyleSheet(
+                    self._llm_model_input.styleSheet() +
+                    f" QLineEdit {{ border: 1px solid {C.RED}; }}"
+                )
+                return
 
         # STT model: combo for Whisper, text input for Vosk
         if self._sel_stt == "whisper":
@@ -1544,19 +1730,24 @@ class SetupOverlay(QWidget):
             tts_voice = self._tts_voice_input.text().strip() or "en-US-GuyNeural"
             tts_speed = "1.0"
 
-        _provider = getattr(self, "_sel_llm_provider", "ollama")
-        _default_url = "http://localhost:1234" if _provider == "openai" else "http://localhost:11434"
+        if _provider == "gemini":
+            llm_url = self.GEMINI_BASE_URL
+        else:
+            _default_url = "http://localhost:1234" if _provider == "openai" else "http://localhost:11434"
+            llm_url = self._llm_url_input.text().strip() or _default_url
+
         cfg = {
             "stt_engine":         self._sel_stt,
             "stt_model":          stt_model,
             "stt_language":       self._stt_lang_input.text().strip() or "auto",
             "llm_provider":       _provider,
-            "llm_url":            self._llm_url_input.text().strip() or _default_url,
+            "llm_url":            llm_url,
             "llm_model":          llm_model,
             "tts_engine":         self._sel_tts,
             "tts_voice":          tts_voice,
             "tts_speed":          tts_speed,
             "elevenlabs_api_key": self._el_key_input.text().strip(),
+            "gemini_api_key":     self._gemini_key_input.text().strip(),
         }
         if self._sel_stt == "vosk" and stt_model:
             cfg["vosk_model_path"] = stt_model
@@ -1688,6 +1879,7 @@ class MainWindow(QMainWindow):
     _state_sig   = pyqtSignal(str)
     _startup_sig = pyqtSignal(str, str)  # action, data — thread-safe startup panel control
     _stats_sig   = pyqtSignal(dict)      # message-stats updates from worker threads
+    _confirm_sig = pyqtSignal(str, object)  # message, result-holder dict — see AetherUI.confirm_blocking
 
     def __init__(self, face_path: str):
         super().__init__()
@@ -1746,6 +1938,7 @@ class MainWindow(QMainWindow):
         self._state_sig.connect(self._apply_state)
         self._startup_sig.connect(self._on_startup_sig)
         self._stats_sig.connect(self._stats_bar.update_stats)
+        self._confirm_sig.connect(self._on_confirm_requested)
 
         _theme = detect_system_theme()
         self._log.append_log(
@@ -1807,7 +2000,7 @@ class MainWindow(QMainWindow):
         super().resizeEvent(event)
         cw = self.centralWidget()
         if self._overlay and self._overlay.isVisible():
-            ow, oh = 520, 580
+            ow, oh = 560, 660
             self._overlay.setGeometry(
                 (cw.width()  - ow) // 2,
                 (cw.height() - oh) // 2,
@@ -1822,6 +2015,20 @@ class MainWindow(QMainWindow):
             )
 
     # ── Startup panel (thread-safe via _startup_sig) ────────────────────
+    def _on_confirm_requested(self, message: str, result_holder: dict) -> None:
+        """Runs on the Qt UI thread — shows a blocking Yes/No dialog for a
+        high-risk operation (shell exec, file delete, port scan, etc.) and
+        reports the answer back to the worker thread that's blocked waiting
+        on result_holder['event']. See AetherUI.confirm_blocking for the
+        thread-safe entry point background code should actually call."""
+        reply = QMessageBox.question(
+            self, "Aether — Confirmation Required", message,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        result_holder["answer"] = (reply == QMessageBox.StandardButton.Yes)
+        result_holder["event"].set()
+
     def _on_startup_sig(self, action: str, data: str) -> None:
         """Runs on main thread — handles all startup panel state changes."""
         if action == "show":
@@ -2236,7 +2443,7 @@ class MainWindow(QMainWindow):
     def _show_setup(self):
         ov = SetupOverlay(self.centralWidget())
         cw = self.centralWidget()
-        ow, oh = 520, 580
+        ow, oh = 560, 660
         ov.setGeometry(
             (cw.width()  - ow) // 2,
             (cw.height() - oh) // 2,
@@ -2252,10 +2459,8 @@ class MainWindow(QMainWindow):
         except Exception:
             cfg = {}
         os.makedirs(CONFIG_DIR, exist_ok=True)
-        API_FILE.write_text(
-            json.dumps(cfg, indent=4),
-            encoding="utf-8",
-        )
+        from core.config_io import save_config  # merges: keeps settings the dialog does not show
+        save_config(API_FILE, cfg)
         self._ready = True
         if self._overlay:
             self._overlay.hide()
@@ -2278,7 +2483,7 @@ class MainWindow(QMainWindow):
             pass
         ov = SetupOverlay(self.centralWidget(), initial=current, mode="config")
         cw = self.centralWidget()
-        ow, oh = 520, 600
+        ow, oh = 560, 680
         ov.setGeometry(
             (cw.width()  - ow) // 2,
             (cw.height() - oh) // 2,
@@ -2294,7 +2499,8 @@ class MainWindow(QMainWindow):
         except Exception:
             cfg = {}
         os.makedirs(CONFIG_DIR, exist_ok=True)
-        API_FILE.write_text(json.dumps(cfg, indent=4), encoding="utf-8")
+        from core.config_io import save_config  # merges: keeps settings the dialog does not show
+        save_config(API_FILE, cfg)
         if self._overlay:
             self._overlay.hide()
             self._overlay = None
@@ -2355,10 +2561,51 @@ class AetherUI:
         self._win._on_reconfigure_cb = cb
 
     def set_state(self, state: str):
-        self._win._state_sig.emit(state)
+        # Background threads (TTS worker, tool dispatch, STT, etc.) call
+        # this well after the window may have been destroyed during
+        # shutdown -- PySide raises RuntimeError("wrapped C/C++ object of
+        # type MainWindow has been deleted") in that case, and previously
+        # that propagated out of a thread's `finally` block uncaught,
+        # crashing the whole process (seen as exit code -1073741819).
+        # There's nothing meaningful to update once the window is gone,
+        # so swallow it here -- this is the single choke point every
+        # set_state() caller goes through, so this covers all of them.
+        try:
+            self._win._state_sig.emit(state)
+        except RuntimeError:
+            pass
 
     def write_log(self, text: str):
-        self._win._log_sig.emit(text)
+        try:
+            self._win._log_sig.emit(text)
+        except RuntimeError:
+            pass
+
+    def confirm_blocking(self, message: str, timeout: float = 120.0) -> bool:
+        """Thread-safe blocking Yes/No confirmation dialog for high-risk
+        operations (shell exec, file delete, port scan, breach lookups).
+        Safe to call from any background worker thread -- blocks the
+        CALLING thread (not the Qt UI thread) until the user answers or
+        `timeout` seconds elapse, at which point it fails closed (returns
+        False) rather than hanging forever. Must NOT be called from the Qt
+        UI thread itself: the UI thread is the one that shows the dialog
+        and sets the result, so calling this from that same thread would
+        deadlock waiting on an event nothing can ever set.
+
+        This is the intended callback for core.safety.SafetyLayer's
+        set_confirm_callback() -- see main.py's AetherLocal init for the
+        wiring, and core/safety.py's requires_confirmation()/
+        request_confirmation() for the gating logic that decides when to
+        call this at all."""
+        if threading.current_thread() is threading.main_thread():
+            raise RuntimeError(
+                "AetherUI.confirm_blocking() must be called from a background "
+                "worker thread, not the main/UI thread (it would deadlock)."
+            )
+        result = {"answer": False, "event": threading.Event()}
+        self._win._confirm_sig.emit(message, result)
+        result["event"].wait(timeout=timeout)  # fails closed on timeout: answer stays False
+        return result["answer"]
 
     def update_message_stats(self, data: dict) -> None:
         """Thread-safe update of the Message Stats panel. See StatsBar.update_stats

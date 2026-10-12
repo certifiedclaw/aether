@@ -34,29 +34,69 @@ else
     echo "[INFO] Virtual environment already exists"
 fi
 
-# Activate virtual environment and install dependencies
-echo "[INFO] Activating virtual environment and installing dependencies..."
+# Activate virtual environment
+echo "[INFO] Activating virtual environment..."
 source venv/bin/activate
-if [ $? -ne 0 ]; then
+if [ $? -ne 0 ] || [ -z "$VIRTUAL_ENV" ]; then
     echo "[ERROR] Failed to activate virtual environment"
     exit 1
 fi
 
-pip install --upgrade pip
+# Upgrade pip/setuptools/wheel via "python -m pip", not bare "pip" -- on some
+# platforms pip cannot reliably overwrite its own running executable when
+# invoked directly. Non-fatal: an older pip can still install everything
+# below fine.
+echo "[INFO] Upgrading pip, setuptools, and wheel..."
+python3 -m pip install --upgrade pip setuptools wheel
 if [ $? -ne 0 ]; then
-    echo "[ERROR] Failed to upgrade pip"
+    echo "[WARN] Could not upgrade pip/setuptools/wheel -- continuing with the existing version."
+fi
+
+if [ ! -f requirements.txt ]; then
+    echo "[ERROR] requirements.txt not found in $(pwd)."
+    echo "        Run this script from inside the Aether project folder."
     exit 1
 fi
 
-pip install -r requirements.txt
+echo "[INFO] Installing dependencies from requirements.txt..."
+python3 -m pip install -r requirements.txt
 if [ $? -ne 0 ]; then
-    echo "[ERROR] Failed to install dependencies"
-    exit 1
+    echo "[WARN] First attempt failed -- retrying once..."
+    python3 -m pip install -r requirements.txt
+    if [ $? -ne 0 ]; then
+        echo "[ERROR] Failed to install dependencies."
+        echo "        Scroll up past the retry to find the FIRST error pip printed --"
+        echo "        pip repeats it, and the real cause is usually higher up than"
+        echo "        the last line (e.g. a specific package failing to build, or"
+        echo "        one needing a system library)."
+        exit 1
+    fi
 fi
 
 echo ""
 echo "============================================"
 echo "   Installation completed successfully!"
+echo "============================================"
+echo ""
+echo "Aether can run two ways:"
+echo "  1. Normal   - the real app: window, mic, TTS. Use this for actual"
+echo "                use and for testing real user experience."
+echo "  2. Headless - no window, no mic, no audio. Scripted text in, text"
+echo "                out -- for fast automated testing of the"
+echo "                conversation/tool/memory logic only. This does NOT"
+echo "                test real voice, audio, or the GUI -- it is not a"
+echo "                substitute for a normal run."
+echo ""
+read -p "Set run.sh's default mode [1 or 2]: " _mode_choice
+if [ "$_mode_choice" = "2" ]; then
+    echo "headless" > aether_mode.txt
+else
+    echo "normal" > aether_mode.txt
+fi
+echo ""
+echo "Saved to aether_mode.txt -- re-run install.sh anytime to change it,"
+echo "or edit that file directly (\"normal\" or \"headless\")."
+echo "For scripted headless testing, see tests/live_test_script.txt."
 echo ""
 echo "To run Aether, execute: ./run.sh"
 echo "============================================"

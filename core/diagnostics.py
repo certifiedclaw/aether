@@ -42,6 +42,27 @@ def run_all(config=None) -> list[Check]:
     except Exception as e:
         results.append(Check("Ollama", False, f"Not reachable: {e}"))
 
+    # LLM backend (remote-PC / local-CPU fallback, if configured)
+    try:
+        from core.llm_client import get_llm_backend_status
+        status = get_llm_backend_status()
+        if status["mode"] == "single":
+            results.append(Check("LLM Backend", True, f"single host — {status['url']}"))
+        else:
+            active = status["active"]
+            if active == "remote":
+                results.append(Check("LLM Backend", True,
+                    f"remote ({status['remote_url']}) — model {status['model']}"))
+            elif active == "local":
+                results.append(Check("LLM Backend", True,
+                    f"local CPU fallback ({status['local_url']}) — remote "
+                    f"{status['remote_url']} unreachable"))
+            else:
+                results.append(Check("LLM Backend", True,
+                    f"dual-host configured, not yet checked — remote {status['remote_url']}"))
+    except Exception as e:
+        results.append(Check("LLM Backend", False, f"check failed: {e}"))
+
     # Browser CDP
     try:
         import requests
@@ -59,7 +80,7 @@ def run_all(config=None) -> list[Check]:
 
     # Packages
     pkgs = {
-        "PySide6":                   "PySide6",
+        "PyQt6":                     "PyQt6",
         "requests":                  "requests",
         "PyMuPDF (fitz)":            "fitz",
         "psutil":                    "psutil",

@@ -29,10 +29,9 @@ class WhisperSTT:
             _e = str(_first_err).lower()
             if any(k in _e for k in ("offline", "not found", "cache", "localentry", "does not exist")):
                 print(f"[STT] '{model_name}' not cached — downloading (internet required for first run)…")
-                os.environ.pop("HF_HUB_OFFLINE",      None)
-                os.environ.pop("TRANSFORMERS_OFFLINE", None)
-                os.environ.pop("HF_DATASETS_OFFLINE",  None)
-                self._model = WhisperModel(model_name, device=device, compute_type=compute)
+                from core.hf_offline import allow_online
+                with allow_online():
+                    self._model = WhisperModel(model_name, device=device, compute_type=compute)
             else:
                 raise
 

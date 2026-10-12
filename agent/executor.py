@@ -393,6 +393,10 @@ class AgentExecutor:
                             success      = False
                             break
 
+                if cancel_flag and cancel_flag.is_set():
+                    if speak: speak("Task cancelled, sir.")
+                    return "Task cancelled."
+
                 if not step_ok and not failed_step:
                     failed_step  = step
                     failed_error = "Max retries exceeded"

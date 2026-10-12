@@ -134,6 +134,9 @@ class StructuredLogger:
     Human-readable summary also goes to the rotating text log.
     """
 
+    _MAX_JSONL_BYTES  = 5 * 1024 * 1024   # rotate once the file crosses this size
+    _JSONL_KEEP_LINES = 5000              # lines kept after rotating
+
     def __init__(self, log_dir: Path) -> None:
         self._log_dir = log_dir
         self._log_dir.mkdir(parents=True, exist_ok=True)
@@ -150,9 +153,28 @@ class StructuredLogger:
         }
         line = json.dumps(record, default=str)
         with self._lock:
+            self._maybe_rotate()
             with open(self._jsonl, "a", encoding="utf-8") as f:
                 f.write(line + "\n")
         logger.debug("[obs] %s %s", kind, kwargs)
+
+    def _maybe_rotate(self) -> None:
+        """Keep events.jsonl from growing without bound over a long-running
+        session: once it crosses _MAX_JSONL_BYTES, truncate to the most
+        recent _JSONL_KEEP_LINES lines. Caller must already hold self._lock.
+        """
+        try:
+            if not self._jsonl.exists() or \
+               self._jsonl.stat().st_size < self._MAX_JSONL_BYTES:
+                return
+            lines = self._jsonl.read_text(encoding="utf-8").splitlines()
+            kept  = lines[-self._JSONL_KEEP_LINES:]
+            self._jsonl.write_text(
+                "\n".join(kept) + ("\n" if kept else ""), encoding="utf-8")
+            logger.info("[obs] events.jsonl rotated: kept last %d of %d lines",
+                        len(kept), len(lines))
+        except Exception as e:
+            logger.warning("[obs] events.jsonl rotation failed: %s", e)
 
     def recent(self, n: int = 20) -> list[dict]:
         try:

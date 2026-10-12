@@ -151,7 +151,9 @@ class SystemMonitor:
     def _record(self, key: str):
         self._last_alert[key] = time.monotonic()
 
-    def check(self) -> str | None:
+    def check(self, plain: bool = False) -> str | None:
+        """plain=True returns a short human-readable notice (no LLM instructions),
+        suitable for speaking/logging directly instead of sending to the model."""
         try:
             cpu  = psutil.cpu_percent(interval=None)
             ram  = psutil.virtual_memory().percent
@@ -166,6 +168,9 @@ class SystemMonitor:
             self._cpu_streak += 1
             if self._cpu_streak >= _CPU_STREAK and self._can_alert("cpu"):
                 alerts.append(
+                    f"CPU usage has been critically high ({cpu:.0f}%) for several seconds. "
+                    "Consider closing heavy applications."
+                    if plain else
                     f"[SYSTEM_ALERT] CPU usage has been critically high ({cpu:.0f}%) "
                     "for several seconds. Warn the user in their language and suggest "
                     "closing heavy applications."
@@ -177,6 +182,8 @@ class SystemMonitor:
 
         if ram >= self.thresholds["ram"] and self._can_alert("ram"):
             alerts.append(
+                f"RAM is at {ram:.0f}% and nearly exhausted. Consider freeing memory."
+                if plain else
                 f"[SYSTEM_ALERT] RAM is at {ram:.0f}% — nearly exhausted. "
                 "Warn the user in their language and suggest freeing memory."
             )
@@ -184,6 +191,9 @@ class SystemMonitor:
 
         if temp > 0 and temp >= self.thresholds["temp"] and self._can_alert("temp"):
             alerts.append(
+                f"CPU temperature is {temp:.0f} degrees Celsius, above the safe limit. "
+                "Consider reducing load or checking cooling."
+                if plain else
                 f"[SYSTEM_ALERT] CPU temperature is {temp:.0f}°C — above the safe limit. "
                 "Warn the user in their language and advise reducing system load "
                 "or checking cooling."
@@ -192,6 +202,8 @@ class SystemMonitor:
 
         if gpu >= 0 and gpu >= self.thresholds["gpu"] and self._can_alert("gpu"):
             alerts.append(
+                f"GPU load is at {gpu:.0f}%."
+                if plain else
                 f"[SYSTEM_ALERT] GPU load is at {gpu:.0f}%. "
                 "Briefly inform the user in their language."
             )

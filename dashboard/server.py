@@ -12,6 +12,7 @@ import asyncio
 import queue as _queue
 import base64
 import hashlib
+import os
 import re
 import secrets
 import socket
@@ -28,10 +29,23 @@ try:
 except ImportError:
     pass
 
-# python-multipart is required for file uploads — optional dependency
+# python-multipart is required for file uploads — optional dependency.
+# NOTE: importing UploadFile/File from fastapi always succeeds (they're just
+# fastapi's own classes) regardless of whether python-multipart is actually
+# installed -- the real dependency only gets exercised later, when FastAPI
+# builds the request-parsing "dependant" for a route that uses UploadFile/
+# File(...) as a parameter (see _build_app()'s /api/upload route below).
+# That happens at *route-registration* time, not import time, and raises
+# RuntimeError if python-multipart is missing -- so checking only the
+# fastapi import here would make _UPLOAD_OK always True and crash the whole
+# dashboard (not just uploads) on any install missing python-multipart.
+# Use fastapi's own internal availability check so this stays correct
+# regardless of which of python-multipart's two import names is installed.
 _UPLOAD_OK = False
 try:
     from fastapi import UploadFile, File as FastAPIFile
+    from fastapi.dependencies.utils import ensure_multipart_is_installed
+    ensure_multipart_is_installed()
     _UPLOAD_OK = True
 except Exception:
     pass
@@ -103,160 +117,172 @@ def _ensure_network_access(port: int) -> None:
     macOS   : osascript admin dialog if the Application Firewall is on.
     Linux   : pkexec GUI → sudo -n → prints manual command as fallback.
     """
-    import sys, subprocess, os, tempfile, threading
+    import sys
 
-    # ── Windows ──────────────────────────────────────────────────────────────
     if sys.platform == "win32":
-        import ctypes, time
+        _ensure_network_access_windows(port)
+    elif sys.platform == "darwin":
+        _ensure_network_access_macos(port)
+    else:
+        _ensure_network_access_linux(port)
 
-        port_rule = f"AETHER Dashboard Port {port}"
-        prog_rule  = "AETHER Dashboard Python"
-        py_exe     = sys.executable
 
-        def _netsh_rule_exists(name: str) -> bool:
-            try:
-                r = subprocess.run(
-                    ["netsh", "advfirewall", "firewall", "show", "rule", f"name={name}"],
-                    capture_output=True, text=True, timeout=5,
-                )
-                return r.returncode == 0 and "No rules match" not in r.stdout
-            except Exception:
-                return False
+def _ensure_network_access_windows(port: int) -> None:
+    import sys, subprocess, os, tempfile, threading
+    import ctypes, time
 
-        def _network_is_public() -> bool:
-            try:
-                r = subprocess.run(
-                    ["powershell", "-NoProfile", "-NonInteractive", "-Command",
-                     "(Get-NetConnectionProfile | "
-                     "Where-Object {$_.NetworkCategory -eq 'Public'} | "
-                     "Measure-Object).Count"],
-                    capture_output=True, text=True, timeout=6,
-                )
-                return r.stdout.strip() not in ("", "0")
-            except Exception:
-                return False
+    port_rule = f"AETHER Dashboard Port {port}"
+    prog_rule  = "AETHER Dashboard Python"
+    py_exe     = sys.executable
 
-        need_port    = not _netsh_rule_exists(port_rule)
-        need_prog    = not _netsh_rule_exists(prog_rule)
-        need_private = _network_is_public()
-
-        if not need_port and not need_prog and not need_private:
-            return  # already fully configured
-
-        # Build a .bat file — netsh + powershell, runs fast when elevated
-        bat_lines = ["@echo off"]
-        if need_private:
-            bat_lines.append(
-                'powershell -NoProfile -NonInteractive -Command "'
-                'Get-NetConnectionProfile | '
-                "Where-Object {$_.NetworkCategory -eq 'Public'} | "
-                'Set-NetConnectionProfile -NetworkCategory Private"'
-            )
-        if need_port:
-            bat_lines.append(
-                f'netsh advfirewall firewall add rule '
-                f'name="{port_rule}" protocol=TCP dir=in '
-                f'localport={port} action=allow'
-            )
-        if need_prog:
-            bat_lines.append(
-                f'netsh advfirewall firewall add rule '
-                f'name="{prog_rule}" dir=in action=allow '
-                f'program="{py_exe}" enable=yes'
-            )
-
-        bat_body = "\r\n".join(bat_lines) + "\r\n"
-        fd, bat_path = tempfile.mkstemp(suffix=".bat", prefix="aether_fw_")
+    def _netsh_rule_exists(name: str) -> bool:
         try:
-            os.write(fd, bat_body.encode("mbcs"))   # Windows cmd.exe expects ANSI
+            r = subprocess.run(
+                ["netsh", "advfirewall", "firewall", "show", "rule", f"name={name}"],
+                capture_output=True, text=True, timeout=5,
+            )
+            return r.returncode == 0 and "No rules match" not in r.stdout
+        except Exception:
+            return False
+
+    def _network_is_public() -> bool:
+        try:
+            r = subprocess.run(
+                ["powershell", "-NoProfile", "-NonInteractive", "-Command",
+                 "(Get-NetConnectionProfile | "
+                 "Where-Object {$_.NetworkCategory -eq 'Public'} | "
+                 "Measure-Object).Count"],
+                capture_output=True, text=True, timeout=6,
+            )
+            return r.stdout.strip() not in ("", "0")
+        except Exception:
+            return False
+
+    need_port    = not _netsh_rule_exists(port_rule)
+    need_prog    = not _netsh_rule_exists(prog_rule)
+    need_private = _network_is_public()
+
+    if not need_port and not need_prog and not need_private:
+        return  # already fully configured
+
+    # Build a .bat file — netsh + powershell, runs fast when elevated
+    bat_lines = ["@echo off"]
+    if need_private:
+        bat_lines.append(
+            'powershell -NoProfile -NonInteractive -Command "'
+            'Get-NetConnectionProfile | '
+            "Where-Object {$_.NetworkCategory -eq 'Public'} | "
+            'Set-NetConnectionProfile -NetworkCategory Private"'
+        )
+    if need_port:
+        bat_lines.append(
+            f'netsh advfirewall firewall add rule '
+            f'name="{port_rule}" protocol=TCP dir=in '
+            f'localport={port} action=allow'
+        )
+    if need_prog:
+        bat_lines.append(
+            f'netsh advfirewall firewall add rule '
+            f'name="{prog_rule}" dir=in action=allow '
+            f'program="{py_exe}" enable=yes'
+        )
+
+    bat_body = "\r\n".join(bat_lines) + "\r\n"
+    fd, bat_path = tempfile.mkstemp(suffix=".bat", prefix="aether_fw_")
+    try:
+        os.write(fd, bat_body.encode("mbcs"))   # Windows cmd.exe expects ANSI
+        os.close(fd)
+    except Exception:
+        try:
             os.close(fd)
         except Exception:
+            pass
+        return
+
+    # ── Try running directly (succeeds when already admin) ────────────────
+    try:
+        r = subprocess.run(
+            [bat_path], capture_output=True, timeout=8, shell=True
+        )
+        if r.returncode == 0:
+            print(f"[Dashboard] Firewall configured for port {port}.")
             try:
-                os.close(fd)
+                os.unlink(bat_path)
             except Exception:
                 pass
             return
+    except Exception:
+        pass
 
-        # ── Try running directly (succeeds when already admin) ────────────────
-        try:
-            r = subprocess.run(
-                [bat_path], capture_output=True, timeout=8, shell=True
-            )
-            if r.returncode == 0:
-                print(f"[Dashboard] Firewall configured for port {port}.")
-                try:
-                    os.unlink(bat_path)
-                except Exception:
-                    pass
-                return
-        except Exception:
-            pass
+    # ── ShellExecuteW: native UAC elevation (most reliable on Windows) ────
+    # ShellExecuteW with verb "runas" always shows the UAC dialog regardless
+    # of UAC level settings. Non-blocking — uvicorn is already running.
+    print("[Dashboard] One-time network setup required.")
+    print("[Dashboard] >>> A Windows security dialog will appear — click 'Yes' <<<")
+    try:
+        ret = ctypes.windll.shell32.ShellExecuteW(
+            None,       # hwnd  (no parent window)
+            "runas",    # verb  (request elevation)
+            bat_path,   # file  (our .bat)
+            None,       # params
+            None,       # working dir
+            0,          # SW_HIDE (run without a visible cmd window)
+        )
+        if int(ret) > 32:
+            # ShellExecuteW returns immediately; bat finishes in ~1 second.
+            # Sleep briefly so the rules are in place before the first retry.
+            time.sleep(2)
+            print(f"[Dashboard] Network setup complete — port {port} is open.")
+            print("[Dashboard] Refresh your phone browser to connect.")
+        else:
+            print("[Dashboard] Setup was not allowed.")
+            print("[Dashboard] Phone connections may fail until AETHER is run as Administrator.")
+    except Exception as e:
+        print(f"[Dashboard] Firewall setup error: {e}")
+    finally:
+        # Cleanup after the bat has had time to run
+        def _cleanup(path: str) -> None:
+            time.sleep(5)
+            try:
+                os.unlink(path)
+            except Exception:
+                pass
+        threading.Thread(target=_cleanup, args=(bat_path,), daemon=True).start()
 
-        # ── ShellExecuteW: native UAC elevation (most reliable on Windows) ────
-        # ShellExecuteW with verb "runas" always shows the UAC dialog regardless
-        # of UAC level settings. Non-blocking — uvicorn is already running.
-        print("[Dashboard] One-time network setup required.")
-        print("[Dashboard] >>> A Windows security dialog will appear — click 'Yes' <<<")
-        try:
-            ret = ctypes.windll.shell32.ShellExecuteW(
-                None,       # hwnd  (no parent window)
-                "runas",    # verb  (request elevation)
-                bat_path,   # file  (our .bat)
-                None,       # params
-                None,       # working dir
-                0,          # SW_HIDE (run without a visible cmd window)
-            )
-            if int(ret) > 32:
-                # ShellExecuteW returns immediately; bat finishes in ~1 second.
-                # Sleep briefly so the rules are in place before the first retry.
-                time.sleep(2)
-                print(f"[Dashboard] Network setup complete — port {port} is open.")
-                print("[Dashboard] Refresh your phone browser to connect.")
-            else:
-                print("[Dashboard] Setup was not allowed.")
-                print("[Dashboard] Phone connections may fail until AETHER is run as Administrator.")
-        except Exception as e:
-            print(f"[Dashboard] Firewall setup error: {e}")
-        finally:
-            # Cleanup after the bat has had time to run
-            def _cleanup(path: str) -> None:
-                time.sleep(5)
-                try:
-                    os.unlink(path)
-                except Exception:
-                    pass
-            threading.Thread(target=_cleanup, args=(bat_path,), daemon=True).start()
-        return
 
-    # ── macOS ─────────────────────────────────────────────────────────────────
-    if sys.platform == "darwin":
-        fw_ctl = "/usr/libexec/ApplicationFirewall/socketfilterfw"
-        try:
-            r = subprocess.run(
-                [fw_ctl, "--getglobalstate"], capture_output=True, text=True, timeout=5,
-            )
-            if "disabled" in r.stdout.lower():
-                return  # firewall off — nothing to do
+def _ensure_network_access_macos(port: int) -> None:
+    import subprocess
 
-            py = sys.executable
-            listed = subprocess.run(
-                [fw_ctl, "--listapps"], capture_output=True, text=True, timeout=5,
-            )
-            if py in listed.stdout:
-                return  # already allowed
+    fw_ctl = "/usr/libexec/ApplicationFirewall/socketfilterfw"
+    try:
+        r = subprocess.run(
+            [fw_ctl, "--getglobalstate"], capture_output=True, text=True, timeout=5,
+        )
+        if "disabled" in r.stdout.lower():
+            return  # firewall off — nothing to do
 
-            print("[Dashboard] One-time network setup — enter your password in the macOS dialog.")
-            subprocess.run(
-                ["osascript", "-e",
-                 f'do shell script "{fw_ctl} --add {py} && {fw_ctl} --unblockapp {py}"'
-                 f' with administrator privileges'],
-                timeout=60,
-            )
-        except Exception:
-            pass  # macOS firewall is off by default — silent failure is fine
-        return
+        import sys
+        py = sys.executable
+        listed = subprocess.run(
+            [fw_ctl, "--listapps"], capture_output=True, text=True, timeout=5,
+        )
+        if py in listed.stdout:
+            return  # already allowed
 
-    # ── Linux ─────────────────────────────────────────────────────────────────
+        print("[Dashboard] One-time network setup — enter your password in the macOS dialog.")
+        subprocess.run(
+            ["osascript", "-e",
+             f'do shell script "{fw_ctl} --add {py} && {fw_ctl} --unblockapp {py}"'
+             f' with administrator privileges'],
+            timeout=60,
+        )
+    except Exception:
+        pass  # macOS firewall is off by default — silent failure is fine
+
+
+def _ensure_network_access_linux(port: int) -> None:
+    import subprocess
+
     def _privileged(cmd: list[str]) -> bool:
         for prefix in (["pkexec"], ["sudo", "-n"]):
             try:
@@ -379,7 +405,7 @@ class DashboardServer:
         self._connect_callback            = None
         self._pending_keys: dict[str, float] = {}
         self._device_sessions: dict[str, dict] = {}  # device_token → {session_key}
-        self._phone_audio_queue: asyncio.Queue    = asyncio.Queue(maxsize=200)
+        self._phone_audio_queue: _queue.Queue     = _queue.Queue(maxsize=200)
         self._uploads_dir                 = UPLOADS_DIR
         self._login_html                  = _read("login.html")
         self._app_html                    = _read("app.html")
@@ -447,13 +473,45 @@ class DashboardServer:
 
     # ── FastAPI app ───────────────────────────────────────────────────────
 
+    def _auth(self, req: Request) -> bool:
+        tok = req.headers.get("authorization", "").removeprefix("Bearer ").strip()
+        return bool(tok) and tok in self._tokens
+
+    @staticmethod
+    def _safe_filename(raw: str) -> str:
+        name = Path(raw).name                          # strip path components
+        name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '_', name).strip(". ")
+        return name or "upload"
+
     def _build_app(self) -> "FastAPI":
         app = FastAPI(docs_url=None, redoc_url=None)
 
-        def _auth(req: Request) -> bool:
-            tok = req.headers.get("authorization", "").removeprefix("Bearer ").strip()
-            return bool(tok) and tok in self._tokens
+        # Opt-in Stage-2 security router (security/, dashboard/api_secure.py).
+        # Fully separate surface under /api/secure/*, own bearer-token
+        # sessions -- does not touch _auth/_tokens below. Off by default;
+        # requires explicit env var so existing installs aren't affected
+        # until the user has actually gone through security/first_run.py.
+        if os.environ.get("AETHER_SECURE_ROUTER") == "1":
+            try:
+                from .api_secure import router as security_router
+                app.include_router(security_router, prefix="/api/secure")
+            except Exception as e:
+                print(f"[Aether] secure router not mounted: {e}")
 
+        self._register_static_routes(app)
+        self._register_auth_routes(app)
+        self._register_command_routes(app)
+        self._register_approval_routes(app)
+        self._register_llm_status_routes(app)
+        self._register_phone_audio_ws(app)
+        self._register_file_routes(app)
+        self._register_main_ws(app)
+
+        return app
+
+    # ── static / login page routes ────────────────────────────────────────
+
+    def _register_static_routes(self, app: "FastAPI") -> None:
         # serve CryptoJS from local cache, fallback to CDN redirect
         @app.get("/static/crypto.js")
         async def serve_crypto():
@@ -477,6 +535,9 @@ class DashboardServer:
                     .replace("__PORT__", str(PORT)))
             return HTMLResponse(html)
 
+    # ── auth / pairing routes ────────────────────────────────────────────
+
+    def _register_auth_routes(self, app: "FastAPI") -> None:
         @app.post("/login")
         async def login(req: Request):
             body    = await req.json()
@@ -570,15 +631,66 @@ class DashboardServer:
         @app.post("/api/revoke-devices")
         async def revoke_devices(req: Request):
             """Invalidate all persistent device tokens (admin action)."""
-            if not _auth(req):
+            if not self._auth(req):
                 return JSONResponse({"error": "Unauthorized"}, status_code=401)
             count = len(self._device_sessions)
             self._device_sessions.clear()
             return JSONResponse({"ok": True, "revoked": count})
 
+    # ── pending approvals (headless remote-approval flow) ──────────────────
+
+    def _register_approval_routes(self, app: "FastAPI") -> None:
+        """Backs core.headless_ui.HeadlessUI.confirm_blocking()'s remote-
+        approval flow -- see core/pending_approvals.py. Listing and
+        resolving both require the same session auth as everything else
+        here; there's no separate approval-specific auth, on the
+        assumption that anyone who can reach the authenticated dashboard
+        is the operator this whole flow exists to reach."""
+
+        @app.get("/api/approvals")
+        async def list_approvals(req: Request):
+            if not self._auth(req):
+                return JSONResponse({"error": "Unauthorized"}, status_code=401)
+            from core.pending_approvals import get_approval_store
+            return JSONResponse({"approvals": get_approval_store().list_pending()})
+
+        @app.post("/api/approvals/{approval_id}/approve")
+        async def approve_approval(approval_id: str, req: Request):
+            if not self._auth(req):
+                return JSONResponse({"error": "Unauthorized"}, status_code=401)
+            from core.pending_approvals import get_approval_store
+            if not get_approval_store().resolve(approval_id, True):
+                return JSONResponse({"error": "Not found or already resolved"}, status_code=404)
+            return JSONResponse({"ok": True})
+
+        @app.post("/api/approvals/{approval_id}/deny")
+        async def deny_approval(approval_id: str, req: Request):
+            if not self._auth(req):
+                return JSONResponse({"error": "Unauthorized"}, status_code=401)
+            from core.pending_approvals import get_approval_store
+            if not get_approval_store().resolve(approval_id, False):
+                return JSONResponse({"error": "Not found or already resolved"}, status_code=404)
+            return JSONResponse({"ok": True})
+
+    # ── LLM backend status (remote-PC / local-CPU fallback) ────────────────
+
+    def _register_llm_status_routes(self, app: "FastAPI") -> None:
+        """Web-dashboard counterpart of the "LLM Backend" line in the CLI
+        diagnostics/"status" command -- see core.llm_client.get_llm_backend_status()."""
+
+        @app.get("/api/llm-status")
+        async def llm_status_ep(req: Request):
+            if not self._auth(req):
+                return JSONResponse({"error": "Unauthorized"}, status_code=401)
+            from core.llm_client import get_llm_backend_status
+            return JSONResponse(get_llm_backend_status())
+
+    # ── voice command routes ─────────────────────────────────────────────
+
+    def _register_command_routes(self, app: "FastAPI") -> None:
         @app.post("/api/command")
         async def command(req: Request):
-            if not _auth(req):
+            if not self._auth(req):
                 return JSONResponse({"error": "Unauthorized"}, status_code=401)
             body  = await req.json()
             token = req.headers.get("authorization", "").removeprefix("Bearer ").strip()
@@ -597,20 +709,22 @@ class DashboardServer:
 
         @app.post("/api/wake")
         async def wake_ep(req: Request):
-            if not _auth(req):
+            if not self._auth(req):
                 return JSONResponse({"error": "Unauthorized"}, status_code=401)
             if self._wake_callback:
                 self._wake_callback()
             return JSONResponse({"ok": True})
 
-        # ── Phone mic real-time audio ────────────────────────────────────────
-        # Upstream (Mark-XLVIII) piped this straight into Gemini's Live API
-        # realtime audio session. Aether's voice stack is local (Whisper STT,
-        # not a cloud realtime session), so that pipeline doesn't carry over
-        # as-is. The endpoint still accepts frames and queues them — wiring
-        # them into Whisper would mean chunking/resampling on receipt — but
-        # nothing currently drains this queue. Text commands via /api/command
-        # and the /ws relay are the fully working path.
+    # ── phone mic real-time audio ────────────────────────────────────────
+
+    def _register_phone_audio_ws(self, app: "FastAPI") -> None:
+        # Client (dashboard/static/app.html doMic()) already resamples to
+        # 16 kHz mono and sends signed 16-bit PCM frames — the same format
+        # main.py's local-mic pipeline expects. _phone_audio_queue is a
+        # plain thread-safe queue.Queue (not asyncio.Queue), same pattern
+        # as _command_queue above, so main.py's threaded
+        # _phone_audio_stt_loop can drain it directly with a blocking
+        # queue.get(timeout=...) — see that method for the consumer.
         @app.websocket("/ws/phone-audio")
         async def phone_audio_ws(websocket: WebSocket, token: str = ""):
             tok = token.strip()
@@ -619,7 +733,7 @@ class DashboardServer:
                 return
             await websocket.accept()
             asyncio.create_task(self.broadcast(
-                {"type": "sys", "text": "Phone microphone connected (not yet wired to STT in Aether)."}
+                {"type": "sys", "text": "Phone microphone connected."}
             ))
             try:
                 while True:
@@ -628,7 +742,7 @@ class DashboardServer:
                         self._phone_audio_queue.put_nowait(
                             {"data": data, "mime_type": "audio/pcm"}
                         )
-                    except asyncio.QueueFull:
+                    except _queue.Full:
                         pass  # drop frame rather than block
             except WebSocketDisconnect:
                 pass
@@ -637,20 +751,16 @@ class DashboardServer:
                     {"type": "sys", "text": "Phone microphone stopped."}
                 ))
 
-        # ── File sharing ──────────────────────────────────────────────────────
+    # ── file sharing routes ──────────────────────────────────────────────
 
-        def _safe_filename(raw: str) -> str:
-            name = Path(raw).name                          # strip path components
-            name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '_', name).strip(". ")
-            return name or "upload"
-
+    def _register_file_routes(self, app: "FastAPI") -> None:
         if _UPLOAD_OK:
             @app.post("/api/upload")
             async def upload_file(req: Request, file: UploadFile = FastAPIFile(...)):
-                if not _auth(req):
+                if not self._auth(req):
                     return JSONResponse({"error": "Unauthorized"}, status_code=401)
 
-                safe = _safe_filename(file.filename or "upload")
+                safe = self._safe_filename(file.filename or "upload")
                 dest = self._uploads_dir / safe
                 stem, suffix = Path(safe).stem, Path(safe).suffix
                 counter = 1
@@ -699,7 +809,7 @@ class DashboardServer:
 
         @app.get("/api/files")
         async def list_files(req: Request):
-            if not _auth(req):
+            if not self._auth(req):
                 return JSONResponse({"error": "Unauthorized"}, status_code=401)
             files = []
             try:
@@ -725,6 +835,9 @@ class DashboardServer:
                 return JSONResponse({"error": "Not found"}, status_code=404)
             return FileResponse(str(path), filename=safe)
 
+    # ── main relay websocket ──────────────────────────────────────────────
+
+    def _register_main_ws(self, app: "FastAPI") -> None:
         @app.websocket("/ws")
         async def ws_ep(websocket: WebSocket, token: str = ""):
             tok = token.strip()
@@ -753,7 +866,6 @@ class DashboardServer:
             finally:
                 self._clients.discard(websocket)
 
-        return app
 
     # ── serve ─────────────────────────────────────────────────────────────
 

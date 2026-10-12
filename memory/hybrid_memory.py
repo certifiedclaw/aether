@@ -21,6 +21,7 @@ import logging
 import math
 import re
 import sqlite3
+import threading
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -138,8 +139,22 @@ class HybridMemory:
         self._encoder = None
         self._reranker = None
         self._enc_tried = self._re_tried = False
+        self._enc_lock = threading.Lock()
+        self._re_lock  = threading.Lock()
 
         self._rebuild_bm25()
+
+        # Warm the dense encoder + reranker in the background rather than
+        # on the first real retrieval call. Without this, whichever user
+        # message triggers the first _retrieve() pays the full multi-second
+        # model-load cost inline, stalling that turn. _retrieve() itself
+        # uses non-blocking loads (see _load_encoder/_load_reranker below)
+        # and just skips the dense/rerank stage for any call that lands
+        # before this finishes, so correctness never depends on timing —
+        # only how much of the pipeline is available yet.
+        threading.Thread(
+            target=self._preload_models, daemon=True, name="hybrid-mem-preload"
+        ).start()
 
     # ── DB ────────────────────────────────────────────────────────────────
 
@@ -157,32 +172,59 @@ class HybridMemory:
         return conn
 
     # ── Lazy loaders ──────────────────────────────────────────────────────
+    #
+    # `blocking=True` (used by the background preload thread started in
+    # __init__) waits for the load to finish. `blocking=False` (used by
+    # _retrieve on the hot path) returns immediately if another thread is
+    # already loading — a live conversation turn should never stall on a
+    # multi-second model load; it just runs BM25-only for that one call and
+    # gets the full pipeline on the next one, once loading finishes.
 
-    def _load_encoder(self) -> None:
+    def _preload_models(self) -> None:
+        self._load_encoder(blocking=True)
+        self._load_reranker(blocking=True)
+
+    def _load_encoder(self, blocking: bool = True) -> None:
         if self._enc_tried:
             return
-        self._enc_tried = True
+        acquired = self._enc_lock.acquire(blocking=blocking)
+        if not acquired:
+            return  # someone else is already loading it — don't wait
         try:
-            from sentence_transformers import SentenceTransformer
-            self._encoder = SentenceTransformer(self._embed_model)
-            logger.info("HybridMemory: dense encoder ready (%s)", self._embed_model)
-        except ImportError:
-            logger.info("HybridMemory: sentence-transformers not installed — BM25 only")
-        except Exception as e:
-            logger.warning("HybridMemory encoder: %s", e)
+            if self._enc_tried:  # re-check: may have finished while we waited
+                return
+            self._enc_tried = True
+            try:
+                from sentence_transformers import SentenceTransformer
+                self._encoder = SentenceTransformer(self._embed_model)
+                logger.info("HybridMemory: dense encoder ready (%s)", self._embed_model)
+            except ImportError:
+                logger.info("HybridMemory: sentence-transformers not installed — BM25 only")
+            except Exception as e:
+                logger.warning("HybridMemory encoder: %s", e)
+        finally:
+            self._enc_lock.release()
 
-    def _load_reranker(self) -> None:
+    def _load_reranker(self, blocking: bool = True) -> None:
         if self._re_tried:
             return
-        self._re_tried = True
+        acquired = self._re_lock.acquire(blocking=blocking)
+        if not acquired:
+            return
         try:
-            from sentence_transformers import CrossEncoder
-            self._reranker = CrossEncoder(self._rerank_model)
-            logger.info("HybridMemory: cross-encoder reranker ready")
-        except ImportError:
-            logger.debug("HybridMemory: CrossEncoder not available — skipping rerank")
-        except Exception as e:
-            logger.debug("HybridMemory reranker: %s", e)
+            if self._re_tried:
+                return
+            self._re_tried = True
+            try:
+                from sentence_transformers import CrossEncoder
+                self._reranker = CrossEncoder(self._rerank_model)
+                logger.info("HybridMemory: cross-encoder reranker ready")
+            except ImportError:
+                logger.debug("HybridMemory: CrossEncoder not available — skipping rerank")
+            except Exception as e:
+                logger.debug("HybridMemory reranker: %s", e)
+        finally:
+            self._re_lock.release()
 
     # ── Write ─────────────────────────────────────────────────────────────
 
@@ -247,13 +289,23 @@ class HybridMemory:
     # ── Three-stage retrieval ─────────────────────────────────────────────
 
     def _retrieve(self, query: str, top_k: int = 5) -> list[MemoryEntry]:
+        # NOTE: these early-outs return [] rather than get_recent(top_k).
+        # get_recent() is a legitimate direct API (used by callers who want
+        # "the last N exchanges" on purpose) but using it as a silent
+        # substitute here — whenever no doc index exists yet, BM25 finds
+        # nothing, or nothing clears the relevance threshold — meant every
+        # "no relevant memory" case quietly injected unrelated recent
+        # conversation into the prompt as if it *were* relevant. A greeting
+        # or an unrelated follow-up would get whatever was chatted about
+        # last, framed as "[Relevant memory]". No match should mean no
+        # injected context, not a random substitute.
         if not self._doc_texts:
-            return self.get_recent(top_k)
+            return []
 
         # Stage 1 — BM25 candidate selection
         bm25_raw = self._bm25.scores(query)
         if not bm25_raw:
-            return self.get_recent(top_k)
+            return []
 
         max_bm25 = max(bm25_raw) or 1.0
         ranked = sorted(
@@ -262,10 +314,12 @@ class HybridMemory:
         candidates = [(i, self._doc_ids[i], self._doc_texts[i], s / max_bm25)
                       for i, s in ranked if s > 0]
         if not candidates:
-            return self.get_recent(top_k)
+            return []
 
-        # Stage 2 — Dense re-scoring (if encoder available)
-        self._load_encoder()
+        # Stage 2 — Dense re-scoring (if encoder available). Non-blocking:
+        # a turn that lands before the background preload finishes just
+        # runs BM25-only rather than stalling on model load.
+        self._load_encoder(blocking=False)
         if self._encoder:
             try:
                 # Reuse cached embeddings computed at write-time; only encode
@@ -298,7 +352,8 @@ class HybridMemory:
 
         # Stage 3 — Cross-encoder reranking (if available)
         top_candidates = candidates[:top_k * 2]
-        self._load_reranker()
+        # Non-blocking for the same reason as the encoder above.
+        self._load_reranker(blocking=False)
         if self._reranker and len(top_candidates) > 1:
             try:
                 pairs  = [(query, c[1]) for c in top_candidates]
@@ -318,12 +373,15 @@ class HybridMemory:
         for doc_id, text, score in top_candidates[:top_k]:
             if score >= self._threshold:
                 result.append(MemoryEntry(doc_id, "exchange", text, 0.0, score))
-        return result or self.get_recent(top_k)
+        return result
 
     # ── Helpers ───────────────────────────────────────────────────────────
 
     def _encode_one(self, text: str) -> bytes | None:
-        self._load_encoder()
+        # Non-blocking — a memory write shouldn't stall the turn either;
+        # it just skips the embedding (stored with embedding=NULL) if the
+        # encoder isn't ready yet, same as a cache miss.
+        self._load_encoder(blocking=False)
         if self._encoder is None:
             return None
         try:

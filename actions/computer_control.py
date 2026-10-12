@@ -52,7 +52,7 @@ _SAFE_SCREENSHOT_ROOTS = (
 )
 
 def _safe_screenshot_path(requested: str | None) -> Path:
-    fallback = Path.home() / "Desktop" / "aether_screenshot.png"
+    fallback = __import__("core.known_folders",fromlist=["x"]).desktop_dir() / "aether_screenshot.png"
     if not requested:
         return fallback
     try:
@@ -350,6 +350,8 @@ def _screen_find(description: str) -> tuple[int, int] | None:
 
     return None
 
+from core.risk import gated  # noqa: E402
+@gated("computer_control")
 def computer_control(
     parameters: dict,
     response=None,

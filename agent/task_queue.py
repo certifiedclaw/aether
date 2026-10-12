@@ -24,7 +24,7 @@ class TaskPriority(Enum):
 class Task:
     priority:    int                       
     created_at:  float = field(compare=False)
-    task_id:     str   = field(compare=False)
+    task_id:     str   = field(compare=True)
     goal:        str   = field(compare=False)
     status:      TaskStatus = field(compare=False, default=TaskStatus.PENDING)
     result:      Any        = field(compare=False, default=None)
@@ -35,6 +35,8 @@ class Task:
 
 
 class TaskQueue:
+    _MAX_TASK_HISTORY = 200  # cap on finished (terminal-status) tasks retained in self._tasks
+
     def __init__(self, max_concurrent: int = 1):
         self._queue:        list[Task]       = []
         self._lock:         threading.Lock   = threading.Lock()
@@ -108,6 +110,15 @@ class TaskQueue:
 
             task.cancel_flag.set()
             task.status = TaskStatus.CANCELLED
+            # Evict from the pending queue immediately. _next_task() only
+            # ever returns PENDING tasks, so a task cancelled before it
+            # started running would otherwise sit in self._queue forever --
+            # silently skipped on every worker-loop pass but never removed.
+            try:
+                self._queue.remove(task)
+            except ValueError:
+                pass  # already picked up by the worker (now running) — fine
+            self._prune_task_history()
             print(f"[TaskQueue] 🚫 Task cancelled: [{task_id}]")
             return True
 
@@ -138,6 +149,23 @@ class TaskQueue:
     def pending_count(self) -> int:
         with self._lock:
             return sum(1 for t in self._queue if t.status == TaskStatus.PENDING)
+
+    def _prune_task_history(self) -> None:
+        """Cap self._tasks so it doesn't grow forever over a long-running
+        session. Only evicts finished tasks (COMPLETED/FAILED/CANCELLED),
+        oldest first by created_at; PENDING/RUNNING tasks are never touched.
+        Caller must already hold self._lock.
+        """
+        if len(self._tasks) <= self._MAX_TASK_HISTORY:
+            return
+        finished = sorted(
+            (t for t in self._tasks.values()
+             if t.status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED)),
+            key=lambda t: t.created_at,
+        )
+        overflow = len(self._tasks) - self._MAX_TASK_HISTORY
+        for t in finished[:overflow]:
+            self._tasks.pop(t.task_id, None)
 
     def _worker_loop(self) -> None:
         while self._running:
@@ -188,6 +216,7 @@ class TaskQueue:
                     task.status = TaskStatus.COMPLETED
                     task.result = result
                 self._active_count -= 1
+                self._prune_task_history()
 
             if task.on_complete and not task.cancel_flag.is_set():
                 try:
@@ -202,6 +231,7 @@ class TaskQueue:
                 task.status = TaskStatus.FAILED
                 task.error  = str(e)
                 self._active_count -= 1
+                self._prune_task_history()
             print(f"[TaskQueue] ❌ Failed: [{task.task_id}] {e}")
 
         with self._condition:

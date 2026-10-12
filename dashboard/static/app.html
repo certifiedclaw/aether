@@ -51,6 +51,25 @@
     .enc-badge.off { display: block; background: rgba(255,100,100,0.08); border: 1px solid rgba(255,100,100,0.2); color: #f87171; }
     .url { font-size: 10px; font-family: monospace; color: var(--muted); padding: 4px 9px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
 
+    /* ── LLM BACKEND BADGE ── */
+    .llm-badge {
+      font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 99px;
+      background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+      display: none; white-space: nowrap;
+    }
+    .llm-badge.shown  { display: block; }
+    .llm-badge.remote { background: var(--gdim); border-color: rgba(34,197,94,0.3); color: var(--green); }
+    .llm-badge.local  { background: rgba(234,179,8,0.12); border-color: rgba(234,179,8,0.3); color: #eab308; }
+
+    /* ── PENDING APPROVALS ── */
+    #approval-banner { flex-shrink: 0; display: none; flex-direction: column; gap: 6px; padding: 10px 16px; background: rgba(234,179,8,0.08); border-bottom: 1px solid rgba(234,179,8,0.25); }
+    #approval-banner.shown { display: flex; }
+    .approval-item { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+    .approval-msg { flex: 1; color: var(--text); white-space: pre-wrap; }
+    .approval-btn { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; }
+    .approval-approve { background: var(--gdim); border-color: rgba(34,197,94,0.35); color: var(--green); }
+    .approval-deny    { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); color: #ef4444; }
+
     /* ── FEED ── */
     main { flex: 1; overflow-y: auto; padding: 14px 16px 8px; display: flex; flex-direction: column; gap: 10px; }
     main::-webkit-scrollbar { width: 3px; }
@@ -140,8 +159,10 @@
     <div class="pill" id="pill"><span class="dot"></span><span id="st">Connecting</span></div>
     <div class="enc-badge" id="enc">AES-256</div>
     <div class="spacer"></div>
+    <div class="llm-badge" id="llm-badge"></div>
     <div class="url">__IP__:__PORT__</div>
   </header>
+  <div id="approval-banner"></div>
   <main id="feed"></main>
   <footer>
     <input id="inp" placeholder="Send a command to AETHER…" autocomplete="off">
@@ -404,6 +425,62 @@
       clearTimeout(_toastTimer);
       _toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
     }
+
+    // ── LLM backend status (remote PC / local CPU fallback) ─────────────────
+    async function pollLlmStatus() {
+      try {
+        const r = await _authFetch('/api/llm-status');
+        if (!r.ok) return;
+        const s = await r.json();
+        const badge = document.getElementById('llm-badge');
+        if (s.mode === 'single') {
+          badge.textContent = `LLM: ${s.url}`;
+          badge.className = 'llm-badge shown';
+        } else if (s.active === 'remote') {
+          badge.textContent = `LLM: remote — ${s.url}`;
+          badge.className = 'llm-badge shown remote';
+        } else if (s.active === 'local') {
+          badge.textContent = `LLM: local fallback — ${s.url} (remote ${s.remote_url} unreachable)`;
+          badge.className = 'llm-badge shown local';
+        } else {
+          badge.textContent = 'LLM: checking…';
+          badge.className = 'llm-badge shown';
+        }
+      } catch (e) { /* dashboard keeps working even if this fails */ }
+    }
+    pollLlmStatus();
+    setInterval(pollLlmStatus, 8000);
+
+    // ── Pending approvals (headless remote-approval flow) ───────────────────
+    async function pollApprovals() {
+      try {
+        const r = await _authFetch('/api/approvals');
+        if (!r.ok) return;
+        const { approvals } = await r.json();
+        const banner = document.getElementById('approval-banner');
+        if (!approvals || approvals.length === 0) {
+          banner.className = ''; banner.innerHTML = '';
+          return;
+        }
+        banner.className = 'shown';
+        banner.innerHTML = approvals.map(a => `
+          <div class="approval-item" data-id="${esc(a.id)}">
+            <span class="approval-msg">⚠ Approval needed: ${esc(a.message)}</span>
+            <button class="approval-btn approval-approve" onclick="resolveApproval('${esc(a.id)}', true)">APPROVE</button>
+            <button class="approval-btn approval-deny" onclick="resolveApproval('${esc(a.id)}', false)">DENY</button>
+          </div>
+        `).join('');
+      } catch (e) { /* dashboard keeps working even if this fails */ }
+    }
+    async function resolveApproval(id, approved) {
+      try {
+        await _authFetch(`/api/approvals/${id}/${approved ? 'approve' : 'deny'}`, { method: 'POST' });
+        toast(approved ? 'Approved' : 'Denied');
+      } catch (e) { toast('Failed to send response'); }
+      pollApprovals();
+    }
+    pollApprovals();
+    setInterval(pollApprovals, 4000);
 
     // ── Real-time Voice — PCM16 WebSocket → Gemini Live ──────────────────────
     const micBtn  = document.getElementById('mic-btn');

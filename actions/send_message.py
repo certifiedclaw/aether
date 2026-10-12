@@ -230,6 +230,8 @@ def _resolve_platform(platform_str: str):
     return lambda r, m: _desktop_send(platform_str.strip().title(), r, m)
 
 
+from core.risk import gated  # noqa: E402
+@gated("send_message")
 def send_message(
     parameters: dict,
     response=None,

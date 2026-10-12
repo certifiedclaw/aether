@@ -1,40 +1,26 @@
-__pycache__/
-*.py[cod]
-
-logs/
-*.log
-logs/security.log
-logs/security.log.*
-
-
-
-config/api_keys.json
-config/certs/*.key
-config/certs/*.crt
-config/certs/*.pem
-
+# ── Secrets (never commit) ───────────────────────────────────────────────
+/config/api_keys.json
+/config/certs/
 .env
-venv/
-.venv/
+*.pem
+*.key
 
-# Aether data + memory (may contain personal content, history, embeddings)
-data/
-data/memory.db
-data/rag_index/
-data/screenshots/
-data/security/
-memory/long_term.json
+# ── Personal / runtime data ──────────────────────────────────────────────
+/data/memory.db
+/data/memory.db-*
+/data/notes/
+/data/rag_index/
+/data/screenshots/
+/data/security/
+/memory/long_term.json
+/logs/
+/tests/data/
 
-# Remote tunnel binaries + credentials
-remote/bin/
-remote/.ngrok_token
-remote/.cloudflared/
+# ── Python / tooling ─────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+.pytest_cache/
 
-# React Native / Expo build artifacts
-mobile/aether_app/node_modules/
-mobile/aether_app/ios/
-mobile/aether_app/android/
-mobile/aether_app/.expo/
-.expo/
-*.ipa
-*.apk
+# ── Local archives and backups ───────────────────────────────────────────
+*.zip
+*.bak

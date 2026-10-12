@@ -389,6 +389,9 @@ def diff_files(file1: str, file2: str) -> str:
     """Show line-by-line diff of two text files."""
     try:
         import difflib
+        from core.protected_paths import is_protected, DENIED
+        if is_protected(file1) or is_protected(file2):
+            return DENIED
         a = Path(os.path.expanduser(file1)).read_text(encoding="utf-8", errors="replace").splitlines()
         b = Path(os.path.expanduser(file2)).read_text(encoding="utf-8", errors="replace").splitlines()
         diff = list(difflib.unified_diff(a, b,
@@ -430,6 +433,9 @@ def word_count(text_or_path: str) -> str:
     """Count words, lines, and characters in text or a file."""
     try:
         p = Path(os.path.expanduser(text_or_path))
+        from core.protected_paths import is_protected, DENIED
+        if p.exists() and p.is_file() and is_protected(p):
+            return DENIED
         if p.exists() and p.is_file():
             text = p.read_text(encoding="utf-8", errors="replace")
             source = p.name
@@ -639,20 +645,54 @@ def run_python(code: str, timeout: int = 10) -> str:
 def calculate(expression: str) -> str:
     """
     Safely evaluate a math expression.
-    Supports: +−×/ ** sqrt sin cos log abs round etc.
+    Supports: + - * / ** % // sqrt sin cos log abs round etc.
+
+    Parsed with ast and evaluated node by node (no eval), so attribute access
+    such as (1).__class__ and runaway powers like 9**9**9 are rejected.
     """
+    import ast
     import math
-    safe_globals = {k: getattr(math, k) for k in dir(math) if not k.startswith("_")}
-    safe_globals["abs"] = abs
-    safe_globals["round"] = round
-    # Normalise ×÷ symbols
+    import operator
+
+    funcs = {k: getattr(math, k) for k in dir(math)
+             if not k.startswith("_") and callable(getattr(math, k))}
+    funcs.update({"abs": abs, "round": round, "min": min, "max": max})
+    consts = {"pi": math.pi, "e": math.e, "tau": math.tau, "inf": math.inf}
+    bin_ops = {
+        ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
+        ast.Div: operator.truediv, ast.FloorDiv: operator.floordiv,
+        ast.Mod: operator.mod, ast.Pow: operator.pow,
+    }
+    un_ops = {ast.UAdd: operator.pos, ast.USub: operator.neg}
+
     expr = expression.replace("×", "*").replace("÷", "/").replace("^", "**")
-    # Strip anything that's not a safe character
-    if re.search(r"[^\d\s\+\-\*\/\.\(\)\,\_a-zA-Z]", expr):
-        return f"Unsafe expression: {expression}"
+    if len(expr) > 300:
+        return "Expression too long"
+
+    def ev(node):
+        if isinstance(node, ast.Expression):
+            return ev(node.body)
+        if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+            return node.value
+        if isinstance(node, ast.Name) and node.id in consts:
+            return consts[node.id]
+        if isinstance(node, ast.UnaryOp) and type(node.op) in un_ops:
+            return un_ops[type(node.op)](ev(node.operand))
+        if isinstance(node, ast.BinOp) and type(node.op) in bin_ops:
+            left, right = ev(node.left), ev(node.right)
+            if isinstance(node.op, ast.Pow) and (abs(right) > 1000 or abs(left) > 1e15):
+                raise ValueError("power too large")
+            return bin_ops[type(node.op)](left, right)
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                and node.func.id in funcs and not node.keywords):
+            return funcs[node.func.id](*[ev(a) for a in node.args])
+        raise ValueError("unsupported expression")
+
     try:
-        result = eval(expr, {"__builtins__": {}}, safe_globals)  # noqa: S307
+        result = ev(ast.parse(expr.strip(), mode="eval"))
         return f"= {result}"
+    except ValueError as e:
+        return f"Unsafe or unsupported expression: {expression} ({e})"
     except Exception as e:
         return f"Calculation error: {e}"
 
@@ -862,6 +902,8 @@ def random_fact() -> str:
 # DISPATCH — called by agent/executor.py and main.py _execute_tool
 # ─────────────────────────────────────────────────────────────────────────────
 
+from core.risk import gated, extra_tool_extract  # noqa: E402
+@gated("extra_tool", extract=extra_tool_extract)
 def run_extra_tool(action: str, params: dict) -> str:
     """
     Central dispatch for extra_tool actions.

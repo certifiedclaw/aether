@@ -78,31 +78,40 @@ def volume_mute():
             capture_output=True)
 
 def volume_set(value: int):
+    """Set master volume 0-100. Raises RuntimeError if it cannot be done, so the
+    caller never reports success for a no-op."""
     value = max(0, min(100, int(value)))
     if _OS == "Windows":
         try:
-            import math
-            from ctypes import cast, POINTER
-            from comtypes import CLSCTX_ALL
-            from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-            devices   = AudioUtilities.GetSpeakers()
-            interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-            vol       = cast(interface, POINTER(IAudioEndpointVolume))
-            vol_db    = -65.25 if value == 0 else max(-65.25, 20 * math.log10(value / 100))
-            vol.SetMasterVolumeLevel(vol_db, None)
+            from pycaw.pycaw import AudioUtilities
+            dev = AudioUtilities.GetSpeakers()
+            ep = getattr(dev, "EndpointVolume", None)      # pycaw >= 2024: wrapper object
+            if ep is None:                                 # older pycaw: raw COM device
+                from ctypes import cast, POINTER
+                from comtypes import CLSCTX_ALL
+                from pycaw.pycaw import IAudioEndpointVolume
+                iface = dev.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+                ep = cast(iface, POINTER(IAudioEndpointVolume))
+            ep.SetMasterVolumeLevelScalar(value / 100.0, None)
             return
         except Exception as e:
             print(f"[Settings] pycaw failed, using keypress fallback: {e}")
-            pyautogui.press("volumemute")
-            pyautogui.press("volumemute")
+        if not _PYAUTOGUI:
+            raise RuntimeError("pycaw is unavailable and pyautogui is not installed")
+        # Each Windows volume key press moves 2%: drop to 0, then climb.
+        for _ in range(50):
+            pyautogui.press("volumedown")
+        for _ in range(round(value / 2)):
+            pyautogui.press("volumeup")
+        return
     elif _OS == "Darwin":
-        subprocess.run(["osascript", "-e", f"set volume output volume {value}"],
+        r = subprocess.run(["osascript", "-e", f"set volume output volume {value}"],
             capture_output=True)
-        return
     else:
-        subprocess.run(["pactl", "set-sink-volume", "@DEFAULT_SINK@", f"{value}%"],
+        r = subprocess.run(["pactl", "set-sink-volume", "@DEFAULT_SINK@", f"{value}%"],
             capture_output=True)
-        return
+    if r.returncode != 0:
+        raise RuntimeError((r.stderr or b"").decode(errors="replace").strip() or "volume command failed")
 
 def brightness_up():
     if _OS == "Darwin":
@@ -562,6 +571,19 @@ ACTION_MAP: dict[str, callable] = {
 _DANGEROUS_ACTIONS = {"restart", "shutdown"}
 
 
+def _confirm_dangerous(action: str) -> bool:
+    """Ask the user (blocking UI dialog). Denied if there is no UI or anything fails."""
+    try:
+        from core.safety import get_safety
+        return bool(get_safety().request_confirmation(
+            f"{action} the computer",
+            "Aether wants to " + action + " this computer. Unsaved work in open "
+            "programs may be lost."))
+    except Exception as e:  # noqa: BLE001
+        print(f"[Settings] confirmation unavailable, denying '{action}': {e}")
+        return False
+
+
 
 def _detect_action(description: str) -> dict:
     from core.llm_client import call_llm_text
@@ -587,6 +609,41 @@ def _detect_action(description: str) -> dict:
         print(f"[Settings] Intent detection failed: {e}")
         return {"action": description.lower().replace(" ", "_"), "value": None}
 
+
+# Names weak models invent for volume control -> the real action. Without this a
+# 7B model calling "set_volume" got "Unknown action" and the user heard nothing.
+_VOL_NAMES = {"set_volume", "volume", "volume_control", "change_volume", "adjust_volume",
+              "set_sound", "sound", "volume_change", "control_volume"}
+_UP_WORDS = ("up", "louder", "increase", "raise", "higher", "more")
+_DOWN_WORDS = ("down", "quieter", "lower", "decrease", "reduce", "softer", "less")
+
+
+def _normalize_volume_action(action: str, value, description: str):
+    """Map an invented volume action to (real_action, value), or None."""
+    a = (action or "").strip().lower().replace(" ", "_").replace("-", "_")
+    direct = {
+        "increase_volume": "volume_up", "volume_increase": "volume_up", "raise_volume": "volume_up",
+        "turn_up": "volume_up", "louder": "volume_up", "volume_louder": "volume_up",
+        "decrease_volume": "volume_down", "volume_decrease": "volume_down", "lower_volume": "volume_down",
+        "reduce_volume": "volume_down", "turn_down": "volume_down", "quieter": "volume_down",
+        "volume_quieter": "volume_down", "mute_volume": "mute", "unmute_volume": "unmute",
+    }
+    if a in direct:
+        return direct[a], value
+    if a not in _VOL_NAMES:
+        return None
+    try:
+        return "volume_set", int(str(value).strip().rstrip("%"))
+    except (TypeError, ValueError):
+        pass
+    words = f"{description or ''} {value or ''}".lower().split()
+    if any(w in words for w in _DOWN_WORDS):
+        return "volume_down", None
+    if any(w in words for w in _UP_WORDS):
+        return "volume_up", None
+    return None
+
+
 def computer_settings(
     parameters: dict = None,
     response=None,
@@ -609,6 +666,10 @@ def computer_settings(
 
     action = raw_action.lower().strip().replace(" ", "_").replace("-", "_")
 
+    _vol = _normalize_volume_action(action, value, description)
+    if _vol:
+        action, value = _vol
+
     if not action:
         return "No action could be determined."
 
@@ -617,12 +678,11 @@ def computer_settings(
         player.write_log(f"[Settings] {action}")
 
     if action in _DANGEROUS_ACTIONS:
-        confirmed = str(params.get("confirmed", "")).lower()
-        if confirmed not in ("yes", "true", "1", "confirm"):
-            return (
-                f"This will {action} the computer. "
-                f"Please confirm by calling again with confirmed=yes."
-            )
+        # The approval comes from the USER through the UI dialog (core/safety),
+        # never from a tool parameter: the model fills in tool parameters, so a
+        # "confirmed=yes" argument (or a prompt-injected one) would be no gate at all.
+        if not _confirm_dangerous(action):
+            return f"Cancelled: the user did not approve '{action}'."
 
     if action == "volume_set":
         try:
@@ -663,7 +723,8 @@ def computer_settings(
 
     func = ACTION_MAP.get(action)
     if not func:
-        return f"Unknown action: '{raw_action}'."
+        return (f"Unknown action: '{raw_action}'. Volume actions: volume_up, volume_down, "
+                f"volume_set (value 0-100), mute, unmute.")
 
     try:
         func()

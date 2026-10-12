@@ -774,12 +774,17 @@ def _process_pptx(path: Path, action: str, params: dict, speak=None) -> str:
 
     return f"Unknown PPTX action: '{action}'. Try: summarize, extract_text, analyze"
 
+from core.risk import gated  # noqa: E402
+@gated("file_processor")
 def file_processor(parameters: dict, player=None, speak=None) -> str:
     file_path_str = parameters.get("file_path", "").strip()
     if not file_path_str:
         return "No file path provided."
 
     path = Path(file_path_str)
+    from core.protected_paths import is_protected, DENIED
+    if is_protected(path):
+        return DENIED
     if not path.exists():
         return f"File not found: {file_path_str}"
     if not path.is_file():

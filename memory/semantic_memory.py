@@ -37,6 +37,18 @@ class MemoryEngine:
         self._encoder = None
         self._encoder_tried = False
 
+        # In-memory cache of the most recent embeddings, mirroring
+        # hybrid_memory.py's approach: loaded once (in _load_embedding_cache,
+        # triggered when the encoder first becomes available) instead of
+        # re-querying + re-decoding BLOBs from SQLite on every single search.
+        # Kept in sync incrementally by store() afterwards. Newest-first,
+        # same ordering/window as the old "ORDER BY timestamp DESC LIMIT 200".
+        self._cache_max: int = 200
+        self._cache_ids:   list[int]   = []
+        self._cache_texts: list[str]   = []
+        self._cache_ts:    list[float] = []
+        self._cache_vecs:  list        = []  # np.ndarray, parallel to the above
+
     # ── DB setup ──────────────────────────────────────────────────────────────
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self._db_path), check_same_thread=False)
@@ -61,19 +73,56 @@ class MemoryEngine:
             from sentence_transformers import SentenceTransformer
             self._encoder = SentenceTransformer(self._embedding_model)
             logger.info("Semantic memory enabled (%s)", self._embedding_model)
+            self._load_embedding_cache()
         except ImportError:
             logger.info("sentence-transformers not installed — recency-only memory")
         except Exception as e:
             logger.warning("Encoder load failed: %s", e)
 
+    def _load_embedding_cache(self) -> None:
+        """One-time load of the most recent embedded rows into memory.
+
+        Runs once, right after the encoder becomes available (rows stored
+        before that point have no embedding to load — same as before, they
+        just never take part in semantic search). After this, store()
+        appends to the cache directly so _semantic_search never has to hit
+        SQLite again.
+        """
+        try:
+            import numpy as np
+            rows = self._conn.execute(
+                "SELECT id,content,timestamp,embedding FROM memories "
+                "WHERE embedding IS NOT NULL "
+                "ORDER BY timestamp DESC LIMIT ?", (self._cache_max,)).fetchall()
+        except Exception:
+            return
+        self._cache_ids   = [r[0] for r in rows]
+        self._cache_texts = [r[1] for r in rows]
+        self._cache_ts    = [r[2] for r in rows]
+        self._cache_vecs  = [np.frombuffer(r[3], dtype=np.float32) for r in rows]
+
     # ── Write ──────────────────────────────────────────────────────────────────
     def store(self, user_input: str, response: str) -> None:
         ts  = time.time()
         combined = f"User: {user_input}\nAssistant: {response}"
-        self._conn.execute(
+        emb = self._encode(combined)
+        cur = self._conn.execute(
             "INSERT INTO memories(role,content,timestamp,embedding) VALUES(?,?,?,?)",
-            ("exchange", combined, ts, self._encode(combined)))
+            ("exchange", combined, ts, emb))
         self._conn.commit()
+        if emb is not None:
+            # Prepend (cache is newest-first) and append incrementally —
+            # no re-read from SQLite needed, mirrors hybrid_memory.py.
+            import numpy as np
+            self._cache_ids.insert(0, cur.lastrowid)
+            self._cache_texts.insert(0, combined)
+            self._cache_ts.insert(0, ts)
+            self._cache_vecs.insert(0, np.frombuffer(emb, dtype=np.float32))
+            if len(self._cache_ids) > self._cache_max:
+                self._cache_ids.pop()
+                self._cache_texts.pop()
+                self._cache_ts.pop()
+                self._cache_vecs.pop()
         self._session.append({"role": "user",      "content": user_input})
         self._session.append({"role": "assistant",  "content": response})
         if len(self._session) > self._history_limit:
@@ -109,29 +158,32 @@ class MemoryEngine:
         self._ensure_encoder()
         if self._encoder:
             return self._semantic_search(query, top_k)
+        # No encoder available at all (capability absent, e.g. optional
+        # dependency not installed) — different situation from "searched
+        # and found no relevant match" below, so falling back to recent
+        # exchanges here is a deliberate degraded-mode choice, not the
+        # same relevance-fallback bug.
         return self.get_recent(top_k)
 
     def _semantic_search(self, query: str, top_k: int) -> list[MemoryEntry]:
         try:
             import numpy as np
             q_vec = self._encoder.encode(query)
-            rows  = self._conn.execute(
-                "SELECT id,role,content,timestamp,embedding FROM memories "
-                "ORDER BY timestamp DESC LIMIT 200").fetchall()
             scored = []
-            for row in rows:
-                emb = row[4]
-                if emb is None:
-                    continue
-                vec   = np.frombuffer(emb, dtype=np.float32)
+            for i, vec in enumerate(self._cache_vecs):
                 score = float(np.dot(q_vec, vec) /
                               (np.linalg.norm(q_vec) * np.linalg.norm(vec) + 1e-9))
                 if score >= self._threshold:
-                    scored.append((score, MemoryEntry(row[0], row[1], row[2], row[3])))
+                    entry = MemoryEntry(self._cache_ids[i], "exchange",
+                                         self._cache_texts[i], self._cache_ts[i])
+                    scored.append((score, entry))
             scored.sort(key=lambda x: x[0], reverse=True)
             return [e for _, e in scored[:top_k]]
         except Exception:
-            return self.get_recent(top_k)
+            # A search that errors out found nothing relevant, same as one
+            # that legitimately scored below threshold — return no context
+            # rather than silently substituting unrelated recent exchanges.
+            return []
 
     def _encode(self, text: str) -> bytes | None:
         """Encode only if encoder is already loaded — never trigger a load during store()."""

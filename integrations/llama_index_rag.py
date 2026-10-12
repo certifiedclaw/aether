@@ -46,9 +46,9 @@ def _li_config() -> dict:
         from memory.config_manager import get_mark_config
         cfg = get_mark_config()
         return {
-            "model":               cfg.get("llm.model",       "qwen3:8b"),
+            "model":               cfg.get("llm.model",       cfg.get("llm_model", "qwen3:8b")),
             "embed_model":         cfg.get("llm.embed_model",  "nomic-embed-text"),
-            "base_url":            cfg.get("llm.ollama_url",   "http://localhost:11434"),
+            "base_url":            cfg.ollama_url,
             "default_collection":  cfg.get("llama_index.default_collection", "aether"),
             "chroma_dir":          cfg.get("llama_index.chroma_dir", "./data/chroma_db"),
         }

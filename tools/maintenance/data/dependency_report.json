@@ -1,22 +1,22 @@
 {
   "_meta": {
-    "generated": "2026-07-13T05:06:13.610186+00:00",
-    "pip_packages": 47
+    "generated": "2026-10-12T01:34:17.030919+00:00",
+    "pip_packages": 46
   },
   "pip": [
     {
       "package": "fastapi",
-      "latest": "0.139.0",
+      "latest": "0.143.0",
       "note": null
     },
     {
       "package": "uvicorn",
-      "latest": "0.51.0",
+      "latest": "0.54.0",
       "note": null
     },
     {
       "package": "cryptography",
-      "latest": "49.0.0",
+      "latest": "50.0.2",
       "note": null
     },
     {
@@ -41,12 +41,12 @@
     },
     {
       "package": "sounddevice",
-      "latest": "0.5.5",
+      "latest": "0.5.6",
       "note": null
     },
     {
       "package": "numpy",
-      "latest": "2.5.1",
+      "latest": "2.5.4",
       "note": null
     },
     {
@@ -61,7 +61,7 @@
     },
     {
       "package": "playwright",
-      "latest": "1.61.0",
+      "latest": "1.63.0",
       "note": null
     },
     {
@@ -111,12 +111,12 @@
     },
     {
       "package": "comtypes",
-      "latest": "1.4.16",
+      "latest": "1.4.17",
       "note": null
     },
     {
       "package": "pycaw",
-      "latest": "20251023",
+      "latest": "20260927",
       "note": null
     },
     {
@@ -151,12 +151,12 @@
     },
     {
       "package": "sentence-transformers",
-      "latest": "5.6.0",
+      "latest": "6.1.0",
       "note": null
     },
     {
       "package": "PyMuPDF",
-      "latest": "1.28.0",
+      "latest": "1.28.2",
       "note": null
     },
     {
@@ -166,7 +166,7 @@
     },
     {
       "package": "dnspython",
-      "latest": "2.8.0",
+      "latest": "2.9.0",
       "note": null
     },
     {
@@ -186,7 +186,7 @@
     },
     {
       "package": "langchain",
-      "latest": "1.3.13",
+      "latest": "1.4.4",
       "note": "Fast-moving API; pin a version once Aether's LangChain tool wiring is stable."
     },
     {
@@ -200,23 +200,18 @@
       "note": null
     },
     {
-      "package": "open-interpreter",
-      "latest": "0.4.3",
-      "note": "Depends on litellm; historically conflicts with langchain/llama-index pins. Consider a separate venv."
-    },
-    {
       "package": "llama-index",
-      "latest": "0.14.23",
+      "latest": "0.14.25",
       "note": "Splits into many llama-index-* subpackages frequently; check changelog before bumping."
     },
     {
       "package": "llama-index-llms-ollama",
-      "latest": "0.10.1",
+      "latest": "0.11.0",
       "note": null
     },
     {
       "package": "llama-index-embeddings-ollama",
-      "latest": "0.9.0",
+      "latest": "0.10.0",
       "note": null
     },
     {
@@ -226,7 +221,7 @@
     },
     {
       "package": "wikipedia-api",
-      "latest": "0.15.0",
+      "latest": "0.16.0",
       "note": null
     },
     {
@@ -236,7 +231,7 @@
     },
     {
       "package": "google-genai",
-      "latest": "2.11.0",
+      "latest": "2.29.0",
       "note": null
     }
   ],

@@ -13,6 +13,7 @@ the router is passed (it uses the fast model to produce a summary).
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -29,6 +30,26 @@ ENABLE_SUMMARIZE = False
 def _estimate_tokens(messages: list[dict]) -> int:
     total = sum(len(str(m.get("content", ""))) for m in messages)
     return total // _CHARS_PER_TOKEN
+
+
+def estimate_tool_tokens(tools: list | None) -> int:
+    """Rough token cost of a tool/function schema list, using the same
+    chars-per-token heuristic as message content.
+
+    Tool schemas are sent in the request body alongside `messages` but were
+    previously invisible to compress_if_needed's budget — a request could
+    be judged "fits in 3000 tokens" while actually carrying several
+    thousand additional tokens of tool declarations, so the "fits" decision
+    didn't guarantee the request fit the model's real context window.
+    Callers should subtract this from the message token budget before
+    compressing.
+    """
+    if not tools:
+        return 0
+    try:
+        return len(json.dumps(tools)) // _CHARS_PER_TOKEN
+    except Exception:
+        return 0
 
 
 def compress_if_needed(
@@ -87,7 +108,10 @@ def compress_if_needed(
     def _msg_tokens(m: dict) -> int:
         return len(str(m.get("content", ""))) // _CHARS_PER_TOKEN
 
-    while conv_msgs and running_tokens > token_budget:
+    # Never drop the newest message: it is the user's current request. When the
+    # system prompt alone exceeds the budget (large tool schema -> budget floor),
+    # dropping everything leaves the model with no question to answer.
+    while len(conv_msgs) > 1 and running_tokens > token_budget:
         msg = conv_msgs.pop(0)
         running_tokens -= _msg_tokens(msg)
         dropped.append(msg)
@@ -99,7 +123,7 @@ def compress_if_needed(
     # Also guard the other direction: if what's left now starts with an
     # orphaned "tool" message (its assistant call got dropped above, or the
     # budget was already tight enough at the very first message), drop it too.
-    while conv_msgs and conv_msgs[0].get("role") == "tool":
+    while len(conv_msgs) > 1 and conv_msgs[0].get("role") == "tool":
         dropped.append(conv_msgs.pop(0))
 
     # Optionally summarise the dropped block

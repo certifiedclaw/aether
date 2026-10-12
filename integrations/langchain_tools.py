@@ -51,8 +51,8 @@ def _llm_from_config() -> Any:
     try:
         from memory.config_manager import get_mark_config
         cfg = get_mark_config()
-        model    = cfg.get("llm.model", "qwen3:8b")
-        base_url = cfg.get("llm.ollama_url", "http://localhost:11434")
+        model    = cfg.get("llm.model", cfg.get("llm_model", "qwen3:8b"))
+        base_url = cfg.ollama_url
         return _get_llm(model, base_url)
     except Exception:
         return _get_llm()
@@ -258,12 +258,11 @@ def lc_compress_history(messages: list[dict], max_tokens: int = 3000,
         return rebuilt
 
     except ImportError:
-        # Fallback: simple truncation
-        system  = [m for m in messages if m["role"] == "system"]
-        rest    = [m for m in messages if m["role"] != "system"]
-        while rest and sum(len(str(m.get("content", ""))) for m in system + rest) // _CHARS_PER_TOKEN > max_tokens:
-            rest.pop(0)
-        return system + rest
+        # Fallback: deterministic truncation. Delegates to smart_context so the
+        # newest message (the current user request) is never dropped — the old
+        # inline loop popped it when the system prompt alone exceeded the budget.
+        from core.smart_context import compress_if_needed
+        return compress_if_needed(messages, token_budget=max_tokens)
     except Exception as e:
         logger.debug("LangChain compression error: %s", e)
         return messages

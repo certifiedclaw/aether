@@ -113,11 +113,12 @@ langchain-community
 langchain-ollama
 # duckduckgo-search already listed above
 
-# Open Interpreter — natural language shell / computer control
-# ⚠️  open-interpreter depends on litellm which can conflict with langchain
-# and llama-index. If you hit dependency errors install it in a separate venv
-# or comment out the packages you don't need.
-open-interpreter
+# Open Interpreter — OPTIONAL, deliberately NOT installed here.
+# It pins tiktoken<0.8, which has no wheel for Python 3.13+ and fails to
+# compile from source, aborting this whole install (pip installs nothing if
+# one package fails). It also drags in old pins that conflict with
+# langchain / llama-index. Off by default in Aether (integrations.open_interpreter).
+# To use it:  see requirements-optional.txt (Python 3.12 or older, separate venv).
 
 # LlamaIndex — production RAG pipelines
 llama-index

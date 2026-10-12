@@ -1,14 +1,11 @@
 """
 safety.py — Aether v4.1 Safety & Verification Layer
 
-Patches vs v4.0:
-• FIX #1 — _HIGH_RISK now explicitly includes "run_shell" and "shell" as
-  unconditional entries that cannot be removed from the confirm_on list via
-  config. requires_confirmation() always returns True for these regardless
-  of what the operator put in config.yaml.
-• run_shell / shell are additionally blocked from the dispatch table in
-  agent.py so there is no path to execution without an explicit confirmation
-  dialogue reaching the user.
+Per-tool approval tiers now live in core/risk.py (enforced with @gated on each tool's
+entry function); this module supplies the UI confirmation callback (confirm_action,
+fail-closed) and the legacy path ACL. _UNCONDITIONAL_HIGH_RISK entries ("run_shell",
+"shell", "rm", "rmdir") always require confirmation regardless of the confirm_on list
+in config.
 """
 
 from __future__ import annotations
@@ -27,7 +24,7 @@ _UNCONDITIONAL_HIGH_RISK = frozenset({"run_shell", "shell", "rm", "rmdir"})
 
 # These are high-risk by default but CAN be removed from confirm_on in config
 # if the operator explicitly wants headless operation for them.
-_DEFAULT_HIGH_RISK = frozenset({"delete", "write_file"})
+_DEFAULT_HIGH_RISK = frozenset({"delete", "write_file", "osint_port_scan", "osint_breach_check"})
 
 
 @dataclass
@@ -103,3 +100,18 @@ def get_safety(config=None) -> SafetyLayer:
     if _safety is None:
         _safety = SafetyLayer(config)
     return _safety
+
+
+def confirm_action(operation: str, detail: str = "") -> bool:
+    """Ask the USER (blocking UI dialog) to approve `operation`; True only on approval.
+
+    Fail-closed by design: no UI callback registered, the dialog timing out, or any
+    error at all means False. Use this inside the action that does the work (not only
+    in the dispatcher) so every path that reaches it -- voice tools, the agent
+    executor, plugins -- is covered."""
+    try:
+        return bool(get_safety().request_confirmation(operation, detail))
+    except Exception as e:  # noqa: BLE001
+        logging.getLogger("aether").warning(
+            "confirmation unavailable, denying '%s': %s", operation, e)
+        return False

@@ -91,12 +91,9 @@ class _MarkConfigAdapter:
         self._raw = load_api_keys()
 
     def get(self, key: str, default=None):
-        # Check raw JSON first (top-level keys)
-        top = key.split(".")[0]
-        if top in self._raw:
-            # For nested keys, just return the top-level value if flat key matches
-            if "." not in key:
-                return self._raw.get(key, default)
+        # Check raw JSON first (full dotted key, since _raw is flat, not nested)
+        if key in self._raw:
+            return self._raw.get(key, default)
         # Fall back to defaults table
         val = self._DEFAULTS.get(key, default)
         return val
@@ -140,6 +137,21 @@ def get_mark_config() -> _MarkConfigAdapter:
     if _mark_config_instance is None:
         _mark_config_instance = _MarkConfigAdapter()
     return _mark_config_instance
+
+
+def invalidate_config_cache() -> None:
+    """Force the next get_mark_config() call to build a fresh
+    _MarkConfigAdapter (re-reading from disk via load_api_keys()) instead of
+    returning the stale cached singleton.
+
+    Called by main.py's _do_reconfigure() after the user changes settings
+    live. Without this, every subsystem that was handed get_mark_config()'s
+    result (MemoryEngine, HybridMemory, PluginSystem, etc.) keeps reading
+    the config snapshot taken the first time it was ever constructed --
+    live settings changes never propagate anywhere until a full restart.
+    """
+    global _mark_config_instance
+    _mark_config_instance = None
 
 
 def is_configured() -> bool:

@@ -12,7 +12,11 @@ Sources / inspiration:
   Dorkwright, GoodOldSearch, user-scanner, CrossTrace
 
 ETHICAL NOTICE:  These tools query *publicly available* information only.
-Use responsibly and in accordance with applicable laws.
+Use responsibly and in accordance with applicable laws. The per-action
+authorization/handling warnings the model actually sees before invoking
+this tool live in main.py's TOOL_DECLARATIONS entry for "osint_lookup"
+(that's the schema passed to the LLM at request time) -- keep this
+docstring's notice and that schema text in sync if either changes.
 """
 from __future__ import annotations
 
@@ -617,21 +621,37 @@ def ip_osint(ip_or_host: str) -> str:
     return "\n".join(lines)
 
 
+_MAX_SCAN_PORTS = 2048
+
+
 def port_scan(host: str, ports: str = "21,22,23,25,53,80,110,143,443,445,3306,3389,5432,5900,6379,8080,8443,9200,27017") -> str:
     """
     Quick TCP port scanner. ports = comma-separated list or range like 1-1024.
     """
     host = host.strip()
 
-    # Parse ports
+    # Parse ports (bounded: 1-65535, at most _MAX_SCAN_PORTS per call, so a model-supplied
+    # range like 1-999999999 cannot exhaust memory or turn this into a full-range sweep)
     port_list = []
-    for part in ports.split(","):
-        part = part.strip()
-        if "-" in part:
-            a, b = part.split("-")
-            port_list.extend(range(int(a), int(b) + 1))
-        else:
-            port_list.append(int(part))
+    try:
+        for part in str(ports).split(","):
+            part = part.strip()
+            if "-" in part:
+                a, b = (int(x) for x in part.split("-", 1))
+                if not (1 <= a <= b <= 65535):
+                    return "Invalid port range: use values between 1 and 65535 (e.g. 1-1024)."
+                port_list.extend(range(a, b + 1))
+            elif part:
+                n = int(part)
+                if not 1 <= n <= 65535:
+                    return "Invalid port: use values between 1 and 65535."
+                port_list.append(n)
+            if len(port_list) > _MAX_SCAN_PORTS:
+                return f"Too many ports: scan at most {_MAX_SCAN_PORTS} per call."
+    except ValueError:
+        return "Invalid ports: use a comma-separated list or ranges like 1-1024."
+    if not port_list:
+        return "No ports given."
 
     open_ports, closed_ports = [], []
 

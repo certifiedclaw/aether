@@ -30,6 +30,13 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 # Audio playback helpers
 # ---------------------------------------------------------------------------
 
+try:
+    from core.echo import tap_output as _tap_output, stop_tap as _stop_tap
+except Exception:  # echo guard is optional; playback must never depend on it
+    def _tap_output(*_a, **_k): pass
+    def _stop_tap(*_a, **_k): pass
+
+
 def _to_numpy(samples) -> np.ndarray:
     """Convert samples to float32 numpy array.
 
@@ -81,7 +88,9 @@ def _play_np(samples, sample_rate: int) -> None:
     """Play float32 mono (or stereo) audio via sounddevice.
     Accepts numpy arrays or PyTorch tensors.
     """
-    sd.play(_to_numpy(samples), sample_rate)
+    _arr = _to_numpy(samples)
+    _tap_output(_arr, sample_rate)
+    sd.play(_arr, sample_rate)
     sd.wait()
 
 
@@ -94,6 +103,7 @@ def _play_audio_bytes(audio_bytes: bytes) -> None:
         nchannels=1,
     )
     samples = np.array(decoded.samples, dtype=np.float32)
+    _tap_output(samples, decoded.sample_rate)
     sd.play(samples, decoded.sample_rate)
     sd.wait()
 
@@ -162,7 +172,9 @@ def _import_kokoro_pipeline():
             # Unrelated error (kokoro not installed, etc.)
             raise RuntimeError(
                 f"Kokoro import failed: {first_err}\n"
-                "Run: pip install kokoro>=0.9 soundfile"
+                'Run: pip install "kokoro>=0.9" soundfile\n'
+                "(Kokoro supports Python 3.10-3.12 only; on 3.13+ use EdgeTTS or a "
+                "3.12 venv. Keep the quotes: in cmd.exe an unquoted \">=\" is a redirect.)"
             ) from first_err
 
         # ── Version mismatch: upgrade kokoro silently and retry ──────────
@@ -277,10 +289,9 @@ class KokoroTTSEngine:
             _e = str(_first_err).lower()
             if any(k in _e for k in ("offline", "not found", "cache", "localentry", "does not exist")):
                 print("[TTS] Kokoro model not cached — downloading (internet required for first run)…")
-                os.environ.pop("HF_HUB_OFFLINE",      None)
-                os.environ.pop("TRANSFORMERS_OFFLINE", None)
-                os.environ.pop("HF_DATASETS_OFFLINE",  None)
-                self._pipeline = _create_pipeline()
+                from core.hf_offline import allow_online
+                with allow_online():
+                    self._pipeline = _create_pipeline()
             else:
                 raise
 
@@ -403,6 +414,7 @@ class TTSPlayer:
                 on_done()
 
     def stop(self) -> None:
+        _stop_tap()
         sd.stop()
         with self._lock:
             self._playing = False
@@ -419,7 +431,8 @@ def create_tts_player(config: dict) -> TTSPlayer:
         speed  = float(config.get("tts_speed", 1.0))
         engine = KokoroTTSEngine(voice=voice, speed=speed)
     elif engine_name == "elevenlabs":
-        api_key  = config.get("elevenlabs_api_key", "")
+        from core.credentials import get_secret
+        api_key  = get_secret("elevenlabs_api_key", config)   # env > OS keyring > config file
         voice_id = config.get("tts_voice", "pNInz6obpgDQGcFmaJgB")
         engine   = ElevenLabsTTSEngine(api_key=api_key, voice_id=voice_id)
     else:   # edgetts (default)

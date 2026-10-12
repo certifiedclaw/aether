@@ -39,9 +39,17 @@ def _oi_config() -> dict:
     try:
         from memory.config_manager import get_mark_config
         cfg = get_mark_config()
+        # "llm.model" is legacy/unused (never actually stored under that key —
+        # see the same fallback in config_validator.py); the real user setting
+        # lives under the flat "llm_model" key. LiteLLM (which OI uses under
+        # the hood) requires an "ollama/" provider prefix that raw llm_model
+        # values don't carry, so add it if missing.
+        model = cfg.get("llm.model", cfg.get("llm_model", "ollama/qwen3:8b"))
+        if model and "/" not in model:
+            model = f"ollama/{model}"
         return {
-            "model":     cfg.get("llm.model", "ollama/qwen3:8b"),
-            "base_url":  cfg.get("llm.ollama_url", "http://localhost:11434"),
+            "model":     model,
+            "base_url":  cfg.ollama_url,
             "safe_mode": cfg.get("oi.safe_mode", "ask"),
             "auto_run":  cfg.get("oi.auto_run", False),
         }

@@ -222,6 +222,8 @@ def _call_vision(image_bytes: bytes, mime: str, user_text: str) -> str:
 # Public entry point
 # ---------------------------------------------------------------------------
 
+from core.risk import gated  # noqa: E402
+@gated("screen_process")
 def screen_process(
     parameters:     dict,
     response=None,

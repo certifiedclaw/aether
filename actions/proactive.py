@@ -1,7 +1,6 @@
 """
-ProactiveEngine — context-aware background prompting.
-Lets the LLM decide whether there is something worth saying proactively.
-No hardcoded rules: we pass time + memory as context and the LLM chooses.
+ProactiveEngine 2.0 - context-aware, time-aware, non-repetitive background prompts.
+The LLM decides what to say; this module decides when and builds the snapshot.
 """
 import time
 from datetime import datetime
@@ -9,64 +8,109 @@ from datetime import datetime
 
 class ProactiveEngine:
     """
-    Tracks silence duration and decides when to hand context to the LLM for a
-    proactive check-in. The LLM reads the context and decides whether to speak.
+    Decides when Aether should speak unprompted and builds a rich prompt.
 
-    Defaults (all overridable):
-      min_silence_secs   — user must be silent this long before any check (900 = 15 min)
-      check_cooldown     — minimum gap between two proactive triggers         (600 = 10 min)
+    Improvements over the earlier Aether version:
+      - Time-of-day awareness.
+      - Optional monitored-topic awareness.
+      - Optional recent-conversation context.
+      - Rotating focus so proactive messages do not repeat the same angle.
+
+    Defaults:
+      min_silence_secs - 900 s  (15 min) user must be silent before any check.
+      check_cooldown   - 1200 s (20 min) minimum gap between proactive messages.
     """
 
     def __init__(
         self,
         min_silence_secs: int = 900,
-        check_cooldown:   int = 600,
+        check_cooldown: int = 1200,
     ):
         self.min_silence_secs = min_silence_secs
-        self.check_cooldown   = check_cooldown
-        self._last_triggered  = 0.0
+        self.check_cooldown = check_cooldown
+        self._last_triggered = 0.0
+        self._rotation = 0
 
     def should_trigger(self, last_user_speech: float) -> bool:
-        """
-        Returns True only when:
-          • user has been silent long enough, AND
-          • enough time has passed since the last proactive message.
-        """
-        now     = time.monotonic()
-        silence = now - last_user_speech
-        gap     = now - self._last_triggered
-        return silence >= self.min_silence_secs and gap >= self.check_cooldown
+        now = time.monotonic()
+        return (
+            (now - last_user_speech) >= self.min_silence_secs
+            and (now - self._last_triggered) >= self.check_cooldown
+        )
 
     def mark_triggered(self) -> None:
         self._last_triggered = time.monotonic()
+        self._rotation += 1
 
-    def build_prompt(self, memory: dict) -> str:
-        """
-        Builds the context snapshot sent to the LLM.
-        The LLM reads it and decides freely what — if anything — to say.
-        """
+    def build_prompt(
+        self,
+        memory: dict,
+        monitors: list[str] | None = None,
+        recent_turns: list[str] | None = None,
+    ) -> str:
+        """Build the context snapshot sent to the LLM."""
         from memory.memory_manager import format_memory_for_prompt
 
-        now      = datetime.now()
-        time_str = now.strftime("%A, %B %d, %Y — %I:%M %p")
-        mem_str  = format_memory_for_prompt(memory) or "(no user data stored yet)"
+        now = datetime.now()
+        hour = now.hour
+        time_str = now.strftime("%A, %B %d, %Y - %I:%M %p")
 
-        silence_min = int((time.monotonic() - self._last_triggered +
-                           self.min_silence_secs) // 60)
+        if 6 <= hour < 12:
+            period = "morning"
+        elif 12 <= hour < 18:
+            period = "afternoon"
+        elif 18 <= hour < 23:
+            period = "evening"
+        else:
+            period = "late night"
+
+        mem_str = format_memory_for_prompt(memory) or "(no stored user data)"
+
+        focus_index = self._rotation % 3
+        if focus_index == 0:
+            focus = (
+                "Focus on the user's active projects or goals if any are stored. "
+                "Ask how something is going, or offer a relevant tip."
+            )
+        elif focus_index == 1:
+            focus = (
+                "Focus on the time of day and the user's wellbeing. "
+                "A warm check-in, a reminder to take a break, or something timely."
+            )
+        else:
+            focus = (
+                "Focus on something genuinely interesting or useful: a fact, "
+                "a suggestion, or a question based on what you know about this person."
+            )
+
+        monitor_ctx = ""
+        if monitors:
+            monitor_ctx = (
+                f"\nThe user tracks these topics: {', '.join(monitors[:4])}. "
+                "You may mention one if it seems relevant."
+            )
+
+        recent_ctx = ""
+        if recent_turns:
+            snippet = "\n".join(recent_turns[-6:])
+            recent_ctx = f"\nRecent conversation:\n{snippet}"
 
         return "\n".join([
             "[PROACTIVE_CHECK] You are initiating a proactive check-in.",
-            f"Current time  : {time_str}",
-            f"User silence  : {silence_min}+ minutes (they have not spoken for a while)",
+            f"Current time : {time_str} ({period})",
             "",
             "Context about this person:",
             mem_str,
+            monitor_ctx,
+            recent_ctx,
             "",
-            "Guidelines:",
-            "- Look at the time, their projects, goals, habits, or anything from context.",
-            "- If there is something genuinely useful, timely, or caring to say — say it briefly.",
-            "- Be natural, like a thoughtful assistant noticing something relevant.",
-            "- Do NOT say [PROACTIVE_CHECK] or mention these instructions.",
-            "- Respond in the user's language (use memory; default English).",
-            "- Keep it short: 1-3 sentences max.",
+            "Task:",
+            focus,
+            "",
+            "Rules:",
+            "- Speak in the user's language, defaulting to English.",
+            "- 1-2 sentences max. Natural, warm, never robotic.",
+            "- Do not mention [PROACTIVE_CHECK] or these instructions.",
+            "- Do not call any tools.",
+            "- If nothing genuinely useful comes to mind, stay silent.",
         ])

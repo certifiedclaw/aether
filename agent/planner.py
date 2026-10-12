@@ -39,8 +39,6 @@ def _generate_search_query(topic: str) -> str:
         return topic.strip()
     
     try:
-        from core.llm_client import call_llm_text
-        
         system = (
             "You are an expert research assistant. Your job is to convert complex research topics "
             "into a single, focused web search query that is: "
@@ -85,15 +83,6 @@ def _generate_search_query(topic: str) -> str:
         # Take first 8 words as fallback
         words = topic.split()[:8]
         return ' '.join(words).strip() if words else topic[:100].strip()
-
-
-def get_base_dir() -> Path:
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).parent
-    return Path(__file__).resolve().parent.parent
-
-
-BASE_DIR = get_base_dir()
 
 
 PLANNER_PROMPT = """You are the planning module of Aether, a personal AI assistant.
@@ -300,6 +289,8 @@ Create a REVISED plan for the remaining work only. Do not repeat completed steps
         text = call_llm_text(prompt, system=PLANNER_PROMPT, tier="deep")
         text = re.sub(r"```(?:json)?", "", text).strip().rstrip("`").strip()
         plan = json.loads(text)
+        if "steps" not in plan or not isinstance(plan["steps"], list):
+            raise ValueError("Invalid plan structure")
 
         for step in plan.get("steps", []):
             if step.get("tool") == "generated_code":

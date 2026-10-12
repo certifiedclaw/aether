@@ -1,3 +1,5 @@
+import os
+import re
 import time
 import subprocess
 import platform
@@ -10,6 +12,7 @@ except ImportError:
     _PSUTIL = False
 
 _SYSTEM = platform.system()
+_URI_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.\-]{1,30}:[A-Za-z0-9_./\-]*")
 
 _APP_ALIASES: dict[str, dict[str, str]] = {
 
@@ -77,13 +80,87 @@ def _normalize(raw: str) -> str:
 
     return raw  
 
+def _window_appeared(app_name: str, timeout: float = 3.0) -> bool:
+    """Best-effort check that a top-level window mentioning app_name exists."""
+    try:
+        import pygetwindow as gw
+    except Exception:
+        return False
+    words = [w for w in app_name.lower().split() if len(w) > 2] or [app_name.lower()]
+    deadline = time.time() + timeout
+    while True:
+        try:
+            for t in gw.getAllTitles():
+                tl = (t or "").lower()
+                if tl and any(w in tl for w in words):
+                    return True
+        except Exception:
+            return False
+        if time.time() >= deadline:
+            return False
+        time.sleep(0.5)
+
+
+def _match_start_app(app_name: str, apps: list[dict]) -> dict | None:
+    """Pick the Start-menu entry ({"Name","AppID"}) best matching app_name.
+    Exact name beats prefix beats all-words-contained; None if nothing fits."""
+    q = " ".join(app_name.lower().split())
+    words = [w for w in re.split(r"\W+", q) if w]
+    if not words:
+        return None
+    best, best_rank = None, 99
+    for a in apps:
+        n = " ".join(str(a.get("Name", "")).lower().split())
+        if not n or not a.get("AppID"):
+            continue
+        if n == q:
+            rank = 0
+        elif n.startswith(q):
+            rank = 1
+        elif all(w in n for w in words):
+            rank = 2
+        else:
+            continue
+        if rank < best_rank or (rank == best_rank and len(n) < len(str(best.get("Name", "")))):
+            best, best_rank = a, rank
+    return best
+
+
+_START_APPS_CACHE: list[dict] | None = None
+
+
+def _start_apps() -> list[dict] | None:
+    """Everything the Start menu can launch (classic + Store apps). None if the
+    query itself failed, so callers can fall back to the old typing approach."""
+    global _START_APPS_CACHE
+    if _START_APPS_CACHE is not None:
+        return _START_APPS_CACHE
+    try:
+        import json
+        out = subprocess.run(
+            ["powershell", "-NoProfile", "-Command",
+             "Get-StartApps | Select-Object Name,AppID | ConvertTo-Json -Compress"],
+            capture_output=True, text=True, timeout=8,
+        ).stdout.strip()
+        data = json.loads(out) if out else []
+        if isinstance(data, dict):
+            data = [data]
+        _START_APPS_CACHE = [d for d in data if isinstance(d, dict)]
+        return _START_APPS_CACHE
+    except Exception:
+        return None
+
+
 def _launch_windows(app_name: str) -> bool:
 
-    if shutil.which(app_name) or shutil.which(app_name.split(".")[0]):
+    # Launch the RESOLVED executable path, never the raw string through a shell:
+    # "calc.exe & other" used to match via the split(".")[0] lookup and the whole
+    # string then ran under cmd.exe.
+    _exe = shutil.which(app_name) or shutil.which(app_name.split(".")[0])
+    if _exe:
         try:
             subprocess.Popen(
-                app_name,
-                shell=True,
+                [_exe],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
@@ -92,13 +169,32 @@ def _launch_windows(app_name: str) -> bool:
         except Exception as e:
             print(f"[open_app] subprocess failed: {e}")
 
-    if ":" in app_name:
+    # URI-style targets only (ms-settings:, spotify:, ...). The old code ran
+    # f"start {app_name}" through the shell, so a model-supplied name such as
+    # "x:& calc" executed arbitrary commands. os.startfile never invokes a shell.
+    if _URI_RE.fullmatch(app_name):
         try:
-            subprocess.Popen(f"start {app_name}", shell=True)
+            os.startfile(app_name)  # type: ignore[attr-defined]  # Windows only
             time.sleep(1.0)
             return True
         except Exception:
             pass
+
+    # Ask Windows what is actually installed BEFORE typing into Start. An unknown
+    # name used to cost ~8s of keystrokes and then open a web search; now it
+    # fails in about a second without touching the keyboard.
+    _apps = _start_apps()
+    if _apps is not None:
+        _hit = _match_start_app(app_name, _apps)
+        if not _hit:
+            return False
+        try:
+            subprocess.Popen(["explorer.exe", f"shell:AppsFolder\\{_hit['AppID']}"],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            time.sleep(1.0)
+            return True
+        except Exception as e:
+            print(f"[open_app] Start app launch failed: {e}")
 
     try:
         import pyautogui
@@ -109,7 +205,9 @@ def _launch_windows(app_name: str) -> bool:
         time.sleep(0.9)
         pyautogui.press("enter")
         time.sleep(2.5)
-        return True
+        # Typing into Start proves nothing: an unknown name just opens a web
+        # search. Only report success if a window with that name appeared.
+        return _window_appeared(app_name)
     except Exception as e:
         print(f"[open_app] Start Menu search failed: {e}")
 
@@ -161,7 +259,7 @@ def _launch_macos(app_name: str) -> bool:
         time.sleep(0.8)
         pyautogui.press("enter")
         time.sleep(1.5)
-        return True
+        return _window_appeared(app_name)
     except Exception as e:
         print(f"[open_app] Spotlight failed: {e}")
 
@@ -189,11 +287,12 @@ def _launch_linux(app_name: str) -> bool:
             pass
 
     try:
-        subprocess.run(
+        result = subprocess.run(
             ["xdg-open", app_name],
             capture_output=True, timeout=5
         )
-        return True
+        if result.returncode == 0:
+            return True
     except Exception:
         pass
 
@@ -221,6 +320,8 @@ _OS_LAUNCHERS = {
     "Linux":   _launch_linux,
 }
 
+from core.risk import gated  # noqa: E402
+@gated("open_app")
 def open_app(
     parameters=None,
     response=None,

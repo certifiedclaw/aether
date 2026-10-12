@@ -9,9 +9,6 @@ from pathlib import Path
 from datetime import datetime
 from urllib.parse import quote_plus
 
-import pyautogui
-import numpy as np
-
 try:
     import requests
     _REQUESTS_OK = True
@@ -172,7 +169,8 @@ def _summarize_with_gemini(transcript: str, video_url: str) -> str:
 def _save_summary(content: str, video_url: str) -> str:
     ts       = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"youtube_summary_{ts}.txt"
-    desktop  = Path.home() / "Desktop"
+    from core.known_folders import desktop_dir as _desktop_dir
+    desktop  = _desktop_dir()
     desktop.mkdir(parents=True, exist_ok=True)
     filepath = desktop / filename
 

@@ -11,13 +11,25 @@ import threading
 from pathlib import Path
 from typing import Optional
 
-from playwright.async_api import (
-    async_playwright,
-    BrowserContext,
-    Page,
-    Playwright,
-    TimeoutError as PlaywrightTimeout,
-)
+try:
+    from playwright.async_api import (
+        async_playwright,
+        BrowserContext,
+        Page,
+        Playwright,
+        TimeoutError as PlaywrightTimeout,
+    )
+    _PLAYWRIGHT_OK = True
+except ImportError:
+    # Optional dependency: a missing package must not stop Aether from starting.
+    # Type names are only used in annotations (lazy, via `from __future__`);
+    # PlaywrightTimeout stays a real exception class so `except` clauses are valid.
+    _PLAYWRIGHT_OK = False
+    async_playwright = None
+    BrowserContext = Page = Playwright = object
+
+    class PlaywrightTimeout(Exception):
+        pass
 _OS = platform.system()   # "Windows" | "Darwin" | "Linux"
 
 def _normalize_url(url: str) -> str:
@@ -700,7 +712,7 @@ class _BrowserSession:
     async def screenshot(self, path: str = None) -> str:
         page = await self._get_page()
         try:
-            save_path = path or str(Path.home() / "Desktop" / "aether_screenshot.png")
+            save_path = path or str(__import__("core.known_folders",fromlist=["x"]).desktop_dir() / "aether_screenshot.png")
             await page.screenshot(path=save_path, full_page=False)
             return f"Screenshot saved: {save_path}"
         except Exception as e:
@@ -801,6 +813,8 @@ class _SessionRegistry:
 
 _registry = _SessionRegistry()
 
+from core.risk import gated  # noqa: E402
+@gated("browser_control")
 def browser_control(
     parameters:    dict = None,
     response=None,
@@ -811,6 +825,12 @@ def browser_control(
     action  = params.get("action", "").lower().strip()
     browser = params.get("browser", "").lower().strip() or None
     result  = "Unknown action."
+
+    if not _PLAYWRIGHT_OK:
+        result = ("Browser control needs the 'playwright' package. "
+                  "Run: pip install playwright   then:   playwright install chromium")
+        _log(player, result)
+        return result
 
     if action == "switch":
         target = browser or params.get("target", "").lower().strip()

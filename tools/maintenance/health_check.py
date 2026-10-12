@@ -40,6 +40,22 @@ def _iter_py_files(root: Path):
         yield path
 
 
+def _iter_comments(text: str):
+    """Yield (lineno, comment_text) for actual comment tokens only —
+    a raw per-line regex also matches a bare '#' that happens to appear
+    inside a string literal (this file's own '## TODO / FIXME / XXX'
+    markdown heading string was tripping its own check that way)."""
+    import io
+    import tokenize as _tokenize
+    try:
+        tokens = _tokenize.generate_tokens(io.StringIO(text).readline)
+        for tok in tokens:
+            if tok.type == _tokenize.COMMENT:
+                yield tok.start[0], tok.string
+    except (_tokenize.TokenError, SyntaxError, IndentationError):
+        return
+
+
 def _check_file(path: Path, findings: dict):
     rel = str(path.relative_to(REPO_ROOT))
     try:
@@ -52,10 +68,12 @@ def _check_file(path: Path, findings: dict):
     if len(lines) > FILE_LINE_LIMIT:
         findings["large_files"].append({"file": rel, "lines": len(lines)})
 
-    for i, line in enumerate(lines, start=1):
-        m = TODO_RE.search(line)
+    for lineno, comment in _iter_comments(text):
+        m = TODO_RE.search(comment)
         if m:
-            findings["todos"].append({"file": rel, "line": i, "tag": m.group(1).upper(), "text": m.group(2).strip()[:120]})
+            findings["todos"].append({"file": rel, "line": lineno, "tag": m.group(1).upper(), "text": m.group(2).strip()[:120]})
+
+    for i, line in enumerate(lines, start=1):
         stripped = line.strip()
         if stripped == "except:" or stripped.startswith("except:  "):
             findings["bare_except"].append({"file": rel, "line": i})

@@ -12,7 +12,8 @@ def get_base_dir():
     return Path(__file__).resolve().parent.parent
 
 BASE_DIR           = get_base_dir()
-DESKTOP            = Path.home() / "Desktop"
+from core.known_folders import desktop_dir as _desktop_dir
+DESKTOP            = _desktop_dir()
 MAX_BUILD_ATTEMPTS = 3
 
 from core.llm_client import call_llm_text as _llm
@@ -79,7 +80,7 @@ def _has_error(output: str) -> bool:
 def _take_screenshot() -> Path | None:
     try:
         import pyautogui
-        screenshot_path = Path.home() / "Desktop" / f"aether_debug_{int(time.time())}.png"
+        screenshot_path = __import__("core.known_folders",fromlist=["x"]).desktop_dir() / f"aether_debug_{int(time.time())}.png"
         screenshot = pyautogui.screenshot()
         screenshot.save(str(screenshot_path))
         print(f"[Code] 📸 Screenshot: {screenshot_path}")
@@ -156,6 +157,12 @@ def _fix_code(code: str, error_output: str, description: str) -> str:
         f"Broken code:\n{code}\n\nFixed code:"
     )
     return _clean_code(_llm(prompt, system=system))
+
+
+def _approve_execution(operation: str, detail: str) -> bool:
+    """User approval before model-written or model-chosen code is executed."""
+    from core.safety import confirm_action
+    return confirm_action(operation, detail)
 
 
 def _run_file(path: Path, args: list, timeout: int) -> str:
@@ -505,9 +512,20 @@ def code_helper(
         return _explain_action(file_path, code, player)
 
     elif action == "run":
+        if not _approve_execution(
+                "run a script",
+                f"File: {file_path or '(none given)'}\nArguments: {args or '(none)'}\n"
+                f"Timeout: {timeout}s\n\nThis executes the file on your computer."):
+            return "Cancelled: you did not approve running that file, so nothing was run."
         return _run_action(file_path, args, timeout, player)
 
     elif action == "build":
+        if not _approve_execution(
+                "write and run a program",
+                f"Language: {language}\nTask: {description[:300]}\n\n"
+                f"Aether will have the model write this program and then RUN it, "
+                f"retrying with fixes up to {MAX_BUILD_ATTEMPTS} times."):
+            return "Cancelled: you did not approve writing and running that program."
         return _build(description, language, output_path, args, timeout, speak, player)
 
     elif action == "optimize":

@@ -272,7 +272,12 @@ class SecurityManager:
                 d.consecutive_fails += 1
                 if d.consecutive_fails >= _MAX_CONSEC_FAILS:
                     d.locked_until = now + _RATE_LIMIT_LOCKOUT
-            self._lockouts[ip] = now + _RATE_LIMIT_LOCKOUT
+            # Escalate the IP itself to the long lockout only after
+            # _MAX_CONSEC_FAILS failures within the window -- not on every
+            # single failed attempt (that's what is_rate_limited()'s
+            # _RATE_LIMIT_MAX/window check is already for).
+            if len(self._attempts.get(ip, [])) >= _MAX_CONSEC_FAILS:
+                self._lockouts[ip] = now + _RATE_LIMIT_LOCKOUT
             self._save_devices()
 
     def is_rate_limited(self, ip: str) -> bool:

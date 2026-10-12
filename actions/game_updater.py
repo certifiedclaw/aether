@@ -923,6 +923,8 @@ def _get_schedule_status() -> str:
         return "No scheduled game update found."
 
 
+from core.risk import gated  # noqa: E402
+@gated("game_updater")
 def game_updater(parameters: dict, player=None, speak=None) -> str:
     p         = parameters or {}
     action    = p.get("action",    "update").lower().strip()

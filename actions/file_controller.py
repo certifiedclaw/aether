@@ -1,8 +1,11 @@
 import os
 import shutil
 import platform
+from core.known_folders import known_folder as _known_folder
 from pathlib import Path
 from datetime import datetime
+
+from core import undo as undo_stack
 
 try:
     import send2trash
@@ -16,10 +19,18 @@ _SAFE_ROOTS: list[Path] = [
     Path.home(),
 ]
 
+# Aether's own folder (source, risk table, config/api_keys.json, hot-reloaded plugins/) is
+# never reachable through the file tool: a MONITOR-tier write there would let the model
+# rewrite its own gates or drop in a plugin without any prompt.
+_PROTECTED_ROOTS: list[Path] = [Path(__file__).resolve().parent.parent]
+
 def _is_safe_path(target: Path) -> bool:
     """Verilen path _SAFE_ROOTS içinde mi? Değilse işlemi reddet."""
     try:
         resolved = target.resolve()
+        if any(resolved == p.resolve() or resolved.is_relative_to(p.resolve())
+               for p in _PROTECTED_ROOTS):
+            return False
         return any(
             resolved == root.resolve() or resolved.is_relative_to(root.resolve())
             for root in _SAFE_ROOTS
@@ -28,6 +39,9 @@ def _is_safe_path(target: Path) -> bool:
         return False
 
 def _get_desktop() -> Path:
+    _kf = _known_folder("desktop")
+    if _kf:
+        return _kf
     if _OS == "Linux":
         xdg = os.environ.get("XDG_DESKTOP_DIR", "")
         if xdg and Path(xdg).exists():
@@ -35,6 +49,9 @@ def _get_desktop() -> Path:
     return Path.home() / "Desktop"
 
 def _get_downloads() -> Path:
+    _kf = _known_folder("downloads")
+    if _kf:
+        return _kf
     if _OS == "Linux":
         xdg = os.environ.get("XDG_DOWNLOAD_DIR", "")
         if xdg and Path(xdg).exists():
@@ -42,6 +59,9 @@ def _get_downloads() -> Path:
     return Path.home() / "Downloads"
 
 def _get_documents() -> Path:
+    _kf = _known_folder("documents")
+    if _kf:
+        return _kf
     if _OS == "Linux":
         xdg = os.environ.get("XDG_DOCUMENTS_DIR", "")
         if xdg and Path(xdg).exists():
@@ -49,6 +69,9 @@ def _get_documents() -> Path:
     return Path.home() / "Documents"
 
 def _get_pictures() -> Path:
+    _kf = _known_folder("pictures")
+    if _kf:
+        return _kf
     if _OS == "Linux":
         xdg = os.environ.get("XDG_PICTURES_DIR", "")
         if xdg and Path(xdg).exists():
@@ -56,6 +79,9 @@ def _get_pictures() -> Path:
     return Path.home() / "Pictures"
 
 def _get_music() -> Path:
+    _kf = _known_folder("music")
+    if _kf:
+        return _kf
     if _OS == "Linux":
         xdg = os.environ.get("XDG_MUSIC_DIR", "")
         if xdg and Path(xdg).exists():
@@ -63,6 +89,9 @@ def _get_music() -> Path:
     return Path.home() / "Music"
 
 def _get_videos() -> Path:
+    _kf = _known_folder("videos")
+    if _kf:
+        return _kf
     if _OS == "Linux":
         xdg = os.environ.get("XDG_VIDEOS_DIR", "")
         if xdg and Path(xdg).exists():
@@ -104,6 +133,40 @@ def _safe_trash(target: Path) -> str:
     return f"Moved to Trash: {target.name}"
 
 
+def _register_write_undo(target: Path, verb: str) -> None:
+    """Call BEFORE writing/overwriting `target` — captures whatever's
+    there now (if anything) so the write can be undone.
+
+    - Didn't exist yet: undo removes the file this write is about to create.
+    - Existed and content fits under undo.UNDO_MAX_BYTES and decodes as
+      text: undo restores that exact content.
+    - Existed but is too large or isn't text (binary, decode failure):
+      no undo is registered at all — see core/undo.py's "does not guess"
+      note. A silent no-op undo would be worse than none.
+    """
+    existed = target.exists()
+    old_content: str | None = None
+    if existed:
+        try:
+            if target.stat().st_size <= undo_stack.UNDO_MAX_BYTES:
+                old_content = target.read_text(encoding="utf-8")
+        except Exception:
+            old_content = None  # binary/undecodable — can't safely buffer
+
+    if existed and old_content is not None:
+        def _undo(_t=target, _c=old_content):
+            _t.write_text(_c, encoding="utf-8")
+            return f"Restored previous contents of {_t.name}"
+        undo_stack.register(f"{verb} {target.name} (had existing content)", _undo)
+    elif not existed:
+        def _undo(_t=target):
+            if _t.exists():
+                return _safe_trash(_t)
+            return f"{_t.name} was already gone."
+        undo_stack.register(f"{verb} {target.name} (new file)", _undo)
+    # else: existed but couldn't be buffered — no undo entry, on purpose.
+
+
 def list_files(path: str = "desktop", show_hidden: bool = False) -> str:
     try:
         target = _resolve_path(path)
@@ -142,6 +205,9 @@ def create_file(path: str, name: str = "", content: str = "") -> str:
         if not _is_safe_path(target):
             return f"Access denied: {target}"
         target.parent.mkdir(parents=True, exist_ok=True)
+
+        _register_write_undo(target, verb="Created/wrote")
+
         target.write_text(content, encoding="utf-8")
         return f"File created: {target.name}"
     except Exception as e:
@@ -203,8 +269,26 @@ def move_file(path: str, name: str = "", destination: str = "") -> str:
         if dst.is_dir():
             dst = dst / src.name
 
+        # A move that would overwrite an existing file at the destination
+        # can't be safely undone without also buffering whatever it's
+        # about to clobber. Rather than register an undo entry that
+        # promises a recovery it can't actually deliver, skip it for this
+        # case — same "does not guess" rule core/undo.py documents for
+        # writes.
+        _dst_will_clobber = dst.exists()
+
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(src), str(dst))
+
+        if not _dst_will_clobber:
+            def _undo(_src=src, _dst=dst):
+                if not _dst.exists():
+                    return f"{_dst.name} is no longer there to move back."
+                _src.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(_dst), str(_src))
+                return f"Moved back: {_dst.name} → {_src.parent.name}/"
+            undo_stack.register(f"Moved {src.name} → {dst.parent.name}/", _undo)
+
         return f"Moved: {src.name} → {dst.parent.name}/"
 
     except Exception as e:
@@ -257,8 +341,23 @@ def rename_file(path: str, name: str = "", new_name: str = "") -> str:
         if new_path.exists():
             return f"A file named '{new_name}' already exists here."
 
+        old_name = target.name
         target.rename(new_path)
-        return f"Renamed: {target.name} → {new_name}"
+
+        # Unlike move, a clobber-then-undo scenario can't happen here —
+        # rename_file already refuses when new_path exists, so it's always
+        # safe to register.
+        def _undo(_new=new_path, _old_name=old_name):
+            if not _new.exists():
+                return f"{_new.name} is no longer there to rename back."
+            restored = _new.parent / _old_name
+            if restored.exists():
+                return f"Can't undo — {_old_name} already exists again at that location."
+            _new.rename(restored)
+            return f"Renamed back: {_new.name} → {_old_name}"
+        undo_stack.register(f"Renamed {old_name} → {new_name}", _undo)
+
+        return f"Renamed: {old_name} → {new_name}"
 
     except Exception as e:
         return f"Could not rename: {e}"
@@ -292,6 +391,9 @@ def write_file(path: str, name: str = "", content: str = "",
         if not _is_safe_path(target):
             return f"Access denied: {target}"
         target.parent.mkdir(parents=True, exist_ok=True)
+
+        _register_write_undo(target, verb="Appended to" if append else "Wrote to")
+
         mode = "a" if append else "w"
         with open(target, mode, encoding="utf-8") as f:
             f.write(content)
@@ -467,6 +569,8 @@ def get_file_info(path: str, name: str = "") -> str:
     except Exception as e:
         return f"Could not get file info: {e}"
 
+from core.risk import gated  # noqa: E402
+@gated("file_controller")
 def file_controller(
     parameters: dict = None,
     response=None,

@@ -108,7 +108,13 @@ def install_for_config(config: dict, log: Callable | None = None) -> None:
 
     needed: list[tuple[str, str]] = list(_CORE)
     needed += _STT.get(stt, [])
-    needed += _TTS.get(tts, [])
+    if tts == "kokoro" and sys.version_info >= (3, 13):
+        # kokoro requires Python <3.13 -- pip can only fail here, on every config change.
+        if log:
+            log("SYS: Kokoro supports Python 3.10-3.12 only - skipping its install "
+                "(Aether will use the EdgeTTS fallback).")
+    else:
+        needed += _TTS.get(tts, [])
     if platform.system() == "Windows":
         needed += _WINDOWS
     # Install integration packages when enabled in config
