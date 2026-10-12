@@ -1,0 +1,26 @@
+# ── Secrets (never commit) ───────────────────────────────────────────────
+/config/api_keys.json
+/config/certs/
+.env
+*.pem
+*.key
+
+# ── Personal / runtime data ──────────────────────────────────────────────
+/data/memory.db
+/data/memory.db-*
+/data/notes/
+/data/rag_index/
+/data/screenshots/
+/data/security/
+/memory/long_term.json
+/logs/
+/tests/data/
+
+# ── Python / tooling ─────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# ── Local archives and backups ───────────────────────────────────────────
+*.zip
+*.bak

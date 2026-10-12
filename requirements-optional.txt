@@ -1,0 +1,21 @@
+# Aether — OPTIONAL integrations (not installed by install.bat)
+#
+# Open Interpreter: lets the LLM write and run code. Off by default in Aether.
+# Requirements and caveats:
+#   * Python 3.12 or older. It pins tiktoken<0.8, which cannot be built on
+#     Python 3.13+ (no wheel; the source build needs PyO3, max Python 3.12).
+#   * Install it in a SEPARATE venv, or accept that it downgrades shared
+#     packages (rich, protobuf, psutil, google-generativeai, ...) and can
+#     conflict with langchain / llama-index.
+#
+# Usage:
+#   py -3.12 -m venv venv-oi
+#   venv-oi\Scripts\activate
+#   python -m pip install -r requirements.txt -r requirements-optional.txt
+open-interpreter
+
+# keyring: store API keys in the OS credential manager instead of config/api_keys.json.
+#   python -m pip install keyring
+#   python tools\secrets_cli.py migrate          (dry run)
+#   python tools\secrets_cli.py migrate --apply
+keyring

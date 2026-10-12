@@ -1,0 +1,86 @@
+{
+  "_comment": "Copy this to config/api_keys.json and fill in your values.",
+
+  "_comment_llm": "── LLM settings ─────────────────────────────────────────",
+  "llm_model":    "qwen3:8b",
+  "ollama_url":   "http://localhost:11434",
+  "llm_provider": "ollama",
+
+  "_comment_llm_provider": "Set llm_provider to 'ollama', 'openai' (for LM Studio / LocalAI / Jan / llama.cpp server), or 'gemini' (for Google AI)",
+  "_comment_llm_url":      "For OpenAI-compatible: set llm_url to e.g. 'http://localhost:1234'",
+  "llm_url":      "http://localhost:11434",
+
+  "_comment_llm_remote": "── Optional: prefer a remote PC (e.g. your gaming rig's GPU) for inference, falling back to CPU on this machine if it's off/unreachable. Only takes effect if llm_remote_url is set -- leave unset for single-host behavior (the default, unchanged).",
+  "_comment_llm_remote_url":   "Ollama on your other PC, reachable over LAN or Tailscale, e.g. 'http://192.168.1.50:11434'",
+  "llm_remote_url":   "",
+  "llm_remote_model": "",
+  "_comment_llm_local":        "Fallback used when llm_remote_url doesn't answer -- CPU inference on this machine.",
+  "llm_local_url":    "http://localhost:11434",
+  "llm_local_model":  "",
+  "_comment_llm_health_check": "How the remote host's reachability is checked -- interval is how long a verdict is cached (avoids probing on every message), timeout is how long a single probe waits before giving up.",
+  "llm_health_check_interval": 20,
+  "llm_health_check_timeout":  2.5,
+
+  "_comment_stt": "── Speech-to-text ───────────────────────────────────────",
+  "stt_engine":   "whisper",
+  "stt_model":    "small",
+  "stt_language": "auto",
+
+  "_comment_tts": "── Text-to-speech ───────────────────────────────────────",
+  "tts_engine":   "edgetts",
+  "tts_voice":    "en-US-GuyNeural",
+  "elevenlabs_api_key": "",
+  "gemini_api_key": "",
+  "_comment_gemini_escalation": "Used by core/tier_router.py's HARD tier -- when the primary llm_provider above is 'ollama'/'openai' and a gemini_api_key is set, complex-reasoning turns are escalated to this Gemini model for just that turn. Falls back to 'gemini-3.8-flash' if unset. Has no effect if llm_provider is already 'gemini'.",
+  "gemini_escalation_model": "gemini-3.8-flash",
+  "_comment_gemini_retry": "Seconds to wait before ONE retry of a transient Gemini 500/502/503/504 before falling back to the local model. 0 disables the retry.",
+  "gemini_retry_delay": 1.0,
+  "_comment_gemini_cooldown": "Seconds Gemini escalations fast-fail after a real outage (the retry also failed), so each HARD turn does not wait out a timeout before falling back to local. 429 rests at least 300s; 401/403/404 at least 3600s. 0 disables.",
+  "gemini_cooldown": 120,
+
+  "_comment_embed": "── Embeddings (for hybrid memory & RAG) ─────────────────",
+  "llm.embed_model": "nomic-embed-text",
+
+  "_comment_memory": "── Memory settings ──────────────────────────────────────",
+  "memory.db_path":             "data/memory.db",
+  "memory.chat_history_limit":  100,
+  "memory.relevance_threshold": 0.35,
+
+  "_comment_integrations": "── v3 Integration settings ──────────────────────",
+  "integrations.langchain":         true,
+  "integrations.llama_index":       true,
+  "integrations.open_interpreter":  false,
+
+  "langchain.max_research_steps":   6,
+
+  "llama_index.default_collection": "aether",
+  "llama_index.chroma_dir":         "./data/chroma_db",
+
+  "_comment_oi": "── Open Interpreter settings ────────────────────────────",
+  "oi.safe_mode":  "ask",
+  "oi.auto_run":   false,
+
+  "_comment_mcp": "── MCP Server config ────────────────────────────────────",
+  "mcp.enabled":  false,
+  "mcp_enabled":  false,
+  "mcp.servers":  [],
+  "mcp_servers":  [],
+
+  "_comment_logging": "── Logging / paths ──────────────────────────────────",
+  "logging.log_dir":  "logs",
+  "rag.index_path":   "data/rag_index",
+
+  "_comment_filewatcher": "── File watcher — auto-index new/modified files into RAG ──",
+  "_comment_watch_dirs":  "Add paths to watch; leave empty to disable",
+  "rag.watch_dirs":   [],
+
+  "_comment_v4": "── v4 (ported from Mark-XLVIII): dashboard & proactive ──",
+  "_comment_dashboard": "Web dashboard / phone remote runs on http://<this-pc-ip>:8000 if fastapi+uvicorn+cryptography are installed. No on/off flag yet — presence of the packages is the toggle.",
+  "_comment_headless": "Env vars, not config keys — set AETHER_HEADLESS=1 to run on a server with no display/GUI/mic (interact via the dashboard/phone remote instead). AETHER_HEADLESS_AUTO_CONFIRM=1 auto-approves high-risk-action confirmations with no human review (off by default — they fail closed/denied headless otherwise). AETHER_NO_AUTOPUSH=1 stops the maintenance-doc auto-push to GitHub on every launch, useful for an unattended server.",
+
+  "_comment_ntfy": "── Push notifications for headless approval requests ────── No ntfy integration existed in this project before -- these are new keys, not a reuse of something pre-configured. With no ntfy_topic set, approval pushes are silently skipped (the request still shows up in the dashboard's Pending Approvals list either way -- ntfy is just how you find out about it without watching the dashboard).",
+  "ntfy_base_url": "https://ntfy.sh",
+  "ntfy_topic":    "",
+  "proactive_min_silence_secs": 900,
+  "proactive_check_cooldown":   600
+}

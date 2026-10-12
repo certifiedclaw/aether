@@ -1,0 +1,15 @@
+Hello.
+Hello, how are you today?
+What is 240 times 17?
+Explain in two sentences how a hash table works.
+Remember that my favorite color is teal.
+What is my favorite color?
+Turn the volume down a little.
+Turn the volume up a little.
+What's the weather in London right now?
+Search the web for the latest stable version of Python.
+List the files on my desktop.
+Turn the volume down a little, then tell me the weather in London.
+Open an application called Zorblax Quantum Editor.
+Compare SQLite and PostgreSQL for a small desktop app in three bullet points.
+Turn the volume up a little.
