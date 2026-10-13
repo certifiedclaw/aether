@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-13 00:25 UTC
+Generated: 2026-10-13 00:30 UTC
+
+## #58 — 2026-10-13 00:30 UTC — Codex
+
+Render assistant and user chat entries as safe GitHub-style Markdown, preserving immediate display and styling code blocks; add UI regression coverage.
+
+**Touched:** `ui.py`, `tests/test_all_critical.py`
+
+**Next steps:** Continue product improvements with persistent conversation management and cancellation/regeneration; profile model/network wait separately from UI rendering.
+
+---
 
 ## #57 — 2026-10-13 00:25 UTC — Codex
 

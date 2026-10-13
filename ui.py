@@ -5,6 +5,7 @@ import math
 import os
 import platform
 import random
+import re
 import subprocess
 import sys
 import threading
@@ -21,7 +22,8 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtGui import (
     QBrush, QColor, QDragEnterEvent, QDropEvent, QFont, QFontDatabase,
-    QKeySequence, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, QTextCharFormat,
+    QKeySequence, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap,
+    QTextCharFormat, QTextCursor, QTextDocument, QTextDocumentFragment,
     QRadialGradient, QShortcut,
 )
 from PyQt6.QtWidgets import (
@@ -654,11 +656,24 @@ class LogWidget(QTextEdit):
             "file": qcol(C.GREEN),
             "sys":  qcol(C.ACC2),
         }.get(tag, qcol(C.TEXT))
+        safe_text = re.sub(r"!\[([^\]]*)\]\([^)]+\)", r"\1", text)
+        document = QTextDocument()
+        document.setDefaultFont(self.font())
+        document.setMarkdown(
+            safe_text,
+            QTextDocument.MarkdownFeature.MarkdownDialectGitHub |
+            QTextDocument.MarkdownFeature.MarkdownNoHTML,
+        )
+        document_cursor = QTextCursor(document)
+        document_cursor.select(QTextCursor.SelectionType.Document)
         fmt = QTextCharFormat()
         fmt.setForeground(QBrush(color))
+        document_cursor.mergeCharFormat(fmt)
         cursor = self.textCursor()
         cursor.movePosition(cursor.MoveOperation.End)
-        cursor.insertText(text + "\n", fmt)
+        if not self.document().isEmpty():
+            cursor.insertBlock()
+        cursor.insertFragment(QTextDocumentFragment(document))
         self.setTextCursor(cursor)
         self.ensureCursorVisible()
 

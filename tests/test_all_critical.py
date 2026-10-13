@@ -816,7 +816,21 @@ def test_setup_overlay_refactor_preserves_behavior():
     log = ui.LogWidget()
     entry = "Aether: " + ("response text " * 40)
     log.append_log(entry)
-    assert log.toPlainText() == entry + "\n"
+    assert log.toPlainText() == entry.rstrip()
+
+    markdown_log = ui.LogWidget()
+    markdown_log.append_log(
+        "Aether: **bold** and `inline`\n\n```python\nprint(1)\n```"
+    )
+    assert "Aether: bold and inline" in markdown_log.toPlainText()
+    assert "print(1)" in markdown_log.toPlainText()
+    cursor = markdown_log.textCursor()
+    cursor.setPosition(markdown_log.toPlainText().index("bold"))
+    cursor.movePosition(cursor.MoveOperation.NextCharacter, cursor.MoveMode.KeepAnchor)
+    assert cursor.charFormat().fontWeight() >= ui.QFont.Weight.Bold
+    cursor.setPosition(markdown_log.toPlainText().index("print"))
+    cursor.movePosition(cursor.MoveOperation.NextCharacter, cursor.MoveMode.KeepAnchor)
+    assert cursor.charFormat().fontFamily().lower() == "monospace"
 
     # Interactivity: switching STT engine flips which input is shown.
     assert ov._vosk_model_input.isHidden() is False
