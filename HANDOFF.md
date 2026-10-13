@@ -4,6 +4,16 @@
 
 Generated: 2026-10-13 00:43 UTC
 
+## #61 — 2026-10-13 00:43 UTC — Codex
+
+Add up to 30 persisted, auto-titled chat sessions with selector and New button/hotkey; add switch, rename, list, delete and legacy migration; isolate short-term memory on chat changes. Full suite 653 passed, 2 skipped.
+
+**Touched:** `ui.py`, `main.py`, `core/chat_history.py`, `core/chat_commands.py`, `core/conversation_core.py`, `tests/test_chat_history.py`, `tests/test_chat_commands.py`, `tests/test_all_critical.py`
+
+**Next steps:** Continue chat-first work with stop/regenerate controls and richer file-aware chats; profile first-token and total model latency with a configured model only when credentials are user-provided.
+
+---
+
 ## #60 — 2026-10-13 00:43 UTC — Codex
 
 Add up to 30 persisted, auto-titled chat sessions with selector and New button/hotkey; add switch, rename, list, and delete commands, migrate the prior single transcript format, and clear short-term memory on chat changes.

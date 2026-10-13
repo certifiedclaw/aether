@@ -1,5 +1,5 @@
 {
-  "next_id": 61,
+  "next_id": 62,
   "entries": [
     {
       "id": 1,
@@ -803,6 +803,23 @@
         "tests/test_all_critical.py"
       ],
       "next_steps": "Continue chat-first work with stop/regenerate controls and better file-aware conversations; separately profile first-token and total model latency using a configured model without assuming credentials."
+    },
+    {
+      "id": 61,
+      "timestamp": "2026-10-13 00:43 UTC",
+      "by": "Codex",
+      "summary": "Add up to 30 persisted, auto-titled chat sessions with selector and New button/hotkey; add switch, rename, list, delete and legacy migration; isolate short-term memory on chat changes. Full suite 653 passed, 2 skipped.",
+      "files": [
+        "ui.py",
+        "main.py",
+        "core/chat_history.py",
+        "core/chat_commands.py",
+        "core/conversation_core.py",
+        "tests/test_chat_history.py",
+        "tests/test_chat_commands.py",
+        "tests/test_all_critical.py"
+      ],
+      "next_steps": "Continue chat-first work with stop/regenerate controls and richer file-aware chats; profile first-token and total model latency with a configured model only when credentials are user-provided."
     }
   ]
 }
