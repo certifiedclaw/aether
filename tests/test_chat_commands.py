@@ -83,3 +83,34 @@ def test_rename_delete_and_chat_list_commands(tmp_path, monkeypatch):
     assert "Personal workspace" in agent.ui.logs[-1]
     assert agent._handle_chat_command("/deletechat Temporary")
     assert agent._chat_sessions.active_title == "Personal workspace"
+
+
+def test_searchchats_finds_user_and_assistant_text_across_sessions(tmp_path, monkeypatch):
+    agent = _agent(tmp_path, monkeypatch)
+    agent._handle_chat_command("/newchat Work")
+    agent._conversation.extend([
+        {"role": "user", "content": "Where is the deployment guide?"},
+        {"role": "assistant", "content": "The deployment guide is in the docs folder."},
+    ])
+    agent._chat_sessions.save_current(agent._conversation)
+    agent._handle_chat_command("/newchat Travel")
+    agent._conversation.extend([
+        {"role": "user", "content": "Find a hotel near the station."},
+    ])
+    agent._chat_sessions.save_current(agent._conversation)
+
+    assert agent._handle_chat_command("/searchchats DEPLOYMENT GUIDE")
+    result = agent.ui.logs[-1]
+    assert "Work" in result
+    assert "You: Where is the deployment guide?" in result
+    assert "Aether: The deployment guide is in the docs folder." in result
+    assert "Travel" not in result
+
+
+def test_searchchats_requires_query_and_reports_no_matches(tmp_path, monkeypatch):
+    agent = _agent(tmp_path, monkeypatch)
+
+    assert agent._handle_chat_command("/searchchats")
+    assert "Usage: /searchchats <text>" in agent.ui.logs[-1]
+    assert agent._handle_chat_command("/searchchats absent phrase")
+    assert "No saved chat messages matched" in agent.ui.logs[-1]

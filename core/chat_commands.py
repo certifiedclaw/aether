@@ -77,6 +77,42 @@ class ChatCommandsMixin:
                 lines.append(f"- {session['title']}{marker}")
             self.ui.write_log("\n".join(lines))
             return True
+        if lowered == "/searchchats" or lowered.startswith("/searchchats "):
+            query = command[len("/searchchats"):].strip()
+            if not query:
+                self.ui.write_log("ERR: Usage: /searchchats <text>")
+                return True
+            if len(query) > 200:
+                self.ui.write_log("ERR: Search text must be 200 characters or fewer.")
+                return True
+            query = query.casefold()
+            matches = []
+            for session in self._chat_sessions.list_sessions():
+                for message in session.get("messages", []):
+                    if message.get("role") not in ("user", "assistant"):
+                        continue
+                    content = message.get("content")
+                    if not isinstance(content, str) or query not in content.casefold():
+                        continue
+                    snippet = " ".join(content.split())
+                    if len(snippet) > 180:
+                        position = snippet.casefold().find(query)
+                        start = max(0, position - 60)
+                        has_more = start + 180 < len(snippet)
+                        snippet = ("…" if start else "") + snippet[start:start + 180]
+                        if has_more:
+                            snippet += "…"
+                    label = "You" if message["role"] == "user" else "Aether"
+                    matches.append(f"- {session['title']} — {label}: {snippet}")
+                    if len(matches) == 10:
+                        break
+                if len(matches) == 10:
+                    break
+            if matches:
+                self.ui.write_log("SYS: Chat search results (up to 10):\n" + "\n".join(matches))
+            else:
+                self.ui.write_log("SYS: No saved chat messages matched that search.")
+            return True
         if lowered.startswith("/switchchat "):
             title = command[len("/switchchat "):].strip()
             self._chat_sessions.save_current(self._conversation)
@@ -194,6 +230,7 @@ class ChatCommandsMixin:
                 "/switchchat <name> Switch to a saved chat\n"
                 "/renamechat <name>  Rename the active chat\n"
                 "/deletechat <name> Delete a saved chat\n"
+                "/searchchats <text> Search saved conversations\n"
                 "/help              Show this command list\n"
                 "─────────────────────────────────────────────────────\n"
                 "Hotkeys: F4 mute · F11 fullscreen · Ctrl+Alt+A show/hide · Esc collapse"

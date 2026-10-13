@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-13 00:49 UTC
+Generated: 2026-10-13 01:02 UTC
+
+## #63 — 2026-10-13 01:02 UTC — Codex
+
+Add local /searchchats command to search saved conversation user and assistant messages, with bounded results and snippets.
+
+**Touched:** `core/chat_commands.py`, `tests/test_chat_commands.py`
+
+**Next steps:** Continue broad chat improvements; next candidates are safe edit/regenerate UX and file-aware conversations.
+
+---
 
 ## #62 — 2026-10-13 00:49 UTC — Codex
 
