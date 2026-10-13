@@ -43,6 +43,11 @@ def _default_session(messages=None, title="New chat", auto_title=False) -> dict:
             "messages": _valid_history(messages or []), "auto_title": auto_title}
 
 
+def _preserve_invalid_store(path: Path) -> None:
+    backup = path.with_name(f"{path.name}.corrupt-{uuid.uuid4().hex}")
+    path.replace(backup)
+
+
 def _valid_store(payload) -> dict:
     if not isinstance(payload, dict):
         return {"active_id": "", "sessions": []}
@@ -84,12 +89,34 @@ def _valid_store(payload) -> dict:
 
 def _read_store(path: Path) -> dict:
     try:
-        if path.stat().st_size > _MAX_FILE_BYTES:
-            return {"active_id": "", "sessions": []}
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError):
+        size = path.stat().st_size
+    except FileNotFoundError:
         return {"active_id": "", "sessions": []}
-    return _valid_store(payload)
+    if size > _MAX_FILE_BYTES:
+        _preserve_invalid_store(path)
+        return {"active_id": "", "sessions": []}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {"active_id": "", "sessions": []}
+    except (UnicodeError, json.JSONDecodeError):
+        _preserve_invalid_store(path)
+        return {"active_id": "", "sessions": []}
+    supported = (
+        isinstance(payload, dict)
+        and (
+            payload.get("version") == 1
+            or (payload.get("version") == 2 and isinstance(payload.get("sessions"), list))
+        )
+    )
+    if not supported:
+        _preserve_invalid_store(path)
+        return {"active_id": "", "sessions": []}
+    store = _valid_store(payload)
+    if payload.get("version") == 2 and payload["sessions"] and not store["sessions"]:
+        _preserve_invalid_store(path)
+        return {"active_id": "", "sessions": []}
+    return store
 
 
 def _write_store(payload, path: Path) -> None:

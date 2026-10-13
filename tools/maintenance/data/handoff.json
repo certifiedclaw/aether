@@ -1,5 +1,5 @@
 {
-  "next_id": 64,
+  "next_id": 66,
   "entries": [
     {
       "id": 1,
@@ -846,6 +846,35 @@
         "tests/test_chat_commands.py"
       ],
       "next_steps": "Continue broad chat improvements; next candidates are safe edit/regenerate UX and file-aware conversations."
+    },
+    {
+      "id": 64,
+      "timestamp": "2026-10-13 01:39 UTC",
+      "by": "Codex",
+      "summary": "Preserve malformed or unsupported saved chat-history files as unique .corrupt-* backups before creating a fresh store; add regression coverage for malformed JSON and unsupported schema versions. Full suite: 658 passed, 2 skipped.",
+      "files": [
+        "core/chat_history.py",
+        "tests/test_chat_history.py"
+      ],
+      "next_steps": "Review Gemini HTTP 429 retry behavior (roadmap #26), plugin trust boundaries (#36), and cancellation during stalled streaming reads."
+    },
+    {
+      "id": 65,
+      "timestamp": "2026-10-13 01:44 UTC",
+      "by": "Codex",
+      "summary": "Audit fixes: preserve malformed or unsupported chat-history files before recovery; remove trailing spaces from completed roadmap entries. Added regression tests; full suite: 658 passed, 2 skipped. Corrected completed dashboard binding roadmap item and refreshed project/dependency reports.",
+      "files": [
+        "core/chat_history.py",
+        "tests/test_chat_history.py",
+        "tools/maintenance/roadmap.py",
+        "tests/test_apply_roadmap.py",
+        "ROADMAP.md",
+        "MAINTENANCE.md",
+        "PROJECT_STATE.md",
+        "HEALTH_REPORT.md",
+        "DEPENDENCY_REPORT.md"
+      ],
+      "next_steps": "Review remaining gaps: Gemini HTTP 429 retry behavior (roadmap #26), plugin trust boundary (#36), and cancellation during stalled streaming reads."
     }
   ]
 }

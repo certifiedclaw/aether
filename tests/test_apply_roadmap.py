@@ -63,6 +63,7 @@ def test_never_marks_anything_done_and_renders_the_markdown(scratch, tmp_path):
     roadmap.cmd_render(__import__("argparse").Namespace())
     md = (tmp_path / "ROADMAP.md").read_text(encoding="utf-8")
     items = json.loads(scratch.read_text())["items"]
+    assert all(line == line.rstrip() for line in md.splitlines())
     assert [i["status"] for i in items[:3]] == ["backlog", "backlog", "done"]   # untouched
     assert all(i["status"] == "backlog" for i in items[3:])                     # nothing marked done
     assert "Egress log" in md and "get_secret" in md

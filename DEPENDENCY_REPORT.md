@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.dep_watcher` (or `run_all`) to refresh. Requires internet access.
 
-Generated: 2026-10-12T21:05:11.933795+00:00
+Generated: 2026-10-13T01:41:47.499924+00:00
 
 Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 3 versions behind" — it reports the latest available so you can decide whether to pin and bump.
 
@@ -10,8 +10,8 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 
 | Component | Latest | Why it matters |
 |---|---|---|
-| [Ollama](https://github.com/ollama/ollama) | unknown (lookup failed) | local LLM runtime — core/llm_client.py talks to it |
-| [faster-whisper (engine)](https://github.com/SYSTRAN/faster-whisper) | unknown (lookup failed) | default STT engine per requirements.txt |
+| [Ollama](https://github.com/ollama/ollama) | v0.40.3 | local LLM runtime — core/llm_client.py talks to it |
+| [faster-whisper (engine)](https://github.com/SYSTRAN/faster-whisper) | v1.2.1 | default STT engine per requirements.txt |
 | [Kokoro TTS](https://github.com/hexgrad/Kokoro-82M) | unknown (lookup failed) | offline TTS option, alternative to edge-tts |
 
 ## Python packages (from requirements.txt)
@@ -63,7 +63,7 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 | qrcode | 8.2 |  |
 | wikipedia-api | 0.16.0 |  |
 | google-generativeai | 0.8.6 |  |
-| google-genai | 2.29.0 |  |
+| google-genai | 2.30.0 |  |
 
 ## Flagged for extra attention
 - **langchain** — Fast-moving API; pin a version once Aether's LangChain tool wiring is stable.

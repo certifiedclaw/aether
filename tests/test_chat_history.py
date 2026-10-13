@@ -32,6 +32,22 @@ def test_chat_history_rejects_invalid_messages_and_corrupt_files(tmp_path):
 
     path.write_text("{broken", encoding="utf-8")
     assert load_history(path) == []
+    backups = list(tmp_path.glob("history.json.corrupt-*"))
+    assert len(backups) == 1
+    assert backups[0].read_text(encoding="utf-8") == "{broken"
+
+
+def test_chat_history_preserves_unsupported_store_version(tmp_path):
+    path = tmp_path / "history.json"
+    original = json.dumps({"version": 3, "messages": [{"role": "user", "content": "future"}]})
+    path.write_text(original, encoding="utf-8")
+
+    store = ChatSessionStore(path)
+
+    backups = list(tmp_path.glob("history.json.corrupt-*"))
+    assert store.active_messages == []
+    assert len(backups) == 1
+    assert backups[0].read_text(encoding="utf-8") == original
 
 
 def test_chat_history_is_bounded(tmp_path):

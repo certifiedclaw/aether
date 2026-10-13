@@ -2,7 +2,27 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-13 01:02 UTC
+Generated: 2026-10-13 01:44 UTC
+
+## #65 — 2026-10-13 01:44 UTC — Codex
+
+Audit fixes: preserve malformed or unsupported chat-history files before recovery; remove trailing spaces from completed roadmap entries. Added regression tests; full suite: 658 passed, 2 skipped. Corrected completed dashboard binding roadmap item and refreshed project/dependency reports.
+
+**Touched:** `core/chat_history.py`, `tests/test_chat_history.py`, `tools/maintenance/roadmap.py`, `tests/test_apply_roadmap.py`, `ROADMAP.md`, `MAINTENANCE.md`, `PROJECT_STATE.md`, `HEALTH_REPORT.md`, `DEPENDENCY_REPORT.md`
+
+**Next steps:** Review remaining gaps: Gemini HTTP 429 retry behavior (roadmap #26), plugin trust boundary (#36), and cancellation during stalled streaming reads.
+
+---
+
+## #64 — 2026-10-13 01:39 UTC — Codex
+
+Preserve malformed or unsupported saved chat-history files as unique .corrupt-* backups before creating a fresh store; add regression coverage for malformed JSON and unsupported schema versions. Full suite: 658 passed, 2 skipped.
+
+**Touched:** `core/chat_history.py`, `tests/test_chat_history.py`
+
+**Next steps:** Review Gemini HTTP 429 retry behavior (roadmap #26), plugin trust boundaries (#36), and cancellation during stalled streaming reads.
+
+---
 
 ## #63 — 2026-10-13 01:02 UTC — Codex
 
