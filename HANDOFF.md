@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-13 03:29 UTC
+Generated: 2026-10-13 03:42 UTC
+
+## #69 — 2026-10-13 03:42 UTC — Codex
+
+Completed a repository-wide static audit (234 tracked files inventoried; high-risk auth, file-write, upload, MCP, execution, logging, archive, startup, and auto-publish paths traced). No source files changed. Key findings: startup maintenance push can include unrelated staged files; dev_agent writes unvalidated model paths before approval; dashboard upload parses/spools before its in-handler auth and size checks; MCP inherits full environment, is not formally advertised, has an unguarded fallback, and can hang on initialized notification; generated code lacks OS isolation; remote token URLs/logging and secure-router IP lockout risks; archive expansion and pending approval restart gaps; headless dependency installation can block startup.
+
+**Touched:** `audit only; no source files changed`
+
+**Next steps:** Address the startup auto-push index isolation, dev_agent path confinement and pre-approval writes, dashboard request-size/auth ordering, MCP protocol/env/gating/schema issues, and OS sandboxing before deploying to the homelab; then add targeted regression tests and verify on Ubuntu headless.
+
+---
 
 ## #68 — 2026-10-13 03:29 UTC — Codex
 
