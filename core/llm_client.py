@@ -34,6 +34,7 @@ import subprocess
 import sys
 import threading
 import time
+from queue import Empty, Full, Queue
 from pathlib import Path
 from typing import Generator
 
@@ -709,6 +710,84 @@ def call_llm_text(
         raise RuntimeError(f"LLM text call failed: {e}")
 
 
+def _watch_response_cancel(response, cancel_event):
+    if cancel_event is None:
+        return None
+    finished = threading.Event()
+
+    def close_on_cancel():
+        while not finished.wait(0.05):
+            if cancel_event.is_set():
+                try:
+                    response.close()
+                except Exception:
+                    pass
+                return
+
+    watcher = threading.Thread(target=close_on_cancel, daemon=True,
+                               name="llm-stream-cancel")
+    watcher.start()
+    return finished.set
+
+
+def _iter_cancelable_lines(response, cancel_event, *, watch=True):
+    if cancel_event is None:
+        yield from response.iter_lines()
+        return
+
+    stopped = threading.Event()
+    lines = Queue(maxsize=2)
+    finished = object()
+
+    def publish(item):
+        while not stopped.is_set():
+            try:
+                lines.put(item, timeout=0.05)
+                return True
+            except Full:
+                continue
+        return False
+
+    def read_lines():
+        try:
+            for line in response.iter_lines():
+                if (stopped.is_set()
+                        or (cancel_event is not None and cancel_event.is_set())
+                        or not publish((line, None))):
+                    return
+        except Exception as error:
+            publish((None, error))
+        finally:
+            publish((finished, None))
+
+    stop_watcher = _watch_response_cancel(response, cancel_event) if watch else None
+    reader = threading.Thread(target=read_lines, daemon=True,
+                              name="llm-stream-reader")
+    reader.start()
+    try:
+        while True:
+            cancelled = cancel_event is not None and cancel_event.is_set()
+            try:
+                line, error = (lines.get_nowait() if cancelled
+                               else lines.get(timeout=0.05))
+            except Empty:
+                if cancelled:
+                    return
+                continue
+            if line is finished:
+                return
+            if error is not None:
+                if cancel_event is not None and cancel_event.is_set():
+                    return
+                raise error
+            yield line
+    finally:
+        stopped.set()
+        if stop_watcher is not None and (
+                cancel_event is None or not cancel_event.is_set()):
+            stop_watcher()
+
+
 def _stream_openai_once(
     messages: list,
     tools:    list | None,
@@ -767,61 +846,78 @@ def _stream_openai_once(
             # tool_call fragments: index → {"id", "function": {"name", "arguments"}}
             tc_fragments: dict[int, dict] = {}
 
-            for raw in resp.iter_lines():
-                if cancel_event is not None and cancel_event.is_set():
-                    yield {"type": "cancelled", "content": full_content}
-                    return
-                if not raw:
-                    continue
-                # SSE lines look like: b"data: {...}" or b"data: [DONE]"
-                line = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else raw
-                if not line.startswith("data:"):
-                    continue
-                data = line[5:].strip()
-                if data == "[DONE]":
-                    break
+            stop_watcher = _watch_response_cancel(resp, cancel_event)
+            try:
                 try:
-                    chunk = json.loads(data)
-                except json.JSONDecodeError:
-                    continue
+                    for raw in _iter_cancelable_lines(resp, cancel_event, watch=False):
+                        if not raw:
+                            continue
+                        # SSE lines look like: b"data: {...}" or b"data: [DONE]"
+                        line = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else raw
+                        if not line.startswith("data:"):
+                            continue
+                        data = line[5:].strip()
+                        if data == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data)
+                        except json.JSONDecodeError:
+                            continue
 
-                choice = chunk.get("choices", [{}])[0]
-                delta  = choice.get("delta", {})
-                text   = delta.get("content") or ""
+                        choice = chunk.get("choices", [{}])[0]
+                        delta  = choice.get("delta", {})
+                        text   = delta.get("content") or ""
 
-                full_content += text
-                buf          += text
+                        full_content += text
+                        buf          += text
 
-                # Accumulate sentence boundaries for streaming TTS
-                while True:
-                    m = _SENT_END.search(buf)
-                    if not m:
-                        break
-                    sentence = buf[: m.start() + 1].strip()
-                    buf      = buf[m.end():]
-                    if sentence:
-                        yield {"type": "sentence", "text": sentence}
+                        # Accumulate sentence boundaries for streaming TTS
+                        while True:
+                            m = _SENT_END.search(buf)
+                            if not m:
+                                break
+                            sentence = buf[: m.start() + 1].strip()
+                            buf      = buf[m.end():]
+                            if sentence:
+                                yield {"type": "sentence", "text": sentence}
 
-                # Accumulate streaming tool-call fragments
-                for tc in (delta.get("tool_calls") or []):
-                    idx = tc.get("index", 0)
-                    if idx not in tc_fragments:
-                        tc_fragments[idx] = {"id": "", "function": {"name": "", "arguments": ""}}
-                    frag = tc_fragments[idx]
-                    frag["id"] = frag["id"] or tc.get("id", "")
-                    fn = tc.get("function", {})
-                    frag["function"]["name"]      += fn.get("name") or ""
-                    frag["function"]["arguments"] += fn.get("arguments") or ""
+                        # Accumulate streaming tool-call fragments
+                        for tc in (delta.get("tool_calls") or []):
+                            idx = tc.get("index", 0)
+                            if idx not in tc_fragments:
+                                tc_fragments[idx] = {"id": "", "function": {"name": "", "arguments": ""}}
+                            frag = tc_fragments[idx]
+                            frag["id"] = frag["id"] or tc.get("id", "")
+                            fn = tc.get("function", {})
+                            frag["function"]["name"]      += fn.get("name") or ""
+                            frag["function"]["arguments"] += fn.get("arguments") or ""
 
-                finish = choice.get("finish_reason")
-                if finish == "length":
-                    _hit_length = True
-                if finish in ("stop", "tool_calls", "length"):
-                    break
+                        finish = choice.get("finish_reason")
+                        if finish == "length":
+                            _hit_length = True
+                        if finish in ("stop", "tool_calls", "length"):
+                            break
+                        if cancel_event is not None and cancel_event.is_set():
+                            yield {"type": "cancelled", "content": full_content}
+                            return
+                except Exception:
+                    if cancel_event is None or not cancel_event.is_set():
+                        raise
+            finally:
+                if stop_watcher is not None and (
+                        cancel_event is None or not cancel_event.is_set()):
+                    stop_watcher()
+
+            if cancel_event is not None and cancel_event.is_set():
+                yield {"type": "cancelled", "content": full_content}
+                return
 
             # Flush any trailing content
             if buf.strip():
                 yield {"type": "sentence", "text": buf.strip()}
+            if cancel_event is not None and cancel_event.is_set():
+                yield {"type": "cancelled", "content": full_content}
+                return
 
             # Parse accumulated tool-call argument strings → dicts
             tool_calls: list = []
@@ -968,7 +1064,7 @@ def _note_gemini_failure(model: str, msg: str) -> None:
         logger.warning("Gemini '%s' resting for %ds after: %s", model, secs, msg[:100])
 
 
-_TRANSIENT_HTTP_RE = re.compile(r"HTTP error:\s*(500|502|503|504)\b")
+_TRANSIENT_HTTP_RE = re.compile(r"HTTP error:\s*(429|500|502|503|504)\b")
 
 
 def gemini_retry_delay() -> float:
@@ -991,13 +1087,13 @@ def _stream_openai(
     model_override:    str | None = None,
     cancel_event=None,
 ) -> Generator[dict, None, None]:
-    """_stream_openai_once() plus ONE short retry for Gemini on transient 5xx.
+    """_stream_openai_once() plus ONE short retry for Gemini on 429/5xx.
 
-    Gemini regularly answers 503 "high demand" for a second or two. Without a
-    retry every such blip dropped the turn to the slower local model. The retry
-    only happens when the HTTP error arrived before any event was produced, so
-    nothing can be spoken twice; timeouts and 4xx (bad key, quota, bad request)
-    are not retried and fall back to local immediately, as before.
+    Gemini can briefly answer 429 or 503 during rate pressure/high demand.
+    Without a retry every such blip dropped the turn to the slower local model. The retry
+    only happens when a retryable HTTP error arrived before any event was
+    produced, so nothing can be spoken twice. Timeouts and other 4xx errors
+    (bad key, permission, malformed request) fall back to local immediately.
     """
     provider   = provider_override or get_llm_provider()
     delay      = gemini_retry_delay() if provider == "gemini" else 0.0
@@ -1040,7 +1136,11 @@ def _stream_openai(
             retried = True
             logger.warning("Gemini transient error (%s) - retrying once in %.1fs",
                            str(e)[:120], delay)
-            time.sleep(delay)
+            if cancel_event is None:
+                time.sleep(delay)
+            elif cancel_event.wait(delay):
+                yield {"type": "cancelled", "content": ""}
+                return
 
 
 def gemini_timeout() -> int:
@@ -1126,10 +1226,7 @@ def call_llm_stream(
             tool_calls:  list = []
             buf          = ""
 
-            for raw in resp.iter_lines():
-                if cancel_event is not None and cancel_event.is_set():
-                    yield {"type": "cancelled", "content": full_content}
-                    return
+            for raw in _iter_cancelable_lines(resp, cancel_event):
                 if not raw:
                     continue
                 try:
@@ -1162,6 +1259,9 @@ def call_llm_stream(
                 if chunk.get("done"):
                     if buf.strip() and not _is_tool_tag_prefix(full_content):
                         yield {"type": "sentence", "text": buf.strip()}
+                    if cancel_event is not None and cancel_event.is_set():
+                        yield {"type": "cancelled", "content": full_content}
+                        return
 
                     # Ollama reports these on the final chunk (durations in ns).
                     # done_reason == "length" means generation was cut off by
@@ -1183,6 +1283,14 @@ def call_llm_stream(
                         "stats":      stats,
                     }
                     return
+
+                if cancel_event is not None and cancel_event.is_set():
+                    yield {"type": "cancelled", "content": full_content}
+                    return
+
+            if cancel_event is not None and cancel_event.is_set():
+                yield {"type": "cancelled", "content": full_content}
+                return
 
             # Fallback: connection closed without Ollama ever sending a
             # final "done": true chunk. Without this, the caller's loop

@@ -41,12 +41,12 @@ def test_unknown_tool_and_unlisted_action_mean_ask():
     assert risk.tier_for("file_controller", "format_c_drive") == ASK     # no "*" default
     assert risk.tier_for("code_helper", "write") == ASK
     assert risk.tier_for("send_message", "") == ASK
-    assert risk.tier_for("  EXTRA_tool".strip(), " Run_Python ") in (ASK,)  # case/space-insensitive action
-    assert risk.tier_for("extra_tool", " Run_Python ") == ASK
+    assert risk.tier_for("  EXTRA_tool".strip(), " Run_Python ") == ASK
+    assert risk.tier_for("extra_tool", " Run_Python ") == BLOCK
 
 
 @pytest.mark.parametrize("tool,action,expected", [
-    ("extra_tool", "run_python", ASK), ("extra_tool", "kill_process", ASK),
+    ("extra_tool", "run_python", BLOCK), ("extra_tool", "kill_process", ASK),
     ("extra_tool", "calculate", SAFE),
     ("file_processor", "run", ASK), ("file_processor", "extract", MONITOR),
     ("file_processor", "describe the picture", MONITOR),
@@ -76,7 +76,7 @@ def test_overrides_tighten_but_never_loosen(monkeypatch):
     assert risk.tier_for("computer_control", "type") == TASK            # untouched
     assert risk.tier_for("web_search", "") == BLOCK
     assert risk.tier_for("send_message", "") == ASK                     # cannot loosen
-    assert risk.tier_for("extra_tool", "run_python") == ASK             # cannot loosen
+    assert risk.tier_for("extra_tool", "run_python") == BLOCK           # cannot loosen
     monkeypatch.setattr(risk, "_overrides", lambda: {"web_search": "bogus"})
     assert risk.tier_for("web_search", "") == ASK                       # invalid override -> ask
 
@@ -261,16 +261,18 @@ def test_json_extract_remains_analysis_without_archive_confirmation(ui, monkeypa
     assert ui.asked == []
 
 
-def test_extra_tool_run_python_does_not_execute_without_approval(ui, tmp_path):
+def test_extra_tool_run_python_is_blocked_before_approval_or_execution(ui, tmp_path):
     import actions.extra_tools as et
     marker = tmp_path / "RAN2.txt"
     code = f"open(r'{marker}','w').write('x')"
     ui.answer = False
     out = et.run_extra_tool("run_python", {"action": "run_python", "code": code})
-    assert out.startswith("Cancelled") and not marker.exists()
+    assert "disabled" in out.lower() and not marker.exists()
+    assert ui.asked == []
     ui.answer = True
-    et.run_extra_tool("run_python", {"action": "run_python", "code": code})
-    assert marker.exists()
+    out = et.run_extra_tool("run_python", {"action": "run_python", "code": code})
+    assert "disabled" in out.lower() and not marker.exists()
+    assert ui.asked == []
 
 
 def test_oversized_python_is_rejected_before_approval_or_execution(ui, monkeypatch):
@@ -322,7 +324,8 @@ def test_agent_executor_path_is_gated_too(ui, tmp_path):
     from agent import executor
     ui.answer = False
     out = executor._call_tool("extra_tool", {"action": "run_python", "code": "print(1)"}, None)
-    assert "Cancelled" in out
+    assert "disabled" in out.lower()
+    assert ui.asked == []
 
 
 # ── the table must cover every action a tool really implements ───────────────

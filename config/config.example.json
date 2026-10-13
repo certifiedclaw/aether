@@ -34,7 +34,7 @@
   "openai_api_key": "",
   "_comment_gemini_escalation": "Used by core/tier_router.py's HARD tier -- when the primary llm_provider above is 'ollama'/'openai' and a gemini_api_key is set, complex-reasoning turns are escalated to this Gemini model for just that turn. Falls back to 'gemini-3.8-flash' if unset. Has no effect if llm_provider is already 'gemini'.",
   "gemini_escalation_model": "gemini-3.8-flash",
-  "_comment_gemini_retry": "Seconds to wait before ONE retry of a transient Gemini 500/502/503/504 before falling back to the local model. 0 disables the retry.",
+  "_comment_gemini_retry": "Seconds to wait before ONE retry of a transient Gemini 429/500/502/503/504 before falling back to the local model. 0 disables the retry.",
   "gemini_retry_delay": 1.0,
   "_comment_gemini_cooldown": "Seconds Gemini escalations fast-fail after a real outage (the retry also failed), so each HARD turn does not wait out a timeout before falling back to local. 429 rests at least 300s; 401/403/404 at least 3600s. 0 disables.",
   "gemini_cooldown": 120,
@@ -48,6 +48,8 @@
   "memory.relevance_threshold": 0.35,
 
   "_comment_integrations": "── v3 Integration settings ──────────────────────",
+  "_comment_plugin_trust": "Only load plugin files whose exact SHA-256 digest is listed here after review. Changes require re-approval.",
+  "plugins.trusted_hashes": {},
   "integrations.langchain":         true,
   "integrations.llama_index":       true,
   "integrations.open_interpreter":  false,

@@ -130,7 +130,7 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
     },
     "extra_tool": {
         "": SAFE,
-        "run_python": ASK,                # arbitrary model-written code
+        "run_python": BLOCK,              # disabled until OS-enforced isolation is available
         "kill_process": ASK, "batch_rename": ASK,
         "delete_note": MONITOR, "type_text": MONITOR, "unzip": ASK, "zip": MONITOR,
         "play_file": MONITOR, "set_volume": MONITOR, "focus_window": MONITOR,
@@ -219,6 +219,8 @@ def tier_for(tool: str, action: str = "") -> str:
 # parameters that are code/commands the user is approving: show them (almost) whole
 _FULL_SHOW_PARAMS = frozenset({"code", "command", "script"})
 APPROVAL_CODE_LIMIT = 4000
+RUN_PYTHON_DISABLED = (
+    "Blocked: arbitrary Python execution is disabled until Aether can enforce OS-level isolation.")
 _FULL_SHOW_LIMIT = APPROVAL_CODE_LIMIT
 _SECRETISH = re.compile(r"pass(word|phrase)?|secret|token|api_?key|credential|^pin$", re.I)
 
@@ -357,6 +359,7 @@ def check(tool: str, action: str, params: dict) -> str | None:
         code = (params or {}).get("code", "")
         if not isinstance(code, str) or len(code) > APPROVAL_CODE_LIMIT:
             return f"Code too long or invalid (maximum {APPROVAL_CODE_LIMIT} characters)."
+        return RUN_PYTHON_DISABLED
     tier = tier_for(tool, action)
     if _escalates_to_ask(tool, params):
         tier = strictest(tier, ASK)

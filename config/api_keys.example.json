@@ -1,5 +1,7 @@
 {
   "_comment": "Copy to api_keys.json and fill in. api_keys.json is git-ignored; do not put real keys in this example file or in any zip you share.",
+  "_comment_plugin_trust": "Only load plugin files whose exact SHA-256 digest is listed here after review.",
+  "plugins.trusted_hashes": {},
   "gemini_api_key": "",
   "elevenlabs_api_key": ""
 }

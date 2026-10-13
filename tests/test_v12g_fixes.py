@@ -106,25 +106,12 @@ def test_replay_is_skipped_not_waited_out_when_env_is_broken(vl, monkeypatch):
     assert "SKIPPED" in "\n".join(vl.out)
 
 
-# ── run_python hardening (it is NOT a sandbox; these are the guard rails it does have) ──
-def test_run_python_strips_secret_looking_env_vars_and_uses_scratch_cwd(monkeypatch, tmp_path):
+# ── run_python fails closed until OS-enforced isolation exists ──
+def test_run_python_never_starts_a_subprocess(monkeypatch):
     from actions import extra_tools as et
-    monkeypatch.setenv("GEMINI_API_KEY", "LEAKME")
-    monkeypatch.setenv("AETHER_SOMETHING", "LEAKME2")
-    monkeypatch.setenv("HARMLESS_VAR", "visible")
-    monkeypatch.chdir(tmp_path)
-    out = et.run_python(
-        "import os; print(os.environ.get('GEMINI_API_KEY'), os.environ.get('AETHER_SOMETHING'),"
-        " os.environ.get('HARMLESS_VAR')); print(os.getcwd())")
-    assert "LEAKME" not in out and "visible" in out
-    assert str(tmp_path) not in out and "aether_py_" in out
-
-
-def test_run_python_uses_the_current_interpreter_in_isolated_mode():
-    from actions import extra_tools as et
-    out = et.run_python("import sys; print(sys.executable); print(sys.flags.isolated)")
-    import sys
-    assert sys.executable in out and "1" in out.splitlines()[-1]
+    monkeypatch.setattr(et.subprocess, "run", lambda *a, **k: pytest.fail("must not execute"))
+    out = et.run_python("print('must not run')")
+    assert "disabled" in out.lower()
 
 
 def test_run_python_rejects_code_larger_than_approval_preview(monkeypatch):
@@ -132,28 +119,3 @@ def test_run_python_rejects_code_larger_than_approval_preview(monkeypatch):
     monkeypatch.setattr(et.subprocess, "run", lambda *a, **k: pytest.fail("must not execute"))
     out = et.run_python("x" * 4001)
     assert out == "Code too long (maximum 4000 characters)."
-
-
-def test_run_python_clamps_a_model_chosen_timeout(monkeypatch):
-    from actions import extra_tools as et
-    seen = {}
-    real = et.subprocess.run
-
-    def spy(*a, **k):
-        seen["timeout"] = k["timeout"]
-        return real(*a, **k)
-    monkeypatch.setattr(et.subprocess, "run", spy)
-    et.run_python("print(1)", timeout=10**6)
-    assert seen["timeout"] == 60
-    et.run_python("print(1)", timeout="garbage")
-    assert seen["timeout"] == 10
-    assert et.run_python("while True: pass", timeout=1) == "Timed out after 1s"
-
-
-def test_approval_dialog_shows_the_whole_code_for_ask_tier_tools():
-    from core import risk
-    code = "x = 1\n" * 500 + "print('TAIL_MARKER')"          # ~3000 chars
-    detail = risk._detail("extra_tool", "run_python", {"action": "run_python", "code": code})
-    assert "TAIL_MARKER" in detail
-    huge = "y" * 9000
-    assert "truncated" in risk._detail("extra_tool", "run_python", {"code": huge})

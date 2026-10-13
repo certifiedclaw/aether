@@ -11,13 +11,14 @@ Supports both plugin formats:
     def run(parameters: dict, player=None, session_memory=None) -> str: ...
 """
 from __future__ import annotations
-import importlib.util, inspect, logging, re, sys
+import hashlib, hmac, importlib.util, inspect, logging, re, sys
 from pathlib import Path
 from typing import Callable
 
 logger = logging.getLogger(__name__)
 
 _NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]{0,63}$")
+_SHA256_RE = re.compile(r"^[a-fA-F0-9]{64}$")
 _DEFAULT_PARAMS = {"type": "OBJECT", "properties": {}}
 
 
@@ -55,12 +56,19 @@ class PluginSystem:
     def _load(self, path: Path) -> bool:
         module_name = f"aether_plugin_{path.stem}"
         try:
+            source = path.read_bytes()
+            expected_hash = self._trusted_hash(path.name)
+            actual_hash = hashlib.sha256(source).hexdigest()
+            if expected_hash is None or not hmac.compare_digest(actual_hash, expected_hash):
+                raise PermissionError(
+                    f"plugin is not trusted; approve SHA-256 {actual_hash} in plugins.trusted_hashes")
+
             spec = importlib.util.spec_from_file_location(module_name, path)
             if spec is None or spec.loader is None:
                 raise ImportError("could not build import spec")
             mod  = importlib.util.module_from_spec(spec)
             sys.modules[module_name] = mod
-            spec.loader.exec_module(mod)
+            exec(compile(source, str(path), "exec"), mod.__dict__)
 
             if hasattr(mod, "PLUGIN"):
                 self._load_mark_plugin(mod, path)
@@ -72,6 +80,15 @@ class PluginSystem:
             self._errors[path.name] = str(e)
             logger.warning("Plugin load failed %s: %s", path.name, e)
             return False
+
+    def _trusted_hash(self, filename: str) -> str | None:
+        trusted = self._config.get("plugins.trusted_hashes", {})
+        if not isinstance(trusted, dict):
+            return None
+        digest = trusted.get(filename)
+        if not isinstance(digest, str) or not _SHA256_RE.fullmatch(digest):
+            return None
+        return digest.lower()
 
     def _load_mark_plugin(self, mod, path: Path) -> None:
         meta = getattr(mod, "PLUGIN", None)

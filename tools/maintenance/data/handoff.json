@@ -1,5 +1,5 @@
 {
-  "next_id": 66,
+  "next_id": 67,
   "entries": [
     {
       "id": 1,
@@ -875,6 +875,32 @@
         "DEPENDENCY_REPORT.md"
       ],
       "next_steps": "Review remaining gaps: Gemini HTTP 429 retry behavior (roadmap #26), plugin trust boundary (#36), and cancellation during stalled streaming reads."
+    },
+    {
+      "id": 66,
+      "timestamp": "2026-10-13 02:09 UTC",
+      "by": "Codex CLI",
+      "summary": "Hardened residual retry, plugin-trust, arbitrary-code, and stream-cancellation risks. Full suite: 659 passed, 2 skipped, 1 third-party warning.",
+      "files": [
+        "core/llm_client.py",
+        "tests/test_invariants.py",
+        "tests/test_stream_cancellation.py",
+        "core/plugins.py",
+        "memory/config_manager.py",
+        "config/api_keys.example.json",
+        "config/config.example.json",
+        "docs/PLUGIN_SECURITY.md",
+        "readme.md",
+        "actions/extra_tools.py",
+        "core/risk.py",
+        "core/tool_declarations.py",
+        "tests/test_plugin_trust.py",
+        "tests/test_all_critical.py",
+        "tests/test_risk.py",
+        "tests/test_v12g_fixes.py",
+        "ROADMAP.md"
+      ],
+      "next_steps": "Keep run_python disabled until OS-enforced isolation is implemented and tested; retry the upstream dependency lookup separately."
     }
   ]
 }

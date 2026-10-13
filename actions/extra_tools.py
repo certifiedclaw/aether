@@ -30,7 +30,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Callable
 
-from core.risk import APPROVAL_CODE_LIMIT
+from core.risk import APPROVAL_CODE_LIMIT, RUN_PYTHON_DISABLED
 
 logger = logging.getLogger(__name__)
 
@@ -658,45 +658,12 @@ def set_system_volume(level: int) -> str:
 # CODE
 # ─────────────────────────────────────────────────────────────────────────────
 
-_SECRET_ENV = re.compile(r"key|token|secret|passw|credential|^aether_", re.I)
-
-
 def run_python(code: str, timeout: int = 10) -> str:
-    """
-    Execute a Python snippet in a child process and return its output.
-
-    This is NOT a sandbox: approved code runs as you and can touch anything you can.
-    The protection is the ASK-tier confirmation (core/risk.py), which shows the whole
-    snippet. What this function adds: the same interpreter as Aether (not whatever
-    'python' is first on PATH), isolated mode (-I: no user site / cwd imports), a
-    scratch working directory, an environment stripped of anything that looks like a
-    key or token, and a timeout clamped to 1-60 s (the model chooses the value).
-    """
-    import tempfile
+    """Fail closed until arbitrary code can run in an OS-enforced sandbox."""
     code = str(code or "")
     if len(code) > APPROVAL_CODE_LIMIT:
         return f"Code too long (maximum {APPROVAL_CODE_LIMIT} characters)."
-    try:
-        secs = max(1, min(int(timeout), 60))
-    except (TypeError, ValueError):
-        secs = 10
-    env = {k: v for k, v in os.environ.items() if not _SECRET_ENV.search(k)}
-    try:
-        with tempfile.TemporaryDirectory(prefix="aether_py_") as scratch:
-            result = subprocess.run(
-                [sys.executable, "-I", "-c", code],
-                capture_output=True, text=True, timeout=secs, env=env, cwd=scratch)
-        out = result.stdout[:2000]
-        err = result.stderr[:500]
-        if err and not out:
-            return f"[stderr]\n{err}"
-        if err:
-            out += f"\n[stderr]\n{err}"
-        return out or "(no output)"
-    except subprocess.TimeoutExpired:
-        return f"Timed out after {secs}s"
-    except Exception as e:
-        return f"Run error: {e}"
+    return RUN_PYTHON_DISABLED
 
 
 def calculate(expression: str) -> str:

@@ -77,7 +77,7 @@ Microphone → STT (Whisper / Vosk)
 - **Hybrid memory** — BM25 keyword + dense semantic + cross-encoder reranker for accurate recall across sessions
 - **Goal manager** — Persistent goals survive restarts; the LLM always knows your active goals and sub-tasks
 - **RAG engine** — Index your Obsidian vault, PDFs, Markdown files; query from them by voice
-- **Plugin system** — Drop any `.py` file into `plugins/` and Aether loads it instantly (hot-reload, no restart needed)
+- **Plugin system** — Reviewed plugin files load on matching SHA-256 trust entries; see `docs/PLUGIN_SECURITY.md`
 - **Live configuration** — Change LLM model, STT engine, TTS voice without restarting (⚙ Configure button)
 - **Ollama auto-start** — Automatically launches `ollama serve` if it's not running
 - **Multi-language STT** — Set `stt_language` to `auto` (Whisper detects) or a specific locale (`tr`, `de`, `fr`, …)
@@ -226,6 +226,9 @@ After setup, use the **⚙ CONFIGURE** button in the right panel to change any s
 | `game_updater` | Steam / Epic Games install & update |
 | `flight_finder` | Google Flights search |
 | `file_processor` | Process images, PDFs, CSV, audio, video |
+
+The arbitrary Python execution tool is disabled until an OS-enforced sandbox
+is available; a confirmation dialog alone is not a security boundary.
 
 ---
 

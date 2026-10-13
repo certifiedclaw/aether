@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-13 01:44 UTC
+Generated: 2026-10-13 02:09 UTC
+
+## #66 — 2026-10-13 02:09 UTC — Codex CLI
+
+Hardened residual retry, plugin-trust, arbitrary-code, and stream-cancellation risks. Full suite: 659 passed, 2 skipped, 1 third-party warning.
+
+**Touched:** `core/llm_client.py`, `tests/test_invariants.py`, `tests/test_stream_cancellation.py`, `core/plugins.py`, `memory/config_manager.py`, `config/api_keys.example.json`, `config/config.example.json`, `docs/PLUGIN_SECURITY.md`, `readme.md`, `actions/extra_tools.py`, `core/risk.py`, `core/tool_declarations.py`, `tests/test_plugin_trust.py`, `tests/test_all_critical.py`, `tests/test_risk.py`, `tests/test_v12g_fixes.py`, `ROADMAP.md`
+
+**Next steps:** Keep run_python disabled until OS-enforced isolation is implemented and tested; retry the upstream dependency lookup separately.
+
+---
 
 ## #65 — 2026-10-13 01:44 UTC — Codex
 

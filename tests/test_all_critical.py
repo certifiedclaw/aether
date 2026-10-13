@@ -494,15 +494,22 @@ def test_plugin_system_reload_exists_and_works():
     reload silently failed 100% of the time (caught by plugin_watcher's own
     try/except and just logged). Covers the full add/edit/delete cycle."""
     import tempfile
+    import hashlib
     from pathlib import Path
     from core.plugins import PluginSystem
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
+        trusted = {}
 
         class FakeCfg:
             def get(self, k, d=None):
-                return str(tmpdir) if k == "plugins.plugin_dir" else d
+                if k == "plugins.plugin_dir":
+                    return str(tmpdir)
+                return trusted if k == "plugins.trusted_hashes" else d
+
+        def approve(filename):
+            trusted[filename] = hashlib.sha256((tmpdir / filename).read_bytes()).hexdigest()
 
         p = PluginSystem(FakeCfg())
         assert hasattr(p, "reload"), "PluginSystem must define reload() -- plugin_watcher.py depends on it"
@@ -510,12 +517,16 @@ def test_plugin_system_reload_exists_and_works():
 
         (tmpdir / "greet.py").write_text(
             "PLUGIN_NAME = \"greet\"\nPLUGIN_TOOLS = {\"say_hi\": lambda: \"hi!\"}\n")
+        approve("greet.py")
         assert p.reload() == 1
         assert p.execute_tool("say_hi") == "hi!"
 
         # editing an existing plugin must take effect, not serve a stale cached module
         (tmpdir / "greet.py").write_text(
             "PLUGIN_NAME = \"greet\"\nPLUGIN_TOOLS = {\"say_hi\": lambda: \"hello there!\"}\n")
+        assert p.reload() == 0
+        assert "say_hi" not in p.list_tools()
+        approve("greet.py")
         p.reload()
         assert p.execute_tool("say_hi") == "hello there!"
 
@@ -527,6 +538,7 @@ def test_plugin_system_reload_exists_and_works():
             "}\n"
             "def run(parameters, player=None, session_memory=None):\n"
             "    return 'echo: ' + parameters.get('text', '')\n")
+        approve("mark_style.py")
         assert p.reload() == 2
         assert p.execute_tool("mark_echo", text="hi") == "echo: hi"
         decls = {d["name"]: d for d in p.get_tool_declarations()}

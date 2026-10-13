@@ -335,7 +335,7 @@ def test_gemini_gets_large_reply_budget_and_length_stop_is_flagged(monkeypatch):
     assert ev[-1]["stats"]["truncated"] is True              # surfaced so the reply gets the "…" marker
 
 
-# ── Gemini transient-5xx retry ────────────────────────────────────────────────
+# ── Gemini transient HTTP retry ──────────────────────────────────────────────
 def _retry_harness(monkeypatch, outcomes):
     """Patch _stream_openai_once to play back `outcomes` (exception or event list)."""
     import core.llm_client as lc
@@ -354,6 +354,7 @@ def _retry_harness(monkeypatch, outcomes):
 
 
 _E503 = RuntimeError('OpenAI-compatible HTTP error: 503 {"error": {"code": 503, "status": "UNAVAILABLE"}}')
+_E429 = RuntimeError("OpenAI-compatible HTTP error: 429 quota")
 _OK = [{"type": "sentence", "text": "hi."}, {"type": "done", "content": "hi.", "tool_calls": [], "stats": {}}]
 
 
@@ -371,10 +372,38 @@ def test_gemini_503_twice_raises_after_exactly_one_retry(monkeypatch):
     assert calls["n"] == 2
 
 
+def test_gemini_429_is_retried_once_then_succeeds(monkeypatch):
+    lc, calls = _retry_harness(monkeypatch, [_E429, _OK])
+    ev = list(lc._stream_openai([], None, 5, provider_override="gemini"))
+    assert calls["n"] == 2 and calls["sleeps"] == [1.0]
+    assert ev[-1]["type"] == "done"
+
+
+def test_gemini_retry_backoff_is_interruptible_by_cancel(monkeypatch):
+    import core.llm_client as lc
+
+    def fail_once(messages, tools, timeout, **kw):
+        raise _E503
+        yield
+
+    class CancelDuringWait:
+        def is_set(self):
+            return False
+
+        def wait(self, delay):
+            assert delay == 1.0
+            return True
+
+    monkeypatch.setattr(lc, "_stream_openai_once", fail_once)
+    monkeypatch.setattr(lc, "_load_config", lambda: {})
+    events = list(lc._stream_openai(
+        [], None, 5, provider_override="gemini", cancel_event=CancelDuringWait()))
+    assert events == [{"type": "cancelled", "content": ""}]
+
+
 @pytest.mark.parametrize("err", [
     RuntimeError("OpenAI-compatible HTTP error: 400 bad request"),
     RuntimeError("OpenAI-compatible HTTP error: 401 unauthorized"),
-    RuntimeError("OpenAI-compatible HTTP error: 429 quota"),
     RuntimeError("OpenAI-compatible stream timed out."),
 ])
 def test_gemini_non_transient_errors_are_not_retried(monkeypatch, err):

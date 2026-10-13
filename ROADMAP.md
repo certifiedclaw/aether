@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap add/start/done`.
 
-Generated: 2026-10-13 01:42 UTC
+Generated: 2026-10-13 02:10 UTC
 
 ## In progress
 
@@ -13,12 +13,6 @@ Generated: 2026-10-13 01:42 UTC
 
 - [ ] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option `high`
   - Live Gemini key is inside full-folder zips. Verify git history never contained it; rotate if it did.
-- [ ] **#36** Plugins: write down the trust model (plugins/ *.py are hot-loaded and run fully trusted) and consider an explicit enable/hash allowlist `high`
-  - Raised by an external audit of the v12 tree. core/plugins.py exec_module's every plugins/*.py; file_controller now refuses the install folder, so the model cannot drop one in, but nothing else vets them.
-- [ ] **#26** Retry once (about 1s backoff) on Gemini 503/429 before falling back to local `medium`
-  - Seen in two consecutive verify runs; local HARD fallback costs 2-4s more.
-- [ ] **#37** run_python is not a sandbox: decide keep (ASK + full-code dialog + scrubbed env, as of v12g) or replace with a real isolation layer `medium`
-  - v12g: same interpreter, -I, scratch cwd, secret env stripped, timeout clamped 1-60s, dialog shows whole code. Still runs as the user.
 - [ ] **#14** Route the 174 stray print() calls through core/observability.py `low`
   - Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules — actions/ is intentionally exempt (CLI-facing tool output).
 - [ ] **#16** Decide fate of the vestigial session_memory param across actions/ `low`
@@ -76,6 +70,8 @@ Generated: 2026-10-13 01:42 UTC
   - 4 of 7 failed prompts showed raw <tool_call>{...}</tool_call> instead of acting. Touches streaming path and makes model text executable, so get explicit go-ahead; check ollama --version first. See handoff #37.
 - [x] **#23** actions/desktop.py exec() sandbox is escapable and runs model-written code without a confirmation
   - safe_builtins exposes getattr and the sandbox passes Path/time objects, so getattr(Path.__init__,'__globals__') reaches os/sys; Windows also exposes ctypes. Needs a design decision: confirmation via core/safety, or a real allowlist DSL instead of exec. See handoff #39.
+- [x] **#26** Retry once (about 1s backoff) on Gemini 503/429 before falling back to local
+  - Seen in two consecutive verify runs; local HARD fallback costs 2-4s more.
 - [x] **#27** Execution timeout for AI-generated desktop code
   - exec() cannot be killed in-process; approved code with an infinite loop hangs its thread. Run in a worker with a deadline.
 - [x] **#28** verify_local.py: flag packages declared in requirements.txt but not installed
@@ -86,4 +82,8 @@ Generated: 2026-10-13 01:42 UTC
   - No attempt limiting on /connect key checks; 6-char key, 10 min window. Server binds 0.0.0.0 (intentional for phone remote) - consider per-IP lockout after N bad keys.
 - [x] **#35** Audit remaining tools that take arbitrary paths against core/protected_paths (screen_process, game_updater, reminder, send_message attachments)
   - v12f routed extra_tool diff/word_count, file_processor and pdf_tool through is_protected(); the others were not read.
+- [x] **#36** Plugins: write down the trust model (plugins/ *.py are hot-loaded and run fully trusted) and consider an explicit enable/hash allowlist
+  - Raised by an external audit of the v12 tree. core/plugins.py exec_module's every plugins/*.py; file_controller now refuses the install folder, so the model cannot drop one in, but nothing else vets them.
+- [x] **#37** run_python is not a sandbox: decide keep (ASK + full-code dialog + scrubbed env, as of v12g) or replace with a real isolation layer
+  - v12g: same interpreter, -I, scratch cwd, secret env stripped, timeout clamped 1-60s, dialog shows whole code. Still runs as the user.
 - [x] **#38** Dashboard still binds 0.0.0.0 over plain HTTP by default; add LAN-only/bind option and prefer HTTPS
