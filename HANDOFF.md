@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-13 00:30 UTC
+Generated: 2026-10-13 00:32 UTC
+
+## #59 — 2026-10-13 00:32 UTC — Codex
+
+Persist the latest chat transcript locally across launches with bounded, atomic JSON storage and restore it into the chat log; add coverage for tool turns, corruption, and size limits.
+
+**Touched:** `main.py`, `core/conversation_core.py`, `core/chat_history.py`, `tests/test_chat_history.py`
+
+**Next steps:** Continue ChatGPT-style improvements with multiple named conversations and richer file-aware chat; profile model latency and test a real provider only with explicit user credentials.
+
+---
 
 ## #58 — 2026-10-13 00:30 UTC — Codex
 

@@ -911,3 +911,9 @@ class ConversationCoreMixin:
                 pass
             if not self.ui.muted:
                 self.ui.set_state("LISTENING")
+        finally:
+            try:
+                from core.chat_history import save_history
+                save_history(self._conversation)
+            except Exception as e:
+                logger.warning("Could not save chat history: %s", e)
