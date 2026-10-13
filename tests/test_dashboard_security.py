@@ -9,6 +9,8 @@ from dashboard import server as srv
 
 def test_dashboard_binds_to_loopback_by_default(monkeypatch):
     monkeypatch.delenv("AETHER_DASHBOARD_HOST", raising=False)
+    # Independent of whether config/certs exists on this machine.
+    monkeypatch.setattr(srv.DashboardServer, "_ssl_enabled", lambda self: False)
     dashboard = srv.DashboardServer()
     assert dashboard._host == "127.0.0.1"
     assert dashboard.get_url().startswith("http://127.0.0.1:")
