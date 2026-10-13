@@ -1,5 +1,5 @@
 {
-  "next_id": 62,
+  "next_id": 63,
   "entries": [
     {
       "id": 1,
@@ -820,6 +820,21 @@
         "tests/test_all_critical.py"
       ],
       "next_steps": "Continue chat-first work with stop/regenerate controls and richer file-aware chats; profile first-token and total model latency with a configured model only when credentials are user-provided."
+    },
+    {
+      "id": 62,
+      "timestamp": "2026-10-13 00:49 UTC",
+      "by": "Codex",
+      "summary": "Add a Stop control that cancels active Ollama/OpenAI-compatible streams at the next received chunk, interrupts queued speech, preserves partial text as an explicitly stopped reply, and prevents subsequent tool rounds. Focused checks: 148 passed; full suite: 654 passed, 2 skipped, one unrelated timeout assertion failed in full run and passed in isolation.",
+      "files": [
+        "ui.py",
+        "main.py",
+        "core/llm_client.py",
+        "core/conversation_core.py",
+        "tests/test_stream_cancellation.py",
+        "tests/test_all_critical.py"
+      ],
+      "next_steps": "Improve cancellation during a stalled network read if the HTTP client supports safe response closure; next chat feature is regenerate/edit prompt, then richer file-aware chat."
     }
   ]
 }

@@ -1931,6 +1931,7 @@ class MainWindow(QMainWindow):
         )
 
         self.on_text_command  = None
+        self.on_stop_command  = None
         self._muted           = False
         self._current_file: str | None = None
 
@@ -2387,6 +2388,10 @@ class MainWindow(QMainWindow):
         if self.on_text_command:
             self.on_text_command("/newchat")
 
+    def _request_stop(self) -> None:
+        if self.on_stop_command:
+            self.on_stop_command()
+
     def _build_input_row(self) -> QHBoxLayout:
         row = QHBoxLayout(); row.setSpacing(5)
         self._input = QLineEdit()
@@ -2403,19 +2408,35 @@ class MainWindow(QMainWindow):
         self._input.returnPressed.connect(self._send)
         row.addWidget(self._input)
 
-        send = QPushButton("▸")
-        send.setFixedSize(30, 30)
-        send.setFont(QFont(FONT_BODY, 11, QFont.Weight.Bold))
-        send.setCursor(Qt.CursorShape.PointingHandCursor)
-        send.setStyleSheet(f"""
+        self._send_btn = QPushButton("▸")
+        self._send_btn.setFixedSize(30, 30)
+        self._send_btn.setFont(QFont(FONT_BODY, 11, QFont.Weight.Bold))
+        self._send_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._send_btn.setStyleSheet(f"""
             QPushButton {{
                 background: {C.PANEL}; color: {C.PRI};
                 border: 1px solid {C.PRI_DIM}; border-radius: 3px;
             }}
             QPushButton:hover {{ background: {C.PRI_GHO}; border: 1px solid {C.PRI}; }}
         """)
-        send.clicked.connect(self._send)
-        row.addWidget(send)
+        self._send_btn.clicked.connect(self._send)
+        row.addWidget(self._send_btn)
+
+        self._stop_btn = QPushButton("■")
+        self._stop_btn.setFixedSize(30, 30)
+        self._stop_btn.setToolTip("Stop the current response")
+        self._stop_btn.setFont(QFont(FONT_BODY, 9, QFont.Weight.Bold))
+        self._stop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._stop_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: #190808; color: {C.RED};
+                border: 1px solid {C.RED}; border-radius: 3px;
+            }}
+            QPushButton:hover {{ background: #2a0b0b; }}
+        """)
+        self._stop_btn.clicked.connect(self._request_stop)
+        self._stop_btn.hide()
+        row.addWidget(self._stop_btn)
         return row
 
     def _build_footer(self) -> QWidget:
@@ -2493,6 +2514,9 @@ class MainWindow(QMainWindow):
     def _apply_state(self, state: str):
         self.orb.state    = state
         self.orb.speaking = (state == "SPEAKING")
+        show_stop = state in ("THINKING", "PROCESSING", "SPEAKING") and bool(self.on_stop_command)
+        self._send_btn.setVisible(not show_stop)
+        self._stop_btn.setVisible(show_stop)
         if state == "ERROR":
             self.orb.flash_error()
 
@@ -2619,6 +2643,14 @@ class AetherUI:
     @on_text_command.setter
     def on_text_command(self, cb):
         self._win.on_text_command = cb
+
+    @property
+    def on_stop_command(self):
+        return self._win.on_stop_command
+
+    @on_stop_command.setter
+    def on_stop_command(self, cb):
+        self._win.on_stop_command = cb
 
     @property
     def on_reconfigure(self):

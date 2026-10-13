@@ -346,6 +346,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         self._speaking_lock   = threading.Lock()
         self._text_queue:     queue.Queue = queue.Queue()
         self._tts_queue:      queue.Queue = queue.Queue()
+        self._cancel_current_turn = threading.Event()
         from core.chat_history import ChatSessionStore
         self._chat_sessions = ChatSessionStore()
         self._active_chat_id = self._chat_sessions.active_id
@@ -398,6 +399,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         self._last_user_speech: float           = time.monotonic()
 
         self.ui.on_text_command = self._on_text_command
+        self.ui.on_stop_command = self._stop_current_response
         self._refresh_chat_list()
         self._render_chat_history()
 
@@ -462,7 +464,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         elif not self.ui.muted:
             self.ui.set_state("LISTENING")
 
-    def _interrupt_speaking(self) -> None:
+    def _interrupt_speaking(self, reason: str = "barge-in") -> None:
         """Stop TTS playback immediately (barge-in)."""
         try:
             if self._tts and hasattr(self._tts, "stop"):
@@ -478,7 +480,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         with self._speaking_lock:
             self._speaking = False
         self.ui.set_state("LISTENING")
-        self.ui.write_log("SYS: [barge-in] speech interrupted")
+        self.ui.write_log(f"SYS: [{reason}] speech interrupted")
 
     def speak(self, text: str) -> None:
         if not text or not self._tts:
@@ -583,6 +585,11 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
 
     def _on_text_command(self, text: str) -> None:
         self._text_queue.put(text)
+
+    def _stop_current_response(self) -> None:
+        self._cancel_current_turn.set()
+        self._interrupt_speaking(reason="response stopped")
+        self.ui.write_log("SYS: Stop requested; an active tool action may finish first.")
 
     # ------------------------------------------------------------------
     # Tool execution

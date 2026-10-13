@@ -843,6 +843,12 @@ def test_setup_overlay_refactor_preserves_behavior():
     assert chat_commands == ["/switchchat First chat"]
     window._request_new_chat()
     assert chat_commands[-1] == "/newchat"
+    stop_requests = []
+    window.on_stop_command = lambda: stop_requests.append(True)
+    window._apply_state("THINKING")
+    assert window._stop_btn.isHidden() is False
+    window._stop_btn.click()
+    assert stop_requests == [True]
     window.close()
 
     # Interactivity: switching STT engine flips which input is shown.

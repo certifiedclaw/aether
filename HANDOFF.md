@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-13 00:43 UTC
+Generated: 2026-10-13 00:49 UTC
+
+## #62 — 2026-10-13 00:49 UTC — Codex
+
+Add a Stop control that cancels active Ollama/OpenAI-compatible streams at the next received chunk, interrupts queued speech, preserves partial text as an explicitly stopped reply, and prevents subsequent tool rounds. Focused checks: 148 passed; full suite: 654 passed, 2 skipped, one unrelated timeout assertion failed in full run and passed in isolation.
+
+**Touched:** `ui.py`, `main.py`, `core/llm_client.py`, `core/conversation_core.py`, `tests/test_stream_cancellation.py`, `tests/test_all_critical.py`
+
+**Next steps:** Improve cancellation during a stalled network read if the HTTP client supports safe response closure; next chat feature is regenerate/edit prompt, then richer file-aware chat.
+
+---
 
 ## #61 — 2026-10-13 00:43 UTC — Codex
 

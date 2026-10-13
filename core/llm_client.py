@@ -717,6 +717,7 @@ def _stream_openai_once(
     provider_override: str | None = None,
     url_override:      str | None = None,
     model_override:    str | None = None,
+    cancel_event=None,
 ) -> Generator[dict, None, None]:
     """
     Streaming backend for OpenAI-compatible servers (LM Studio, LocalAI,
@@ -767,6 +768,9 @@ def _stream_openai_once(
             tc_fragments: dict[int, dict] = {}
 
             for raw in resp.iter_lines():
+                if cancel_event is not None and cancel_event.is_set():
+                    yield {"type": "cancelled", "content": full_content}
+                    return
                 if not raw:
                     continue
                 # SSE lines look like: b"data: {...}" or b"data: [DONE]"
@@ -985,6 +989,7 @@ def _stream_openai(
     provider_override: str | None = None,
     url_override:      str | None = None,
     model_override:    str | None = None,
+    cancel_event=None,
 ) -> Generator[dict, None, None]:
     """_stream_openai_once() plus ONE short retry for Gemini on transient 5xx.
 
@@ -1013,14 +1018,20 @@ def _stream_openai(
         try:
             for event in _stream_openai_once(
                     messages, tools, timeout, provider_override=provider_override,
-                    url_override=url_override, model_override=model_override):
+                    url_override=url_override, model_override=model_override,
+                    cancel_event=cancel_event):
                 produced = True
                 yield event
+                if event.get("type") == "cancelled":
+                    return
             if escalation:
                 with _COOL_LOCK:
                     _GEMINI_COOLDOWNS.pop(key, None)    # healthy again
             return
         except RuntimeError as e:
+            if cancel_event is not None and cancel_event.is_set():
+                yield {"type": "cancelled", "content": ""}
+                return
             if (produced or retried or delay <= 0
                     or not _TRANSIENT_HTTP_RE.search(str(e))):
                 if escalation and not produced:
@@ -1049,6 +1060,7 @@ def call_llm_stream(
     provider_override: str | None = None,
     url_override:      str | None = None,
     model_override:    str | None = None,
+    cancel_event=None,
 ) -> Generator[dict, None, None]:
     """
     Streaming chat request.  Routes to Ollama or OpenAI-compatible backend.
@@ -1070,6 +1082,9 @@ def call_llm_stream(
     Tool calls always appear in the final "done" event.
     """
     provider = provider_override or get_llm_provider()
+    if cancel_event is not None and cancel_event.is_set():
+        yield {"type": "cancelled", "content": ""}
+        return
     if provider_override == "gemini":
         # Cloud escalation must fail fast: a slow 503 used to hold the turn ~30s
         # before the local fallback even started. Config: "gemini_timeout" (s).
@@ -1078,6 +1093,7 @@ def call_llm_stream(
         yield from _stream_openai(
             messages, tools, timeout,
             provider_override=provider, url_override=url_override, model_override=model_override,
+            cancel_event=cancel_event,
         )
         return
 
@@ -1111,6 +1127,9 @@ def call_llm_stream(
             buf          = ""
 
             for raw in resp.iter_lines():
+                if cancel_event is not None and cancel_event.is_set():
+                    yield {"type": "cancelled", "content": full_content}
+                    return
                 if not raw:
                     continue
                 try:
