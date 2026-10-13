@@ -913,7 +913,8 @@ class ConversationCoreMixin:
                 self.ui.set_state("LISTENING")
         finally:
             try:
-                from core.chat_history import save_history
-                save_history(self._conversation)
+                self._chat_sessions.save_current(self._conversation)
+                self._active_chat_id = self._chat_sessions.active_id
+                self._refresh_chat_list()
             except Exception as e:
                 logger.warning("Could not save chat history: %s", e)

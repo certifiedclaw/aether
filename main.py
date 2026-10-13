@@ -346,8 +346,10 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         self._speaking_lock   = threading.Lock()
         self._text_queue:     queue.Queue = queue.Queue()
         self._tts_queue:      queue.Queue = queue.Queue()
-        from core.chat_history import load_history
-        self._conversation:   list[dict]  = load_history()
+        from core.chat_history import ChatSessionStore
+        self._chat_sessions = ChatSessionStore()
+        self._active_chat_id = self._chat_sessions.active_id
+        self._conversation:   list[dict]  = list(self._chat_sessions.active_messages)
         # STT (whisper/vosk), the dashboard command loop, the proactive loop,
         # and the system monitor loop can each call _process_message on their
         # own thread. Without serialization two calls can interleave reads/
@@ -396,10 +398,22 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         self._last_user_speech: float           = time.monotonic()
 
         self.ui.on_text_command = self._on_text_command
+        self._refresh_chat_list()
+        self._render_chat_history()
+
+    def _render_chat_history(self) -> None:
+        self.ui.clear_log()
         for message in self._conversation:
             if message.get("role") in ("user", "assistant") and isinstance(message.get("content"), str):
                 label = "You" if message["role"] == "user" else "Aether"
                 self.ui.write_log(f"{label}: {message['content']}")
+
+    def _refresh_chat_list(self) -> None:
+        sessions = self._chat_sessions.list_sessions()
+        self.ui.set_chat_sessions(
+            [session["title"] for session in sessions],
+            self._chat_sessions.active_title,
+        )
 
     # ------------------------------------------------------------------
     # System prompt — now injects semantic memory context

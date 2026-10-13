@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-13 00:32 UTC
+Generated: 2026-10-13 00:43 UTC
+
+## #60 — 2026-10-13 00:43 UTC — Codex
+
+Add up to 30 persisted, auto-titled chat sessions with selector and New button/hotkey; add switch, rename, list, and delete commands, migrate the prior single transcript format, and clear short-term memory on chat changes.
+
+**Touched:** `ui.py`, `main.py`, `core/chat_history.py`, `core/chat_commands.py`, `core/conversation_core.py`, `tests/test_chat_history.py`, `tests/test_chat_commands.py`, `tests/test_all_critical.py`
+
+**Next steps:** Continue chat-first work with stop/regenerate controls and better file-aware conversations; separately profile first-token and total model latency using a configured model without assuming credentials.
+
+---
 
 ## #59 — 2026-10-13 00:32 UTC — Codex
 

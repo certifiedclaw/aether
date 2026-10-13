@@ -1911,6 +1911,8 @@ class StartupPanel(QWidget):
 
 class MainWindow(QMainWindow):
     _log_sig     = pyqtSignal(str)
+    _clear_log_sig = pyqtSignal()
+    _chat_sessions_sig = pyqtSignal(object, str)
     _state_sig   = pyqtSignal(str)
     _startup_sig = pyqtSignal(str, str)  # action, data — thread-safe startup panel control
     _stats_sig   = pyqtSignal(dict)      # message-stats updates from worker threads
@@ -1970,6 +1972,8 @@ class MainWindow(QMainWindow):
         self._update_metrics()
 
         self._log_sig.connect(self._log.append_log)
+        self._clear_log_sig.connect(self._log.clear)
+        self._chat_sessions_sig.connect(self._set_chat_sessions)
         self._state_sig.connect(self._apply_state)
         self._startup_sig.connect(self._on_startup_sig)
         self._stats_sig.connect(self._stats_bar.update_stats)
@@ -1995,6 +1999,8 @@ class MainWindow(QMainWindow):
         sc_show.activated.connect(self._toggle_visibility)
         sc_collapse = QShortcut(QKeySequence("Escape"), self)
         sc_collapse.activated.connect(self._toggle_collapse)
+        sc_newchat = QShortcut(QKeySequence("Ctrl+Shift+N"), self)
+        sc_newchat.activated.connect(self._request_new_chat)
 
         self._collapsed = False
         self._saved_size = None
@@ -2283,6 +2289,16 @@ class MainWindow(QMainWindow):
             return l
 
         lay.addWidget(_sec("ACTIVITY LOG"))
+        chat_row = QHBoxLayout()
+        self._chat_combo = QComboBox()
+        self._chat_combo.setToolTip("Select a saved conversation")
+        self._chat_combo.currentTextChanged.connect(self._on_chat_selected)
+        chat_row.addWidget(self._chat_combo, stretch=1)
+        new_chat_btn = QPushButton("＋ New")
+        new_chat_btn.setToolTip("Start a new conversation (Ctrl+Shift+N)")
+        new_chat_btn.clicked.connect(self._request_new_chat)
+        chat_row.addWidget(new_chat_btn)
+        lay.addLayout(chat_row)
         self._log = LogWidget()
         lay.addWidget(self._log, stretch=1)
 
@@ -2353,6 +2369,23 @@ class MainWindow(QMainWindow):
         lay.addWidget(cfg_btn)
 
         return w
+
+    def _set_chat_sessions(self, titles: list[str], active_title: str) -> None:
+        self._chat_combo.blockSignals(True)
+        self._chat_combo.clear()
+        self._chat_combo.addItems(titles)
+        index = self._chat_combo.findText(active_title)
+        if index >= 0:
+            self._chat_combo.setCurrentIndex(index)
+        self._chat_combo.blockSignals(False)
+
+    def _on_chat_selected(self, title: str) -> None:
+        if title and self.on_text_command:
+            self.on_text_command(f"/switchchat {title}")
+
+    def _request_new_chat(self) -> None:
+        if self.on_text_command:
+            self.on_text_command("/newchat")
 
     def _build_input_row(self) -> QHBoxLayout:
         row = QHBoxLayout(); row.setSpacing(5)
@@ -2613,6 +2646,18 @@ class AetherUI:
     def write_log(self, text: str):
         try:
             self._win._log_sig.emit(text)
+        except RuntimeError:
+            pass
+
+    def clear_log(self):
+        try:
+            self._win._clear_log_sig.emit()
+        except RuntimeError:
+            pass
+
+    def set_chat_sessions(self, titles: list[str], active_title: str):
+        try:
+            self._win._chat_sessions_sig.emit(titles, active_title)
         except RuntimeError:
             pass
 

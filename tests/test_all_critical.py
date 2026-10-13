@@ -832,6 +832,19 @@ def test_setup_overlay_refactor_preserves_behavior():
     cursor.movePosition(cursor.MoveOperation.NextCharacter, cursor.MoveMode.KeepAnchor)
     assert cursor.charFormat().fontFamily().lower() == "monospace"
 
+    window = ui.MainWindow("")
+    window._chat_sessions_sig.emit(["First chat", "Second chat"], "Second chat")
+    app.processEvents()
+    assert window._chat_combo.currentText() == "Second chat"
+    chat_commands = []
+    window.on_text_command = chat_commands.append
+    window._chat_combo.setCurrentIndex(0)
+    app.processEvents()
+    assert chat_commands == ["/switchchat First chat"]
+    window._request_new_chat()
+    assert chat_commands[-1] == "/newchat"
+    window.close()
+
     # Interactivity: switching STT engine flips which input is shown.
     assert ov._vosk_model_input.isHidden() is False
     ov._stt_btns["whisper"].click()

@@ -1,6 +1,6 @@
 import json
 
-from core.chat_history import load_history, save_history
+from core.chat_history import ChatSessionStore, load_history, save_history
 
 
 def test_chat_history_round_trips_tool_turns(tmp_path):
@@ -47,3 +47,55 @@ def test_chat_history_is_bounded(tmp_path):
 
     save_history([{"role": "user", "content": "x" * (129 * 1024)}], path)
     assert load_history(path) == []
+
+
+def test_named_chats_switch_and_persist_independently(tmp_path):
+    path = tmp_path / "history.json"
+    store = ChatSessionStore(path)
+    first_id = store.active_id
+    store.save_current([{"role": "user", "content": "first transcript"}])
+    first_title = store.active_title
+
+    second = store.create("Research")
+    store.save_current([{"role": "user", "content": "second transcript"}])
+    assert second["title"] == "Research"
+    assert store.switch(first_title)["id"] == first_id
+    assert store.active_messages == [{"role": "user", "content": "first transcript"}]
+
+    restored = ChatSessionStore(path)
+    assert restored.active_title == first_title
+    assert restored.switch("Research")["messages"] == [
+        {"role": "user", "content": "second transcript"}
+    ]
+
+
+def test_named_chat_titles_are_unique_and_rename_delete_are_safe(tmp_path):
+    store = ChatSessionStore(tmp_path / "history.json")
+    first = store.create("Notes")
+    second = store.create("Notes")
+    assert first["title"] == "Notes"
+    assert second["title"] == "Notes (2)"
+    assert store.delete("New chat")
+    assert store.rename_active("Updated notes")
+    assert store.active_title == "Updated notes"
+    assert store.delete("Notes")
+    assert not store.delete("Updated notes")
+
+
+def test_chat_store_migrates_existing_single_history(tmp_path):
+    path = tmp_path / "history.json"
+    old_messages = [{"role": "user", "content": "old conversation"}]
+    path.write_text(json.dumps({"version": 1, "messages": old_messages}), encoding="utf-8")
+
+    store = ChatSessionStore(path)
+
+    assert store.active_title == "Previous chat"
+    assert store.active_messages == old_messages
+
+
+def test_new_chat_auto_titles_from_first_user_message(tmp_path):
+    store = ChatSessionStore(tmp_path / "history.json")
+    store.create()
+    store.save_current([{"role": "user", "content": "  Explain   local chat sessions  "}])
+
+    assert store.active_title == "Explain local chat sessions"
