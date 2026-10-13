@@ -290,6 +290,15 @@ def _ask_gemini_for_desktop_action(task: str) -> str:
     except Exception as e:
         return f"ERROR: {e}"
 
+
+def _run_wallpaper_command(command: list[str]) -> str | None:
+    result = subprocess.run(command, capture_output=True, text=True, timeout=10)
+    if result.returncode == 0:
+        return None
+    detail = (result.stderr or result.stdout).strip()
+    return detail[:300] or f"command exited with status {result.returncode}"
+
+
 def set_wallpaper(image_path: str) -> str:
     path = Path(image_path).expanduser().resolve()
     if not path.exists():
@@ -316,7 +325,9 @@ def set_wallpaper(image_path: str) -> str:
                 f'tell application "System Events" to tell every desktop to '
                 f'set picture to POSIX file "{path}"'
             )
-            subprocess.run(["osascript", "-e", script], capture_output=True)
+            error = _run_wallpaper_command(["osascript", "-e", script])
+            if error:
+                return f"Could not set wallpaper: {error}"
             return f"Wallpaper set: {path.name}"
 
         else:
@@ -324,14 +335,18 @@ def set_wallpaper(image_path: str) -> str:
             uri = f"file://{path}"
 
             if "gnome" in desktop_env or "unity" in desktop_env:
-                subprocess.run([
+                error = _run_wallpaper_command([
                     "gsettings", "set", "org.gnome.desktop.background",
                     "picture-uri", uri
-                ], capture_output=True)
-                subprocess.run([
+                ])
+                if error:
+                    return f"Could not set wallpaper: {error}"
+                error = _run_wallpaper_command([
                     "gsettings", "set", "org.gnome.desktop.background",
                     "picture-uri-dark", uri
-                ], capture_output=True)
+                ])
+                if error:
+                    return f"Wallpaper changed, but dark-mode wallpaper could not be set: {error}"
 
             elif "kde" in desktop_env:
                 # KDE Plasma
@@ -344,28 +359,28 @@ for (var i = 0; i < allDesktops.length; i++) {{
     d.writeConfig("Image", "file://{path}");
 }}
 """
-                subprocess.run(
+                error = _run_wallpaper_command(
                     ["qdbus", "org.kde.plasmashell", "/PlasmaShell",
-                     "org.kde.PlasmaShell.evaluateScript", script],
-                    capture_output=True
+                     "org.kde.PlasmaShell.evaluateScript", script]
                 )
+                if error:
+                    return f"Could not set wallpaper: {error}"
 
             elif "xfce" in desktop_env:
-                subprocess.run([
+                error = _run_wallpaper_command([
                     "xfconf-query", "-c", "xfce4-desktop",
                     "-p", "/backdrop/screen0/monitor0/workspace0/last-image",
                     "-s", str(path)
-                ], capture_output=True)
+                ])
+                if error:
+                    return f"Could not set wallpaper: {error}"
 
             else:
-                result = subprocess.run(
-                    ["feh", "--bg-scale", str(path)],
-                    capture_output=True
-                )
-                if result.returncode != 0:
+                error = _run_wallpaper_command(["feh", "--bg-scale", str(path)])
+                if error:
                     return (
                         f"Could not set wallpaper automatically on {desktop_env}. "
-                        f"Try manually or install 'feh'."
+                        f"Try manually or install 'feh'. Details: {error}"
                     )
 
             return f"Wallpaper set: {path.name}"

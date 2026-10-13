@@ -182,3 +182,34 @@ def test_missing_desktop_mutation_arguments_and_read_only_actions_do_not_prompt(
     assert d.desktop_control({"action": "wallpaper"}) == "No image path provided."
     assert d.desktop_control({"action": "wallpaper_url"}) == "No URL provided."
     assert d.desktop_control({"action": "list"}) == "listed"
+
+
+def test_wallpaper_command_failure_is_reported(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+
+    image = tmp_path / "wallpaper.jpg"
+    image.write_bytes(b"image")
+    monkeypatch.setattr(d, "_OS", "Linux")
+    monkeypatch.setenv("XDG_CURRENT_DESKTOP", "GNOME")
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append((command, kwargs))
+        return SimpleNamespace(returncode=1, stderr="permission denied", stdout="")
+
+    monkeypatch.setattr(d.subprocess, "run", run)
+    result = d.set_wallpaper(str(image))
+
+    assert result == "Could not set wallpaper: permission denied"
+    assert len(calls) == 1
+    assert calls[0][1]["timeout"] == 10
+
+
+def test_wallpaper_timeout_is_reported(monkeypatch, tmp_path):
+    image = tmp_path / "wallpaper.jpg"
+    image.write_bytes(b"image")
+    monkeypatch.setattr(d, "_OS", "Darwin")
+    monkeypatch.setattr(d.subprocess, "run", lambda *a, **k: (_ for _ in ()).throw(
+        d.subprocess.TimeoutExpired("osascript", 10)))
+
+    assert d.set_wallpaper(str(image)).startswith("Could not set wallpaper:")
