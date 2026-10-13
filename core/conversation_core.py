@@ -461,7 +461,8 @@ class ConversationCoreMixin:
         # default model) if no gemini_api_key is configured, rather than
         # failing the turn.
         _stream_kwargs: dict = {}
-        if _route.tier == _Tier.HARD and get_llm_provider() != "gemini":
+        _primary_provider = get_llm_provider()
+        if _route.tier == _Tier.HARD and _primary_provider != "gemini":
             _gem_key, _gem_model = get_gemini_settings()
             if _gem_key:
                 _stream_kwargs = {
@@ -482,7 +483,7 @@ class ConversationCoreMixin:
             from core.llm_client import get_config_flag as _cfg_flag
             _gem_key2, _gem_model2 = get_gemini_settings()
             if _wants_gemini_tools(user_text, flag=_cfg_flag("gemini_for_tools"),
-                                   provider=get_llm_provider(), has_key=bool(_gem_key2),
+                                   provider=_primary_provider, has_key=bool(_gem_key2),
                                    tier=_route.tier):
                 _stream_kwargs = {
                     "provider_override": "gemini",
@@ -504,7 +505,9 @@ class ConversationCoreMixin:
             _turn_tools = _filter_tools_for_turn(self._tools_for_current_turn(), user_text)
         messages, _active_mem = self._prepare_conversation_messages(
             user_text, light=_is_quick, tools=_turn_tools,
-            history_budget=(_CLOUD_HISTORY_BUDGET if _stream_kwargs else None),
+            history_budget=(_CLOUD_HISTORY_BUDGET
+                            if _stream_kwargs or _primary_provider in ("gemini", "openai_api")
+                            else None),
         )
         # For live_report: did memory injection actually surface anything?
         # None means "not attempted" (QUICK-tier turns skip retrieval
@@ -528,11 +531,15 @@ class ConversationCoreMixin:
         _consecutive_silent_rounds = 0
         _any_truncated = False   # for live_report — set if any round hit num_predict
         _loop_exhausted = False  # for live_report — set in the exhaustion branch below
+        _turn_cancelled = False
 
         tools = _turn_tools
         _empty_retried = False   # one no-tools retry after an empty model response
 
         for _round in range(MAX_TOOL_ROUNDS):
+            if self._cancel_current_turn.is_set():
+                _turn_cancelled = True
+                break
             final_content    = ""
             final_tool_calls: list = []
             _streamed: list[str] = []
@@ -541,16 +548,28 @@ class ConversationCoreMixin:
             _round_start = time.monotonic()
             for _attempt in (0, 1):
                 try:
-                    for event in call_llm_stream(messages, tools, **_stream_kwargs):
+                    for event in call_llm_stream(
+                            messages, tools, cancel_event=self._cancel_current_turn,
+                            **_stream_kwargs):
                         if event["type"] == "sentence":
+                            if self._cancel_current_turn.is_set():
+                                _turn_cancelled = True
+                                break
                             _streamed.append(event["text"])
                             self.speak(event["text"])
                         elif event["type"] == "done":
                             final_content    = event["content"]
                             final_tool_calls = event["tool_calls"]
                             _llm_stats       = event.get("stats", {})
+                        elif event["type"] == "cancelled":
+                            _turn_cancelled = True
+                            final_content = event.get("content", "")
+                            break
                     break
                 except RuntimeError as e:
+                    if self._cancel_current_turn.is_set():
+                        _turn_cancelled = True
+                        break
                     if _stream_kwargs and _attempt == 0:
                         # Cloud route failed (bad key, quota, 400...): never leave the
                         # user with no answer -- retry this round on the local model.
@@ -567,6 +586,19 @@ class ConversationCoreMixin:
                         self.ui.set_state("LISTENING")
                     return
             _round_elapsed = time.monotonic() - _round_start
+
+            if self._cancel_current_turn.is_set():
+                _turn_cancelled = True
+            if _turn_cancelled:
+                partial_reply = (final_content or " ".join(_streamed)).strip()
+                if partial_reply:
+                    partial_msg = {"role": "assistant", "content": partial_reply}
+                    messages.append(partial_msg)
+                    self._conversation.append(partial_msg)
+                    self.ui.write_log(f"Aether: {partial_reply} *(stopped)*")
+                self.ui.write_log("SYS: Response stopped.")
+                final_assistant_reply = partial_reply
+                break
 
             # Empty round: no text, no tool call (small local models do this when a
             # tool-laden prompt confuses them, e.g. "What is 240 times 17?" on 9 tools).
@@ -685,6 +717,18 @@ class ConversationCoreMixin:
                     self._publish_message_stats(_llm_stats, _round_elapsed)
                 break
 
+            if self._cancel_current_turn.is_set():
+                _turn_cancelled = True
+                partial_reply = (final_content or " ".join(_streamed)).strip()
+                if partial_reply:
+                    partial_msg = {"role": "assistant", "content": partial_reply}
+                    messages.append(partial_msg)
+                    self._conversation.append(partial_msg)
+                    self.ui.write_log(f"Aether: {partial_reply} *(stopped)*")
+                self.ui.write_log("SYS: Response stopped before the requested action started.")
+                final_assistant_reply = partial_reply
+                break
+
             assistant_msg = {
                 "role":       "assistant",
                 "content":    final_content or "",
@@ -717,6 +761,11 @@ class ConversationCoreMixin:
                 break
 
             _tool_results, all_silent = self._execute_tool_calls(final_tool_calls, messages)
+
+            if self._cancel_current_turn.is_set():
+                _turn_cancelled = True
+                self.ui.write_log("SYS: Response stopped after the active action finished.")
+                break
 
             if not self.ui.muted:
                 self.ui.set_state("THINKING")
@@ -776,7 +825,7 @@ class ConversationCoreMixin:
         # this fell straight through to _finalize_response with nothing to
         # say — the user got total silence with no error, log line, or
         # spoken response. Surface it instead.
-        if not final_assistant_reply:
+        if not final_assistant_reply and not _turn_cancelled:
             _loop_exhausted = True
             final_assistant_reply = (
                 "I wasn't able to finish that after a few tool attempts — "
@@ -802,7 +851,7 @@ class ConversationCoreMixin:
         )
 
         # ── Store full exchange + self-evaluate ─────────────────────────
-        self._finalize_response(user_text, final_assistant_reply, _active_mem,
+        self._finalize_response(user_text, "" if _turn_cancelled else final_assistant_reply, _active_mem,
                                  _tool_results, _llm_synthesized)
 
         if not self.ui.muted:
@@ -894,6 +943,7 @@ class ConversationCoreMixin:
             self._process_message_locked(user_text)
 
     def _process_message_locked(self, user_text: str) -> None:
+        self._cancel_current_turn.clear()
         try:
             self._process_message_inner(user_text)
         except Exception as e:
@@ -908,3 +958,10 @@ class ConversationCoreMixin:
                 pass
             if not self.ui.muted:
                 self.ui.set_state("LISTENING")
+        finally:
+            try:
+                self._chat_sessions.save_current(self._conversation)
+                self._active_chat_id = self._chat_sessions.active_id
+                self._refresh_chat_list()
+            except Exception as e:
+                logger.warning("Could not save chat history: %s", e)

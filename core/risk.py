@@ -94,10 +94,11 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
     "file_controller": {
         "": SAFE, "list": SAFE, "find": SAFE, "info": SAFE, "read": SAFE,
         "disk_usage": SAFE, "largest": SAFE,
-        # mutating, but reversible through the undo tool / Recycle Bin
+        # Mutations here remain reversible through undo or the Recycle Bin.
         "create_file": MONITOR, "create_folder": MONITOR, "write": MONITOR,
         "copy": MONITOR, "move": MONITOR, "rename": MONITOR,
-        "delete": MONITOR, "organize_desktop": MONITOR,
+        "delete": MONITOR,
+        "organize_desktop": ASK,  # batch-moves desktop files; show an approval prompt
     },
     "computer_control": {
         "": SAFE, "screenshot": SAFE, "screen_find": SAFE, "wait": SAFE, "focus_window": SAFE,
@@ -119,9 +120,8 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
         "press": TASK, "fill_form": TASK,
     },
     "file_processor": {
-        # "run" executes a .py file: the same hole code_helper had. Every other action
-        # is analysis/conversion (and any unrecognised action text is treated by the
-        # tool as a free-form instruction for the model), so it is only recorded.
+        # "run" executes a .py file: the same hole code_helper had. Other actions
+        # are analysis/conversion or perform their own operation-specific check.
         "run": ASK, "*": MONITOR,
     },
     "memory_tool": {
@@ -130,9 +130,9 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
     },
     "extra_tool": {
         "": SAFE,
-        "run_python": ASK,                # arbitrary model-written code
+        "run_python": BLOCK,              # disabled until OS-enforced isolation is available
         "kill_process": ASK, "batch_rename": ASK,
-        "delete_note": MONITOR, "type_text": MONITOR, "unzip": MONITOR, "zip": MONITOR,
+        "delete_note": MONITOR, "type_text": MONITOR, "unzip": ASK, "zip": MONITOR,
         "play_file": MONITOR, "set_volume": MONITOR, "focus_window": MONITOR,
         "type": MONITOR, "auto_type": MONITOR,       # keystrokes into the focused window
         "clipboard_read": MONITOR,                   # clipboard can hold secrets
@@ -152,8 +152,14 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
 
     # ── enforced INSIDE the function (richer dialog); see SELF_GATED ─────────
     "computer_settings": {"shutdown": ASK, "restart": ASK, "*": SAFE},
-    "desktop_control":   {"task": ASK, "*": SAFE},
-    "code_helper":       {"run": ASK, "build": ASK, "*": SAFE},
+    "desktop_control":   {
+        "task": ASK, "wallpaper": ASK, "wallpaper_url": ASK,
+        "organize": ASK, "clean": ASK, "*": SAFE,
+    },
+    "code_helper":       {
+        "run": ASK, "build": ASK, "write": ASK, "edit": ASK,
+        "optimize": ASK, "screen_debug": ASK, "*": SAFE,
+    },
     "dev_agent":         ASK,
     "osint_lookup":      {"port_scan": ASK, "breach_check": ASK, "*": MONITOR},
 }
@@ -212,7 +218,10 @@ def tier_for(tool: str, action: str = "") -> str:
 
 # parameters that are code/commands the user is approving: show them (almost) whole
 _FULL_SHOW_PARAMS = frozenset({"code", "command", "script"})
-_FULL_SHOW_LIMIT = 4000
+APPROVAL_CODE_LIMIT = 4000
+RUN_PYTHON_DISABLED = (
+    "Blocked: arbitrary Python execution is disabled until Aether can enforce OS-level isolation.")
+_FULL_SHOW_LIMIT = APPROVAL_CODE_LIMIT
 _SECRETISH = re.compile(r"pass(word|phrase)?|secret|token|api_?key|credential|^pin$", re.I)
 
 
@@ -346,6 +355,11 @@ def _escalates_to_ask(tool: str, params: dict) -> bool:
 
 def check(tool: str, action: str, params: dict) -> str | None:
     """Apply the tier. Returns None if the call may proceed, else the message to return."""
+    if tool == "extra_tool" and action == "run_python":
+        code = (params or {}).get("code", "")
+        if not isinstance(code, str) or len(code) > APPROVAL_CODE_LIMIT:
+            return f"Code too long or invalid (maximum {APPROVAL_CODE_LIMIT} characters)."
+        return RUN_PYTHON_DISABLED
     tier = tier_for(tool, action)
     if _escalates_to_ask(tool, params):
         tier = strictest(tier, ASK)

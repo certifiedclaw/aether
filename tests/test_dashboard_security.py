@@ -7,6 +7,19 @@ pytest.importorskip("fastapi")
 from dashboard import server as srv
 
 
+def test_dashboard_binds_to_loopback_by_default(monkeypatch):
+    monkeypatch.delenv("AETHER_DASHBOARD_HOST", raising=False)
+    dashboard = srv.DashboardServer()
+    assert dashboard._host == "127.0.0.1"
+    assert dashboard.get_url().startswith("http://127.0.0.1:")
+
+
+def test_remote_dashboard_requires_tls():
+    assert not srv.DashboardServer._remote_access_allowed("0.0.0.0", False)
+    assert srv.DashboardServer._remote_access_allowed("0.0.0.0", True)
+    assert srv.DashboardServer._remote_access_allowed("127.0.0.1", False)
+
+
 def _client_encrypt(skey, text, tag=True):
     """Mirror of app.html _encrypt()."""
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes

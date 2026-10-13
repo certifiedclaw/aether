@@ -17,6 +17,7 @@ DESKTOP            = _desktop_dir()
 MAX_BUILD_ATTEMPTS = 3
 
 from core.llm_client import call_llm_text as _llm
+from core.protected_paths import DENIED, is_protected
 
 
 def _clean_code(text: str) -> str:
@@ -47,6 +48,8 @@ def _read_file(file_path: str) -> tuple[str, str]:
     if not file_path:
         return "", "No file path provided."
     p = Path(file_path)
+    if is_protected(p):
+        return "", DENIED
     if not p.exists():
         return "", f"File not found: {file_path}"
     try:
@@ -56,6 +59,15 @@ def _read_file(file_path: str) -> tuple[str, str]:
 
 
 def _save_file(path: Path, content: str) -> str:
+    try:
+        resolved = path.resolve()
+        plugin_dir = (BASE_DIR / "plugins").resolve()
+        if is_protected(resolved):
+            return DENIED
+        if resolved == plugin_dir or plugin_dir in resolved.parents:
+            return "Access denied: code-helper cannot write executable plugin files."
+    except Exception:
+        return DENIED
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
@@ -144,7 +156,6 @@ def _write(description: str, language: str, output_path: str, player=None) -> tu
     )
     code = _clean_code(_llm(prompt, system=system))
     path = _resolve_save_path(output_path, lang)
-    _save_file(path, code)
     return code, path
 
 
@@ -163,6 +174,14 @@ def _approve_execution(operation: str, detail: str) -> bool:
     """User approval before model-written or model-chosen code is executed."""
     from core.safety import confirm_action
     return confirm_action(operation, detail)
+
+
+def _approve_file_change(operation: str, path: Path, content: str) -> bool:
+    from core.safety import confirm_action
+    return confirm_action(
+        operation,
+        f"Destination: {path}\n\nComplete generated file content:\n{content}",
+    )
 
 
 def _run_file(path: Path, args: list, timeout: int) -> str:
@@ -212,6 +231,9 @@ def _build(description, language, output_path, args, timeout, speak=None, player
 
     try:
         code, path = _write(description, lang, output_path, player)
+        status = _save_file(path, code)
+        if status.startswith("Access denied:") or status.startswith("Could not save:"):
+            return status
         print(f"[Code] ✅ Written: {path}")
     except Exception as e:
         msg = f"Could not write initial code: {e}"
@@ -261,8 +283,13 @@ def _write_action(description, language, output_path, player) -> str:
         player.write_log("[Code] Writing code...")
     try:
         code, path = _write(description, language, output_path, player)
+        if not _approve_file_change("write a code file", path, code):
+            return "Cancelled: you did not approve writing this code file."
+        status = _save_file(path, code)
+        if status.startswith("Access denied:") or status.startswith("Could not save:"):
+            return status
         print(f"[Code] ✅ Written: {path}")
-        return f"Code written. Saved to: {path}\n\nPreview:\n{_preview(code)}"
+        return f"Code written. {status}\n\nPreview:\n{_preview(code)}"
     except Exception as e:
         return f"Could not generate code: {e}"
 
@@ -291,7 +318,12 @@ def _edit_action(file_path, instruction, player) -> str:
     except Exception as e:
         return f"Could not edit code: {e}"
 
-    status = _save_file(Path(file_path), edited)
+    save_path = Path(file_path)
+    if not _approve_file_change("edit a code file", save_path, edited):
+        return "Cancelled: you did not approve editing this code file."
+    status = _save_file(save_path, edited)
+    if status.startswith("Access denied:") or status.startswith("Could not save:"):
+        return status
     print(f"[Code] ✅ Edited: {file_path}")
     return f"File edited. {status}\n\nPreview:\n{_preview(edited)}"
 
@@ -359,7 +391,11 @@ def _optimize_action(file_path, code, language, output_path, player) -> str:
     else:
         save_path = _resolve_save_path(output_path, lang)
 
+    if not _approve_file_change("optimize a code file", save_path, optimized):
+        return "Cancelled: you did not approve saving the optimized code."
     status = _save_file(save_path, optimized)
+    if status.startswith("Access denied:") or status.startswith("Could not save:"):
+        return status
     print(f"[Code] ✅ Optimized: {save_path}")
 
     original_lines  = len(code.splitlines())
@@ -450,7 +486,11 @@ def _screen_debug_action(description, file_path, player, speak=None) -> str:
             if code_match:
                 fixed_code = code_match.group(1).strip()
                 save_path  = Path(file_path)
-                _save_file(save_path, fixed_code)
+                if not _approve_file_change("fix a code file", save_path, fixed_code):
+                    return analysis + "\n\nCancelled: you did not approve saving the proposed fix."
+                status = _save_file(save_path, fixed_code)
+                if status.startswith("Access denied:") or status.startswith("Could not save:"):
+                    return analysis + f"\n\n{status}"
                 analysis += f"\n\n✅ Fixed code has been saved to: {file_path}"
                 print(f"[Code] ✅ Fixed code saved: {file_path}")
 

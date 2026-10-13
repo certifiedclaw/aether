@@ -5,6 +5,7 @@ import math
 import os
 import platform
 import random
+import re
 import subprocess
 import sys
 import threading
@@ -22,6 +23,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import (
     QBrush, QColor, QDragEnterEvent, QDropEvent, QFont, QFontDatabase,
     QKeySequence, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap,
+    QTextCharFormat, QTextCursor, QTextDocument, QTextDocumentFragment,
     QRadialGradient, QShortcut,
 )
 from PyQt6.QtWidgets import (
@@ -635,64 +637,45 @@ class LogWidget(QTextEdit):
                 min-height: 20px;
             }}
         """)
-        self._queue: list[str] = []
-        self._typing  = False
-        self._text    = ""
-        self._pos     = 0
-        self._tag     = "sys"
-        self._tmr = QTimer(self)
-        self._tmr.timeout.connect(self._step)
-        self._sig.connect(self._enqueue)
+        self._sig.connect(self._append_entry)
 
     def append_log(self, text: str):
         self._sig.emit(text)
 
-    def _enqueue(self, text: str):
-        self._queue.append(text)
-        if not self._typing:
-            self._next()
-
-    def _next(self):
-        if not self._queue:
-            self._typing = False
-            return
-        self._typing = True
-        self._text   = self._queue.pop(0)
-        self._pos    = 0
-        tl = self._text.lower()
-        if   tl.startswith("you:"):    self._tag = "you"
-        elif tl.startswith("aether:"): self._tag = "ai"
-        elif tl.startswith("file:"):   self._tag = "file"
-        elif "err" in tl:              self._tag = "err"
-        else:                          self._tag = "sys"
-        self._tmr.start(6)
-
-    def _step(self):
-        if self._pos < len(self._text):
-            ch  = self._text[self._pos]
-            cur = self.textCursor()
-            fmt = cur.charFormat()
-            col = {
-                "you":  qcol(C.WHITE),
-                "ai":   qcol(C.PRI),
-                "err":  qcol(C.RED),
-                "file": qcol(C.GREEN),
-                "sys":  qcol(C.ACC2),
-            }.get(self._tag, qcol(C.TEXT))
-            fmt.setForeground(QBrush(col))
-            cur.movePosition(cur.MoveOperation.End)
-            cur.insertText(ch, fmt)
-            self.setTextCursor(cur)
-            self.ensureCursorVisible()
-            self._pos += 1
-        else:
-            self._tmr.stop()
-            cur = self.textCursor()
-            cur.movePosition(cur.MoveOperation.End)
-            cur.insertText("\n")
-            self.setTextCursor(cur)
-            self.ensureCursorVisible()
-            QTimer.singleShot(20, self._next)
+    def _append_entry(self, text: str):
+        tl = text.lower()
+        if   tl.startswith("you:"):    tag = "you"
+        elif tl.startswith("aether:"): tag = "ai"
+        elif tl.startswith("file:"):   tag = "file"
+        elif "err" in tl:              tag = "err"
+        else:                           tag = "sys"
+        color = {
+            "you":  qcol(C.WHITE),
+            "ai":   qcol(C.PRI),
+            "err":  qcol(C.RED),
+            "file": qcol(C.GREEN),
+            "sys":  qcol(C.ACC2),
+        }.get(tag, qcol(C.TEXT))
+        safe_text = re.sub(r"!\[([^\]]*)\]\([^)]+\)", r"\1", text)
+        document = QTextDocument()
+        document.setDefaultFont(self.font())
+        document.setMarkdown(
+            safe_text,
+            QTextDocument.MarkdownFeature.MarkdownDialectGitHub |
+            QTextDocument.MarkdownFeature.MarkdownNoHTML,
+        )
+        document_cursor = QTextCursor(document)
+        document_cursor.select(QTextCursor.SelectionType.Document)
+        fmt = QTextCharFormat()
+        fmt.setForeground(QBrush(color))
+        document_cursor.mergeCharFormat(fmt)
+        cursor = self.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)
+        if not self.document().isEmpty():
+            cursor.insertBlock()
+        cursor.insertFragment(QTextDocumentFragment(document))
+        self.setTextCursor(cursor)
+        self.ensureCursorVisible()
 
 
 class StatsBar(QWidget):
@@ -1086,6 +1069,7 @@ class SetupOverlay(QWidget):
         super().__init__(parent)
         self._mode = mode
         _init = initial or {}
+        self._initial_config = _init
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet(f"""
             SetupOverlay {{
@@ -1108,10 +1092,10 @@ class SetupOverlay(QWidget):
         self._sel_tts          = _init.get("tts_engine",    "edgetts")
 
         _prov_init = _init.get("llm_provider", "ollama")
-        self._sel_llm_provider = _prov_init if _prov_init in ("ollama", "openai", "gemini") else "ollama"
+        self._sel_llm_provider = _prov_init if _prov_init in ("ollama", "openai", "gemini", "openai_api") else "ollama"
         # Which local backend to fall back to if the user switches from Gemini back to Local
         self._sel_local_sub = self._sel_llm_provider if self._sel_llm_provider in ("ollama", "openai") else "ollama"
-        self._sel_engine = "gemini" if self._sel_llm_provider == "gemini" else "local"
+        self._sel_engine = self._sel_llm_provider if self._sel_llm_provider in ("gemini", "openai_api") else "local"
 
         # Best-effort local hardware detection, used to recommend Ollama models.
         # Never allowed to break setup if it fails (missing psutil, sandboxed host, etc).
@@ -1301,11 +1285,12 @@ class SetupOverlay(QWidget):
         layout.addWidget(self._lbl("AI ENGINE", 7, col=C.TEXT_DIM,
                                align=Qt.AlignmentFlag.AlignLeft))
 
-        # Top-level choice: run models locally, or use Gemini in the cloud.
+        # Top-level choice: local models or hosted model APIs.
         engine_row, self._engine_btns = self._toggle_row(
             [
                 ("local",  "🖥  Local (Ollama / LM Studio)"),
                 ("gemini", "✨  Gemini (cloud API key)"),
+                ("openai_api", "✦  OpenAI API (usage billed separately)"),
             ],
             lambda: self._sel_engine,
             self._set_engine,
@@ -1377,7 +1362,7 @@ class SetupOverlay(QWidget):
                                 align=Qt.AlignmentFlag.AlignRight))
         _local_default_url = "http://localhost:1234" if self._sel_local_sub == "openai" else "http://localhost:11434"
         # Don't prefill the local URL box with the Gemini endpoint if the saved config was Gemini.
-        _default_url = _local_default_url if self._sel_llm_provider == "gemini" else _init.get("llm_url", _local_default_url)
+        _default_url = _local_default_url if self._sel_llm_provider in ("gemini", "openai_api") else _init.get("llm_url", _local_default_url)
         self._llm_url_input = self._input(
             "http://localhost:1234" if self._sel_local_sub == "openai"
             else "http://localhost:11434"
@@ -1387,7 +1372,7 @@ class SetupOverlay(QWidget):
         llm_row.addWidget(self._lbl("Model:", 7, col=C.TEXT_MED,
                                 align=Qt.AlignmentFlag.AlignRight))
         self._llm_model_input = self._input("e.g.  qwen2.5:3b  /  llama3.2  /  mistral")
-        self._llm_model_input.setText(_init.get("llm_model", "") if self._sel_llm_provider != "gemini" else "")
+        self._llm_model_input.setText(_init.get("llm_model", "") if self._sel_llm_provider not in ("gemini", "openai_api") else "")
         llm_row.addWidget(self._llm_model_input, stretch=2)
         local_lay.addLayout(llm_row)
 
@@ -1430,11 +1415,39 @@ class SetupOverlay(QWidget):
         gem_lay.addLayout(gem_model_row)
 
         layout.addWidget(self._llm_gemini_widget)
+
+        self._llm_openai_widget = QWidget()
+        self._llm_openai_widget.setStyleSheet("background: transparent;")
+        openai_lay = QVBoxLayout(self._llm_openai_widget)
+        openai_lay.setContentsMargins(0, 6, 0, 0)
+        openai_lay.setSpacing(5)
+        openai_lay.addWidget(self._lbl(
+            "platform.openai.com/api-keys  ·  API usage is billed separately from ChatGPT",
+            7, col=C.TEXT_DIM, align=Qt.AlignmentFlag.AlignLeft
+        ))
+        openai_key_row = QHBoxLayout(); openai_key_row.setSpacing(5)
+        openai_key_row.addWidget(self._lbl("API Key:", 7, col=C.TEXT_MED,
+                                          align=Qt.AlignmentFlag.AlignRight))
+        self._openai_key_input = self._input("sk-…", pw=True)
+        self._openai_key_input.setText(_init.get("openai_api_key", ""))
+        openai_key_row.addWidget(self._openai_key_input)
+        openai_lay.addLayout(openai_key_row)
+        openai_model_row = QHBoxLayout(); openai_model_row.setSpacing(5)
+        openai_model_row.addWidget(self._lbl("Model ID:", 7, col=C.TEXT_MED,
+                                            align=Qt.AlignmentFlag.AlignRight))
+        self._openai_model_input = self._input("model ID from your OpenAI API account")
+        self._openai_model_input.setText(
+            _init.get("llm_model", "") if self._sel_llm_provider == "openai_api" else ""
+        )
+        openai_model_row.addWidget(self._openai_model_input)
+        openai_lay.addLayout(openai_model_row)
+        layout.addWidget(self._llm_openai_widget)
         layout.addWidget(self._sep())
 
         # Apply initial visibility now that both panels exist
         self._llm_local_widget.setVisible(self._sel_engine == "local")
         self._llm_gemini_widget.setVisible(self._sel_engine == "gemini")
+        self._llm_openai_widget.setVisible(self._sel_engine == "openai_api")
         for k, btn in self._engine_btns.items():
             self._style_btn(btn, k == self._sel_engine)
 
@@ -1604,9 +1617,9 @@ class SetupOverlay(QWidget):
             self._el_key_widget.setVisible(key == "elevenlabs")
 
     def _set_engine(self, key: str):
-        """Top-level toggle: Local (Ollama/LM Studio) vs Gemini (cloud API)."""
+        """Top-level toggle between local models and hosted model APIs."""
         self._sel_engine = key
-        self._sel_llm_provider = self._sel_local_sub if key == "local" else "gemini"
+        self._sel_llm_provider = self._sel_local_sub if key == "local" else key
         if hasattr(self, "_engine_btns"):
             for k, btn in self._engine_btns.items():
                 self._style_btn(btn, k == key)
@@ -1614,6 +1627,8 @@ class SetupOverlay(QWidget):
             self._llm_local_widget.setVisible(key == "local")
         if hasattr(self, "_llm_gemini_widget"):
             self._llm_gemini_widget.setVisible(key == "gemini")
+        if hasattr(self, "_llm_openai_widget"):
+            self._llm_openai_widget.setVisible(key == "openai_api")
 
     def _apply_model_reco(self, tag: str):
         """Clicking a recommended model fills the model field and switches to Ollama."""
@@ -1702,9 +1717,26 @@ class SetupOverlay(QWidget):
 
         if _provider == "gemini":
             llm_model = self._gemini_model_combo.currentData() or "gemini-3.8-flash"
-            if not self._gemini_key_input.text().strip():
+            from core.credentials import get_secret
+            if not (self._gemini_key_input.text().strip() or
+                    get_secret("gemini_api_key", self._initial_config)):
                 self._gemini_key_input.setStyleSheet(
                     self._INPUT_STYLE + f" QLineEdit {{ border: 1px solid {C.RED}; }}"
+                )
+                return
+        elif _provider == "openai_api":
+            llm_model = self._openai_model_input.text().strip()
+            from core.credentials import get_secret
+            if not (self._openai_key_input.text().strip() or
+                    get_secret("openai_api_key", self._initial_config)):
+                self._openai_key_input.setStyleSheet(
+                    self._INPUT_STYLE + f" QLineEdit {{ border: 1px solid {C.RED}; }}"
+                )
+                return
+            if not llm_model:
+                self._openai_model_input.setStyleSheet(
+                    self._openai_model_input.styleSheet() +
+                    f" QLineEdit {{ border: 1px solid {C.RED}; }}"
                 )
                 return
         else:
@@ -1732,6 +1764,8 @@ class SetupOverlay(QWidget):
 
         if _provider == "gemini":
             llm_url = self.GEMINI_BASE_URL
+        elif _provider == "openai_api":
+            llm_url = "https://api.openai.com"
         else:
             _default_url = "http://localhost:1234" if _provider == "openai" else "http://localhost:11434"
             llm_url = self._llm_url_input.text().strip() or _default_url
@@ -1748,6 +1782,7 @@ class SetupOverlay(QWidget):
             "tts_speed":          tts_speed,
             "elevenlabs_api_key": self._el_key_input.text().strip(),
             "gemini_api_key":     self._gemini_key_input.text().strip(),
+            "openai_api_key":    self._openai_key_input.text().strip(),
         }
         if self._sel_stt == "vosk" and stt_model:
             cfg["vosk_model_path"] = stt_model
@@ -1876,6 +1911,8 @@ class StartupPanel(QWidget):
 
 class MainWindow(QMainWindow):
     _log_sig     = pyqtSignal(str)
+    _clear_log_sig = pyqtSignal()
+    _chat_sessions_sig = pyqtSignal(object, str)
     _state_sig   = pyqtSignal(str)
     _startup_sig = pyqtSignal(str, str)  # action, data — thread-safe startup panel control
     _stats_sig   = pyqtSignal(dict)      # message-stats updates from worker threads
@@ -1894,6 +1931,7 @@ class MainWindow(QMainWindow):
         )
 
         self.on_text_command  = None
+        self.on_stop_command  = None
         self._muted           = False
         self._current_file: str | None = None
 
@@ -1935,6 +1973,8 @@ class MainWindow(QMainWindow):
         self._update_metrics()
 
         self._log_sig.connect(self._log.append_log)
+        self._clear_log_sig.connect(self._log.clear)
+        self._chat_sessions_sig.connect(self._set_chat_sessions)
         self._state_sig.connect(self._apply_state)
         self._startup_sig.connect(self._on_startup_sig)
         self._stats_sig.connect(self._stats_bar.update_stats)
@@ -1960,6 +2000,8 @@ class MainWindow(QMainWindow):
         sc_show.activated.connect(self._toggle_visibility)
         sc_collapse = QShortcut(QKeySequence("Escape"), self)
         sc_collapse.activated.connect(self._toggle_collapse)
+        sc_newchat = QShortcut(QKeySequence("Ctrl+Shift+N"), self)
+        sc_newchat.activated.connect(self._request_new_chat)
 
         self._collapsed = False
         self._saved_size = None
@@ -2248,6 +2290,16 @@ class MainWindow(QMainWindow):
             return l
 
         lay.addWidget(_sec("ACTIVITY LOG"))
+        chat_row = QHBoxLayout()
+        self._chat_combo = QComboBox()
+        self._chat_combo.setToolTip("Select a saved conversation")
+        self._chat_combo.currentTextChanged.connect(self._on_chat_selected)
+        chat_row.addWidget(self._chat_combo, stretch=1)
+        new_chat_btn = QPushButton("＋ New")
+        new_chat_btn.setToolTip("Start a new conversation (Ctrl+Shift+N)")
+        new_chat_btn.clicked.connect(self._request_new_chat)
+        chat_row.addWidget(new_chat_btn)
+        lay.addLayout(chat_row)
         self._log = LogWidget()
         lay.addWidget(self._log, stretch=1)
 
@@ -2319,6 +2371,27 @@ class MainWindow(QMainWindow):
 
         return w
 
+    def _set_chat_sessions(self, titles: list[str], active_title: str) -> None:
+        self._chat_combo.blockSignals(True)
+        self._chat_combo.clear()
+        self._chat_combo.addItems(titles)
+        index = self._chat_combo.findText(active_title)
+        if index >= 0:
+            self._chat_combo.setCurrentIndex(index)
+        self._chat_combo.blockSignals(False)
+
+    def _on_chat_selected(self, title: str) -> None:
+        if title and self.on_text_command:
+            self.on_text_command(f"/switchchat {title}")
+
+    def _request_new_chat(self) -> None:
+        if self.on_text_command:
+            self.on_text_command("/newchat")
+
+    def _request_stop(self) -> None:
+        if self.on_stop_command:
+            self.on_stop_command()
+
     def _build_input_row(self) -> QHBoxLayout:
         row = QHBoxLayout(); row.setSpacing(5)
         self._input = QLineEdit()
@@ -2335,19 +2408,35 @@ class MainWindow(QMainWindow):
         self._input.returnPressed.connect(self._send)
         row.addWidget(self._input)
 
-        send = QPushButton("▸")
-        send.setFixedSize(30, 30)
-        send.setFont(QFont(FONT_BODY, 11, QFont.Weight.Bold))
-        send.setCursor(Qt.CursorShape.PointingHandCursor)
-        send.setStyleSheet(f"""
+        self._send_btn = QPushButton("▸")
+        self._send_btn.setFixedSize(30, 30)
+        self._send_btn.setFont(QFont(FONT_BODY, 11, QFont.Weight.Bold))
+        self._send_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._send_btn.setStyleSheet(f"""
             QPushButton {{
                 background: {C.PANEL}; color: {C.PRI};
                 border: 1px solid {C.PRI_DIM}; border-radius: 3px;
             }}
             QPushButton:hover {{ background: {C.PRI_GHO}; border: 1px solid {C.PRI}; }}
         """)
-        send.clicked.connect(self._send)
-        row.addWidget(send)
+        self._send_btn.clicked.connect(self._send)
+        row.addWidget(self._send_btn)
+
+        self._stop_btn = QPushButton("■")
+        self._stop_btn.setFixedSize(30, 30)
+        self._stop_btn.setToolTip("Stop the current response")
+        self._stop_btn.setFont(QFont(FONT_BODY, 9, QFont.Weight.Bold))
+        self._stop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._stop_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: #190808; color: {C.RED};
+                border: 1px solid {C.RED}; border-radius: 3px;
+            }}
+            QPushButton:hover {{ background: #2a0b0b; }}
+        """)
+        self._stop_btn.clicked.connect(self._request_stop)
+        self._stop_btn.hide()
+        row.addWidget(self._stop_btn)
         return row
 
     def _build_footer(self) -> QWidget:
@@ -2425,6 +2514,9 @@ class MainWindow(QMainWindow):
     def _apply_state(self, state: str):
         self.orb.state    = state
         self.orb.speaking = (state == "SPEAKING")
+        show_stop = state in ("THINKING", "PROCESSING", "SPEAKING") and bool(self.on_stop_command)
+        self._send_btn.setVisible(not show_stop)
+        self._stop_btn.setVisible(show_stop)
         if state == "ERROR":
             self.orb.flash_error()
 
@@ -2553,6 +2645,14 @@ class AetherUI:
         self._win.on_text_command = cb
 
     @property
+    def on_stop_command(self):
+        return self._win.on_stop_command
+
+    @on_stop_command.setter
+    def on_stop_command(self, cb):
+        self._win.on_stop_command = cb
+
+    @property
     def on_reconfigure(self):
         return self._win._on_reconfigure_cb
 
@@ -2578,6 +2678,18 @@ class AetherUI:
     def write_log(self, text: str):
         try:
             self._win._log_sig.emit(text)
+        except RuntimeError:
+            pass
+
+    def clear_log(self):
+        try:
+            self._win._clear_log_sig.emit()
+        except RuntimeError:
+            pass
+
+    def set_chat_sessions(self, titles: list[str], active_title: str):
+        try:
+            self._win._chat_sessions_sig.emit(titles, active_title)
         except RuntimeError:
             pass
 

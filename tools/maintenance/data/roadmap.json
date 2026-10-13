@@ -230,28 +230,28 @@
       "id": 26,
       "title": "Retry once (about 1s backoff) on Gemini 503/429 before falling back to local",
       "priority": "medium",
-      "status": "backlog",
+      "status": "done",
       "notes": "Seen in two consecutive verify runs; local HARD fallback costs 2-4s more.",
       "created": "2026-10-07",
-      "updated": "2026-10-07"
+      "updated": "2026-10-13"
     },
     {
       "id": 27,
       "title": "Execution timeout for AI-generated desktop code",
       "priority": "medium",
-      "status": "backlog",
+      "status": "done",
       "notes": "exec() cannot be killed in-process; approved code with an infinite loop hangs its thread. Run in a worker with a deadline.",
       "created": "2026-10-07",
-      "updated": "2026-10-07"
+      "updated": "2026-10-13"
     },
     {
       "id": 28,
       "title": "verify_local.py: flag packages declared in requirements.txt but not installed",
       "priority": "medium",
-      "status": "backlog",
+      "status": "done",
       "notes": "watchdog and keyboard were missing for several runs, disabling plugin hot-reload and the ctrl+alt+j hotkey without any verify warning.",
       "created": "2026-10-07",
-      "updated": "2026-10-07"
+      "updated": "2026-10-13"
     },
     {
       "id": 29,
@@ -320,28 +320,28 @@
       "id": 36,
       "title": "Plugins: write down the trust model (plugins/ *.py are hot-loaded and run fully trusted) and consider an explicit enable/hash allowlist",
       "priority": "high",
-      "status": "backlog",
+      "status": "done",
       "notes": "Raised by an external audit of the v12 tree. core/plugins.py exec_module's every plugins/*.py; file_controller now refuses the install folder, so the model cannot drop one in, but nothing else vets them.",
       "created": "2026-10-12",
-      "updated": "2026-10-12"
+      "updated": "2026-10-13"
     },
     {
       "id": 37,
       "title": "run_python is not a sandbox: decide keep (ASK + full-code dialog + scrubbed env, as of v12g) or replace with a real isolation layer",
       "priority": "medium",
-      "status": "backlog",
+      "status": "done",
       "notes": "v12g: same interpreter, -I, scratch cwd, secret env stripped, timeout clamped 1-60s, dialog shows whole code. Still runs as the user.",
       "created": "2026-10-12",
-      "updated": "2026-10-12"
+      "updated": "2026-10-13"
     },
     {
       "id": 38,
       "title": "Dashboard still binds 0.0.0.0 over plain HTTP by default; add LAN-only/bind option and prefer HTTPS",
       "priority": "medium",
-      "status": "backlog",
+      "status": "done",
       "notes": "",
       "created": "2026-10-12",
-      "updated": "2026-10-12"
+      "updated": "2026-10-13"
     }
   ]
 }

@@ -494,15 +494,22 @@ def test_plugin_system_reload_exists_and_works():
     reload silently failed 100% of the time (caught by plugin_watcher's own
     try/except and just logged). Covers the full add/edit/delete cycle."""
     import tempfile
+    import hashlib
     from pathlib import Path
     from core.plugins import PluginSystem
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
+        trusted = {}
 
         class FakeCfg:
             def get(self, k, d=None):
-                return str(tmpdir) if k == "plugins.plugin_dir" else d
+                if k == "plugins.plugin_dir":
+                    return str(tmpdir)
+                return trusted if k == "plugins.trusted_hashes" else d
+
+        def approve(filename):
+            trusted[filename] = hashlib.sha256((tmpdir / filename).read_bytes()).hexdigest()
 
         p = PluginSystem(FakeCfg())
         assert hasattr(p, "reload"), "PluginSystem must define reload() -- plugin_watcher.py depends on it"
@@ -510,12 +517,16 @@ def test_plugin_system_reload_exists_and_works():
 
         (tmpdir / "greet.py").write_text(
             "PLUGIN_NAME = \"greet\"\nPLUGIN_TOOLS = {\"say_hi\": lambda: \"hi!\"}\n")
+        approve("greet.py")
         assert p.reload() == 1
         assert p.execute_tool("say_hi") == "hi!"
 
         # editing an existing plugin must take effect, not serve a stale cached module
         (tmpdir / "greet.py").write_text(
             "PLUGIN_NAME = \"greet\"\nPLUGIN_TOOLS = {\"say_hi\": lambda: \"hello there!\"}\n")
+        assert p.reload() == 0
+        assert "say_hi" not in p.list_tools()
+        approve("greet.py")
         p.reload()
         assert p.execute_tool("say_hi") == "hello there!"
 
@@ -527,6 +538,7 @@ def test_plugin_system_reload_exists_and_works():
             "}\n"
             "def run(parameters, player=None, session_memory=None):\n"
             "    return 'echo: ' + parameters.get('text', '')\n")
+        approve("mark_style.py")
         assert p.reload() == 2
         assert p.execute_tool("mark_echo", text="hi") == "echo: hi"
         decls = {d["name"]: d for d in p.get_tool_declarations()}
@@ -802,9 +814,54 @@ def test_setup_overlay_refactor_preserves_behavior():
     assert ov._stt_lang_input.text() == "tr"
     assert set(ov._stt_btns.keys()) == {"whisper", "vosk"}
     assert set(ov._llm_prov_btns.keys()) == {"ollama", "openai"}
+    assert set(ov._engine_btns.keys()) == {"local", "gemini", "openai_api"}
+    ov._engine_btns["openai_api"].click()
+    assert ov._sel_llm_provider == "openai_api"
+    assert ov._llm_openai_widget.isHidden() is False
+    assert "billed separately" in ov._llm_openai_widget.findChildren(QLabel)[0].text()
+    ov._engine_btns["local"].click()
+    assert ov._sel_llm_provider == "openai"
     assert set(ov._tts_btns.keys()) == {"edgetts", "kokoro", "elevenlabs"}
     assert len(ov.findChildren(QLineEdit)) > 0
     assert len(ov.findChildren(QComboBox)) > 0
+
+    log = ui.LogWidget()
+    entry = "Aether: " + ("response text " * 40)
+    log.append_log(entry)
+    assert log.toPlainText() == entry.rstrip()
+
+    markdown_log = ui.LogWidget()
+    markdown_log.append_log(
+        "Aether: **bold** and `inline`\n\n```python\nprint(1)\n```"
+    )
+    assert "Aether: bold and inline" in markdown_log.toPlainText()
+    assert "print(1)" in markdown_log.toPlainText()
+    cursor = markdown_log.textCursor()
+    cursor.setPosition(markdown_log.toPlainText().index("bold"))
+    cursor.movePosition(cursor.MoveOperation.NextCharacter, cursor.MoveMode.KeepAnchor)
+    assert cursor.charFormat().fontWeight() >= ui.QFont.Weight.Bold
+    cursor.setPosition(markdown_log.toPlainText().index("print"))
+    cursor.movePosition(cursor.MoveOperation.NextCharacter, cursor.MoveMode.KeepAnchor)
+    assert cursor.charFormat().fontFamily().lower() == "monospace"
+
+    window = ui.MainWindow("")
+    window._chat_sessions_sig.emit(["First chat", "Second chat"], "Second chat")
+    app.processEvents()
+    assert window._chat_combo.currentText() == "Second chat"
+    chat_commands = []
+    window.on_text_command = chat_commands.append
+    window._chat_combo.setCurrentIndex(0)
+    app.processEvents()
+    assert chat_commands == ["/switchchat First chat"]
+    window._request_new_chat()
+    assert chat_commands[-1] == "/newchat"
+    stop_requests = []
+    window.on_stop_command = lambda: stop_requests.append(True)
+    window._apply_state("THINKING")
+    assert window._stop_btn.isHidden() is False
+    window._stop_btn.click()
+    assert stop_requests == [True]
+    window.close()
 
     # Interactivity: switching STT engine flips which input is shown.
     assert ov._vosk_model_input.isHidden() is False

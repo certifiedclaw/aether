@@ -11,8 +11,8 @@ WHY
     inside every zip of the project. With this module the key can live in the OS
     credential store instead, and the file can hold an empty string.
 
-Only three places in the code consume a secret: llm_client (Gemini, twice) and tts
-(ElevenLabs). Everything else reads non-secret settings from the same file.
+LLM providers and TTS resolve their keys through this module. Everything else
+reads non-secret settings from the same file.
 
 The keyring package is OPTIONAL and imported lazily; if it is missing or the backend
 misbehaves, resolution silently continues to the file. Values are never logged.
@@ -30,7 +30,7 @@ import time
 logger = logging.getLogger("aether")
 
 SERVICE = "aether"
-SECRET_NAMES = ("gemini_api_key", "elevenlabs_api_key")
+SECRET_NAMES = ("gemini_api_key", "openai_api_key", "elevenlabs_api_key")
 CACHE_SECONDS = 30
 
 _CACHE: dict[str, tuple[float, str | None]] = {}

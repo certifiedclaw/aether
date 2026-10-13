@@ -5,7 +5,8 @@ Conversation Core split — see core/conversation_core.py's module
 docstring for background). Mechanical extraction: `_handle_chat_command`
 is the same logic that used to live inline in AetherLocal, moved here so
 the built-in slash-command handling (/status, /clear, /selftest,
-/crashes, /backup, /memstats, /prune, /export, /import, /help) is its
+/crashes, /backup, /memstats, /prune, /export, /import, /newchat,
+/chats, /switchchat, /renamechat, /deletechat, /help) is its
 own reviewable unit.
 
 `ChatCommandsMixin` is meant to be mixed into `AetherLocal`
@@ -35,6 +36,14 @@ class ChatCommandsMixin:
     Mixed into AetherLocal — see module docstring above.
     """
 
+    def _clear_chat_memory(self) -> None:
+        memory = getattr(self, "_hybrid_mem", None) or self._semantic_mem
+        if memory:
+            try:
+                memory.clear_session()
+            except Exception as exc:
+                self.ui.write_log(f"WRN: Could not reset short-term chat memory: {exc}")
+
     def _handle_chat_command(self, user_text: str) -> bool:
         """Built-in slash/text commands (status, /clear, /help, etc.).
 
@@ -45,14 +54,113 @@ class ChatCommandsMixin:
         from main import (get_recent_crashes, backup_memory, memory_stats,
                            prune_memory, export_memory, import_memory,
                            run_self_test_async)  # lazy: avoids circular import at module load time
+        command = user_text.strip()
+        lowered = command.lower()
+        if lowered == "/newchat" or lowered.startswith("/newchat "):
+            self._chat_sessions.save_current(self._conversation)
+            try:
+                session = self._chat_sessions.create(command[len("/newchat"):].strip())
+            except ValueError as exc:
+                self.ui.write_log(f"ERR: {exc}")
+                return True
+            self._active_chat_id = session["id"]
+            self._conversation = []
+            self._clear_chat_memory()
+            self.ui.clear_log()
+            self._refresh_chat_list()
+            self.ui.write_log(f"SYS: Started chat: {session['title']}")
+            return True
+        if lowered == "/chats":
+            lines = ["SYS: Saved chats (most recent first):"]
+            for session in self._chat_sessions.list_sessions():
+                marker = "  (active)" if session["id"] == self._active_chat_id else ""
+                lines.append(f"- {session['title']}{marker}")
+            self.ui.write_log("\n".join(lines))
+            return True
+        if lowered == "/searchchats" or lowered.startswith("/searchchats "):
+            query = command[len("/searchchats"):].strip()
+            if not query:
+                self.ui.write_log("ERR: Usage: /searchchats <text>")
+                return True
+            if len(query) > 200:
+                self.ui.write_log("ERR: Search text must be 200 characters or fewer.")
+                return True
+            query = query.casefold()
+            matches = []
+            for session in self._chat_sessions.list_sessions():
+                for message in session.get("messages", []):
+                    if message.get("role") not in ("user", "assistant"):
+                        continue
+                    content = message.get("content")
+                    if not isinstance(content, str) or query not in content.casefold():
+                        continue
+                    snippet = " ".join(content.split())
+                    if len(snippet) > 180:
+                        position = snippet.casefold().find(query)
+                        start = max(0, position - 60)
+                        has_more = start + 180 < len(snippet)
+                        snippet = ("…" if start else "") + snippet[start:start + 180]
+                        if has_more:
+                            snippet += "…"
+                    label = "You" if message["role"] == "user" else "Aether"
+                    matches.append(f"- {session['title']} — {label}: {snippet}")
+                    if len(matches) == 10:
+                        break
+                if len(matches) == 10:
+                    break
+            if matches:
+                self.ui.write_log("SYS: Chat search results (up to 10):\n" + "\n".join(matches))
+            else:
+                self.ui.write_log("SYS: No saved chat messages matched that search.")
+            return True
+        if lowered.startswith("/switchchat "):
+            title = command[len("/switchchat "):].strip()
+            self._chat_sessions.save_current(self._conversation)
+            session = self._chat_sessions.switch(title)
+            if session is None:
+                self.ui.write_log(f"ERR: No saved chat named '{title}'. Use /chats to list chats.")
+                return True
+            self._active_chat_id = session["id"]
+            self._conversation = list(session["messages"])
+            self._clear_chat_memory()
+            self.ui.clear_log()
+            self._refresh_chat_list()
+            self.ui.write_log(f"SYS: Switched to chat: {session['title']}")
+            for message in self._conversation:
+                if message.get("role") in ("user", "assistant") and isinstance(message.get("content"), str):
+                    label = "You" if message["role"] == "user" else "Aether"
+                    self.ui.write_log(f"{label}: {message['content']}")
+            return True
+        if lowered.startswith("/renamechat "):
+            title = command[len("/renamechat "):].strip()
+            if not self._chat_sessions.rename_active(title):
+                self.ui.write_log("ERR: Usage: /renamechat <new-name> (renames the active chat)")
+            else:
+                self._refresh_chat_list()
+                self.ui.write_log("SYS: Chat renamed.")
+            return True
+        if lowered.startswith("/deletechat "):
+            title = command[len("/deletechat "):].strip()
+            deleting_active = title.casefold() == self._chat_sessions.active_title.casefold()
+            if not self._chat_sessions.delete(title):
+                self.ui.write_log("ERR: Could not delete that chat. The last remaining chat cannot be deleted.")
+            else:
+                active = self._chat_sessions.active_session
+                self._active_chat_id = active["id"]
+                self._conversation = list(active["messages"])
+                if deleting_active:
+                    self._clear_chat_memory()
+                self._render_chat_history()
+                self._refresh_chat_list()
+                self.ui.write_log(f"SYS: Deleted chat: {title}")
+            return True
         if user_text.strip().lower() in ("status", "aether status", "/status"):
             self._execute_tool("diagnostics", {})
             return True
         if user_text.strip().lower() == "/clear":
             with self._conversation_lock:
                 self._conversation.clear()
-            if self._semantic_mem:
-                self._semantic_mem.clear_session()
+            self._clear_chat_memory()
             self.ui.write_log("SYS: Chat history cleared.")
             self.speak("History cleared.")
             return True
@@ -117,6 +225,12 @@ class ChatCommandsMixin:
                 "/export [path]     Export memories to JSON file\n"
                 "/import <path>     Restore memories from export file\n"
                 "/clear             Clear chat history\n"
+                "/newchat [name]    Start a new saved chat\n"
+                "/chats             List saved chats\n"
+                "/switchchat <name> Switch to a saved chat\n"
+                "/renamechat <name>  Rename the active chat\n"
+                "/deletechat <name> Delete a saved chat\n"
+                "/searchchats <text> Search saved conversations\n"
                 "/help              Show this command list\n"
                 "─────────────────────────────────────────────────────\n"
                 "Hotkeys: F4 mute · F11 fullscreen · Ctrl+Alt+A show/hide · Esc collapse"

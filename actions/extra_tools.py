@@ -30,6 +30,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Callable
 
+from core.risk import APPROVAL_CODE_LIMIT, RUN_PYTHON_DISABLED
+
 logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -337,21 +339,37 @@ def zip_files(paths: list | str, output: str = "") -> str:
     """Zip one or more files/folders."""
     try:
         import zipfile
+        from core.protected_paths import DENIED, is_protected
         if isinstance(paths, str):
             paths = [p.strip() for p in paths.split(",") if p.strip()]
+        if not paths:
+            return "Zip error: no input paths provided."
         if not output:
             output = paths[0].rstrip("/\\") + ".zip"
         output = os.path.expanduser(output)
+        if is_protected(output):
+            return DENIED
+
+        entries = []
+        for source in paths:
+            source = os.path.expanduser(str(source).strip())
+            if is_protected(source):
+                return DENIED
+            if os.path.isdir(source):
+                for root, _, files in os.walk(source):
+                    for name in files:
+                        file_path = os.path.join(root, name)
+                        if is_protected(file_path):
+                            return DENIED
+                        entries.append((file_path, os.path.relpath(file_path, os.path.dirname(source))))
+            else:
+                if not os.path.isfile(source):
+                    return f"Zip error: input not found: {source}"
+                entries.append((source, os.path.basename(source)))
+
         with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zf:
-            for p in paths:
-                p = os.path.expanduser(p.strip())
-                if os.path.isdir(p):
-                    for root, _, files in os.walk(p):
-                        for f in files:
-                            fp = os.path.join(root, f)
-                            zf.write(fp, os.path.relpath(fp, os.path.dirname(p)))
-                else:
-                    zf.write(p, os.path.basename(p))
+            for file_path, archive_name in entries:
+                zf.write(file_path, archive_name)
         size = Path(output).stat().st_size
         return f"📦 Created {output}  ({size:,} bytes)"
     except Exception as e:
@@ -362,11 +380,30 @@ def unzip_file(path: str, dest: str = "") -> str:
     """Extract a zip file."""
     try:
         import zipfile
+        from core.protected_paths import DENIED, is_protected
         path = os.path.expanduser(path)
         dest = os.path.expanduser(dest) if dest else str(Path(path).parent)
+        if is_protected(path):
+            return DENIED
+        dest_root = Path(dest).resolve()
+        plugin_dir = (Path(__file__).resolve().parent.parent / "plugins").resolve()
+        if is_protected(dest_root):
+            return DENIED
+        if dest_root == plugin_dir or plugin_dir in dest_root.parents:
+            return "Access denied: archives cannot be extracted into the executable plugin directory."
         with zipfile.ZipFile(path, "r") as zf:
-            zf.extractall(dest)
             names = zf.namelist()
+            for name in names:
+                target = (dest_root / name).resolve()
+                try:
+                    target.relative_to(dest_root)
+                except ValueError:
+                    return "Unzip error: archive contains an unsafe path."
+                if is_protected(target):
+                    return DENIED
+                if target == plugin_dir or plugin_dir in target.parents:
+                    return "Access denied: archives cannot install executable plugin files."
+            zf.extractall(dest_root)
         return f"📂 Extracted {len(names)} file(s) to {dest}"
     except Exception as e:
         return f"Unzip error: {e}"
@@ -621,42 +658,12 @@ def set_system_volume(level: int) -> str:
 # CODE
 # ─────────────────────────────────────────────────────────────────────────────
 
-_SECRET_ENV = re.compile(r"key|token|secret|passw|credential|^aether_", re.I)
-
-
 def run_python(code: str, timeout: int = 10) -> str:
-    """
-    Execute a Python snippet in a child process and return its output.
-
-    This is NOT a sandbox: approved code runs as you and can touch anything you can.
-    The protection is the ASK-tier confirmation (core/risk.py), which shows the whole
-    snippet. What this function adds: the same interpreter as Aether (not whatever
-    'python' is first on PATH), isolated mode (-I: no user site / cwd imports), a
-    scratch working directory, an environment stripped of anything that looks like a
-    key or token, and a timeout clamped to 1-60 s (the model chooses the value).
-    """
-    import tempfile
-    try:
-        secs = max(1, min(int(timeout), 60))
-    except (TypeError, ValueError):
-        secs = 10
-    env = {k: v for k, v in os.environ.items() if not _SECRET_ENV.search(k)}
-    try:
-        with tempfile.TemporaryDirectory(prefix="aether_py_") as scratch:
-            result = subprocess.run(
-                [sys.executable, "-I", "-c", code],
-                capture_output=True, text=True, timeout=secs, env=env, cwd=scratch)
-        out = result.stdout[:2000]
-        err = result.stderr[:500]
-        if err and not out:
-            return f"[stderr]\n{err}"
-        if err:
-            out += f"\n[stderr]\n{err}"
-        return out or "(no output)"
-    except subprocess.TimeoutExpired:
-        return f"Timed out after {secs}s"
-    except Exception as e:
-        return f"Run error: {e}"
+    """Fail closed until arbitrary code can run in an OS-enforced sandbox."""
+    code = str(code or "")
+    if len(code) > APPROVAL_CODE_LIMIT:
+        return f"Code too long (maximum {APPROVAL_CODE_LIMIT} characters)."
+    return RUN_PYTHON_DISABLED
 
 
 def calculate(expression: str) -> str:

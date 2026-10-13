@@ -121,6 +121,11 @@ def _confirm_generated_code(code: str) -> bool:
         return False
 
 
+def _confirm_desktop_action(operation: str, detail: str) -> bool:
+    from core.safety import confirm_action
+    return confirm_action(f"desktop {operation}", detail)
+
+
 def _ns(**members) -> object:
     """Namespace exposing ONLY the given members (no module reachable from it)."""
     return types.SimpleNamespace(**members)
@@ -285,6 +290,15 @@ def _ask_gemini_for_desktop_action(task: str) -> str:
     except Exception as e:
         return f"ERROR: {e}"
 
+
+def _run_wallpaper_command(command: list[str]) -> str | None:
+    result = subprocess.run(command, capture_output=True, text=True, timeout=10)
+    if result.returncode == 0:
+        return None
+    detail = (result.stderr or result.stdout).strip()
+    return detail[:300] or f"command exited with status {result.returncode}"
+
+
 def set_wallpaper(image_path: str) -> str:
     path = Path(image_path).expanduser().resolve()
     if not path.exists():
@@ -303,7 +317,9 @@ def set_wallpaper(image_path: str) -> str:
                     path = bmp_path
                 except ImportError:
                     pass 
-            ctypes.windll.user32.SystemParametersInfoW(20, 0, str(path), 3)
+            changed = ctypes.windll.user32.SystemParametersInfoW(20, 0, str(path), 3)
+            if not changed:
+                return "Could not set wallpaper: Windows rejected the wallpaper change."
             return f"Wallpaper set: {path.name}"
 
         elif _OS == "Darwin":
@@ -311,7 +327,9 @@ def set_wallpaper(image_path: str) -> str:
                 f'tell application "System Events" to tell every desktop to '
                 f'set picture to POSIX file "{path}"'
             )
-            subprocess.run(["osascript", "-e", script], capture_output=True)
+            error = _run_wallpaper_command(["osascript", "-e", script])
+            if error:
+                return f"Could not set wallpaper: {error}"
             return f"Wallpaper set: {path.name}"
 
         else:
@@ -319,14 +337,18 @@ def set_wallpaper(image_path: str) -> str:
             uri = f"file://{path}"
 
             if "gnome" in desktop_env or "unity" in desktop_env:
-                subprocess.run([
+                error = _run_wallpaper_command([
                     "gsettings", "set", "org.gnome.desktop.background",
                     "picture-uri", uri
-                ], capture_output=True)
-                subprocess.run([
+                ])
+                if error:
+                    return f"Could not set wallpaper: {error}"
+                error = _run_wallpaper_command([
                     "gsettings", "set", "org.gnome.desktop.background",
                     "picture-uri-dark", uri
-                ], capture_output=True)
+                ])
+                if error:
+                    return f"Wallpaper changed, but dark-mode wallpaper could not be set: {error}"
 
             elif "kde" in desktop_env:
                 # KDE Plasma
@@ -339,28 +361,28 @@ for (var i = 0; i < allDesktops.length; i++) {{
     d.writeConfig("Image", "file://{path}");
 }}
 """
-                subprocess.run(
+                error = _run_wallpaper_command(
                     ["qdbus", "org.kde.plasmashell", "/PlasmaShell",
-                     "org.kde.PlasmaShell.evaluateScript", script],
-                    capture_output=True
+                     "org.kde.PlasmaShell.evaluateScript", script]
                 )
+                if error:
+                    return f"Could not set wallpaper: {error}"
 
             elif "xfce" in desktop_env:
-                subprocess.run([
+                error = _run_wallpaper_command([
                     "xfconf-query", "-c", "xfce4-desktop",
                     "-p", "/backdrop/screen0/monitor0/workspace0/last-image",
                     "-s", str(path)
-                ], capture_output=True)
+                ])
+                if error:
+                    return f"Could not set wallpaper: {error}"
 
             else:
-                result = subprocess.run(
-                    ["feh", "--bg-scale", str(path)],
-                    capture_output=True
-                )
-                if result.returncode != 0:
+                error = _run_wallpaper_command(["feh", "--bg-scale", str(path)])
+                if error:
                     return (
                         f"Could not set wallpaper automatically on {desktop_env}. "
-                        f"Try manually or install 'feh'."
+                        f"Try manually or install 'feh'. Details: {error}"
                     )
 
             return f"Wallpaper set: {path.name}"
@@ -570,19 +592,39 @@ def desktop_control(
     try:
         if action == "wallpaper":
             path = params.get("path", "")
+            if path and not _confirm_desktop_action(
+                    "set wallpaper", f"Image file: {path}\nThis changes the desktop wallpaper."):
+                return "Cancelled: the wallpaper was not changed."
             return set_wallpaper(path) if path else "No image path provided."
 
         elif action == "wallpaper_url":
             url = params.get("url", "")
+            if url and not _confirm_desktop_action(
+                    "download and set wallpaper",
+                    f"Image URL: {url}\nAether will download this image and set it as the desktop wallpaper."):
+                return "Cancelled: no image was downloaded or applied."
             return set_wallpaper_from_url(url) if url else "No URL provided."
 
         elif action == "current_wallpaper":
             return get_current_wallpaper()
 
         elif action == "organize":
-            return organize_desktop(params.get("mode", "by_type"))
+            mode = params.get("mode", "by_type")
+            mode_description = "modified month" if mode == "by_date" else "file type"
+            if not _confirm_desktop_action(
+                    "organize desktop files",
+                    f"Desktop: {_get_desktop()}\nOrganization: {mode_description}\n"
+                    "Aether will move non-hidden top-level files into folders. File contents are not deleted."):
+                return "Cancelled: no desktop files were moved."
+            return organize_desktop(mode)
 
         elif action == "clean":
+            if not _confirm_desktop_action(
+                    "archive desktop files",
+                    f"Desktop: {_get_desktop()}\n"
+                    "Aether will move non-hidden top-level files into a dated Desktop Archive folder. "
+                    "File contents are not deleted."):
+                return "Cancelled: no desktop files were moved."
             return clean_desktop()
 
         elif action == "list":

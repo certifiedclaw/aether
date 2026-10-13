@@ -24,6 +24,11 @@ def get_base_dir() -> Path:
 
 
 BASE_DIR = get_base_dir()
+_MAX_GENERATED_CODE = 4000
+
+
+class GeneratedCodeNotRun(RuntimeError):
+    """Generated Python was blocked or declined and must not be retried silently."""
 
 
 # ---------------------------------------------------------------------------
@@ -67,6 +72,16 @@ def _run_generated_code(description: str, speak: Callable | None = None) -> str:
     try:
         code = call_llm_text(prompt, system=system, tier="deep")
         code = re.sub(r"```(?:python)?", "", code).strip().rstrip("`").strip()
+
+        if len(code) > _MAX_GENERATED_CODE:
+            raise GeneratedCodeNotRun(
+                f"Generated code was not run because it exceeds the {_MAX_GENERATED_CODE}-character review limit.")
+
+        from core.safety import confirm_action
+        if not confirm_action(
+                "run model-generated Python code",
+                f"Task: {description}\n\nComplete generated code:\n{code}"):
+            raise GeneratedCodeNotRun("Cancelled: you did not approve running the generated code.")
 
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".py", delete=False, encoding="utf-8"
@@ -342,6 +357,10 @@ class AgentExecutor:
                         print(f"[Executor] ✅ Step {step_num} done: {str(result)[:100]}")
                         step_ok = True
                         break
+
+                    except GeneratedCodeNotRun as e:
+                        if speak: speak(str(e))
+                        return str(e)
 
                     except Exception as e:
                         error_msg = str(e)

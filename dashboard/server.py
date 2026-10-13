@@ -1,9 +1,8 @@
 """
-dashboard/server.py — AETHER Local HTTP Dashboard
+dashboard/server.py — AETHER Local Dashboard
 
-Plain HTTP on port 8000 (no SSL warnings, no firewall issues).
-Security at the application layer: AES-256-CBC with session-key-derived key.
-CryptoJS is auto-downloaded once and served locally — no CDN needed after that.
+The dashboard binds to loopback by default. Remote access requires an explicit
+AETHER_DASHBOARD_HOST and TLS certificates in config/certs/aether.{key,crt}.
 
 Install deps:  pip install fastapi "uvicorn[standard]" cryptography
 """
@@ -451,7 +450,8 @@ def _read(name: str) -> str:
 class DashboardServer:
 
     def __init__(self):
-        self._ip                          = _local_ip()
+        self._host                        = os.environ.get("AETHER_DASHBOARD_HOST", "127.0.0.1").strip() or "127.0.0.1"
+        self._ip                          = self._advertised_ip()
         self._tokens: set[str]            = set()
         self._token_keys: dict[str, str]  = {}   # auth_token → session_key
         self._aes_cache:  dict[str, tuple]= {}   # session_key → (AES key, MAC key)
@@ -470,6 +470,21 @@ class DashboardServer:
         self._login_html                  = _read("login.html")
         self._app_html                    = _read("app.html")
         self.app                          = self._build_app()
+
+    @staticmethod
+    def _is_loopback_host(host: str) -> bool:
+        return host.strip().lower() in {"localhost", "127.0.0.1", "::1"}
+
+    @classmethod
+    def _remote_access_allowed(cls, host: str, ssl_enabled: bool) -> bool:
+        return cls._is_loopback_host(host) or ssl_enabled
+
+    def _advertised_ip(self) -> str:
+        if self._is_loopback_host(self._host):
+            return "127.0.0.1"
+        if self._host not in {"0.0.0.0", "::"}:
+            return self._host
+        return _local_ip()
 
     # ── one-time key management ───────────────────────────────────────────
 
@@ -956,7 +971,7 @@ class DashboardServer:
         ssl_cert = BASE_DIR / "config" / "certs" / "aether.crt"
         asyncio.get_event_loop().run_in_executor(None, _ensure_network_access, PORT + 1)
         cfg = uvicorn.Config(
-            self.app, host="0.0.0.0", port=PORT + 1, log_level="warning",
+            self.app, host=self._host, port=PORT + 1, log_level="warning",
             ssl_keyfile=str(ssl_key), ssl_certfile=str(ssl_cert),
         )
         print(f"[Dashboard] Manual entry:  {self._ip}:{PORT + 1}  (type in browser, accept cert once)")
@@ -968,19 +983,21 @@ class DashboardServer:
             print("[Dashboard] Run:  pip install fastapi 'uvicorn[standard]' cryptography")
             return
 
-        # Firewall setup runs in a thread — uvicorn starts immediately,
-        # no waiting for UAC dialogs or subprocess timeouts.
-        asyncio.get_event_loop().run_in_executor(None, _ensure_network_access, PORT)
-
         use_ssl  = self._ssl_enabled()
         ssl_key  = BASE_DIR / "config" / "certs" / "aether.key"
         ssl_cert = BASE_DIR / "config" / "certs" / "aether.crt"
+        if not self._remote_access_allowed(self._host, use_ssl):
+            print("[Dashboard] Remote access disabled: set up TLS certificates in config/certs first.")
+            return
 
-        if use_ssl:
+        if use_ssl and not self._is_loopback_host(self._host):
             asyncio.create_task(self._serve_alias())
 
+        if not self._is_loopback_host(self._host):
+            asyncio.get_event_loop().run_in_executor(None, _ensure_network_access, PORT)
+
         cfg = uvicorn.Config(
-            self.app, host="0.0.0.0", port=PORT, log_level="warning",
+            self.app, host=self._host, port=PORT, log_level="warning",
             **({"ssl_keyfile": str(ssl_key), "ssl_certfile": str(ssl_cert)} if use_ssl else {}),
         )
 

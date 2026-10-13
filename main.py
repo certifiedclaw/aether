@@ -346,7 +346,11 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         self._speaking_lock   = threading.Lock()
         self._text_queue:     queue.Queue = queue.Queue()
         self._tts_queue:      queue.Queue = queue.Queue()
-        self._conversation:   list[dict]  = []
+        self._cancel_current_turn = threading.Event()
+        from core.chat_history import ChatSessionStore
+        self._chat_sessions = ChatSessionStore()
+        self._active_chat_id = self._chat_sessions.active_id
+        self._conversation:   list[dict]  = list(self._chat_sessions.active_messages)
         # STT (whisper/vosk), the dashboard command loop, the proactive loop,
         # and the system monitor loop can each call _process_message on their
         # own thread. Without serialization two calls can interleave reads/
@@ -395,6 +399,23 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         self._last_user_speech: float           = time.monotonic()
 
         self.ui.on_text_command = self._on_text_command
+        self.ui.on_stop_command = self._stop_current_response
+        self._refresh_chat_list()
+        self._render_chat_history()
+
+    def _render_chat_history(self) -> None:
+        self.ui.clear_log()
+        for message in self._conversation:
+            if message.get("role") in ("user", "assistant") and isinstance(message.get("content"), str):
+                label = "You" if message["role"] == "user" else "Aether"
+                self.ui.write_log(f"{label}: {message['content']}")
+
+    def _refresh_chat_list(self) -> None:
+        sessions = self._chat_sessions.list_sessions()
+        self.ui.set_chat_sessions(
+            [session["title"] for session in sessions],
+            self._chat_sessions.active_title,
+        )
 
     # ------------------------------------------------------------------
     # System prompt — now injects semantic memory context
@@ -443,7 +464,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         elif not self.ui.muted:
             self.ui.set_state("LISTENING")
 
-    def _interrupt_speaking(self) -> None:
+    def _interrupt_speaking(self, reason: str = "barge-in") -> None:
         """Stop TTS playback immediately (barge-in)."""
         try:
             if self._tts and hasattr(self._tts, "stop"):
@@ -459,7 +480,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         with self._speaking_lock:
             self._speaking = False
         self.ui.set_state("LISTENING")
-        self.ui.write_log("SYS: [barge-in] speech interrupted")
+        self.ui.write_log(f"SYS: [{reason}] speech interrupted")
 
     def speak(self, text: str) -> None:
         if not text or not self._tts:
@@ -564,6 +585,11 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
 
     def _on_text_command(self, text: str) -> None:
         self._text_queue.put(text)
+
+    def _stop_current_response(self) -> None:
+        self._cancel_current_turn.set()
+        self._interrupt_speaking(reason="response stopped")
+        self.ui.write_log("SYS: Stop requested; an active tool action may finish first.")
 
     # ------------------------------------------------------------------
     # Tool execution

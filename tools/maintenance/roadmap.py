@@ -148,7 +148,10 @@ def render_markdown(data: dict) -> str:
         for item in items:
             box = "x" if status == "done" else " "
             prio = f"`{item['priority']}`" if status != "done" else ""
-            lines.append(f"- [{box}] **#{item['id']}** {item['title']} {prio}")
+            line = f"- [{box}] **#{item['id']}** {item['title']}"
+            if prio:
+                line += f" {prio}"
+            lines.append(line)
             if item.get("notes"):
                 lines.append(f"  - {item['notes']}")
         lines.append("")

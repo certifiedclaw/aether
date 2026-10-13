@@ -477,7 +477,7 @@ TOOL_DECLARATIONS = [
             "Extended utility toolkit. Use for: Wikipedia lookups, word definitions, battery status, "
             "notes (save/read/list/delete), reminders, timers, password generation, unit conversion, "
             "zip/unzip files, file hashing, file diff, find large files, word count, batch rename, "
-            "list/kill processes, list/focus windows, type text, set volume, run Python snippets, "
+            "list/kill processes, list/focus windows, type text, set volume, "
             "calculate math expressions, format/lint code, ping hosts, check ports, wifi list, "
             "local IP, play media files, generate QR codes, screenshot region, translate text, "
             "read/write clipboard, get current datetime, random facts."
@@ -492,7 +492,7 @@ TOOL_DECLARATIONS = [
                         "remind_me|list_reminders|cancel_reminder|timer|password|convert_units|"
                         "zip|unzip|hash_file|diff|large_files|word_count|batch_rename|"
                         "list_processes|kill_process|list_windows|focus_window|auto_type|set_volume|"
-                        "run_python|calculate|format_json|lint|ping|check_port|wifi_list|local_ip|"
+                        "calculate|format_json|lint|ping|check_port|wifi_list|local_ip|"
                         "play_file|qr_code|screenshot_region|translate|clipboard_read|clipboard_write|"
                         "datetime|random_fact"
                     )

@@ -39,23 +39,30 @@ def test_strictest_ordering_and_invalid_values_fail_closed():
 def test_unknown_tool_and_unlisted_action_mean_ask():
     assert risk.tier_for("brand_new_tool", "x") == ASK
     assert risk.tier_for("file_controller", "format_c_drive") == ASK     # no "*" default
-    assert risk.tier_for("code_helper", "write") == SAFE                 # "*" default
+    assert risk.tier_for("code_helper", "write") == ASK
     assert risk.tier_for("send_message", "") == ASK
-    assert risk.tier_for("  EXTRA_tool".strip(), " Run_Python ") in (ASK,)  # case/space-insensitive action
-    assert risk.tier_for("extra_tool", " Run_Python ") == ASK
+    assert risk.tier_for("  EXTRA_tool".strip(), " Run_Python ") == ASK
+    assert risk.tier_for("extra_tool", " Run_Python ") == BLOCK
 
 
 @pytest.mark.parametrize("tool,action,expected", [
-    ("extra_tool", "run_python", ASK), ("extra_tool", "kill_process", ASK),
+    ("extra_tool", "run_python", BLOCK), ("extra_tool", "kill_process", ASK),
     ("extra_tool", "calculate", SAFE),
-    ("file_processor", "run", ASK), ("file_processor", "describe the picture", MONITOR),
+    ("file_processor", "run", ASK), ("file_processor", "extract", MONITOR),
+    ("file_processor", "describe the picture", MONITOR),
     ("memory_tool", "prune", ASK), ("memory_tool", "import", ASK), ("memory_tool", "stats", SAFE),
     ("send_message", "", ASK), ("file_controller", "delete", MONITOR),
+    ("file_controller", "organize_desktop", ASK),
     ("file_controller", "list", SAFE), ("computer_control", "click", TASK),
     ("computer_control", "screenshot", SAFE), ("browser_control", "fill_form", TASK),
     ("browser_control", "go_to", MONITOR), ("browser_control", "get_text", SAFE),
     ("computer_settings", "shutdown", ASK), ("desktop_control", "task", ASK),
+    ("desktop_control", "wallpaper", ASK), ("desktop_control", "wallpaper_url", ASK),
+    ("desktop_control", "organize", ASK), ("desktop_control", "clean", ASK),
     ("dev_agent", "", ASK), ("code_helper", "build", ASK),
+    ("code_helper", "write", ASK), ("code_helper", "edit", ASK),
+    ("code_helper", "optimize", ASK), ("code_helper", "screen_debug", ASK),
+    ("extra_tool", "unzip", ASK),
 ])
 def test_table_values(tool, action, expected):
     assert risk.tier_for(tool, action) == expected
@@ -69,7 +76,7 @@ def test_overrides_tighten_but_never_loosen(monkeypatch):
     assert risk.tier_for("computer_control", "type") == TASK            # untouched
     assert risk.tier_for("web_search", "") == BLOCK
     assert risk.tier_for("send_message", "") == ASK                     # cannot loosen
-    assert risk.tier_for("extra_tool", "run_python") == ASK             # cannot loosen
+    assert risk.tier_for("extra_tool", "run_python") == BLOCK           # cannot loosen
     monkeypatch.setattr(risk, "_overrides", lambda: {"web_search": "bogus"})
     assert risk.tier_for("web_search", "") == ASK                       # invalid override -> ask
 
@@ -216,22 +223,82 @@ def test_file_processor_run_does_not_execute_without_approval(ui, tmp_path):
     assert "evil.py" in ui.asked[-1][1]                                  # dialog names the file
 
 
-def test_extra_tool_run_python_does_not_execute_without_approval(ui, tmp_path):
+def test_file_processor_extract_requires_approval(ui, tmp_path):
+    import zipfile
+    import actions.file_processor as fp
+    archive = tmp_path / "bundle.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("notes.txt", "ordinary")
+    destination = tmp_path / "extracted"
+
+    ui.answer = False
+    out = fp.file_processor({"file_path": str(archive), "action": "extract",
+                             "destination": str(destination)})
+    assert out.startswith("Cancelled") and not destination.exists()
+    assert ui.asked[-1][0] == "extract archive"
+
+    ui.answer = True
+    out = fp.file_processor({"file_path": str(archive), "action": "extract",
+                             "destination": str(destination)})
+    assert "Extracted to" in out
+    assert (destination / "notes.txt").read_text(encoding="utf-8") == "ordinary"
+
+
+def test_json_extract_remains_analysis_without_archive_confirmation(ui, monkeypatch, tmp_path):
+    import actions.file_processor as fp
+    class Result:
+        text = "JSON fields summarized"
+    class Model:
+        def generate_content(self, prompt):
+            return Result()
+    source = tmp_path / "data.json"
+    source.write_text('{"name":"Aether"}', encoding="utf-8")
+    monkeypatch.setattr(fp, "_gemini_client", lambda: Model())
+
+    result = fp.file_processor({"file_path": str(source), "action": "extract"})
+
+    assert result == "JSON fields summarized"
+    assert ui.asked == []
+
+
+def test_extra_tool_run_python_is_blocked_before_approval_or_execution(ui, tmp_path):
     import actions.extra_tools as et
     marker = tmp_path / "RAN2.txt"
     code = f"open(r'{marker}','w').write('x')"
     ui.answer = False
     out = et.run_extra_tool("run_python", {"action": "run_python", "code": code})
-    assert out.startswith("Cancelled") and not marker.exists()
+    assert "disabled" in out.lower() and not marker.exists()
+    assert ui.asked == []
     ui.answer = True
-    et.run_extra_tool("run_python", {"action": "run_python", "code": code})
-    assert marker.exists()
+    out = et.run_extra_tool("run_python", {"action": "run_python", "code": code})
+    assert "disabled" in out.lower() and not marker.exists()
+    assert ui.asked == []
+
+
+def test_oversized_python_is_rejected_before_approval_or_execution(ui, monkeypatch):
+    import actions.extra_tools as et
+    monkeypatch.setattr(et, "run_python", lambda *a, **k: pytest.fail("must not execute"))
+    out = et.run_extra_tool("run_python", {"action": "run_python", "code": "x" * 4001})
+    assert out == "Code too long or invalid (maximum 4000 characters)."
+    assert ui.asked == []
 
 
 def test_extra_tool_harmless_actions_do_not_ask(ui):
     import actions.extra_tools as et
     assert "4" in et.run_extra_tool("calculate", {"action": "calculate", "expression": "2+2"})
     assert ui.asked == []
+
+
+def test_file_controller_organize_desktop_requires_approval(ui, monkeypatch):
+    import actions.file_controller as fc
+    called = []
+    monkeypatch.setattr(fc, "organize_desktop", lambda: called.append(True) or "organized")
+    ui.answer = False
+    assert fc.file_controller({"action": "organize_desktop"}).startswith("Cancelled")
+    assert called == []
+    ui.answer = True
+    assert fc.file_controller({"action": "organize_desktop"}) == "organized"
+    assert called == [True]
 
 
 def test_send_message_denied_never_reaches_the_sender(ui, monkeypatch):
@@ -257,7 +324,8 @@ def test_agent_executor_path_is_gated_too(ui, tmp_path):
     from agent import executor
     ui.answer = False
     out = executor._call_tool("extra_tool", {"action": "run_python", "code": "print(1)"}, None)
-    assert "Cancelled" in out
+    assert "disabled" in out.lower()
+    assert ui.asked == []
 
 
 # ── the table must cover every action a tool really implements ───────────────

@@ -2,7 +2,157 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-12 21:58 UTC
+Generated: 2026-10-13 02:09 UTC
+
+## #66 — 2026-10-13 02:09 UTC — Codex CLI
+
+Hardened residual retry, plugin-trust, arbitrary-code, and stream-cancellation risks. Full suite: 659 passed, 2 skipped, 1 third-party warning.
+
+**Touched:** `core/llm_client.py`, `tests/test_invariants.py`, `tests/test_stream_cancellation.py`, `core/plugins.py`, `memory/config_manager.py`, `config/api_keys.example.json`, `config/config.example.json`, `docs/PLUGIN_SECURITY.md`, `readme.md`, `actions/extra_tools.py`, `core/risk.py`, `core/tool_declarations.py`, `tests/test_plugin_trust.py`, `tests/test_all_critical.py`, `tests/test_risk.py`, `tests/test_v12g_fixes.py`, `ROADMAP.md`
+
+**Next steps:** Keep run_python disabled until OS-enforced isolation is implemented and tested; retry the upstream dependency lookup separately.
+
+---
+
+## #65 — 2026-10-13 01:44 UTC — Codex
+
+Audit fixes: preserve malformed or unsupported chat-history files before recovery; remove trailing spaces from completed roadmap entries. Added regression tests; full suite: 658 passed, 2 skipped. Corrected completed dashboard binding roadmap item and refreshed project/dependency reports.
+
+**Touched:** `core/chat_history.py`, `tests/test_chat_history.py`, `tools/maintenance/roadmap.py`, `tests/test_apply_roadmap.py`, `ROADMAP.md`, `MAINTENANCE.md`, `PROJECT_STATE.md`, `HEALTH_REPORT.md`, `DEPENDENCY_REPORT.md`
+
+**Next steps:** Review remaining gaps: Gemini HTTP 429 retry behavior (roadmap #26), plugin trust boundary (#36), and cancellation during stalled streaming reads.
+
+---
+
+## #64 — 2026-10-13 01:39 UTC — Codex
+
+Preserve malformed or unsupported saved chat-history files as unique .corrupt-* backups before creating a fresh store; add regression coverage for malformed JSON and unsupported schema versions. Full suite: 658 passed, 2 skipped.
+
+**Touched:** `core/chat_history.py`, `tests/test_chat_history.py`
+
+**Next steps:** Review Gemini HTTP 429 retry behavior (roadmap #26), plugin trust boundaries (#36), and cancellation during stalled streaming reads.
+
+---
+
+## #63 — 2026-10-13 01:02 UTC — Codex
+
+Add local /searchchats command to search saved conversation user and assistant messages, with bounded results and snippets.
+
+**Touched:** `core/chat_commands.py`, `tests/test_chat_commands.py`
+
+**Next steps:** Continue broad chat improvements; next candidates are safe edit/regenerate UX and file-aware conversations.
+
+---
+
+## #62 — 2026-10-13 00:49 UTC — Codex
+
+Add a Stop control that cancels active Ollama/OpenAI-compatible streams at the next received chunk, interrupts queued speech, preserves partial text as an explicitly stopped reply, and prevents subsequent tool rounds. Focused checks: 148 passed; full suite: 654 passed, 2 skipped, one unrelated timeout assertion failed in full run and passed in isolation.
+
+**Touched:** `ui.py`, `main.py`, `core/llm_client.py`, `core/conversation_core.py`, `tests/test_stream_cancellation.py`, `tests/test_all_critical.py`
+
+**Next steps:** Improve cancellation during a stalled network read if the HTTP client supports safe response closure; next chat feature is regenerate/edit prompt, then richer file-aware chat.
+
+---
+
+## #61 — 2026-10-13 00:43 UTC — Codex
+
+Add up to 30 persisted, auto-titled chat sessions with selector and New button/hotkey; add switch, rename, list, delete and legacy migration; isolate short-term memory on chat changes. Full suite 653 passed, 2 skipped.
+
+**Touched:** `ui.py`, `main.py`, `core/chat_history.py`, `core/chat_commands.py`, `core/conversation_core.py`, `tests/test_chat_history.py`, `tests/test_chat_commands.py`, `tests/test_all_critical.py`
+
+**Next steps:** Continue chat-first work with stop/regenerate controls and richer file-aware chats; profile first-token and total model latency with a configured model only when credentials are user-provided.
+
+---
+
+## #60 — 2026-10-13 00:43 UTC — Codex
+
+Add up to 30 persisted, auto-titled chat sessions with selector and New button/hotkey; add switch, rename, list, and delete commands, migrate the prior single transcript format, and clear short-term memory on chat changes.
+
+**Touched:** `ui.py`, `main.py`, `core/chat_history.py`, `core/chat_commands.py`, `core/conversation_core.py`, `tests/test_chat_history.py`, `tests/test_chat_commands.py`, `tests/test_all_critical.py`
+
+**Next steps:** Continue chat-first work with stop/regenerate controls and better file-aware conversations; separately profile first-token and total model latency using a configured model without assuming credentials.
+
+---
+
+## #59 — 2026-10-13 00:32 UTC — Codex
+
+Persist the latest chat transcript locally across launches with bounded, atomic JSON storage and restore it into the chat log; add coverage for tool turns, corruption, and size limits.
+
+**Touched:** `main.py`, `core/conversation_core.py`, `core/chat_history.py`, `tests/test_chat_history.py`
+
+**Next steps:** Continue ChatGPT-style improvements with multiple named conversations and richer file-aware chat; profile model latency and test a real provider only with explicit user credentials.
+
+---
+
+## #58 — 2026-10-13 00:30 UTC — Codex
+
+Render assistant and user chat entries as safe GitHub-style Markdown, preserving immediate display and styling code blocks; add UI regression coverage.
+
+**Touched:** `ui.py`, `tests/test_all_critical.py`
+
+**Next steps:** Continue product improvements with persistent conversation management and cancellation/regeneration; profile model/network wait separately from UI rendering.
+
+---
+
+## #57 — 2026-10-13 00:25 UTC — Codex
+
+Removed the chat log's 6 ms-per-character typewriter animation. LogWidget now inserts each colored message in one operation, eliminating multi-second visual reveal delays for long replies; added a Qt regression asserting an entire long message appears immediately. Targeted UI test passed; py_compile and diff check passed. Updated performance notes to mark ui.py partially audited. Earlier OpenAI API feature is already pushed in eff5488.
+
+**Touched:** `ui.py`, `tests/test_all_critical.py`, `PERFORMANCE_NOTES.md`, `docs/PERFORMANCE_NOTES.md`
+
+**Next steps:** Continue building chat-first features: conversation persistence/session list, markdown/code rendering, stop/regenerate controls, and latency profiling with a real configured model. Qt UI test passed in this run; continue real UI checks before broad UI claims.
+
+---
+
+## #56 — 2026-10-13 00:22 UTC — Codex
+
+Started the ChatGPT-replacement work by adding an optional authenticated OpenAI API backend (distinct from local OpenAI-compatible servers), settings controls with explicit separate-billing disclosure, keyring/environment/file secret resolution, tool-call streaming, bounded completion tokens, and the larger hosted history budget. Added mocked streaming/non-streaming API and keyring tests and refreshed performance notes. Validation: full pytest tests suite 644 passed, 2 skipped, 1 third-party warning; py_compile, example JSON parse, and diff check passed. Qt setup interaction test skipped because no usable Qt platform plugin in this environment. No live OpenAI request made.
+
+**Touched:** `ui.py`, `core/llm_client.py`, `core/credentials.py`, `core/conversation_core.py`, `config/config.example.json`, `tests/test_openai_api.py`, `tests/test_credentials.py`, `tests/test_all_critical.py`, `tests/test_invariants.py`, `PERFORMANCE_NOTES.md`, `docs/PERFORMANCE_NOTES.md`
+
+**Next steps:** Continue the ChatGPT-replacement roadmap: add conversation list/history persistence and stop/regenerate UX; profile first-token and total latency with a real configured model; exercise the OpenAI API in the GUI only if the user supplies a key. Do not assume an API key is configured or use it without user setup.
+
+---
+
+## #55 — 2026-10-13 00:05 UTC — Codex
+
+Continued general improvements on codex/security-audit-fixes. Fixed desktop wallpaper command handling to enforce timeouts and report subprocess/Windows API failures; added regression tests. Tests: desktop sandbox 46 passed, desktop timeout and requirement checker 18 passed; py_compile and diff check passed. Pushed commits 37b618a and a449e40. Synced roadmap #27/#28 to done after confirming existing timeout and dependency checks with tests.
+
+**Touched:** `actions/desktop.py`, `tests/test_desktop_sandbox.py`, `ROADMAP.md`, `tools/maintenance/data/roadmap.json`
+
+**Next steps:** Continue with another concrete general improvement; roadmap #26 still lacks explicit HTTP 429 retry, #31 dependency report upstream lookups should be debugged, and avoid broad plugin trust-model work without compatibility decisions.
+
+---
+
+## #54 — 2026-10-12 23:42 UTC — Codex
+
+Secured file_processor archive extraction: require per-extraction approval without changing JSON extract analysis policy; preflight ZIP/tar members for traversal, Windows trailing-dot/space aliases, protected paths and the configured plugin directory; reject ZIP links/special types and all tar links/special members; preserve tar file/directory modes. Added extraction authorization, safe ZIP/tar, alias, protected-path, plugin, traversal, and tar-link/mode regression tests. Focused tests: 84 passed, 1 skipped; py_compile and diff check passed.
+
+**Touched:** `actions/file_processor.py`, `core/risk.py`, `tests/test_protected_paths.py`, `tests/test_risk.py`
+
+**Next steps:** Continue the next independently verified fix; keep plugin trust-model changes and release-archive packaging policy bounded by their explicit compatibility decisions.
+
+---
+
+## #53 — 2026-10-12 23:30 UTC — Codex
+
+Gated agent executor's model-generated Python at the shared execution helper: require confirmation with the exact complete normalized code, block scripts over the 4000-character review limit, and stop the task explicitly on denial instead of reporting success. Added regressions for direct and unknown-tool fallback routes, approval/denial, oversized code, and terminal cancellation. Focused checks: 143 passed. Broader test_all_critical.py: 79 passed, 6 unrelated file_controller undo tests failed.
+
+**Touched:** `agent/executor.py`, `tests/test_execution_gates.py`
+
+**Next steps:** Continue with another concrete confirmed finding; preserve this commit boundary. Reassess plugin trust and full-folder release packaging only if their compatibility/workflow boundaries are source-verified.
+
+---
+
+## #52 — 2026-10-12 23:13 UTC — Codex
+
+Pushed six focused security fixes: code-helper write approvals and protected paths, Python approval-size limit, dotenv protection, archive source/extraction guards, and dashboard loopback/TLS binding. Combined regression checks passed 84 tests with 1 skipped; three unrelated subprocess tests were blocked by sandbox temp permissions.
+
+**Touched:** `actions/code_helper.py`, `actions/extra_tools.py`, `core/risk.py`, `core/protected_paths.py`, `dashboard/server.py`, `tests/test_execution_gates.py`, `tests/test_risk.py`, `tests/test_protected_paths.py`, `tests/test_v12g_fixes.py`, `tests/test_dashboard_security.py`
+
+**Next steps:** Review and merge the pushed codex/security-audit-fixes branch; continue remaining security audit findings and verify GUI/network behavior on the target Windows install.
+
+---
 
 ## #51 — 2026-10-12 21:58 UTC — Claude Code
 

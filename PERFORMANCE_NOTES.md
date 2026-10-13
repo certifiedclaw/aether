@@ -36,8 +36,9 @@ When auditing a new module, search it for: `.build(`, `for .* in os.walk`, `whil
 | Module | Status | Notes |
 |---|---|---|
 | `core/llm_client.py` | ✅ Fixed | `_load_config()` was re-reading disk every call; now cached + mtime-invalidated. `num_ctx` was never actually sent to Ollama — fixed. |
+| `core/conversation_core.py` | ◐ Partial | Hosted Gemini/OpenAI API turns now use the larger cloud history budget instead of the local-model budget; full turn-processing path still needs live-model profiling. |
 | `main.py` | ✅ Fixed (partial) | Self-evaluator backgrounded off the UI return path. Cancel-phrase busy-guard was blocking cancel commands — fixed. `/selftest` handler now uses `run_self_test_async` instead of blocking the chat command loop. |
-| `ui.py` | ✅ Audited | Typewriter-effect timer, GPU metrics polling, and orb rendering passed a full perf audit. |
+| `ui.py` | ◐ Partial | Removed the 6 ms/character chat-log animation so complete messages display immediately; GPU metrics and orb rendering still need profiling under real UI load. |
 | `self_test.py` | ✅ Rewritten | Per-test timeouts, concurrent stateless tests, real memory-DB path resolution + round-trip proof instead of a row count, new config/GPU/disk checks, non-blocking `run_self_test_async`. |
 | `memory/hybrid_memory.py` | ✅ Fixed | `store()` was doing a full BM25 rebuild (re-tokenizing every stored memory) on every call — added `BM25Index.add_doc()` for true incremental updates. Verified score-identical to a full rebuild. |
 | `memory/rag.py` | ✅ Fixed | `index_directory()` rebuilt + re-embedded + saved the whole index after every single file — now chunks everything first, rebuilds/embeds/saves once. Verified via call-count test (3 files → 1 rebuild, was 3). |

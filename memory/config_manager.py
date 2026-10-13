@@ -61,6 +61,7 @@ class _MarkConfigAdapter:
         "rag.chunk_overlap":           50,
         "rag.top_k":                   5,
         "plugins.plugin_dir":          "./plugins",
+        "plugins.trusted_hashes":      {},
         "hotkey.toggle":               "ctrl+alt+j",
         "safety.allowed_paths":        ["~", "."],
         "safety.confirm_on":           ["delete", "shell", "write_file"],
