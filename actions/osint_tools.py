@@ -20,6 +20,7 @@ docstring's notice and that schema text in sync if either changes.
 """
 from __future__ import annotations
 
+import http.client
 import ipaddress
 import json
 import logging
@@ -41,6 +42,65 @@ logger = logging.getLogger(__name__)
 _S = requests.Session()
 _S.headers.update({"User-Agent": "Mozilla/5.0 Aether-OSINT/3.0"})
 _TIMEOUT = 8
+
+
+def _resolve_public_addresses(hostname: str):
+    hostname = hostname.strip().rstrip(".")
+    if not hostname:
+        return [], "A hostname is required."
+
+    try:
+        addresses = [ipaddress.ip_address(hostname)]
+    except ValueError:
+        try:
+            results = socket.getaddrinfo(hostname, None, type=socket.SOCK_STREAM)
+        except OSError:
+            return [], "The hostname could not be resolved."
+        addresses = []
+        for result in results:
+            try:
+                addresses.append(ipaddress.ip_address(result[4][0].split("%", 1)[0]))
+            except (IndexError, TypeError, ValueError):
+                return [], "The hostname resolved to an invalid address."
+
+    unique_addresses = list({str(address): address for address in addresses}.values())
+    if not unique_addresses:
+        return [], "The hostname has no addresses."
+    if any(not address.is_global for address in unique_addresses):
+        return [], "The hostname resolves to a non-public address."
+    return unique_addresses, None
+
+
+class _PinnedHTTPConnection(http.client.HTTPConnection):
+    def __init__(self, host: str, port: int, address: str, timeout: float):
+        super().__init__(host, port, timeout=timeout)
+        self._address = address
+
+    def connect(self):
+        self.sock = socket.create_connection(
+            (self._address, self.port), self.timeout, self.source_address
+        )
+
+
+class _PinnedHTTPSConnection(http.client.HTTPSConnection):
+    def __init__(self, host: str, port: int, address: str, timeout: float):
+        super().__init__(
+            host,
+            port,
+            timeout=timeout,
+            context=ssl.create_default_context(),
+        )
+        self._address = address
+
+    def connect(self):
+        sock = socket.create_connection(
+            (self._address, self.port), self.timeout, self.source_address
+        )
+        if self._tunnel_host:
+            self.sock = sock
+            self._tunnel()
+            sock = self.sock
+        self.sock = self._context.wrap_socket(sock, server_hostname=self.host)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -402,11 +462,41 @@ def subdomain_enum(domain: str, max_results: int = 100) -> str:
 
 def ssl_cert_info(domain: str, port: int = 443) -> str:
     """Retrieve and display SSL certificate information for a domain."""
+    hostname = domain.strip().rstrip(".")
+    try:
+        port = int(port)
+    except (TypeError, ValueError):
+        return "SSL cert error: port must be an integer between 1 and 65535."
+    if not 1 <= port <= 65535:
+        return "SSL cert error: port must be an integer between 1 and 65535."
+    try:
+        try:
+            ipaddress.ip_address(hostname)
+            ascii_hostname = hostname
+        except ValueError:
+            ascii_hostname = hostname.encode("idna").decode("ascii")
+    except UnicodeError:
+        return "SSL cert error: invalid hostname."
+    addresses, validation_error = _resolve_public_addresses(ascii_hostname)
+    if validation_error:
+        return f"SSL cert lookup blocked: {validation_error}"
+
     try:
         ctx = ssl.create_default_context()
-        with socket.create_connection((domain, port), timeout=8) as sock:
-            with ctx.wrap_socket(sock, server_hostname=domain) as ssock:
-                cert = ssock.getpeercert()
+        cert = None
+        connection_error = None
+        for address in addresses:
+            try:
+                with socket.create_connection((str(address), port), timeout=8) as sock:
+                    with ctx.wrap_socket(sock, server_hostname=ascii_hostname) as ssock:
+                        cert = ssock.getpeercert()
+                break
+            except ssl.SSLCertVerificationError:
+                raise
+            except OSError as e:
+                connection_error = e
+        if cert is None:
+            raise connection_error or OSError("No certificate was returned.")
 
         subject  = dict(x[0] for x in cert.get("subject", []))
         issuer   = dict(x[0] for x in cert.get("issuer", []))
@@ -414,7 +504,7 @@ def ssl_cert_info(domain: str, port: int = 443) -> str:
         not_after = cert.get("notAfter", "?")
         not_before = cert.get("notBefore", "?")
 
-        lines = [f"SSL Certificate: {domain}:{port}", ""]
+        lines = [f"SSL Certificate: {hostname}:{port}", ""]
         lines.append(f"  Subject CN:    {subject.get('commonName','?')}")
         lines.append(f"  Issuer:        {issuer.get('organizationName','?')}")
         lines.append(f"  Valid from:    {not_before}")
@@ -423,7 +513,7 @@ def ssl_cert_info(domain: str, port: int = 443) -> str:
             lines.append(f"  Alt names ({len(san)}):  {', '.join(san[:8])}")
             if len(san) > 8:
                 lines.append(f"               … {len(san)-8} more")
-        lines.append(f"\n  crt.sh history: https://crt.sh/?q={domain}")
+        lines.append(f"\n  crt.sh history: https://crt.sh/?q={hostname}")
         return "\n".join(lines)
     except ssl.SSLCertVerificationError as e:
         return f"⚠️ SSL certificate invalid: {e}"
@@ -476,15 +566,80 @@ def tech_stack(domain: str) -> str:
     Detect technologies used on a website using HTTP headers and HTML patterns.
     Inspired by Wappalyzer techniques.
     """
-    url = f"https://{domain}" if not domain.startswith("http") else domain
+    raw_target = str(domain).strip()
+    candidate = raw_target if "://" in raw_target else f"https://{raw_target}"
+    if any(ord(character) < 32 or ord(character) == 127 for character in candidate):
+        return "Tech stack lookup blocked: URL contains control characters."
     try:
-        r = _S.get(url, timeout=10, allow_redirects=True)
-    except Exception as e:
-        return f"Tech stack error: {e}"
+        parsed = urllib.parse.urlsplit(candidate)
+        scheme = parsed.scheme.lower()
+        hostname = parsed.hostname
+        explicit_port = parsed.port
+        port = explicit_port if explicit_port is not None else (443 if scheme == "https" else 80)
+    except ValueError:
+        return "Tech stack lookup blocked: invalid URL or port."
+    if scheme not in {"http", "https"} or not hostname:
+        return "Tech stack lookup blocked: use an HTTP or HTTPS hostname."
+    if parsed.username is not None or parsed.password is not None:
+        return "Tech stack lookup blocked: URLs containing credentials are not allowed."
+    if not 1 <= port <= 65535:
+        return "Tech stack lookup blocked: port must be between 1 and 65535."
+    hostname = hostname.rstrip(".")
+    try:
+        try:
+            ipaddress.ip_address(hostname)
+            ascii_hostname = hostname
+        except ValueError:
+            ascii_hostname = hostname.encode("idna").decode("ascii")
+    except UnicodeError:
+        return "Tech stack lookup blocked: invalid hostname."
 
-    headers  = {k.lower(): v for k, v in r.headers.items()}
-    body     = r.text[:30000].lower()
-    detected = {}
+    addresses, validation_error = _resolve_public_addresses(ascii_hostname)
+    if validation_error:
+        return f"Tech stack lookup blocked: {validation_error}"
+
+    path = parsed.path or "/"
+    if parsed.query:
+        path += f"?{parsed.query}"
+    host_header = f"[{ascii_hostname}]" if ":" in ascii_hostname else ascii_hostname
+    if explicit_port is not None:
+        host_header += f":{port}"
+
+    headers = {}
+    body = ""
+    status_code = None
+    last_error = None
+    connection_type = _PinnedHTTPSConnection if scheme == "https" else _PinnedHTTPConnection
+    for address in addresses:
+        connection = connection_type(ascii_hostname, port, str(address), timeout=10)
+        try:
+            connection.request(
+                "GET",
+                path,
+                headers={
+                    "Host": host_header,
+                    "User-Agent": _S.headers.get("User-Agent", "Aether-OSINT/3.0"),
+                    "Accept-Encoding": "identity",
+                },
+            )
+            response = connection.getresponse()
+            status_code = response.status
+            headers = {key.lower(): value for key, value in response.getheaders()}
+            body = response.read(30000).decode("utf-8", errors="replace").lower()
+            break
+        except (OSError, http.client.HTTPException, ssl.SSLError) as e:
+            last_error = e
+        finally:
+            connection.close()
+
+    if status_code is None:
+        return f"Tech stack error: {last_error or 'could not connect to the public host.'}"
+    if 300 <= status_code < 400:
+        return f"Tech stack lookup stopped at HTTP {status_code}; redirects are not followed."
+    if not 200 <= status_code < 300:
+        return f"Tech stack lookup returned HTTP {status_code}; no technology report generated."
+
+    cookies = headers.get("set-cookie", "").lower()
 
     checks = {
         # Server
@@ -506,7 +661,7 @@ def tech_stack(domain: str) -> str:
         "PHP":           ".php" in body or "x-powered-by" in headers.get("x-powered-by","").lower() and "php" in headers.get("x-powered-by","").lower(),
         # Analytics
         "Google Analytics": "google-analytics.com" in body or "gtag" in body,
-        "Cloudflare":    "__cfduid" in r.cookies or "cloudflare" in headers.get("server","").lower(),
+        "Cloudflare":    "__cfduid" in cookies or "cloudflare" in headers.get("server","").lower(),
         "Nginx":         "nginx" in headers.get("server","").lower(),
         "Apache":        "apache" in headers.get("server","").lower(),
         "IIS":           "iis" in headers.get("server","").lower() or "asp.net" in headers.get("x-powered-by","").lower(),
@@ -525,14 +680,14 @@ def tech_stack(domain: str) -> str:
         elif isinstance(val, str) and val:
             found.append(f"{tech}: {val[:60]}")
 
-    lines = [f"Tech stack: {domain}", ""]
+    lines = [f"Tech stack: {hostname}", ""]
     if found:
         for item in found:
             lines.append(f"  🔧 {item}")
     else:
         lines.append("  No common technologies detected.")
-    lines.append(f"\n  Full analysis: https://www.wappalyzer.com/lookup/{domain}")
-    lines.append(f"  BuiltWith:     https://builtwith.com/{domain}")
+    lines.append(f"\n  Full analysis: https://www.wappalyzer.com/lookup/{hostname}")
+    lines.append(f"  BuiltWith:     https://builtwith.com/{hostname}")
     return "\n".join(lines)
 
 

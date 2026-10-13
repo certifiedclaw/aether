@@ -1,5 +1,5 @@
 {
-  "next_id": 67,
+  "next_id": 69,
   "entries": [
     {
       "id": 1,
@@ -901,6 +901,30 @@
         "ROADMAP.md"
       ],
       "next_steps": "Keep run_python disabled until OS-enforced isolation is implemented and tested; retry the upstream dependency lookup separately."
+    },
+    {
+      "id": 67,
+      "timestamp": "2026-10-13 02:40 UTC",
+      "by": "Codex",
+      "summary": "Pin OSINT web and TLS lookups to validated public IPs, block private destinations and redirects, bound page reads, and add regression tests.",
+      "files": [
+        "actions/osint_tools.py",
+        "tests/test_osint_tools.py"
+      ],
+      "next_steps": "Consider whether OSINT redirects should be followed only after validating and pinning each public destination."
+    },
+    {
+      "id": 68,
+      "timestamp": "2026-10-13 03:29 UTC",
+      "by": "Codex",
+      "summary": "Verified and pushed OSINT destination-pinning protections with regression coverage.",
+      "files": [
+        "actions/osint_tools.py",
+        "tests/test_osint_tools.py",
+        "tools/maintenance/data/handoff.json",
+        "HANDOFF.md"
+      ],
+      "next_steps": "Keep redirects disabled unless each destination is independently validated and pinned."
     }
   ]
 }

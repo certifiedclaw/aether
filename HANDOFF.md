@@ -2,7 +2,27 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-13 02:09 UTC
+Generated: 2026-10-13 03:29 UTC
+
+## #68 — 2026-10-13 03:29 UTC — Codex
+
+Verified and pushed OSINT destination-pinning protections with regression coverage.
+
+**Touched:** `actions/osint_tools.py`, `tests/test_osint_tools.py`, `tools/maintenance/data/handoff.json`, `HANDOFF.md`
+
+**Next steps:** Keep redirects disabled unless each destination is independently validated and pinned.
+
+---
+
+## #67 — 2026-10-13 02:40 UTC — Codex
+
+Pin OSINT web and TLS lookups to validated public IPs, block private destinations and redirects, bound page reads, and add regression tests.
+
+**Touched:** `actions/osint_tools.py`, `tests/test_osint_tools.py`
+
+**Next steps:** Consider whether OSINT redirects should be followed only after validating and pinning each public destination.
+
+---
 
 ## #66 — 2026-10-13 02:09 UTC — Codex CLI
 
