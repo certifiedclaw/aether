@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap add/start/done`.
 
-Generated: 2026-10-12 21:59 UTC
+Generated: 2026-10-13 00:05 UTC
 
 ## In progress
 
@@ -17,10 +17,6 @@ Generated: 2026-10-12 21:59 UTC
   - Raised by an external audit of the v12 tree. core/plugins.py exec_module's every plugins/*.py; file_controller now refuses the install folder, so the model cannot drop one in, but nothing else vets them.
 - [ ] **#26** Retry once (about 1s backoff) on Gemini 503/429 before falling back to local `medium`
   - Seen in two consecutive verify runs; local HARD fallback costs 2-4s more.
-- [ ] **#27** Execution timeout for AI-generated desktop code `medium`
-  - exec() cannot be killed in-process; approved code with an infinite loop hangs its thread. Run in a worker with a deadline.
-- [ ] **#28** verify_local.py: flag packages declared in requirements.txt but not installed `medium`
-  - watchdog and keyboard were missing for several runs, disabling plugin hot-reload and the ctrl+alt+j hotkey without any verify warning.
 - [ ] **#37** run_python is not a sandbox: decide keep (ASK + full-code dialog + scrubbed env, as of v12g) or replace with a real isolation layer `medium`
   - v12g: same interpreter, -I, scratch cwd, secret env stripped, timeout clamped 1-60s, dialog shows whole code. Still runs as the user.
 - [ ] **#38** Dashboard still binds 0.0.0.0 over plain HTTP by default; add LAN-only/bind option and prefer HTTPS `medium`
@@ -81,6 +77,10 @@ Generated: 2026-10-12 21:59 UTC
   - 4 of 7 failed prompts showed raw <tool_call>{...}</tool_call> instead of acting. Touches streaming path and makes model text executable, so get explicit go-ahead; check ollama --version first. See handoff #37.
 - [x] **#23** actions/desktop.py exec() sandbox is escapable and runs model-written code without a confirmation 
   - safe_builtins exposes getattr and the sandbox passes Path/time objects, so getattr(Path.__init__,'__globals__') reaches os/sys; Windows also exposes ctypes. Needs a design decision: confirmation via core/safety, or a real allowlist DSL instead of exec. See handoff #39.
+- [x] **#27** Execution timeout for AI-generated desktop code 
+  - exec() cannot be killed in-process; approved code with an infinite loop hangs its thread. Run in a worker with a deadline.
+- [x] **#28** verify_local.py: flag packages declared in requirements.txt but not installed 
+  - watchdog and keyboard were missing for several runs, disabling plugin hot-reload and the ctrl+alt+j hotkey without any verify warning.
 - [x] **#33** Dashboard: replace AES-CBC (no MAC, key = SHA-256 of the 6-char session code) with AES-GCM and a random per-session key 
   - dashboard/server.py _aes_key/decrypt: anyone who captures one ciphertext can brute-force the ~30-bit code offline in seconds, and CBC without a MAC is malleable. Needs a matching change in the CryptoJS client in dashboard/static, so it must be tested with a real phone/browser. Over plain HTTP (no config/certs) the traffic is also sniffable.
 - [x] **#34** Dashboard: rate-limit the one-time connect key and bind to the LAN interface only 

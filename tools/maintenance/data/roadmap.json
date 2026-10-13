@@ -239,19 +239,19 @@
       "id": 27,
       "title": "Execution timeout for AI-generated desktop code",
       "priority": "medium",
-      "status": "backlog",
+      "status": "done",
       "notes": "exec() cannot be killed in-process; approved code with an infinite loop hangs its thread. Run in a worker with a deadline.",
       "created": "2026-10-07",
-      "updated": "2026-10-07"
+      "updated": "2026-10-13"
     },
     {
       "id": 28,
       "title": "verify_local.py: flag packages declared in requirements.txt but not installed",
       "priority": "medium",
-      "status": "backlog",
+      "status": "done",
       "notes": "watchdog and keyboard were missing for several runs, disabling plugin hot-reload and the ctrl+alt+j hotkey without any verify warning.",
       "created": "2026-10-07",
-      "updated": "2026-10-07"
+      "updated": "2026-10-13"
     },
     {
       "id": 29,
