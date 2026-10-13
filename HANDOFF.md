@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-13 00:22 UTC
+Generated: 2026-10-13 00:25 UTC
+
+## #57 — 2026-10-13 00:25 UTC — Codex
+
+Removed the chat log's 6 ms-per-character typewriter animation. LogWidget now inserts each colored message in one operation, eliminating multi-second visual reveal delays for long replies; added a Qt regression asserting an entire long message appears immediately. Targeted UI test passed; py_compile and diff check passed. Updated performance notes to mark ui.py partially audited. Earlier OpenAI API feature is already pushed in eff5488.
+
+**Touched:** `ui.py`, `tests/test_all_critical.py`, `PERFORMANCE_NOTES.md`, `docs/PERFORMANCE_NOTES.md`
+
+**Next steps:** Continue building chat-first features: conversation persistence/session list, markdown/code rendering, stop/regenerate controls, and latency profiling with a real configured model. Qt UI test passed in this run; continue real UI checks before broad UI claims.
+
+---
 
 ## #56 — 2026-10-13 00:22 UTC — Codex
 

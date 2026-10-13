@@ -813,6 +813,11 @@ def test_setup_overlay_refactor_preserves_behavior():
     assert len(ov.findChildren(QLineEdit)) > 0
     assert len(ov.findChildren(QComboBox)) > 0
 
+    log = ui.LogWidget()
+    entry = "Aether: " + ("response text " * 40)
+    log.append_log(entry)
+    assert log.toPlainText() == entry + "\n"
+
     # Interactivity: switching STT engine flips which input is shown.
     assert ov._vosk_model_input.isHidden() is False
     ov._stt_btns["whisper"].click()

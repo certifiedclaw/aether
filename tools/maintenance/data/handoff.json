@@ -1,5 +1,5 @@
 {
-  "next_id": 57,
+  "next_id": 58,
   "entries": [
     {
       "id": 1,
@@ -749,6 +749,19 @@
         "docs/PERFORMANCE_NOTES.md"
       ],
       "next_steps": "Continue the ChatGPT-replacement roadmap: add conversation list/history persistence and stop/regenerate UX; profile first-token and total latency with a real configured model; exercise the OpenAI API in the GUI only if the user supplies a key. Do not assume an API key is configured or use it without user setup."
+    },
+    {
+      "id": 57,
+      "timestamp": "2026-10-13 00:25 UTC",
+      "by": "Codex",
+      "summary": "Removed the chat log's 6 ms-per-character typewriter animation. LogWidget now inserts each colored message in one operation, eliminating multi-second visual reveal delays for long replies; added a Qt regression asserting an entire long message appears immediately. Targeted UI test passed; py_compile and diff check passed. Updated performance notes to mark ui.py partially audited. Earlier OpenAI API feature is already pushed in eff5488.",
+      "files": [
+        "ui.py",
+        "tests/test_all_critical.py",
+        "PERFORMANCE_NOTES.md",
+        "docs/PERFORMANCE_NOTES.md"
+      ],
+      "next_steps": "Continue building chat-first features: conversation persistence/session list, markdown/code rendering, stop/regenerate controls, and latency profiling with a real configured model. Qt UI test passed in this run; continue real UI checks before broad UI claims."
     }
   ]
 }

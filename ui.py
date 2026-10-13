@@ -21,7 +21,7 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtGui import (
     QBrush, QColor, QDragEnterEvent, QDropEvent, QFont, QFontDatabase,
-    QKeySequence, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap,
+    QKeySequence, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, QTextCharFormat,
     QRadialGradient, QShortcut,
 )
 from PyQt6.QtWidgets import (
@@ -635,64 +635,32 @@ class LogWidget(QTextEdit):
                 min-height: 20px;
             }}
         """)
-        self._queue: list[str] = []
-        self._typing  = False
-        self._text    = ""
-        self._pos     = 0
-        self._tag     = "sys"
-        self._tmr = QTimer(self)
-        self._tmr.timeout.connect(self._step)
-        self._sig.connect(self._enqueue)
+        self._sig.connect(self._append_entry)
 
     def append_log(self, text: str):
         self._sig.emit(text)
 
-    def _enqueue(self, text: str):
-        self._queue.append(text)
-        if not self._typing:
-            self._next()
-
-    def _next(self):
-        if not self._queue:
-            self._typing = False
-            return
-        self._typing = True
-        self._text   = self._queue.pop(0)
-        self._pos    = 0
-        tl = self._text.lower()
-        if   tl.startswith("you:"):    self._tag = "you"
-        elif tl.startswith("aether:"): self._tag = "ai"
-        elif tl.startswith("file:"):   self._tag = "file"
-        elif "err" in tl:              self._tag = "err"
-        else:                          self._tag = "sys"
-        self._tmr.start(6)
-
-    def _step(self):
-        if self._pos < len(self._text):
-            ch  = self._text[self._pos]
-            cur = self.textCursor()
-            fmt = cur.charFormat()
-            col = {
-                "you":  qcol(C.WHITE),
-                "ai":   qcol(C.PRI),
-                "err":  qcol(C.RED),
-                "file": qcol(C.GREEN),
-                "sys":  qcol(C.ACC2),
-            }.get(self._tag, qcol(C.TEXT))
-            fmt.setForeground(QBrush(col))
-            cur.movePosition(cur.MoveOperation.End)
-            cur.insertText(ch, fmt)
-            self.setTextCursor(cur)
-            self.ensureCursorVisible()
-            self._pos += 1
-        else:
-            self._tmr.stop()
-            cur = self.textCursor()
-            cur.movePosition(cur.MoveOperation.End)
-            cur.insertText("\n")
-            self.setTextCursor(cur)
-            self.ensureCursorVisible()
-            QTimer.singleShot(20, self._next)
+    def _append_entry(self, text: str):
+        tl = text.lower()
+        if   tl.startswith("you:"):    tag = "you"
+        elif tl.startswith("aether:"): tag = "ai"
+        elif tl.startswith("file:"):   tag = "file"
+        elif "err" in tl:              tag = "err"
+        else:                           tag = "sys"
+        color = {
+            "you":  qcol(C.WHITE),
+            "ai":   qcol(C.PRI),
+            "err":  qcol(C.RED),
+            "file": qcol(C.GREEN),
+            "sys":  qcol(C.ACC2),
+        }.get(tag, qcol(C.TEXT))
+        fmt = QTextCharFormat()
+        fmt.setForeground(QBrush(color))
+        cursor = self.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)
+        cursor.insertText(text + "\n", fmt)
+        self.setTextCursor(cursor)
+        self.ensureCursorVisible()
 
 
 class StatsBar(QWidget):
