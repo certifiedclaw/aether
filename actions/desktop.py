@@ -317,7 +317,9 @@ def set_wallpaper(image_path: str) -> str:
                     path = bmp_path
                 except ImportError:
                     pass 
-            ctypes.windll.user32.SystemParametersInfoW(20, 0, str(path), 3)
+            changed = ctypes.windll.user32.SystemParametersInfoW(20, 0, str(path), 3)
+            if not changed:
+                return "Could not set wallpaper: Windows rejected the wallpaper change."
             return f"Wallpaper set: {path.name}"
 
         elif _OS == "Darwin":

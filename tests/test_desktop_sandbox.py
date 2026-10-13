@@ -213,3 +213,16 @@ def test_wallpaper_timeout_is_reported(monkeypatch, tmp_path):
         d.subprocess.TimeoutExpired("osascript", 10)))
 
     assert d.set_wallpaper(str(image)).startswith("Could not set wallpaper:")
+
+
+def test_windows_wallpaper_api_failure_is_reported(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    import ctypes
+
+    image = tmp_path / "wallpaper.jpg"
+    image.write_bytes(b"image")
+    monkeypatch.setattr(d, "_OS", "Windows")
+    monkeypatch.setattr(ctypes, "windll", SimpleNamespace(
+        user32=SimpleNamespace(SystemParametersInfoW=lambda *args: False)), raising=False)
+
+    assert d.set_wallpaper(str(image)) == "Could not set wallpaper: Windows rejected the wallpaper change."
