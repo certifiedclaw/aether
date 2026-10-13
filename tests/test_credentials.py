@@ -185,6 +185,13 @@ def test_llm_client_uses_the_keyring_key_for_gemini_auth_and_escalation(kr, monk
     assert lc._auth_headers("ollama", dict(cfg)) == {}                  # other providers unchanged
 
 
+def test_openai_api_auth_uses_the_keyring_key(kr, monkeypatch):
+    import core.llm_client as lc
+    kr.store[("aether", "openai_api_key")] = "openai-kr-key"
+    monkeypatch.setattr(lc, "_load_config", lambda: {"openai_api_key": ""})
+    assert lc._auth_headers("openai_api") == {"Authorization": "Bearer openai-kr-key"}
+
+
 def test_llm_client_env_key_and_file_fallback(kr, monkeypatch):
     import core.llm_client as lc
     monkeypatch.setattr(lc, "_load_config", lambda: {"gemini_api_key": "file-key"})

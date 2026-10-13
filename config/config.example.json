@@ -6,7 +6,7 @@
   "ollama_url":   "http://localhost:11434",
   "llm_provider": "ollama",
 
-  "_comment_llm_provider": "Set llm_provider to 'ollama', 'openai' (for LM Studio / LocalAI / Jan / llama.cpp server), or 'gemini' (for Google AI)",
+  "_comment_llm_provider": "Set llm_provider to 'ollama', 'openai' (local OpenAI-compatible server), 'openai_api' (OpenAI API; billed separately from ChatGPT), or 'gemini' (Google AI)",
   "_comment_llm_url":      "For OpenAI-compatible: set llm_url to e.g. 'http://localhost:1234'",
   "llm_url":      "http://localhost:11434",
 
@@ -31,6 +31,7 @@
   "tts_voice":    "en-US-GuyNeural",
   "elevenlabs_api_key": "",
   "gemini_api_key": "",
+  "openai_api_key": "",
   "_comment_gemini_escalation": "Used by core/tier_router.py's HARD tier -- when the primary llm_provider above is 'ollama'/'openai' and a gemini_api_key is set, complex-reasoning turns are escalated to this Gemini model for just that turn. Falls back to 'gemini-3.8-flash' if unset. Has no effect if llm_provider is already 'gemini'.",
   "gemini_escalation_model": "gemini-3.8-flash",
   "_comment_gemini_retry": "Seconds to wait before ONE retry of a transient Gemini 500/502/503/504 before falling back to the local model. 0 disables the retry.",

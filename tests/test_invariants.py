@@ -155,7 +155,7 @@ def test_cloud_turns_get_bigger_history_budget_and_local_fallback_recompresses()
     import inspect, core.conversation_core as cc
     src = inspect.getsource(cc)
     assert cc._CLOUD_HISTORY_BUDGET >= 6000
-    assert "history_budget=(_CLOUD_HISTORY_BUDGET if _stream_kwargs else None)" in src
+    assert "_primary_provider in (\"gemini\", \"openai_api\")" in src
     # fallback to local must re-fit history to the small local window
     blk = src.split("retrying this turn on the local model")[1][:700]
     assert "compress_if_needed(" in blk and "_local_total_budget() - estimate_tool_tokens" in blk

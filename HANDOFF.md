@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-13 00:05 UTC
+Generated: 2026-10-13 00:22 UTC
+
+## #56 — 2026-10-13 00:22 UTC — Codex
+
+Started the ChatGPT-replacement work by adding an optional authenticated OpenAI API backend (distinct from local OpenAI-compatible servers), settings controls with explicit separate-billing disclosure, keyring/environment/file secret resolution, tool-call streaming, bounded completion tokens, and the larger hosted history budget. Added mocked streaming/non-streaming API and keyring tests and refreshed performance notes. Validation: full pytest tests suite 644 passed, 2 skipped, 1 third-party warning; py_compile, example JSON parse, and diff check passed. Qt setup interaction test skipped because no usable Qt platform plugin in this environment. No live OpenAI request made.
+
+**Touched:** `ui.py`, `core/llm_client.py`, `core/credentials.py`, `core/conversation_core.py`, `config/config.example.json`, `tests/test_openai_api.py`, `tests/test_credentials.py`, `tests/test_all_critical.py`, `tests/test_invariants.py`, `PERFORMANCE_NOTES.md`, `docs/PERFORMANCE_NOTES.md`
+
+**Next steps:** Continue the ChatGPT-replacement roadmap: add conversation list/history persistence and stop/regenerate UX; profile first-token and total latency with a real configured model; exercise the OpenAI API in the GUI only if the user supplies a key. Do not assume an API key is configured or use it without user setup.
+
+---
 
 ## #55 — 2026-10-13 00:05 UTC — Codex
 

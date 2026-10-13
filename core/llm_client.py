@@ -1,7 +1,8 @@
 """
 Local LLM client for Aether.
 
-Supports three backends — selected via  "llm_provider"  in config/api_keys.json:
+Supports local Ollama and OpenAI-compatible hosted/local backends — selected
+via "llm_provider" in config/api_keys.json:
 
   "llm_provider": "ollama"   (default)
         Uses Ollama's native /api/chat endpoint.
@@ -22,6 +23,10 @@ Supports three backends — selected via  "llm_provider"  in config/api_keys.jso
         Set  "llm_url": "https://generativelanguage.googleapis.com/v1beta/openai"  in config.
         Set  "gemini_api_key": "your-api-key-here"  in config/api_keys.json.
         Sent as an  Authorization: Bearer <key>  header on every request.
+
+  "llm_provider": "openai_api"  (OpenAI API)
+        Uses https://api.openai.com/v1/chat/completions with the configured
+        model ID and openai_api_key. API usage is billed separately from ChatGPT.
 """
 import json
 import re
@@ -58,15 +63,17 @@ _DEFAULTS = {
 
 
 def _auth_headers(provider: str, cfg: dict | None = None) -> dict:
-    """Bearer-auth header for providers that need one (currently just Gemini,
-    via its OpenAI-compatible endpoint). Ollama / LM Studio / local
-    OpenAI-compatible servers need no auth, so this returns {} for them.
+    """Bearer-auth header for hosted providers; local backends stay unauthenticated.
     """
-    if provider != "gemini":
+    if provider == "gemini":
+        secret_name = "gemini_api_key"
+    elif provider == "openai_api":
+        secret_name = "openai_api_key"
+    else:
         return {}
     cfg = cfg if cfg is not None else _load_config()
     from core.credentials import get_secret
-    key = get_secret("gemini_api_key", cfg)        # env > OS keyring > config file
+    key = get_secret(secret_name, cfg)
     return {"Authorization": f"Bearer {key}"} if key else {}
 
 
@@ -140,12 +147,14 @@ def get_config_flag(name: str, default: bool = False) -> bool:
 
 
 def get_llm_provider() -> str:
-    """Returns 'ollama', 'openai', or 'gemini' based on llm_provider config."""
+    """Returns the configured local or hosted provider."""
     raw = _load_config().get("llm_provider", "ollama").strip().lower()
     if raw == "ollama":
         return "ollama"
     elif raw == "gemini":
         return "gemini"
+    elif raw == "openai_api":
+        return "openai_api"
     else:
         # Default to openai for LM Studio, LocalAI, Jan, etc.
         return "openai"
@@ -329,11 +338,12 @@ def warmup_model(system_prompt: str | None = None) -> bool:
     if provider != "ollama":
         # OpenAI-compatible: just fire a minimal request to ensure the model is loaded.
         # No keep_alive or KV-cache priming available — server manages this internally.
+        token_param = "max_completion_tokens" if provider == "openai_api" else "max_tokens"
         payload = {
             "model":      model,
             "messages":   messages,
             "stream":     False,
-            "max_tokens": 1,
+            token_param: 1,
         }
         try:
             resp = requests.post(_chat_completions_endpoint(url, provider), json=payload,
@@ -579,10 +589,13 @@ def call_llm(
         "messages": _openai_safe_messages(messages),
     }
 
-    if provider == "openai":
+    if provider in ("openai", "openai_api"):
         payload["stream"]     = False
-        payload["max_tokens"] = 150
-    elif provider == "gemini":
+        if provider == "openai_api":
+            payload["max_completion_tokens"] = _cloud_max_tokens(provider)
+        else:
+            payload["max_tokens"] = 150
+    if provider in ("gemini", "openai_api") and tools:
         payload["tools"]       = tools
         payload["tool_choice"] = "auto"
 
@@ -663,7 +676,8 @@ def call_llm_text(
         # endpoint, …). No keep_alive/num_predict options here — max_tokens is
         # the closest equivalent and only some servers honor it.
         endpoint = _chat_completions_endpoint(url, provider)
-        payload  = {"model": m, "messages": _openai_safe_messages(messages), "stream": False, "max_tokens": num_predict}
+        token_param = "max_completion_tokens" if provider == "openai_api" else "max_tokens"
+        payload  = {"model": m, "messages": _openai_safe_messages(messages), "stream": False, token_param: num_predict}
         try:
             resp = requests.post(endpoint, json=payload, headers=_auth_headers(provider), timeout=timeout)
             resp.raise_for_status()
@@ -728,7 +742,8 @@ def _stream_openai_once(
         "model":      model,
         "messages":   _openai_safe_messages(messages),
         "stream":     True,
-        "max_tokens": _cloud_max_tokens(provider),
+        ("max_completion_tokens" if provider == "openai_api" else "max_tokens"):
+            _cloud_max_tokens(provider),
     }
     if tools:
         payload["tools"]       = tools
@@ -862,6 +877,12 @@ def _cloud_max_tokens(provider: str) -> int:
     short voice-reply cap (150). Gemini needs far more: its hidden reasoning
     tokens count against max_tokens, so 150 produced replies cut off after a
     few words ("The single animal mentioned most is"). Config "gemini_max_tokens"."""
+    if provider == "openai_api":
+        try:
+            v = int(_load_config().get("openai_max_tokens", 1200))
+        except Exception:
+            v = 1200
+        return max(256, min(v, 8192))
     if provider != "gemini":
         return 150
     try:

@@ -36,6 +36,7 @@ When auditing a new module, search it for: `.build(`, `for .* in os.walk`, `whil
 | Module | Status | Notes |
 |---|---|---|
 | `core/llm_client.py` | ✅ Fixed | `_load_config()` was re-reading disk every call; now cached + mtime-invalidated. `num_ctx` was never actually sent to Ollama — fixed. |
+| `core/conversation_core.py` | ◐ Partial | Hosted Gemini/OpenAI API turns now use the larger cloud history budget instead of the local-model budget; full turn-processing path still needs live-model profiling. |
 | `main.py` | ✅ Fixed (partial) | Self-evaluator backgrounded off the UI return path. Cancel-phrase busy-guard was blocking cancel commands — fixed. `/selftest` handler now uses `run_self_test_async` instead of blocking the chat command loop. |
 | `ui.py` | ✅ Audited | Typewriter-effect timer, GPU metrics polling, and orb rendering passed a full perf audit. |
 | `self_test.py` | ✅ Rewritten | Per-test timeouts, concurrent stateless tests, real memory-DB path resolution + round-trip proof instead of a row count, new config/GPU/disk checks, non-blocking `run_self_test_async`. |

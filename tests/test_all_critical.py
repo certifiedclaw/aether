@@ -802,6 +802,13 @@ def test_setup_overlay_refactor_preserves_behavior():
     assert ov._stt_lang_input.text() == "tr"
     assert set(ov._stt_btns.keys()) == {"whisper", "vosk"}
     assert set(ov._llm_prov_btns.keys()) == {"ollama", "openai"}
+    assert set(ov._engine_btns.keys()) == {"local", "gemini", "openai_api"}
+    ov._engine_btns["openai_api"].click()
+    assert ov._sel_llm_provider == "openai_api"
+    assert ov._llm_openai_widget.isHidden() is False
+    assert "billed separately" in ov._llm_openai_widget.findChildren(QLabel)[0].text()
+    ov._engine_btns["local"].click()
+    assert ov._sel_llm_provider == "openai"
     assert set(ov._tts_btns.keys()) == {"edgetts", "kokoro", "elevenlabs"}
     assert len(ov.findChildren(QLineEdit)) > 0
     assert len(ov.findChildren(QComboBox)) > 0

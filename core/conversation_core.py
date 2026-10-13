@@ -461,7 +461,8 @@ class ConversationCoreMixin:
         # default model) if no gemini_api_key is configured, rather than
         # failing the turn.
         _stream_kwargs: dict = {}
-        if _route.tier == _Tier.HARD and get_llm_provider() != "gemini":
+        _primary_provider = get_llm_provider()
+        if _route.tier == _Tier.HARD and _primary_provider != "gemini":
             _gem_key, _gem_model = get_gemini_settings()
             if _gem_key:
                 _stream_kwargs = {
@@ -482,7 +483,7 @@ class ConversationCoreMixin:
             from core.llm_client import get_config_flag as _cfg_flag
             _gem_key2, _gem_model2 = get_gemini_settings()
             if _wants_gemini_tools(user_text, flag=_cfg_flag("gemini_for_tools"),
-                                   provider=get_llm_provider(), has_key=bool(_gem_key2),
+                                   provider=_primary_provider, has_key=bool(_gem_key2),
                                    tier=_route.tier):
                 _stream_kwargs = {
                     "provider_override": "gemini",
@@ -504,7 +505,9 @@ class ConversationCoreMixin:
             _turn_tools = _filter_tools_for_turn(self._tools_for_current_turn(), user_text)
         messages, _active_mem = self._prepare_conversation_messages(
             user_text, light=_is_quick, tools=_turn_tools,
-            history_budget=(_CLOUD_HISTORY_BUDGET if _stream_kwargs else None),
+            history_budget=(_CLOUD_HISTORY_BUDGET
+                            if _stream_kwargs or _primary_provider in ("gemini", "openai_api")
+                            else None),
         )
         # For live_report: did memory injection actually surface anything?
         # None means "not attempted" (QUICK-tier turns skip retrieval

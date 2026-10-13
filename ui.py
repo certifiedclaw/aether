@@ -1086,6 +1086,7 @@ class SetupOverlay(QWidget):
         super().__init__(parent)
         self._mode = mode
         _init = initial or {}
+        self._initial_config = _init
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet(f"""
             SetupOverlay {{
@@ -1108,10 +1109,10 @@ class SetupOverlay(QWidget):
         self._sel_tts          = _init.get("tts_engine",    "edgetts")
 
         _prov_init = _init.get("llm_provider", "ollama")
-        self._sel_llm_provider = _prov_init if _prov_init in ("ollama", "openai", "gemini") else "ollama"
+        self._sel_llm_provider = _prov_init if _prov_init in ("ollama", "openai", "gemini", "openai_api") else "ollama"
         # Which local backend to fall back to if the user switches from Gemini back to Local
         self._sel_local_sub = self._sel_llm_provider if self._sel_llm_provider in ("ollama", "openai") else "ollama"
-        self._sel_engine = "gemini" if self._sel_llm_provider == "gemini" else "local"
+        self._sel_engine = self._sel_llm_provider if self._sel_llm_provider in ("gemini", "openai_api") else "local"
 
         # Best-effort local hardware detection, used to recommend Ollama models.
         # Never allowed to break setup if it fails (missing psutil, sandboxed host, etc).
@@ -1301,11 +1302,12 @@ class SetupOverlay(QWidget):
         layout.addWidget(self._lbl("AI ENGINE", 7, col=C.TEXT_DIM,
                                align=Qt.AlignmentFlag.AlignLeft))
 
-        # Top-level choice: run models locally, or use Gemini in the cloud.
+        # Top-level choice: local models or hosted model APIs.
         engine_row, self._engine_btns = self._toggle_row(
             [
                 ("local",  "🖥  Local (Ollama / LM Studio)"),
                 ("gemini", "✨  Gemini (cloud API key)"),
+                ("openai_api", "✦  OpenAI API (usage billed separately)"),
             ],
             lambda: self._sel_engine,
             self._set_engine,
@@ -1377,7 +1379,7 @@ class SetupOverlay(QWidget):
                                 align=Qt.AlignmentFlag.AlignRight))
         _local_default_url = "http://localhost:1234" if self._sel_local_sub == "openai" else "http://localhost:11434"
         # Don't prefill the local URL box with the Gemini endpoint if the saved config was Gemini.
-        _default_url = _local_default_url if self._sel_llm_provider == "gemini" else _init.get("llm_url", _local_default_url)
+        _default_url = _local_default_url if self._sel_llm_provider in ("gemini", "openai_api") else _init.get("llm_url", _local_default_url)
         self._llm_url_input = self._input(
             "http://localhost:1234" if self._sel_local_sub == "openai"
             else "http://localhost:11434"
@@ -1387,7 +1389,7 @@ class SetupOverlay(QWidget):
         llm_row.addWidget(self._lbl("Model:", 7, col=C.TEXT_MED,
                                 align=Qt.AlignmentFlag.AlignRight))
         self._llm_model_input = self._input("e.g.  qwen2.5:3b  /  llama3.2  /  mistral")
-        self._llm_model_input.setText(_init.get("llm_model", "") if self._sel_llm_provider != "gemini" else "")
+        self._llm_model_input.setText(_init.get("llm_model", "") if self._sel_llm_provider not in ("gemini", "openai_api") else "")
         llm_row.addWidget(self._llm_model_input, stretch=2)
         local_lay.addLayout(llm_row)
 
@@ -1430,11 +1432,39 @@ class SetupOverlay(QWidget):
         gem_lay.addLayout(gem_model_row)
 
         layout.addWidget(self._llm_gemini_widget)
+
+        self._llm_openai_widget = QWidget()
+        self._llm_openai_widget.setStyleSheet("background: transparent;")
+        openai_lay = QVBoxLayout(self._llm_openai_widget)
+        openai_lay.setContentsMargins(0, 6, 0, 0)
+        openai_lay.setSpacing(5)
+        openai_lay.addWidget(self._lbl(
+            "platform.openai.com/api-keys  ·  API usage is billed separately from ChatGPT",
+            7, col=C.TEXT_DIM, align=Qt.AlignmentFlag.AlignLeft
+        ))
+        openai_key_row = QHBoxLayout(); openai_key_row.setSpacing(5)
+        openai_key_row.addWidget(self._lbl("API Key:", 7, col=C.TEXT_MED,
+                                          align=Qt.AlignmentFlag.AlignRight))
+        self._openai_key_input = self._input("sk-…", pw=True)
+        self._openai_key_input.setText(_init.get("openai_api_key", ""))
+        openai_key_row.addWidget(self._openai_key_input)
+        openai_lay.addLayout(openai_key_row)
+        openai_model_row = QHBoxLayout(); openai_model_row.setSpacing(5)
+        openai_model_row.addWidget(self._lbl("Model ID:", 7, col=C.TEXT_MED,
+                                            align=Qt.AlignmentFlag.AlignRight))
+        self._openai_model_input = self._input("model ID from your OpenAI API account")
+        self._openai_model_input.setText(
+            _init.get("llm_model", "") if self._sel_llm_provider == "openai_api" else ""
+        )
+        openai_model_row.addWidget(self._openai_model_input)
+        openai_lay.addLayout(openai_model_row)
+        layout.addWidget(self._llm_openai_widget)
         layout.addWidget(self._sep())
 
         # Apply initial visibility now that both panels exist
         self._llm_local_widget.setVisible(self._sel_engine == "local")
         self._llm_gemini_widget.setVisible(self._sel_engine == "gemini")
+        self._llm_openai_widget.setVisible(self._sel_engine == "openai_api")
         for k, btn in self._engine_btns.items():
             self._style_btn(btn, k == self._sel_engine)
 
@@ -1604,9 +1634,9 @@ class SetupOverlay(QWidget):
             self._el_key_widget.setVisible(key == "elevenlabs")
 
     def _set_engine(self, key: str):
-        """Top-level toggle: Local (Ollama/LM Studio) vs Gemini (cloud API)."""
+        """Top-level toggle between local models and hosted model APIs."""
         self._sel_engine = key
-        self._sel_llm_provider = self._sel_local_sub if key == "local" else "gemini"
+        self._sel_llm_provider = self._sel_local_sub if key == "local" else key
         if hasattr(self, "_engine_btns"):
             for k, btn in self._engine_btns.items():
                 self._style_btn(btn, k == key)
@@ -1614,6 +1644,8 @@ class SetupOverlay(QWidget):
             self._llm_local_widget.setVisible(key == "local")
         if hasattr(self, "_llm_gemini_widget"):
             self._llm_gemini_widget.setVisible(key == "gemini")
+        if hasattr(self, "_llm_openai_widget"):
+            self._llm_openai_widget.setVisible(key == "openai_api")
 
     def _apply_model_reco(self, tag: str):
         """Clicking a recommended model fills the model field and switches to Ollama."""
@@ -1702,9 +1734,26 @@ class SetupOverlay(QWidget):
 
         if _provider == "gemini":
             llm_model = self._gemini_model_combo.currentData() or "gemini-3.8-flash"
-            if not self._gemini_key_input.text().strip():
+            from core.credentials import get_secret
+            if not (self._gemini_key_input.text().strip() or
+                    get_secret("gemini_api_key", self._initial_config)):
                 self._gemini_key_input.setStyleSheet(
                     self._INPUT_STYLE + f" QLineEdit {{ border: 1px solid {C.RED}; }}"
+                )
+                return
+        elif _provider == "openai_api":
+            llm_model = self._openai_model_input.text().strip()
+            from core.credentials import get_secret
+            if not (self._openai_key_input.text().strip() or
+                    get_secret("openai_api_key", self._initial_config)):
+                self._openai_key_input.setStyleSheet(
+                    self._INPUT_STYLE + f" QLineEdit {{ border: 1px solid {C.RED}; }}"
+                )
+                return
+            if not llm_model:
+                self._openai_model_input.setStyleSheet(
+                    self._openai_model_input.styleSheet() +
+                    f" QLineEdit {{ border: 1px solid {C.RED}; }}"
                 )
                 return
         else:
@@ -1732,6 +1781,8 @@ class SetupOverlay(QWidget):
 
         if _provider == "gemini":
             llm_url = self.GEMINI_BASE_URL
+        elif _provider == "openai_api":
+            llm_url = "https://api.openai.com"
         else:
             _default_url = "http://localhost:1234" if _provider == "openai" else "http://localhost:11434"
             llm_url = self._llm_url_input.text().strip() or _default_url
@@ -1748,6 +1799,7 @@ class SetupOverlay(QWidget):
             "tts_speed":          tts_speed,
             "elevenlabs_api_key": self._el_key_input.text().strip(),
             "gemini_api_key":     self._gemini_key_input.text().strip(),
+            "openai_api_key":    self._openai_key_input.text().strip(),
         }
         if self._sel_stt == "vosk" and stt_model:
             cfg["vosk_model_path"] = stt_model
