@@ -144,3 +144,58 @@ def test_upload_preflight_rejects_oversized_request_before_parsing(tmp_path):
         )
 
     assert response.status_code == 413
+
+
+def test_websocket_tickets_are_authenticated_purpose_bound_and_one_time():
+    from fastapi.testclient import TestClient
+
+    dashboard = srv.DashboardServer()
+    dashboard._tokens.add("valid-test-token")
+
+    with TestClient(dashboard.app) as client:
+        assert client.post("/api/ws-ticket", json={"purpose": "main"}).status_code == 401
+        response = client.post(
+            "/api/ws-ticket",
+            json={"purpose": "main"},
+            headers={"Authorization": "Bearer valid-test-token"},
+        )
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    ticket = response.json()["ticket"]
+    assert dashboard._consume_ws_ticket(ticket, "phone-audio") is None
+    assert dashboard._consume_ws_ticket(ticket, "main") is None
+
+    ticket = dashboard._issue_ws_ticket("valid-test-token", "main")
+    assert dashboard._consume_ws_ticket(ticket, "main") == "valid-test-token"
+    assert dashboard._consume_ws_ticket(ticket, "main") is None
+
+
+def test_download_requires_bearer_header_not_query_token(tmp_path):
+    from fastapi.testclient import TestClient
+
+    dashboard = srv.DashboardServer()
+    dashboard._uploads_dir = tmp_path
+    dashboard._tokens.add("valid-test-token")
+    (tmp_path / "notes.txt").write_text("private data", encoding="utf-8")
+
+    with TestClient(dashboard.app) as client:
+        query_response = client.get("/uploads/notes.txt?token=valid-test-token")
+        header_response = client.get(
+            "/uploads/notes.txt",
+            headers={"Authorization": "Bearer valid-test-token"},
+        )
+
+    assert query_response.status_code == 401
+    assert header_response.status_code == 200
+    assert header_response.content == b"private data"
+    assert header_response.headers["cache-control"] == "no-store"
+
+
+def test_dashboard_frontend_does_not_put_bearer_tokens_in_urls():
+    client_code = (srv.STATIC_DIR / "app.html").read_text(encoding="utf-8")
+
+    assert "?token=" not in client_code
+    assert "_getWsTicket('main')" in client_code
+    assert "_getWsTicket('phone-audio')" in client_code
+    assert "data-download=" in client_code

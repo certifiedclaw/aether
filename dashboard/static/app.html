@@ -187,6 +187,16 @@
       opts.headers = Object.assign({}, opts.headers, _authHeader());
       return fetch(url, opts);
     }
+    async function _getWsTicket(purpose) {
+      const response = await _authFetch('/api/ws-ticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ purpose }),
+      });
+      if (!response.ok) throw new Error('WebSocket authorization failed');
+      const result = await response.json();
+      return result.ticket;
+    }
 
     // ── AES-256-CBC encryption (CryptoJS) ────────────────────────────────────
     const _AES_SALT = 'AETHER-DASHBOARD-v1';
@@ -231,20 +241,20 @@
     const wake  = document.getElementById('wake');
 
     const _wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const _wsUrl   = `${_wsProto}://${location.host}/ws?token=${encodeURIComponent(_authToken)}`;
-    const ws       = new WebSocket(_wsUrl);
-
-    ws.onopen    = () => { sys('Remote session active.'); toast('Connected to AETHER'); };
-    ws.onclose   = () => sys('Connection lost — refresh to reconnect.');
-    ws.onerror   = () => sys('Connection error.');
-    ws.onmessage = (e) => {
-      const m = JSON.parse(e.data);
-      if (m.type === 'log')           append(m.speaker, m.text);
-      if (m.type === 'status')        setStatus(m.state);
-      if (m.type === 'wake')          sys('Wake word detected — connecting…');
-      if (m.type === 'sys')           sys(m.text);
-      if (m.type === 'file_received') _onFileReceived(m);
-    };
+    _getWsTicket('main').then(ticket => {
+      const ws = new WebSocket(`${_wsProto}://${location.host}/ws?ticket=${encodeURIComponent(ticket)}`);
+      ws.onopen    = () => { sys('Remote session active.'); toast('Connected to AETHER'); };
+      ws.onclose   = () => sys('Connection lost — refresh to reconnect.');
+      ws.onerror   = () => sys('Connection error.');
+      ws.onmessage = (e) => {
+        const m = JSON.parse(e.data);
+        if (m.type === 'log')           append(m.speaker, m.text);
+        if (m.type === 'status')        setStatus(m.state);
+        if (m.type === 'wake')          sys('Wake word detected — connecting…');
+        if (m.type === 'sys')           sys(m.text);
+        if (m.type === 'file_received') _onFileReceived(m);
+      };
+    }).catch(() => sys('Could not authorize dashboard connection. Refresh to retry.'));
 
     function setStatus(s) {
       if (s === 'active') {
@@ -276,6 +286,9 @@
     function esc(s) {
       return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
+    function escAttr(s) {
+      return esc(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
 
     // ── File helpers ──────────────────────────────────────────────────────────
     function _fileIcon(name) {
@@ -291,6 +304,32 @@
       if (['apk','exe','dmg','deb','rpm','msi'].includes(ext))                              return '⚙️';
       return '📎';
     }
+
+    async function _downloadFile(name) {
+      try {
+        const response = await _authFetch(`/uploads/${encodeURIComponent(name)}`);
+        if (!response.ok) throw new Error('Download failed');
+        const objectUrl = URL.createObjectURL(await response.blob());
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = name;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      } catch (_) {
+        toast('Download failed');
+      }
+    }
+
+    feed.addEventListener('click', event => {
+      const link = event.target instanceof Element
+        ? event.target.closest('a[data-download]')
+        : null;
+      if (!link) return;
+      event.preventDefault();
+      _downloadFile(link.dataset.download);
+    });
 
     function _fmtSize(bytes) {
       if (bytes < 1024)             return bytes + ' B';
@@ -341,12 +380,11 @@
         if (xhr.status === 200) {
           let savedName = file.name;
           try { savedName = JSON.parse(xhr.responseText).name || file.name; } catch {}
-          const dlUrl = `/uploads/${encodeURIComponent(savedName)}?token=${encodeURIComponent(_authToken)}`;
           if (bar)  { bar.style.width = '100%'; bar.style.background = 'var(--green)'; }
           if (st)   { st.textContent = '✓'; st.className = 'fc-status done'; }
           if (lbl)  lbl.textContent = 'Sent';
           if (meta) meta.insertAdjacentHTML('beforeend',
-            `<a class="fc-dl" href="${dlUrl}" download="${esc(savedName)}">⬇ Download back</a>`);
+            `<a class="fc-dl" href="#" data-download="${escAttr(savedName)}">⬇ Download back</a>`);
           toast('File sent!');
         } else {
           let errMsg = 'Upload failed';
@@ -371,7 +409,6 @@
 
     // File received by another WebSocket client (e.g., second open tab)
     function _onFileReceived(m) {
-      const dlUrl = `/uploads/${encodeURIComponent(m.name)}?token=${encodeURIComponent(_authToken)}`;
       const card  = document.createElement('div');
       card.className = 'msg-file';
       card.innerHTML = `
@@ -380,7 +417,7 @@
           <div class="fc-lbl">Received</div>
           <div class="fc-name">${esc(m.name)}</div>
           <div class="fc-size">${_fmtSize(m.size)}</div>
-          <a class="fc-dl" href="${dlUrl}" download="${esc(m.name)}">⬇ Download</a>
+          <a class="fc-dl" href="#" data-download="${escAttr(m.name)}">⬇ Download</a>
         </div>
         <div class="fc-status done">✓</div>
       `;
@@ -568,9 +605,16 @@
       if (ctx.state === 'suspended') await ctx.resume();
 
       const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
-      const ws = new WebSocket(
-        `${wsProto}://${location.host}/ws/phone-audio?token=${encodeURIComponent(_authToken)}`
-      );
+      let ticket;
+      try {
+        ticket = await _getWsTicket('phone-audio');
+      } catch (_) {
+        sys('Could not authorize phone microphone.');
+        stream.getTracks().forEach(track => track.stop());
+        await ctx.close();
+        return;
+      }
+      const ws = new WebSocket(`${wsProto}://${location.host}/ws/phone-audio?ticket=${encodeURIComponent(ticket)}`);
       ws.binaryType = 'arraybuffer';
 
       ws.onopen = async () => {

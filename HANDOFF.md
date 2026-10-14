@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-14 00:34 UTC
+Generated: 2026-10-14 00:39 UTC
+
+## #73 — 2026-10-14 00:39 UTC — Codex
+
+Removed long-lived dashboard bearer tokens from file-download and WebSocket URLs. Downloads now use Authorization headers and no-store responses; WebSocket routes use purpose-bound, one-use tickets expiring after 30 seconds, issued only to authenticated sessions. Updated the browser client and added regression tests.
+
+**Touched:** `dashboard/server.py`, `dashboard/static/app.html`, `tests/test_dashboard_security.py`
+
+**Next steps:** Continue audit fixes with MCP RPC response timeouts, then review remaining generated-code execution and approval lifecycle risks; keep arbitrary generated code disabled without OS isolation.
+
+---
 
 ## #72 — 2026-10-14 00:34 UTC — Codex
 
