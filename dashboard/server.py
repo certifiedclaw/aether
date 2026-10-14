@@ -849,6 +849,32 @@ class DashboardServer:
 
     def _register_file_routes(self, app: "FastAPI") -> None:
         if _UPLOAD_OK:
+            @app.middleware("http")
+            async def upload_preflight(req: Request, call_next):
+                if req.url.path == "/api/upload" and req.method == "POST":
+                    if not self._auth(req):
+                        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+                    content_length = req.headers.get("content-length")
+                    if content_length is None:
+                        return JSONResponse(
+                            {"error": "Content-Length is required for uploads"},
+                            status_code=411,
+                        )
+                    try:
+                        request_size = int(content_length)
+                    except ValueError:
+                        return JSONResponse({"error": "Invalid Content-Length"}, status_code=400)
+                    if request_size < 0:
+                        return JSONResponse({"error": "Invalid Content-Length"}, status_code=400)
+                    max_request_bytes = MAX_UPLOAD_MB * 1024 * 1024 + 1024 * 1024
+                    if request_size > max_request_bytes:
+                        return JSONResponse(
+                            {"error": f"Upload request too large (max {MAX_UPLOAD_MB} MB file)"},
+                            status_code=413,
+                        )
+                return await call_next(req)
+
             @app.post("/api/upload")
             async def upload_file(req: Request, file: UploadFile = FastAPIFile(...)):
                 if not self._auth(req):

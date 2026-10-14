@@ -104,3 +104,43 @@ def test_limiter_window_forgets_old_failures_and_ok_resets():
     lim.ok("a")
     lim.fail("a")
     assert lim.locked("a") == 0
+
+
+@pytest.mark.skipif(not srv._UPLOAD_OK, reason="python-multipart is unavailable")
+def test_upload_authentication_precedes_multipart_parsing(tmp_path):
+    from fastapi.testclient import TestClient
+
+    dashboard = srv.DashboardServer()
+    dashboard._uploads_dir = tmp_path
+
+    with TestClient(dashboard.app) as client:
+        response = client.post(
+            "/api/upload",
+            content=b"not a multipart body",
+            headers={"Content-Type": "application/octet-stream"},
+        )
+
+    assert response.status_code == 401
+
+
+@pytest.mark.skipif(not srv._UPLOAD_OK, reason="python-multipart is unavailable")
+def test_upload_preflight_rejects_oversized_request_before_parsing(tmp_path):
+    from fastapi.testclient import TestClient
+
+    dashboard = srv.DashboardServer()
+    dashboard._uploads_dir = tmp_path
+    dashboard._tokens.add("valid-test-token")
+    oversized_length = srv.MAX_UPLOAD_MB * 1024 * 1024 + 1024 * 1024 + 1
+
+    with TestClient(dashboard.app) as client:
+        response = client.post(
+            "/api/upload",
+            content=b"not a multipart body",
+            headers={
+                "Authorization": "Bearer valid-test-token",
+                "Content-Type": "application/octet-stream",
+                "Content-Length": str(oversized_length),
+            },
+        )
+
+    assert response.status_code == 413

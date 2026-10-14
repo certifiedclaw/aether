@@ -63,12 +63,12 @@ def commit_and_push(message: str | None = None, push: bool = True) -> tuple[bool
     if add.returncode != 0:
         return False, f"git add failed: {add.stderr.strip()}"
 
-    diff = _run(["git", "diff", "--cached", "--quiet"])
+    diff = _run(["git", "diff", "--cached", "--quiet", "--"] + existing)
     if diff.returncode == 0:
         return True, "No changes to maintenance reports since last commit — nothing to push."
 
     msg = message or f"chore: refresh maintenance reports ({datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')})"
-    commit = _run(["git", "commit", "-m", msg])
+    commit = _run(["git", "commit", "--only", "-m", msg, "--"] + existing)
     if commit.returncode != 0:
         return False, f"git commit failed: {commit.stderr.strip()}"
 

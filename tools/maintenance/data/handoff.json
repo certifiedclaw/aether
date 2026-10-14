@@ -1,5 +1,5 @@
 {
-  "next_id": 70,
+  "next_id": 71,
   "entries": [
     {
       "id": 1,
@@ -935,6 +935,21 @@
         "audit only; no source files changed"
       ],
       "next_steps": "Address the startup auto-push index isolation, dev_agent path confinement and pre-approval writes, dashboard request-size/auth ordering, MCP protocol/env/gating/schema issues, and OS sandboxing before deploying to the homelab; then add targeted regression tests and verify on Ubuntu headless."
+    },
+    {
+      "id": 70,
+      "timestamp": "2026-10-13 03:52 UTC",
+      "by": "Codex",
+      "summary": "Fixed three high-risk audit findings: maintenance publishing now detects and commits only report paths, dev_agent rejects absolute/traversal/symlink-resolved paths for both initial writes and repair writes, and dashboard uploads authenticate and enforce request-size limits before multipart parsing. Added regression coverage.",
+      "files": [
+        "actions/dev_agent.py",
+        "dashboard/server.py",
+        "tools/maintenance/publish.py",
+        "tests/test_execution_gates.py",
+        "tests/test_dashboard_security.py",
+        "tests/test_maintenance_publish.py"
+      ],
+      "next_steps": "Continue the audit fixes with MCP environment and tool-call isolation, archive extraction limits, and dashboard token handling; keep generated-code execution unavailable until OS-level sandboxing exists."
     }
   ]
 }

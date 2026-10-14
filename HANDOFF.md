@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-13 03:42 UTC
+Generated: 2026-10-13 03:52 UTC
+
+## #70 — 2026-10-13 03:52 UTC — Codex
+
+Fixed three high-risk audit findings: maintenance publishing now detects and commits only report paths, dev_agent rejects absolute/traversal/symlink-resolved paths for both initial writes and repair writes, and dashboard uploads authenticate and enforce request-size limits before multipart parsing. Added regression coverage.
+
+**Touched:** `actions/dev_agent.py`, `dashboard/server.py`, `tools/maintenance/publish.py`, `tests/test_execution_gates.py`, `tests/test_dashboard_security.py`, `tests/test_maintenance_publish.py`
+
+**Next steps:** Continue the audit fixes with MCP environment and tool-call isolation, archive extraction limits, and dashboard token handling; keep generated-code execution unavailable until OS-level sandboxing exists.
+
+---
 
 ## #69 — 2026-10-13 03:42 UTC — Codex
 
