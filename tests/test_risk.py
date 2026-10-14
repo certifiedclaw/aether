@@ -52,6 +52,7 @@ def test_unknown_tool_and_unlisted_action_mean_ask():
     ("file_processor", "describe the picture", MONITOR),
     ("memory_tool", "prune", ASK), ("memory_tool", "import", ASK), ("memory_tool", "stats", SAFE),
     ("send_message", "", ASK), ("file_controller", "delete", MONITOR),
+    ("mcp.call", "", ASK),
     ("file_controller", "organize_desktop", ASK),
     ("file_controller", "list", SAFE), ("computer_control", "click", TASK),
     ("computer_control", "screenshot", SAFE), ("browser_control", "fill_form", TASK),
@@ -151,7 +152,7 @@ def test_decorator_finds_params_in_methods_kwargs_and_preserves_metadata(ui):
 # ── coverage: no dead config, no ungated declared tool ──────────────────────
 def _declared():
     import core.tool_declarations as td
-    return [d["name"] for d in td.TOOL_DECLARATIONS]
+    return [d["name"] for d in td.TOOL_DECLARATIONS] + list(risk.DYNAMIC_TOOLS)
 
 
 def test_every_declared_tool_is_classified():
@@ -206,6 +207,7 @@ def test_self_gated_tools_really_ask_for_themselves():
         assert ("confirm_action" in text or "_confirm_" in text or "_approve_execution" in text), tool
     import core.tool_dispatch as td
     assert "requires_confirmation" in inspect.getsource(td)          # osint_lookup
+    assert 'check("mcp.call"' in inspect.getsource(td)
 
 
 # ── end to end through the REAL functions (no stubs on the code being gated) ─

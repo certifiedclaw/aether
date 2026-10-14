@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-13 03:52 UTC
+Generated: 2026-10-14 00:32 UTC
+
+## #71 — 2026-10-14 00:32 UTC — Codex
+
+Hardened MCP integration: subprocesses inherit only a small runtime environment plus explicitly configured variables; initialized notifications no longer wait for a nonexistent response; MCP calls require user approval, are limited to advertised tool names, redact nested secrets in approval details, and expose a structured function schema only when configured servers provide tools.
+
+**Touched:** `core/mcp_bridge.py`, `core/tool_dispatch.py`, `core/risk.py`, `core/tool_declarations.py`, `core/conversation_core.py`, `tests/test_mcp_bridge.py`, `tests/test_risk.py`
+
+**Next steps:** Continue audit fixes with safe archive extraction limits and dashboard token handling; retain the no-OS-sandbox restriction for generated code.
+
+---
 
 ## #70 — 2026-10-13 03:52 UTC — Codex
 

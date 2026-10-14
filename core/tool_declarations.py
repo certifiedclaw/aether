@@ -521,6 +521,20 @@ TOOL_DECLARATIONS = [
     },
 ]
 
+MCP_TOOL_DECLARATION = {
+    "name": "mcp.call",
+    "description": "Call an advertised tool on a configured MCP server. Aether will ask for approval before every call.",
+    "parameters": {
+        "type": "OBJECT",
+        "properties": {
+            "server": {"type": "STRING", "description": "Configured MCP server name."},
+            "tool": {"type": "STRING", "description": "Exact tool name advertised by that server."},
+            "args": {"type": "OBJECT", "description": "Arguments required by the selected MCP tool."},
+        },
+        "required": ["server", "tool", "args"],
+    },
+}
+
 
 # ---------------------------------------------------------------------------
 # Convert Gemini-style declarations to OpenAI/Ollama format

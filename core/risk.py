@@ -89,6 +89,7 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
 
     # ── needs the user ──────────────────────────────────────────────────────
     "send_message":    ASK,          # leaves the machine and cannot be taken back
+    "mcp.call":        ASK,          # external MCP tools have server-defined side effects
 
     # per-action
     "file_controller": {
@@ -167,7 +168,10 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
 # Tools whose function asks for itself, with a dialog that shows the actual plan/code.
 SELF_GATED = frozenset({
     "computer_settings", "desktop_control", "code_helper", "dev_agent", "osint_lookup",
+    "mcp.call",
 })
+
+DYNAMIC_TOOLS = frozenset({"mcp.call"})
 
 # tool -> (module, function) for the coverage test: every tool with an ask/block tier
 # must be SELF_GATED or have its entry point wrapped by @gated.
@@ -230,12 +234,23 @@ def _detail(tool: str, action: str, params: dict) -> str:
     for k, v in (params or {}).items():
         if k == "action":
             continue
-        shown = "(hidden)" if _SECRETISH.search(str(k)) else str(v)
+        shown = "(hidden)" if _SECRETISH.search(str(k)) else str(_redact_nested(v))
         limit = _FULL_SHOW_LIMIT if k in _FULL_SHOW_PARAMS else 600
         if len(shown) > limit:
             shown = shown[:limit] + "…  [truncated: " + str(len(str(v))) + " chars in all]"
         lines.append(f"  {k}: {shown}")
     return "\n".join(lines[:12])
+
+
+def _redact_nested(value):
+    if isinstance(value, dict):
+        return {
+            key: "(hidden)" if _SECRETISH.search(str(key)) else _redact_nested(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, (list, tuple)):
+        return [_redact_nested(item) for item in value]
+    return value
 
 
 def _find_params(args: tuple, kwargs: dict) -> dict:

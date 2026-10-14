@@ -38,6 +38,22 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _NEWLINE = b"\n"
+_MCP_ENV_ALLOWLIST = frozenset({
+    "PATH", "HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "SYSTEMROOT",
+    "WINDIR", "TEMP", "TMP", "TMPDIR", "HOMEDRIVE", "HOMEPATH", "PATHEXT",
+    "COMSPEC", "PROGRAMFILES", "PROGRAMFILES(X86)", "LANG", "LC_ALL", "LC_CTYPE",
+    "TZ", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME", "XDG_RUNTIME_DIR",
+})
+
+
+def _server_environment(overrides: dict[str, str] | None) -> dict[str, str]:
+    inherited = {
+        key: value for key, value in os.environ.items()
+        if key.upper() in _MCP_ENV_ALLOWLIST
+    }
+    if overrides:
+        inherited.update({str(key): str(value) for key, value in overrides.items()})
+    return inherited
 
 
 class MCPServerProcess:
@@ -48,7 +64,7 @@ class MCPServerProcess:
         self.name = name
         self._command = command
         self._args = args
-        self._env = {**os.environ, **(env or {})}
+        self._env = _server_environment(env)
         self._proc: subprocess.Popen | None = None
         self._lock = threading.Lock()
         self._msg_id = 0
@@ -119,7 +135,17 @@ class MCPServerProcess:
             "capabilities": {},
             "clientInfo": {"name": "aether", "version": "4.1"},
         })
-        self._send("notifications/initialized")
+        self._notify("notifications/initialized")
+
+    def _notify(self, method: str, params: dict | None = None) -> None:
+        if not self.is_alive():
+            raise RuntimeError(f"MCP server '{self.name}' is not running")
+        payload = {"jsonrpc": "2.0", "method": method}
+        if params:
+            payload["params"] = params
+        with self._lock:
+            self._proc.stdin.write((json.dumps(payload) + "\n").encode())
+            self._proc.stdin.flush()
 
     def _fetch_tools(self) -> list[dict]:
         try:
@@ -136,6 +162,10 @@ class MCPServerProcess:
         return self._tools
 
     def call_tool(self, tool_name: str, arguments: dict) -> str:
+        if not isinstance(arguments, dict):
+            raise ValueError("MCP tool arguments must be an object")
+        if not self.has_tool(tool_name):
+            raise ValueError(f"MCP tool '{tool_name}' was not advertised by server '{self.name}'")
         result = self._send("tools/call", {"name": tool_name, "arguments": arguments})
         if not result:
             return "Done."
@@ -148,6 +178,10 @@ class MCPServerProcess:
             elif block.get("type") == "resource":
                 parts.append(str(block.get("resource", {}).get("text", "")))
         return "\n".join(parts) or "Done."
+
+    def has_tool(self, tool_name: str) -> bool:
+        return any(isinstance(tool, dict) and tool.get("name") == tool_name
+                   for tool in self._tools)
 
 
 class MCPBridge:
@@ -192,6 +226,10 @@ class MCPBridge:
             return f"[MCP] Unknown server '{server}'. Available: {available}"
         if not srv.is_alive():
             return f"[MCP] Server '{server}' is not running."
+        if not isinstance(args, dict):
+            return "[MCP] Tool arguments must be an object."
+        if not srv.has_tool(tool):
+            return f"[MCP] Tool '{tool}' is not advertised by server '{server}'."
         try:
             return srv.call_tool(tool, args)
         except Exception as e:
@@ -204,6 +242,10 @@ class MCPBridge:
             for t in srv.tools:
                 out.append(f"mcp.call(server='{srv_name}', tool='{t['name']}', args={{...}})")
         return out
+
+    def has_tool(self, server: str, tool: str) -> bool:
+        srv = self._servers.get(server)
+        return bool(srv and srv.has_tool(tool))
 
     def shutdown(self) -> None:
         for srv in self._servers.values():

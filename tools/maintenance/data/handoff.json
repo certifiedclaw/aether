@@ -1,5 +1,5 @@
 {
-  "next_id": 71,
+  "next_id": 72,
   "entries": [
     {
       "id": 1,
@@ -950,6 +950,22 @@
         "tests/test_maintenance_publish.py"
       ],
       "next_steps": "Continue the audit fixes with MCP environment and tool-call isolation, archive extraction limits, and dashboard token handling; keep generated-code execution unavailable until OS-level sandboxing exists."
+    },
+    {
+      "id": 71,
+      "timestamp": "2026-10-14 00:32 UTC",
+      "by": "Codex",
+      "summary": "Hardened MCP integration: subprocesses inherit only a small runtime environment plus explicitly configured variables; initialized notifications no longer wait for a nonexistent response; MCP calls require user approval, are limited to advertised tool names, redact nested secrets in approval details, and expose a structured function schema only when configured servers provide tools.",
+      "files": [
+        "core/mcp_bridge.py",
+        "core/tool_dispatch.py",
+        "core/risk.py",
+        "core/tool_declarations.py",
+        "core/conversation_core.py",
+        "tests/test_mcp_bridge.py",
+        "tests/test_risk.py"
+      ],
+      "next_steps": "Continue audit fixes with safe archive extraction limits and dashboard token handling; retain the no-OS-sandbox restriction for generated code."
     }
   ]
 }
