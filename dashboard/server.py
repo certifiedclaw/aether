@@ -53,6 +53,8 @@ BASE_DIR    = Path(__file__).resolve().parent.parent
 STATIC_DIR  = Path(__file__).parent / "static"
 PORT        = 8000
 MAX_UPLOAD_MB = 500
+WS_TICKET_TTL = 30
+MAX_WS_TICKETS = 1000
 
 
 def _make_uploads_dir() -> Path:
@@ -454,6 +456,7 @@ class DashboardServer:
         self._ip                          = self._advertised_ip()
         self._tokens: set[str]            = set()
         self._token_keys: dict[str, str]  = {}   # auth_token → session_key
+        self._ws_tickets: dict[str, tuple[str, str, float]] = {}
         self._aes_cache:  dict[str, tuple]= {}   # session_key → (AES key, MAC key)
         self._limiter = _LoginLimiter()
         self._clients: set[WebSocket]     = set()
@@ -554,6 +557,30 @@ class DashboardServer:
         tok = req.headers.get("authorization", "").removeprefix("Bearer ").strip()
         return bool(tok) and tok in self._tokens
 
+    def _issue_ws_ticket(self, token: str, purpose: str) -> str | None:
+        if (token not in self._tokens or not isinstance(purpose, str)
+                or purpose not in {"main", "phone-audio"}):
+            return None
+        now = time.monotonic()
+        self._ws_tickets = {
+            key: value for key, value in self._ws_tickets.items() if value[2] > now
+        }
+        while len(self._ws_tickets) >= MAX_WS_TICKETS:
+            oldest = min(self._ws_tickets, key=lambda key: self._ws_tickets[key][2])
+            del self._ws_tickets[oldest]
+        ticket = secrets.token_urlsafe(24)
+        self._ws_tickets[ticket] = (token, purpose, now + WS_TICKET_TTL)
+        return ticket
+
+    def _consume_ws_ticket(self, ticket: str, purpose: str) -> str | None:
+        item = self._ws_tickets.pop(ticket, None)
+        if not item:
+            return None
+        token, expected_purpose, expires = item
+        if expires <= time.monotonic() or expected_purpose != purpose or token not in self._tokens:
+            return None
+        return token
+
     @staticmethod
     def _safe_filename(raw: str) -> str:
         name = Path(raw).name                          # strip path components
@@ -615,6 +642,21 @@ class DashboardServer:
     # ── auth / pairing routes ────────────────────────────────────────────
 
     def _register_auth_routes(self, app: "FastAPI") -> None:
+        @app.post("/api/ws-ticket")
+        async def create_ws_ticket(req: Request):
+            if not self._auth(req):
+                return JSONResponse({"error": "Unauthorized"}, status_code=401)
+            try:
+                body = await req.json()
+            except Exception:
+                body = {}
+            purpose = body.get("purpose") if isinstance(body, dict) else None
+            token = req.headers.get("authorization", "").removeprefix("Bearer ").strip()
+            ticket = self._issue_ws_ticket(token, purpose)
+            if not ticket:
+                return JSONResponse({"error": "Invalid WebSocket purpose"}, status_code=400)
+            return JSONResponse({"ticket": ticket}, headers={"Cache-Control": "no-store"})
+
         @app.post("/login")
         async def login(req: Request):
             ip = req.client.host if req.client else "?"
@@ -820,9 +862,9 @@ class DashboardServer:
         # _phone_audio_stt_loop can drain it directly with a blocking
         # queue.get(timeout=...) — see that method for the consumer.
         @app.websocket("/ws/phone-audio")
-        async def phone_audio_ws(websocket: WebSocket, token: str = ""):
-            tok = token.strip()
-            if not tok or tok not in self._tokens:
+        async def phone_audio_ws(websocket: WebSocket, ticket: str = ""):
+            tok = self._consume_ws_ticket(ticket, "phone-audio")
+            if not tok:
                 await websocket.close(code=4001)
                 return
             await websocket.accept()
@@ -849,6 +891,32 @@ class DashboardServer:
 
     def _register_file_routes(self, app: "FastAPI") -> None:
         if _UPLOAD_OK:
+            @app.middleware("http")
+            async def upload_preflight(req: Request, call_next):
+                if req.url.path == "/api/upload" and req.method == "POST":
+                    if not self._auth(req):
+                        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+                    content_length = req.headers.get("content-length")
+                    if content_length is None:
+                        return JSONResponse(
+                            {"error": "Content-Length is required for uploads"},
+                            status_code=411,
+                        )
+                    try:
+                        request_size = int(content_length)
+                    except ValueError:
+                        return JSONResponse({"error": "Invalid Content-Length"}, status_code=400)
+                    if request_size < 0:
+                        return JSONResponse({"error": "Invalid Content-Length"}, status_code=400)
+                    max_request_bytes = MAX_UPLOAD_MB * 1024 * 1024 + 1024 * 1024
+                    if request_size > max_request_bytes:
+                        return JSONResponse(
+                            {"error": f"Upload request too large (max {MAX_UPLOAD_MB} MB file)"},
+                            status_code=413,
+                        )
+                return await call_next(req)
+
             @app.post("/api/upload")
             async def upload_file(req: Request, file: UploadFile = FastAPIFile(...)):
                 if not self._auth(req):
@@ -918,24 +986,22 @@ class DashboardServer:
             return JSONResponse({"files": files})
 
         @app.get("/uploads/{filename}")
-        async def download_file(filename: str, token: str = ""):
-            # Auth via query param — browser <a download> can't send custom headers
-            tok = token.strip()
-            if not tok or tok not in self._tokens:
+        async def download_file(filename: str, req: Request):
+            if not self._auth(req):
                 return JSONResponse({"error": "Unauthorized"}, status_code=401)
             safe = re.sub(r'[/\\]', '', filename)
             path = self._uploads_dir / safe
             if not path.exists() or not path.is_file():
                 return JSONResponse({"error": "Not found"}, status_code=404)
-            return FileResponse(str(path), filename=safe)
+            return FileResponse(str(path), filename=safe, headers={"Cache-Control": "no-store"})
 
     # ── main relay websocket ──────────────────────────────────────────────
 
     def _register_main_ws(self, app: "FastAPI") -> None:
         @app.websocket("/ws")
-        async def ws_ep(websocket: WebSocket, token: str = ""):
-            tok = token.strip()
-            if not tok or tok not in self._tokens:
+        async def ws_ep(websocket: WebSocket, ticket: str = ""):
+            tok = self._consume_ws_ticket(ticket, "main")
+            if not tok:
                 await websocket.close(code=4001)
                 return
             await websocket.accept()

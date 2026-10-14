@@ -751,6 +751,10 @@ def _process_archive(path: Path, action: str, params: dict, speak=None) -> str:
             if zipfile.is_zipfile(path):
                 with zipfile.ZipFile(path) as archive:
                     entries = archive.infolist()
+                    from core.archive_safety import archive_size_error
+                    limit_error = archive_size_error(entries)
+                    if limit_error:
+                        return f"Extract failed: {limit_error}."
                     for entry in entries:
                         _, problem = _archive_target(dest_root, entry.filename, plugin_root, is_protected)
                         if problem:
@@ -765,6 +769,10 @@ def _process_archive(path: Path, action: str, params: dict, speak=None) -> str:
             elif tarfile.is_tarfile(path):
                 with tarfile.open(path, "r:*") as archive:
                     entries = archive.getmembers()
+                    from core.archive_safety import archive_size_error
+                    limit_error = archive_size_error(entries)
+                    if limit_error:
+                        return f"Extract failed: {limit_error}."
                     for entry in entries:
                         _, problem = _archive_target(dest_root, entry.name, plugin_root, is_protected)
                         if problem:

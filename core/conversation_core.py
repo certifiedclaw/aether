@@ -362,6 +362,13 @@ class ConversationCoreMixin:
         if not self._config.get("integrations.open_interpreter", False):
             tools = [tl for tl in tools
                      if tl.get("function", {}).get("name") != "open_interpreter"]
+        if self._mcp:
+            try:
+                if self._mcp.list_all_tools():
+                    from core.tool_declarations import MCP_TOOL_DECLARATION
+                    tools.extend(_to_ollama_tools([MCP_TOOL_DECLARATION]))
+            except Exception as e:
+                self.ui.write_log(f"WRN: MCP tool declaration unavailable - {e}")
         if not self._plugins:
             return tools
         try:

@@ -229,3 +229,64 @@ def test_dev_agent_proceeds_after_approval(monkeypatch, project):
     monkeypatch.setattr(safety, "confirm_action", lambda op, detail="": True)
     da.dev_agent({"description": "demo", "language": "python"})
     assert project["installed"] == [["requests", "rich"]] and project["ran"] == ["python main.py --go"]
+
+
+@pytest.mark.parametrize("unsafe_path", [
+    "../outside.py",
+    "..\\outside.py",
+    "C:\\outside.py",
+    "\\\\server\\share\\outside.py",
+    "/outside.py",
+])
+def test_dev_agent_rejects_paths_outside_project_before_generation(
+        monkeypatch, tmp_path, unsafe_path):
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    monkeypatch.setattr(da, "_llm", lambda *args, **kwargs: pytest.fail("LLM called for unsafe path"))
+
+    with pytest.raises(ValueError):
+        da._write_file(
+            file_info={"path": unsafe_path},
+            project_description="test",
+            all_files=[],
+            language="python",
+            project_dir=project_dir,
+            already_written={},
+        )
+
+
+def test_dev_agent_rejects_resolved_path_escape(monkeypatch, tmp_path):
+    project_dir = tmp_path / "project"
+    outside_dir = tmp_path / "outside"
+    project_dir.mkdir()
+    outside_dir.mkdir()
+    real_resolve = Path.resolve
+
+    def resolve(path, *args, **kwargs):
+        if path == project_dir / "link" / "outside.py":
+            return outside_dir / "outside.py"
+        return real_resolve(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", resolve)
+
+    with pytest.raises(ValueError):
+        da._project_file_path(project_dir, "link/outside.py")
+
+
+def test_dev_agent_rejects_unsafe_repair_path_before_generation(monkeypatch, tmp_path):
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    monkeypatch.setattr(da, "_parse_traceback", lambda *args: ("../outside.py", 2))
+    monkeypatch.setattr(da, "_llm", lambda *args, **kwargs: pytest.fail("LLM called for unsafe path"))
+
+    updated = da._fix_files(
+        error_output="failure",
+        project_description="test",
+        all_files=[],
+        file_codes={"../outside.py": "original"},
+        language="python",
+        project_dir=project_dir,
+        entry_point="../outside.py",
+    )
+
+    assert updated == {}

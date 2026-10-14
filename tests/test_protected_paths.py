@@ -104,6 +104,22 @@ def test_unzip_rejects_archive_path_traversal(tmp_path):
     assert not (tmp_path / "escaped.txt").exists()
 
 
+def test_extra_tools_unzip_rejects_excessive_expansion_before_writing(tmp_path, monkeypatch):
+    import zipfile
+    from actions import extra_tools as et
+    from core import archive_safety
+    archive = tmp_path / "oversized.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("large.txt", "123456")
+    monkeypatch.setattr(archive_safety, "MAX_ARCHIVE_TOTAL_BYTES", 5)
+    destination = tmp_path / "out"
+
+    result = et.unzip_file(str(archive), str(destination))
+
+    assert "expands beyond" in result.lower()
+    assert not destination.exists()
+
+
 @pytest.mark.parametrize("member", ["../escaped.txt", r"..\\escaped.txt", ".env.local", ".env. ", "api_keys.json"])
 def test_file_processor_archive_extract_rejects_unsafe_or_protected_members(tmp_path, member):
     import zipfile
@@ -119,6 +135,23 @@ def test_file_processor_archive_extract_rejects_unsafe_or_protected_members(tmp_
         assert result == pp.DENIED
     else:
         assert "unsafe path" in result.lower()
+    assert not destination.exists()
+
+
+def test_file_processor_archive_extract_rejects_excessive_expansion_before_approval(tmp_path, monkeypatch):
+    import zipfile
+    from actions import file_processor as fp
+    from core import archive_safety
+    archive = tmp_path / "oversized.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("large.txt", "123456")
+    monkeypatch.setattr(archive_safety, "MAX_ARCHIVE_TOTAL_BYTES", 5)
+    monkeypatch.setattr(fp, "_approve_archive_extraction", lambda *args: pytest.fail("approval requested"))
+    destination = tmp_path / "out"
+
+    result = fp._process_archive(archive, "extract", {"destination": str(destination)})
+
+    assert "expands beyond" in result.lower()
     assert not destination.exists()
 
 

@@ -2,7 +2,97 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-13 02:09 UTC
+Generated: 2026-10-14 00:42 UTC
+
+## #75 — 2026-10-14 00:42 UTC — Codex
+
+Closed a remote-approval timeout race: ApprovalStore.resolve now checks expiration while holding the store lock and converts late approval attempts into denials before signaling the blocked caller. Added focused late-click and pending-list regressions. The queue remains intentionally memory-only because a restart invalidates the waiting action.
+
+**Touched:** `core/pending_approvals.py`, `tests/test_pending_approvals.py`
+
+**Next steps:** Continue remaining audit items; review the real-time OS-level isolation requirement for generated code separately rather than claiming approval is a sandbox.
+
+---
+
+## #74 — 2026-10-14 00:41 UTC — Codex
+
+Bounded MCP stdio RPC waits to 30 seconds, moved stdout parsing to a bounded reader queue, capped individual response lines at 8 MiB, stopped unresponsive processes, and discarded unused stderr so a full pipe cannot deadlock the server. Added a real subprocess initialize/notification/tools-list regression test.
+
+**Touched:** `core/mcp_bridge.py`, `tests/test_mcp_bridge.py`
+
+**Next steps:** Continue the audit on approval persistence and other lifecycle gaps; generated-code execution remains blocked until an OS-enforced sandbox is available.
+
+---
+
+## #73 — 2026-10-14 00:39 UTC — Codex
+
+Removed long-lived dashboard bearer tokens from file-download and WebSocket URLs. Downloads now use Authorization headers and no-store responses; WebSocket routes use purpose-bound, one-use tickets expiring after 30 seconds, issued only to authenticated sessions. Updated the browser client and added regression tests.
+
+**Touched:** `dashboard/server.py`, `dashboard/static/app.html`, `tests/test_dashboard_security.py`
+
+**Next steps:** Continue audit fixes with MCP RPC response timeouts, then review remaining generated-code execution and approval lifecycle risks; keep arbitrary generated code disabled without OS isolation.
+
+---
+
+## #72 — 2026-10-14 00:34 UTC — Codex
+
+Added shared archive expansion limits for both extra_tools.unzip and file_processor ZIP/TAR extraction: at most 10,000 members, 512 MiB per member, and 1 GiB total uncompressed data. Limits are checked before approval prompts or writing files.
+
+**Touched:** `core/archive_safety.py`, `actions/extra_tools.py`, `actions/file_processor.py`, `tests/test_protected_paths.py`
+
+**Next steps:** Continue audit fixes with dashboard token handling and remaining MCP request timeouts; keep generated-code execution disabled until OS-level isolation exists.
+
+---
+
+## #71 — 2026-10-14 00:32 UTC — Codex
+
+Hardened MCP integration: subprocesses inherit only a small runtime environment plus explicitly configured variables; initialized notifications no longer wait for a nonexistent response; MCP calls require user approval, are limited to advertised tool names, redact nested secrets in approval details, and expose a structured function schema only when configured servers provide tools.
+
+**Touched:** `core/mcp_bridge.py`, `core/tool_dispatch.py`, `core/risk.py`, `core/tool_declarations.py`, `core/conversation_core.py`, `tests/test_mcp_bridge.py`, `tests/test_risk.py`
+
+**Next steps:** Continue audit fixes with safe archive extraction limits and dashboard token handling; retain the no-OS-sandbox restriction for generated code.
+
+---
+
+## #70 — 2026-10-13 03:52 UTC — Codex
+
+Fixed three high-risk audit findings: maintenance publishing now detects and commits only report paths, dev_agent rejects absolute/traversal/symlink-resolved paths for both initial writes and repair writes, and dashboard uploads authenticate and enforce request-size limits before multipart parsing. Added regression coverage.
+
+**Touched:** `actions/dev_agent.py`, `dashboard/server.py`, `tools/maintenance/publish.py`, `tests/test_execution_gates.py`, `tests/test_dashboard_security.py`, `tests/test_maintenance_publish.py`
+
+**Next steps:** Continue the audit fixes with MCP environment and tool-call isolation, archive extraction limits, and dashboard token handling; keep generated-code execution unavailable until OS-level sandboxing exists.
+
+---
+
+## #69 — 2026-10-13 03:42 UTC — Codex
+
+Completed a repository-wide static audit (234 tracked files inventoried; high-risk auth, file-write, upload, MCP, execution, logging, archive, startup, and auto-publish paths traced). No source files changed. Key findings: startup maintenance push can include unrelated staged files; dev_agent writes unvalidated model paths before approval; dashboard upload parses/spools before its in-handler auth and size checks; MCP inherits full environment, is not formally advertised, has an unguarded fallback, and can hang on initialized notification; generated code lacks OS isolation; remote token URLs/logging and secure-router IP lockout risks; archive expansion and pending approval restart gaps; headless dependency installation can block startup.
+
+**Touched:** `audit only; no source files changed`
+
+**Next steps:** Address the startup auto-push index isolation, dev_agent path confinement and pre-approval writes, dashboard request-size/auth ordering, MCP protocol/env/gating/schema issues, and OS sandboxing before deploying to the homelab; then add targeted regression tests and verify on Ubuntu headless.
+
+---
+
+## #68 — 2026-10-13 03:29 UTC — Codex
+
+Verified and pushed OSINT destination-pinning protections with regression coverage.
+
+**Touched:** `actions/osint_tools.py`, `tests/test_osint_tools.py`, `tools/maintenance/data/handoff.json`, `HANDOFF.md`
+
+**Next steps:** Keep redirects disabled unless each destination is independently validated and pinned.
+
+---
+
+## #67 — 2026-10-13 02:40 UTC — Codex
+
+Pin OSINT web and TLS lookups to validated public IPs, block private destinations and redirects, bound page reads, and add regression tests.
+
+**Touched:** `actions/osint_tools.py`, `tests/test_osint_tools.py`
+
+**Next steps:** Consider whether OSINT redirects should be followed only after validating and pinning each public destination.
+
+---
 
 ## #66 — 2026-10-13 02:09 UTC — Codex CLI
 

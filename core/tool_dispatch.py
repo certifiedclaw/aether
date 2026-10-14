@@ -415,10 +415,25 @@ class ToolDispatchMixin:
 
     def _tool_fallback(self, name: str, args: dict) -> str:
         if self._mcp and name == "mcp.call":
+            server = args.get("server", "")
+            tool = args.get("tool", "")
+            tool_args = args.get("args", {})
+            if not isinstance(server, str) or not isinstance(tool, str) or not isinstance(tool_args, dict):
+                return "[MCP] Server and tool must be strings, and args must be an object."
+            if not self._mcp.has_tool(server, tool):
+                return f"[MCP] Tool '{tool}' is not available on server '{server}'."
+            from core.risk import check
+            denied = check("mcp.call", "", {
+                "server": server,
+                "tool": tool,
+                "arguments": tool_args,
+            })
+            if denied:
+                return denied
             return self._mcp.call(
-                server=args.get("server", ""),
-                tool=args.get("tool", ""),
-                args=args.get("args", {}),
+                server=server,
+                tool=tool,
+                args=tool_args,
             )
         return f"Unknown tool: {name}"
 

@@ -4,6 +4,7 @@ import json
 import re
 import time
 from pathlib import Path
+from pathlib import PurePosixPath, PureWindowsPath
 
 
 def get_base_dir():
@@ -25,6 +26,27 @@ def _strip_fences(text: str) -> str:
     text = re.sub(r"^```[a-zA-Z]*\r?\n?", "", text)
     text = re.sub(r"\r?\n?```\s*$", "", text)
     return text.strip()
+
+
+def _project_file_path(project_dir: Path, file_path: str) -> Path:
+    if not isinstance(file_path, str) or not file_path.strip() or "\x00" in file_path:
+        raise ValueError("Project file path must be a non-empty relative path.")
+
+    windows_path = PureWindowsPath(file_path)
+    normalized = file_path.replace("\\", "/")
+    relative_path = PurePosixPath(normalized)
+    if (windows_path.is_absolute() or windows_path.drive or relative_path.is_absolute()
+            or any(part == ".." for part in relative_path.parts)
+            or not relative_path.parts):
+        raise ValueError(f"Project file path must stay inside the project: {file_path!r}")
+
+    root = project_dir.resolve()
+    candidate = root.joinpath(*relative_path.parts).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(f"Project file path escapes the project: {file_path!r}") from exc
+    return candidate
 
 
 def _is_rate_limit(error: Exception) -> bool:
@@ -135,6 +157,7 @@ def _write_file(
     already_written: dict[str, str],
 ) -> str:
     file_path    = file_info["path"]
+    full_path    = _project_file_path(project_dir, file_path)
     file_desc    = file_info.get("description", "")
     file_imports = file_info.get("imports", [])
 
@@ -164,8 +187,8 @@ def _write_file(
     )
 
     code      = _strip_fences(_llm(prompt, system=system))
-    full_path = project_dir / file_path
     full_path.parent.mkdir(parents=True, exist_ok=True)
+    full_path = _project_file_path(project_dir, file_path)
     full_path.write_text(code, encoding="utf-8")
     print(f"[DevAgent] ✅ Written: {file_path} ({len(code)} chars)")
     return code
@@ -335,9 +358,10 @@ def _fix_files(
         )
 
         try:
+            full_path = _project_file_path(project_dir, fix_path)
             fixed     = _strip_fences(_llm(prompt, system=system))
-            full_path = project_dir / fix_path
             full_path.parent.mkdir(parents=True, exist_ok=True)
+            full_path = _project_file_path(project_dir, fix_path)
             full_path.write_text(fixed, encoding="utf-8")
             updated_codes[fix_path] = fixed
             print(f"[DevAgent] 🔧 Fixed: {fix_path}")
