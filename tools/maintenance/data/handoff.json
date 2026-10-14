@@ -1,5 +1,5 @@
 {
-  "next_id": 76,
+  "next_id": 77,
   "entries": [
     {
       "id": 1,
@@ -1013,6 +1013,17 @@
         "tests/test_pending_approvals.py"
       ],
       "next_steps": "Continue remaining audit items; review the real-time OS-level isolation requirement for generated code separately rather than claiming approval is a sandbox."
+    },
+    {
+      "id": 76,
+      "timestamp": "2026-10-14 01:06 UTC",
+      "by": "Claude Code",
+      "summary": "Merged Codex security PR #4 and test fix PR #5 (master 53a90bf, 700 pass, 1 known Linux-only fail). Recorded the owner's feature wishlist as roadmap #39-#88, phased F0 (foundation: eval harness, /doctor, API server, degradation, leak guard, iansserver deployment) -> F1 (model quality: router, tuning, memory) -> F2 (daily-use features) -> F3 (voice/vision/media) -> F4 (coding agent, skills, agents). Goal: always-on assistant on iansserver, no paid APIs, usable when main PC is off. Sentinel Privacy Suite (separate project, MCP server) is to be integrated; its MCP server has never been run against Aether's bridge.",
+      "files": [
+        "tools/maintenance/data/roadmap.json",
+        "ROADMAP.md"
+      ],
+      "next_steps": "Start F0: eval harness + iansserver Docker setup (needs server free -h / ollama list); OS isolation for generated code via container; verify_local on Windows."
     }
   ]
 }

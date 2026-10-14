@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-10-13T01:44:52.248088+00:00",
+    "generated": "2026-10-14T01:06:56.489864+00:00",
     "pip_packages": 46
   },
   "pip": [
@@ -61,7 +61,7 @@
     },
     {
       "package": "playwright",
-      "latest": "1.63.0",
+      "latest": "1.64.0",
       "note": null
     },
     {
@@ -146,7 +146,7 @@
     },
     {
       "package": "edge-tts",
-      "latest": "7.2.8",
+      "latest": "7.3.1",
       "note": null
     },
     {
@@ -231,7 +231,7 @@
     },
     {
       "package": "google-genai",
-      "latest": "2.30.0",
+      "latest": "2.30.1",
       "note": null
     }
   ],
@@ -240,13 +240,13 @@
       "repo": "ollama/ollama",
       "label": "Ollama",
       "why": "local LLM runtime \u2014 core/llm_client.py talks to it",
-      "latest": "v0.40.3"
+      "latest": "unknown (lookup failed)"
     },
     {
       "repo": "SYSTRAN/faster-whisper",
       "label": "faster-whisper (engine)",
       "why": "default STT engine per requirements.txt",
-      "latest": "v1.2.1"
+      "latest": "unknown (lookup failed)"
     },
     {
       "repo": "hexgrad/Kokoro-82M",

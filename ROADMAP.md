@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap add/start/done`.
 
-Generated: 2026-10-13 02:10 UTC
+Generated: 2026-10-14 01:06 UTC
 
 ## In progress
 
@@ -13,6 +13,57 @@ Generated: 2026-10-13 02:10 UTC
 
 - [ ] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option `high`
   - Live Gemini key is inside full-folder zips. Verify git history never contained it; rotate if it did.
+- [ ] **#39** [F0] Evaluation harness: 100+ fixed prompts, scored after every change `high`
+  - Foundation. Also the benchmark for choosing the iansserver model.
+- [ ] **#40** [F0] Self-diagnosis command (/doctor): models, disk, permissions, config; auto-fix what it can `high`
+  - Seed: tools/verify_local.py.
+- [ ] **#41** [F0] API server: OpenAI-compatible endpoint so other tools can use Aether's models and memory `high`
+  - Lets Orrery, Obsidian organizer, gamepanel share Aether.
+- [ ] **#42** [F0] Graceful degradation: clear messages and automatic fallback when Ollama/model/PC/network is down `high`
+- [ ] **#43** [F0] Data-leak guard: never send secrets, memory or files to any cloud model `high`
+  - Needed before any cloud backend is enabled.
+- [ ] **#51** [F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones `high`
+  - ~800 lines. Depends on F0 eval harness.
+- [ ] **#52** [F1] Prompt and tool-schema tuning per model, driven by benchmark results `high`
+  - ~500 lines.
+- [ ] **#59** [F2] Web search with sources `high`
+  - ~600 lines.
+- [ ] **#60** [F2] Document Q&A over PDFs, notes, Obsidian, with citations `high`
+- [ ] **#88** [F0] Deploy Aether always-on on iansserver (Docker, headless, small CPU model, PC GPU as optional boost) `high`
+  - HP ProDesk 600 G4 (i5-8500, 32GB, HDD; NVMe planned). Docker + headless Aether + Ollama, behind Tailscale/Authelia. Needs free -h / ollama list output from the server.
+- [ ] **#44** [F0] Audit log viewer: searchable timeline of every tool call and approval `medium`
+- [ ] **#45** [F0] Export and import everything (chats, memory, settings) as one portable bundle `medium`
+  - Needed to move to iansserver.
+- [ ] **#46** [F0] Resource governor: pause heavy jobs when other containers (Palworld) need CPU/RAM `medium`
+- [ ] **#47** [F0] Cost and speed dashboard: tokens/s, memory use, latency per model `medium`
+- [ ] **#48** [F0] Auto-update with rollback: pull, run tests, roll back on failure `medium`
+- [ ] **#53** [F1] Self-check pass: model re-reads its answer for obvious mistakes `medium`
+  - ~300 lines.
+- [ ] **#55** [F1] Confidence and 'I don't know': flag uncertain answers, offer to search `medium`
+- [ ] **#56** [F1] Structured memory: small knowledge graph with conflict handling `medium`
+- [ ] **#57** [F1] Long-term memory panel: view, edit, delete what Aether remembers `medium`
+  - Fix #32 first.
+- [ ] **#58** [F1] Task resumption after interruption or restart `medium`
+  - Related to #19.
+- [ ] **#61** [F2] Personal search engine across files, notes, chats `medium`
+  - Builds on memory/RAG.
+- [ ] **#62** [F2] Multi-chat folders and search `medium`
+  - Builds on named chat sessions and /searchchats.
+- [ ] **#63** [F2] Daily briefing (weather, tasks, server status) via ntfy `medium`
+- [ ] **#64** [F2] Rich outputs: tables, charts, file previews inline `medium`
+- [ ] **#65** [F2] Scheduled reports (weekly server health etc.) `medium`
+- [ ] **#66** [F2] Rule builder in plain language (triggers + actions) `medium`
+- [ ] **#67** [F2] Chained approvals: approve a whole multi-step plan once `medium`
+- [ ] **#68** [F2] Hardware key or phone approval for high-risk actions `medium`
+- [ ] **#69** [F2] ntfy two-way: reply to Aether from a push notification `medium`
+- [ ] **#70** [F2] Grafana and Uptime Kuma reading ('why was X down last night?') `medium`
+- [ ] **#71** [F2] Proper web UI `medium`
+- [ ] **#74** [F3] Voice stack upgrade: barge-in, streaming TTS, better wake word `medium`
+- [ ] **#75** [F3] Image and screenshot understanding (vision model) `medium`
+  - Main PC GPU only.
+- [ ] **#81** [F4] Coding agent: sandbox first (container), then edit-test-retry loop with git checkpoints `medium`
+  - Sandbox also brings run_python back.
+- [ ] **#82** [F4] Skills system: drop-in folders of instructions and scripts `medium`
 - [ ] **#14** Route the 174 stray print() calls through core/observability.py `low`
   - Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules — actions/ is intentionally exempt (CLI-facing tool output).
 - [ ] **#16** Decide fate of the vestigial session_memory param across actions/ `low`
@@ -33,6 +84,25 @@ Generated: 2026-10-13 02:10 UTC
   - DEPENDENCY_REPORT.md shows lookup failed for all three upstream checks.
 - [ ] **#32** Investigate long_term.json identity entries missing value `low`
   - Handoff guesses user redaction; unconfirmed.
+- [ ] **#49** [F0] Crash reporter: sanitized report saved locally `low`
+- [ ] **#50** [F0] Telemetry that stays local: usage stats for the owner only `low`
+- [ ] **#54** [F1] Response caching for repeated questions `low`
+  - ~300 lines.
+- [ ] **#72** [F2] Proactive suggestions (always ask first) `low`
+- [ ] **#73** [F2] Multi-device sync of chats and memory `low`
+- [ ] **#76** [F3] Multiple voices and persona `low`
+- [ ] **#77** [F3] Speaker recognition (gate risky tools by who is speaking) `low`
+- [ ] **#78** [F3] Live captions and meeting notes (local faster-whisper) `low`
+- [ ] **#79** [F3] Translation mode `low`
+- [ ] **#80** [F3] Local image generation `low`
+  - Main PC GPU only.
+- [ ] **#83** [F4] Agent teams: planner, worker, reviewer `low`
+  - Slow on CPU; needs GPU or a big model.
+- [ ] **#84** [F4] Issue triage assistant for GitHub issues and PRs `low`
+- [ ] **#85** [F4] Log analyzer `low`
+- [ ] **#86** [F4] Gaming helper (patch notes, mod updates, library summary) `low`
+  - Builds on game_updater.
+- [ ] **#87** [F4] Learning tutor: quizzes from your own notes `low`
 
 ## Done
 

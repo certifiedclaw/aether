@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.dep_watcher` (or `run_all`) to refresh. Requires internet access.
 
-Generated: 2026-10-13T01:41:47.499924+00:00
+Generated: 2026-10-14T01:06:56.489864+00:00
 
 Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 3 versions behind" — it reports the latest available so you can decide whether to pin and bump.
 
@@ -10,8 +10,8 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 
 | Component | Latest | Why it matters |
 |---|---|---|
-| [Ollama](https://github.com/ollama/ollama) | v0.40.3 | local LLM runtime — core/llm_client.py talks to it |
-| [faster-whisper (engine)](https://github.com/SYSTRAN/faster-whisper) | v1.2.1 | default STT engine per requirements.txt |
+| [Ollama](https://github.com/ollama/ollama) | unknown (lookup failed) | local LLM runtime — core/llm_client.py talks to it |
+| [faster-whisper (engine)](https://github.com/SYSTRAN/faster-whisper) | unknown (lookup failed) | default STT engine per requirements.txt |
 | [Kokoro TTS](https://github.com/hexgrad/Kokoro-82M) | unknown (lookup failed) | offline TTS option, alternative to edge-tts |
 
 ## Python packages (from requirements.txt)
@@ -29,7 +29,7 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 | numpy | 2.5.4 |  |
 | soundfile | 0.14.0 |  |
 | requests | 2.34.2 |  |
-| playwright | 1.63.0 |  |
+| playwright | 1.64.0 |  |
 | beautifulsoup4 | 4.15.0 |  |
 | duckduckgo-search | 8.1.1 |  |
 | pyautogui | 0.9.54 |  |
@@ -46,7 +46,7 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 | python-pptx | 1.0.2 |  |
 | miniaudio | 1.71 |  |
 | faster-whisper | 1.2.1 |  |
-| edge-tts | 7.2.8 |  |
+| edge-tts | 7.3.1 |  |
 | sentence-transformers | 6.1.0 |  |
 | PyMuPDF | 1.28.2 |  |
 | python-whois | 0.9.6 |  |
@@ -63,7 +63,7 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 | qrcode | 8.2 |  |
 | wikipedia-api | 0.16.0 |  |
 | google-generativeai | 0.8.6 |  |
-| google-genai | 2.30.0 |  |
+| google-genai | 2.30.1 |  |
 
 ## Flagged for extra attention
 - **langchain** — Fast-moving API; pin a version once Aether's LangChain tool wiring is stable.

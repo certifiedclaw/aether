@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-14 00:42 UTC
+Generated: 2026-10-14 01:06 UTC
+
+## #76 — 2026-10-14 01:06 UTC — Claude Code
+
+Merged Codex security PR #4 and test fix PR #5 (master 53a90bf, 700 pass, 1 known Linux-only fail). Recorded the owner's feature wishlist as roadmap #39-#88, phased F0 (foundation: eval harness, /doctor, API server, degradation, leak guard, iansserver deployment) -> F1 (model quality: router, tuning, memory) -> F2 (daily-use features) -> F3 (voice/vision/media) -> F4 (coding agent, skills, agents). Goal: always-on assistant on iansserver, no paid APIs, usable when main PC is off. Sentinel Privacy Suite (separate project, MCP server) is to be integrated; its MCP server has never been run against Aether's bridge.
+
+**Touched:** `tools/maintenance/data/roadmap.json`, `ROADMAP.md`
+
+**Next steps:** Start F0: eval harness + iansserver Docker setup (needs server free -h / ollama list); OS isolation for generated code via container; verify_local on Windows.
+
+---
 
 ## #75 — 2026-10-14 00:42 UTC — Codex
 

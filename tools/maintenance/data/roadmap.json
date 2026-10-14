@@ -1,5 +1,5 @@
 {
-  "next_id": 39,
+  "next_id": 89,
   "items": [
     {
       "id": 1,
@@ -342,6 +342,456 @@
       "notes": "",
       "created": "2026-10-12",
       "updated": "2026-10-13"
+    },
+    {
+      "id": 39,
+      "title": "[F0] Evaluation harness: 100+ fixed prompts, scored after every change",
+      "priority": "high",
+      "status": "backlog",
+      "notes": "Foundation. Also the benchmark for choosing the iansserver model.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 40,
+      "title": "[F0] Self-diagnosis command (/doctor): models, disk, permissions, config; auto-fix what it can",
+      "priority": "high",
+      "status": "backlog",
+      "notes": "Seed: tools/verify_local.py.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 41,
+      "title": "[F0] API server: OpenAI-compatible endpoint so other tools can use Aether's models and memory",
+      "priority": "high",
+      "status": "backlog",
+      "notes": "Lets Orrery, Obsidian organizer, gamepanel share Aether.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 42,
+      "title": "[F0] Graceful degradation: clear messages and automatic fallback when Ollama/model/PC/network is down",
+      "priority": "high",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 43,
+      "title": "[F0] Data-leak guard: never send secrets, memory or files to any cloud model",
+      "priority": "high",
+      "status": "backlog",
+      "notes": "Needed before any cloud backend is enabled.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 44,
+      "title": "[F0] Audit log viewer: searchable timeline of every tool call and approval",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 45,
+      "title": "[F0] Export and import everything (chats, memory, settings) as one portable bundle",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Needed to move to iansserver.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 46,
+      "title": "[F0] Resource governor: pause heavy jobs when other containers (Palworld) need CPU/RAM",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 47,
+      "title": "[F0] Cost and speed dashboard: tokens/s, memory use, latency per model",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 48,
+      "title": "[F0] Auto-update with rollback: pull, run tests, roll back on failure",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 49,
+      "title": "[F0] Crash reporter: sanitized report saved locally",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 50,
+      "title": "[F0] Telemetry that stays local: usage stats for the owner only",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 51,
+      "title": "[F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones",
+      "priority": "high",
+      "status": "backlog",
+      "notes": "~800 lines. Depends on F0 eval harness.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 52,
+      "title": "[F1] Prompt and tool-schema tuning per model, driven by benchmark results",
+      "priority": "high",
+      "status": "backlog",
+      "notes": "~500 lines.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 53,
+      "title": "[F1] Self-check pass: model re-reads its answer for obvious mistakes",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "~300 lines.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 54,
+      "title": "[F1] Response caching for repeated questions",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "~300 lines.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 55,
+      "title": "[F1] Confidence and 'I don't know': flag uncertain answers, offer to search",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 56,
+      "title": "[F1] Structured memory: small knowledge graph with conflict handling",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 57,
+      "title": "[F1] Long-term memory panel: view, edit, delete what Aether remembers",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Fix #32 first.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 58,
+      "title": "[F1] Task resumption after interruption or restart",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Related to #19.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 59,
+      "title": "[F2] Web search with sources",
+      "priority": "high",
+      "status": "backlog",
+      "notes": "~600 lines.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 60,
+      "title": "[F2] Document Q&A over PDFs, notes, Obsidian, with citations",
+      "priority": "high",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 61,
+      "title": "[F2] Personal search engine across files, notes, chats",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Builds on memory/RAG.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 62,
+      "title": "[F2] Multi-chat folders and search",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Builds on named chat sessions and /searchchats.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 63,
+      "title": "[F2] Daily briefing (weather, tasks, server status) via ntfy",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 64,
+      "title": "[F2] Rich outputs: tables, charts, file previews inline",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 65,
+      "title": "[F2] Scheduled reports (weekly server health etc.)",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 66,
+      "title": "[F2] Rule builder in plain language (triggers + actions)",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 67,
+      "title": "[F2] Chained approvals: approve a whole multi-step plan once",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 68,
+      "title": "[F2] Hardware key or phone approval for high-risk actions",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 69,
+      "title": "[F2] ntfy two-way: reply to Aether from a push notification",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 70,
+      "title": "[F2] Grafana and Uptime Kuma reading ('why was X down last night?')",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 71,
+      "title": "[F2] Proper web UI",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 72,
+      "title": "[F2] Proactive suggestions (always ask first)",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 73,
+      "title": "[F2] Multi-device sync of chats and memory",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 74,
+      "title": "[F3] Voice stack upgrade: barge-in, streaming TTS, better wake word",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 75,
+      "title": "[F3] Image and screenshot understanding (vision model)",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Main PC GPU only.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 76,
+      "title": "[F3] Multiple voices and persona",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 77,
+      "title": "[F3] Speaker recognition (gate risky tools by who is speaking)",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 78,
+      "title": "[F3] Live captions and meeting notes (local faster-whisper)",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 79,
+      "title": "[F3] Translation mode",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 80,
+      "title": "[F3] Local image generation",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "Main PC GPU only.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 81,
+      "title": "[F4] Coding agent: sandbox first (container), then edit-test-retry loop with git checkpoints",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Sandbox also brings run_python back.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 82,
+      "title": "[F4] Skills system: drop-in folders of instructions and scripts",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 83,
+      "title": "[F4] Agent teams: planner, worker, reviewer",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "Slow on CPU; needs GPU or a big model.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 84,
+      "title": "[F4] Issue triage assistant for GitHub issues and PRs",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 85,
+      "title": "[F4] Log analyzer",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 86,
+      "title": "[F4] Gaming helper (patch notes, mod updates, library summary)",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "Builds on game_updater.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 87,
+      "title": "[F4] Learning tutor: quizzes from your own notes",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
+    },
+    {
+      "id": 88,
+      "title": "[F0] Deploy Aether always-on on iansserver (Docker, headless, small CPU model, PC GPU as optional boost)",
+      "priority": "high",
+      "status": "backlog",
+      "notes": "HP ProDesk 600 G4 (i5-8500, 32GB, HDD; NVMe planned). Docker + headless Aether + Ollama, behind Tailscale/Authelia. Needs free -h / ollama list output from the server.",
+      "created": "2026-10-14",
+      "updated": "2026-10-14"
     }
   ]
 }
