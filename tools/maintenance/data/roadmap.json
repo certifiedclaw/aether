@@ -356,7 +356,7 @@
       "id": 40,
       "title": "[F0] Self-diagnosis command (/doctor): models, disk, permissions, config; auto-fix what it can",
       "priority": "high",
-      "status": "backlog",
+      "status": "done",
       "notes": "Seed: tools/verify_local.py.",
       "created": "2026-10-14",
       "updated": "2026-10-14"

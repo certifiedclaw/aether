@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-14 01:11 UTC
+Generated: 2026-10-14 01:15 UTC
+
+## #78 — 2026-10-14 01:15 UTC — Claude Code
+
+Roadmap #40: /doctor. New core/doctor.py (also python -m core.doctor [--fix] [--json]) + /doctor and /doctor fix chat commands (run in a background thread; listed in /help). Checks: Python, config validity/permissions, key storage (names only, never values), git-tracked/unignored secrets, folders, disk/log size, memory.db integrity + long_term.json, Ollama reachability, installed model (with variant hints) and RAM fit, partial-GPU offload, remote PC, dashboard exposure (non-loopback needs TLS), untrusted plugins (shows sha256 to approve). Auto-fixes limited to mkdir and chmod 600; nothing edits config values or deletes data. 30 tests (752 pass, 1 known Linux-only fail). Verified on the sandbox tree only; not run on Windows or against a live Ollama.
+
+**Touched:** `core/doctor.py`, `core/chat_commands.py`, `tests/test_doctor.py`
+
+**Next steps:** Owner: run /doctor (or python -m core.doctor) on the PC and on iansserver and send the output; chmod check is skipped on Windows. Then #88 iansserver Docker setup.
+
+---
 
 ## #77 — 2026-10-14 01:11 UTC — Claude Code
 

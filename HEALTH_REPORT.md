@@ -2,8 +2,8 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.health_check` (or `run_all`) to refresh. Fix things here, don't edit this file directly.
 
-Generated: 2026-10-14T01:11:28.201570+00:00
-Files scanned: 166
+Generated: 2026-10-14T01:15:21.120775+00:00
+Files scanned: 168
 
 ## Summary
 
@@ -13,7 +13,7 @@ Files scanned: 166
 | Bare `except:` clauses | 0 |
 | Files over 600 lines | 15 |
 | Functions over 80 lines | 47 |
-| Stray `print()` calls (outside scripts) | 231 |
+| Stray `print()` calls (outside scripts) | 233 |
 | TODO / FIXME / XXX comments | 0 |
 | Unreadable files | 0 |
 
@@ -36,7 +36,7 @@ Files scanned: 166
 
 ## Functions over 80 lines
 - `core/conversation_core.py:425` — `_process_message_inner()` (440 lines)
-- `core/chat_commands.py:47` — `_handle_chat_command()` (193 lines)
+- `core/chat_commands.py:47` — `_handle_chat_command()` (213 lines)
 - `core/llm_client.py:815` — `_stream_openai_once()` (181 lines)
 - `core/llm_client.py:1179` — `call_llm_stream()` (176 lines)
 - `ui.py:1284` — `_build_llm_section()` (168 lines)
@@ -135,4 +135,4 @@ Found outside of scripts/tests — consider routing through `core/observability.
 - `tools/live_grader.py:221`
 - `tools/live_grader.py:223`
 - `tools/apply_roadmap_v12.py:105`
-- ...and 181 more
+- ...and 183 more

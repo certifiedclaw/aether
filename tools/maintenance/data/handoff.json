@@ -1,5 +1,5 @@
 {
-  "next_id": 78,
+  "next_id": 79,
   "entries": [
     {
       "id": 1,
@@ -1038,6 +1038,18 @@
         "tests/test_eval_harness.py"
       ],
       "next_steps": "Owner runs: python -m tools.eval_harness run --label qwen3-8b --suite all --model <installed model>, sends logs/eval/*.json; fix any case whose expectation was wrong; then run it for each candidate model on iansserver (use --url for remote Ollama) and pick the model; then #51 router."
+    },
+    {
+      "id": 78,
+      "timestamp": "2026-10-14 01:15 UTC",
+      "by": "Claude Code",
+      "summary": "Roadmap #40: /doctor. New core/doctor.py (also python -m core.doctor [--fix] [--json]) + /doctor and /doctor fix chat commands (run in a background thread; listed in /help). Checks: Python, config validity/permissions, key storage (names only, never values), git-tracked/unignored secrets, folders, disk/log size, memory.db integrity + long_term.json, Ollama reachability, installed model (with variant hints) and RAM fit, partial-GPU offload, remote PC, dashboard exposure (non-loopback needs TLS), untrusted plugins (shows sha256 to approve). Auto-fixes limited to mkdir and chmod 600; nothing edits config values or deletes data. 30 tests (752 pass, 1 known Linux-only fail). Verified on the sandbox tree only; not run on Windows or against a live Ollama.",
+      "files": [
+        "core/doctor.py",
+        "core/chat_commands.py",
+        "tests/test_doctor.py"
+      ],
+      "next_steps": "Owner: run /doctor (or python -m core.doctor) on the PC and on iansserver and send the output; chmod check is skipped on Windows. Then #88 iansserver Docker setup."
     }
   ]
 }
