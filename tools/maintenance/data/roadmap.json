@@ -788,7 +788,7 @@
       "id": 88,
       "title": "[F0] Deploy Aether always-on on iansserver (Docker, headless, small CPU model, PC GPU as optional boost)",
       "priority": "high",
-      "status": "backlog",
+      "status": "in-progress",
       "notes": "HP ProDesk 600 G4 (i5-8500, 32GB, HDD; NVMe planned). Docker + headless Aether + Ollama, behind Tailscale/Authelia. Needs free -h / ollama list output from the server.",
       "created": "2026-10-14",
       "updated": "2026-10-14"

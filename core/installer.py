@@ -96,6 +96,22 @@ def _pip(package: str, log: Callable | None = None) -> bool:
 
 # ── Public API ────────────────────────────────────────────────────────────
 
+def installs_disabled() -> bool:
+    """True when runtime package installs must not happen (servers/containers).
+
+    AETHER_SKIP_INSTALL=1 forces it off-limits, =0 forces it allowed; unset
+    defaults to disabled under AETHER_HEADLESS so a server never hangs on
+    pip / browser downloads at boot.
+    """
+    import os
+    v = os.environ.get("AETHER_SKIP_INSTALL", "").strip().lower()
+    if v in ("1", "true", "yes"):
+        return True
+    if v in ("0", "false", "no"):
+        return False
+    return os.environ.get("AETHER_HEADLESS", "").strip().lower() in ("1", "true", "yes")
+
+
 def install_for_config(config: dict, log: Callable | None = None) -> None:
     """
     Install all missing packages required by *config*.
@@ -103,6 +119,11 @@ def install_for_config(config: dict, log: Callable | None = None) -> None:
     Blocking — always call from a background thread.
     Progress is reported via the optional *log* callback (receives a str).
     """
+    if installs_disabled():
+        if log:
+            log("SYS: Runtime installs disabled (server mode) - skipping dependency check.")
+        return
+
     stt = config.get("stt_engine", "whisper").lower()
     tts = config.get("tts_engine", "edgetts").lower()
 

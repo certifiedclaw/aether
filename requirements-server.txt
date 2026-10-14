@@ -1,0 +1,15 @@
+# Aether - headless server image (no Qt, no audio, no browser automation).
+# Voice, vision and desktop-control tools stay on the desktop install.
+requests
+psutil
+pillow
+numpy
+soundfile
+fastapi
+uvicorn[standard]
+cryptography
+python-multipart
+beautifulsoup4
+duckduckgo_search
+python-dotenv
+pyyaml

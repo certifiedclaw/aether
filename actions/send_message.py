@@ -9,7 +9,7 @@ try:
     pyautogui.FAILSAFE = True
     pyautogui.PAUSE    = 0.06
     _PYAUTOGUI = True
-except ImportError:
+except Exception:  # ImportError, or no DISPLAY on a headless server
     _PYAUTOGUI = False
 
 try:

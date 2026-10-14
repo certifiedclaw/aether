@@ -83,11 +83,20 @@ class HeadlessUI:
         self.current_file   = None
         self.on_text_command = None
         self.on_reconfigure  = None
+        self.on_stop_command = None
+        self.chat_sessions: list = []
         self.root            = _HeadlessRootShim()
         self.state           = "IDLE"
         logger.info("[Aether] Running headless (no GUI) — AETHER_HEADLESS=1.")
 
     # ── State / logging ─────────────────────────────────────────────
+    def set_chat_sessions(self, *args, **kwargs) -> None:
+        """No chat picker headless; remember the list for introspection."""
+        self.chat_sessions = list(args[0]) if args and isinstance(args[0], (list, tuple)) else []
+
+    def clear_log(self) -> None:
+        pass
+
     def set_state(self, state: str) -> None:
         self.state = state
         logger.debug(f"[state] {state}")
