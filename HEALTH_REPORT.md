@@ -2,8 +2,8 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.health_check` (or `run_all`) to refresh. Fix things here, don't edit this file directly.
 
-Generated: 2026-10-14T01:06:51.126042+00:00
-Files scanned: 164
+Generated: 2026-10-14T01:11:28.201570+00:00
+Files scanned: 166
 
 ## Summary
 
@@ -13,7 +13,7 @@ Files scanned: 164
 | Bare `except:` clauses | 0 |
 | Files over 600 lines | 15 |
 | Functions over 80 lines | 47 |
-| Stray `print()` calls (outside scripts) | 225 |
+| Stray `print()` calls (outside scripts) | 231 |
 | TODO / FIXME / XXX comments | 0 |
 | Unreadable files | 0 |
 
@@ -21,7 +21,7 @@ Files scanned: 164
 - `ui.py` — 2751 lines
 - `tests/test_all_critical.py` — 2150 lines
 - `actions/osint_tools.py` — 1355 lines
-- `core/llm_client.py` — 1331 lines
+- `core/llm_client.py` — 1355 lines
 - `dashboard/server.py` — 1127 lines
 - `main.py` — 1122 lines
 - `actions/extra_tools.py` — 1076 lines
@@ -37,8 +37,8 @@ Files scanned: 164
 ## Functions over 80 lines
 - `core/conversation_core.py:425` — `_process_message_inner()` (440 lines)
 - `core/chat_commands.py:47` — `_handle_chat_command()` (193 lines)
-- `core/llm_client.py:791` — `_stream_openai_once()` (181 lines)
-- `core/llm_client.py:1155` — `call_llm_stream()` (176 lines)
+- `core/llm_client.py:815` — `_stream_openai_once()` (181 lines)
+- `core/llm_client.py:1179` — `call_llm_stream()` (176 lines)
 - `ui.py:1284` — `_build_llm_section()` (168 lines)
 - `actions/computer_control.py:355` — `computer_control()` (155 lines)
 - `actions/dev_agent.py:373` — `_build_project()` (154 lines)
@@ -53,7 +53,7 @@ Files scanned: 164
 - `main.py:860` — `run()` (115 lines)
 - `actions/game_updater.py:928` — `game_updater()` (115 lines)
 - `tests/test_all_critical.py:760` — `test_setup_overlay_refactor_preserves_behavior()` (113 lines)
-- `core/llm_client.py:517` — `call_llm()` (112 lines)
+- `core/llm_client.py:541` — `call_llm()` (112 lines)
 - `core/listen_loops.py:84` — `_listen_whisper()` (111 lines)
 - `actions/browser_control.py:421` — `_launch()` (104 lines)
 - `dashboard/server.py:892` — `_register_file_routes()` (104 lines)
@@ -72,7 +72,7 @@ Files scanned: 164
 - `ui.py:692` — `__init__()` (88 lines)
 - `actions/browser_control.py:818` — `browser_control()` (88 lines)
 - `actions/osint_tools.py:1058` — `extract_metadata()` (88 lines)
-- `core/llm_client.py:1222` — `_do_stream()` (88 lines)
+- `core/llm_client.py:1246` — `_do_stream()` (88 lines)
 - `actions/computer_settings.py:647` — `computer_settings()` (87 lines)
 - `actions/desktop.py:569` — `desktop_control()` (87 lines)
 - `main.py:1030` — `runner()` (86 lines)
@@ -135,4 +135,4 @@ Found outside of scripts/tests — consider routing through `core/observability.
 - `tools/live_grader.py:221`
 - `tools/live_grader.py:223`
 - `tools/apply_roadmap_v12.py:105`
-- ...and 175 more
+- ...and 181 more

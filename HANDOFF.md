@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-14 01:06 UTC
+Generated: 2026-10-14 01:11 UTC
+
+## #77 — 2026-10-14 01:11 UTC — Claude Code
+
+Roadmap #39 evaluation harness v1. New tools/eval_harness.py (run/compare/show/list) on top of tools/live_grader.py: runs the headless replay against a chosen model/host WITHOUT editing config (new AETHER_EVAL_OVERRIDES hook in core/llm_client._load_config; allowlist of non-secret routing keys, string values only), saves logs/eval/<label>.json (per-category scores, p50/p95 latency, failures), and compares two runs (exit 1 on regression/lower score; flags >25% slower p50). New suite tests/eval_suite_core.json (33 tool-free objective cases: math, knowledge, instruction, format, reasoning, memory, honesty, safety); existing 24-case smoke suite gained a category field. 23 new tests (722 pass, 1 known Linux-only fail). NOT verified end to end: the replay needs a real Aether+Ollama install; core-suite expectations are first-draft and need one calibration run.
+
+**Touched:** `tools/eval_harness.py`, `core/llm_client.py`, `tests/eval_suite_core.json`, `tests/live_test_cases.json`, `tests/test_eval_harness.py`
+
+**Next steps:** Owner runs: python -m tools.eval_harness run --label qwen3-8b --suite all --model <installed model>, sends logs/eval/*.json; fix any case whose expectation was wrong; then run it for each candidate model on iansserver (use --url for remote Ollama) and pick the model; then #51 router.
+
+---
 
 ## #76 — 2026-10-14 01:06 UTC — Claude Code
 

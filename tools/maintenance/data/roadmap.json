@@ -347,7 +347,7 @@
       "id": 39,
       "title": "[F0] Evaluation harness: 100+ fixed prompts, scored after every change",
       "priority": "high",
-      "status": "backlog",
+      "status": "in-progress",
       "notes": "Foundation. Also the benchmark for choosing the iansserver model.",
       "created": "2026-10-14",
       "updated": "2026-10-14"

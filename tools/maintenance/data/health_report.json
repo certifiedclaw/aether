@@ -55,7 +55,7 @@
     },
     {
       "file": "core/llm_client.py",
-      "lines": 1331
+      "lines": 1355
     },
     {
       "file": "core/conversation_core.py",
@@ -283,25 +283,25 @@
       "file": "core/llm_client.py",
       "function": "call_llm",
       "lines": 112,
-      "at_line": 517
+      "at_line": 541
     },
     {
       "file": "core/llm_client.py",
       "function": "_stream_openai_once",
       "lines": 181,
-      "at_line": 791
+      "at_line": 815
     },
     {
       "file": "core/llm_client.py",
       "function": "call_llm_stream",
       "lines": 176,
-      "at_line": 1155
+      "at_line": 1179
     },
     {
       "file": "core/llm_client.py",
       "function": "_do_stream",
       "lines": 88,
-      "at_line": 1222
+      "at_line": 1246
     },
     {
       "file": "core/echo.py",
@@ -551,6 +551,30 @@
     {
       "file": "tools/apply_roadmap_v12.py",
       "line": 107
+    },
+    {
+      "file": "tools/eval_harness.py",
+      "line": 251
+    },
+    {
+      "file": "tools/eval_harness.py",
+      "line": 252
+    },
+    {
+      "file": "tools/eval_harness.py",
+      "line": 256
+    },
+    {
+      "file": "tools/eval_harness.py",
+      "line": 259
+    },
+    {
+      "file": "tools/eval_harness.py",
+      "line": 264
+    },
+    {
+      "file": "tools/eval_harness.py",
+      "line": 268
     },
     {
       "file": "tools/clean_memory.py",
@@ -826,35 +850,27 @@
     },
     {
       "file": "core/llm_client.py",
-      "line": 268
+      "line": 292
     },
     {
       "file": "core/llm_client.py",
-      "line": 270
+      "line": 294
     },
     {
       "file": "core/llm_client.py",
-      "line": 273
+      "line": 297
     },
     {
       "file": "core/llm_client.py",
-      "line": 291
+      "line": 315
     },
     {
       "file": "core/llm_client.py",
-      "line": 298
+      "line": 322
     },
     {
       "file": "core/llm_client.py",
-      "line": 301
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 308
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 311
+      "line": 325
     },
     {
       "file": "core/llm_client.py",
@@ -862,7 +878,7 @@
     },
     {
       "file": "core/llm_client.py",
-      "line": 353
+      "line": 335
     },
     {
       "file": "core/llm_client.py",
@@ -870,39 +886,47 @@
     },
     {
       "file": "core/llm_client.py",
-      "line": 373
+      "line": 377
     },
     {
       "file": "core/llm_client.py",
-      "line": 376
+      "line": 380
     },
     {
       "file": "core/llm_client.py",
-      "line": 451
+      "line": 397
     },
     {
       "file": "core/llm_client.py",
-      "line": 453
+      "line": 400
     },
     {
       "file": "core/llm_client.py",
-      "line": 556
+      "line": 475
     },
     {
       "file": "core/llm_client.py",
-      "line": 578
+      "line": 477
     },
     {
       "file": "core/llm_client.py",
-      "line": 583
+      "line": 580
     },
     {
       "file": "core/llm_client.py",
-      "line": 1315
+      "line": 602
     },
     {
       "file": "core/llm_client.py",
-      "line": 1330
+      "line": 607
+    },
+    {
+      "file": "core/llm_client.py",
+      "line": 1339
+    },
+    {
+      "file": "core/llm_client.py",
+      "line": 1354
     },
     {
       "file": "core/headless_ui.py",
@@ -1252,7 +1276,7 @@
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-10-14T01:06:51.126042+00:00",
-    "files_scanned": 164
+    "generated": "2026-10-14T01:11:28.201570+00:00",
+    "files_scanned": 166
   }
 }
