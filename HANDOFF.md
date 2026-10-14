@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-14 00:32 UTC
+Generated: 2026-10-14 00:34 UTC
+
+## #72 — 2026-10-14 00:34 UTC — Codex
+
+Added shared archive expansion limits for both extra_tools.unzip and file_processor ZIP/TAR extraction: at most 10,000 members, 512 MiB per member, and 1 GiB total uncompressed data. Limits are checked before approval prompts or writing files.
+
+**Touched:** `core/archive_safety.py`, `actions/extra_tools.py`, `actions/file_processor.py`, `tests/test_protected_paths.py`
+
+**Next steps:** Continue audit fixes with dashboard token handling and remaining MCP request timeouts; keep generated-code execution disabled until OS-level isolation exists.
+
+---
 
 ## #71 — 2026-10-14 00:32 UTC — Codex
 

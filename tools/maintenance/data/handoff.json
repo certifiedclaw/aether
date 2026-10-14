@@ -1,5 +1,5 @@
 {
-  "next_id": 72,
+  "next_id": 73,
   "entries": [
     {
       "id": 1,
@@ -966,6 +966,19 @@
         "tests/test_risk.py"
       ],
       "next_steps": "Continue audit fixes with safe archive extraction limits and dashboard token handling; retain the no-OS-sandbox restriction for generated code."
+    },
+    {
+      "id": 72,
+      "timestamp": "2026-10-14 00:34 UTC",
+      "by": "Codex",
+      "summary": "Added shared archive expansion limits for both extra_tools.unzip and file_processor ZIP/TAR extraction: at most 10,000 members, 512 MiB per member, and 1 GiB total uncompressed data. Limits are checked before approval prompts or writing files.",
+      "files": [
+        "core/archive_safety.py",
+        "actions/extra_tools.py",
+        "actions/file_processor.py",
+        "tests/test_protected_paths.py"
+      ],
+      "next_steps": "Continue audit fixes with dashboard token handling and remaining MCP request timeouts; keep generated-code execution disabled until OS-level isolation exists."
     }
   ]
 }

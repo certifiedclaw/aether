@@ -392,7 +392,12 @@ def unzip_file(path: str, dest: str = "") -> str:
         if dest_root == plugin_dir or plugin_dir in dest_root.parents:
             return "Access denied: archives cannot be extracted into the executable plugin directory."
         with zipfile.ZipFile(path, "r") as zf:
-            names = zf.namelist()
+            entries = zf.infolist()
+            from core.archive_safety import archive_size_error
+            limit_error = archive_size_error(entries)
+            if limit_error:
+                return f"Unzip error: {limit_error}."
+            names = [entry.filename for entry in entries]
             for name in names:
                 target = (dest_root / name).resolve()
                 try:
