@@ -2,19 +2,19 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap add/start/done`.
 
-Generated: 2026-10-14 01:06 UTC
+Generated: 2026-10-14 01:11 UTC
 
 ## In progress
 
 - [ ] **#10** Finish the except-pass sweep across actions/ (~90 blocks unreviewed) `low`
   - Handoff #15's sweep covered core/, security/, agent/, dashboard/server.py, main.py, core/llm_client.py (~20 of 111 bare except-pass blocks). This session covered the 62 pass-only (zero-logging, highest-risk shape) blocks specifically in actions/ -- reviewed all of them; found one dead-code path (see #16) but no active silently-broken call like the 3 prior real bugs. Still unreviewed: the ~235 'except Exception as e: log...' blocks across the whole codebase (lower risk shape since they at least log, but not zero -- worth a pass if time allows) and actions/'s non-pass-only except blocks.
+- [ ] **#39** [F0] Evaluation harness: 100+ fixed prompts, scored after every change `high`
+  - Foundation. Also the benchmark for choosing the iansserver model.
 
 ## Backlog
 
 - [ ] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option `high`
   - Live Gemini key is inside full-folder zips. Verify git history never contained it; rotate if it did.
-- [ ] **#39** [F0] Evaluation harness: 100+ fixed prompts, scored after every change `high`
-  - Foundation. Also the benchmark for choosing the iansserver model.
 - [ ] **#40** [F0] Self-diagnosis command (/doctor): models, disk, permissions, config; auto-fix what it can `high`
   - Seed: tools/verify_local.py.
 - [ ] **#41** [F0] API server: OpenAI-compatible endpoint so other tools can use Aether's models and memory `high`

@@ -29,6 +29,7 @@ via "llm_provider" in config/api_keys.json:
         model ID and openai_api_key. API usage is billed separately from ChatGPT.
 """
 import json
+import os
 import re
 import subprocess
 import sys
@@ -186,6 +187,29 @@ def _ollama_missing_model_message(model: str, url: str) -> str:
     return msg + f" Or run: ollama pull {model}"
 
 
+# Test/benchmark hook (tools/eval_harness.py): AETHER_EVAL_OVERRIDES='{"llm_model": "..."}'
+# lets one process try another model without touching config/api_keys.json. Only these
+# non-secret routing keys are honoured, and only string values -- never keys or tokens.
+_EVAL_OVERRIDE_KEYS = frozenset({
+    "llm_model", "llm_url", "ollama_url", "llm_provider",
+    "llm_remote_url", "llm_remote_model", "llm_local_url", "llm_local_model",
+})
+
+
+def _apply_eval_overrides(cfg: dict) -> dict:
+    raw = os.environ.get("AETHER_EVAL_OVERRIDES")
+    if not raw:
+        return cfg
+    try:
+        ov = json.loads(raw)
+    except ValueError:
+        return cfg
+    if not isinstance(ov, dict):
+        return cfg
+    safe = {k: v for k, v in ov.items() if k in _EVAL_OVERRIDE_KEYS and isinstance(v, str)}
+    return {**cfg, **safe} if safe else cfg      # a copy: the file cache is never modified
+
+
 def _load_config() -> dict:
     """Reads config/api_keys.json, cached and invalidated on file change.
 
@@ -196,7 +220,7 @@ def _load_config() -> dict:
     try:
         mtime = CONFIG_PATH.stat().st_mtime
     except Exception:
-        return _config_cache or {}
+        return _apply_eval_overrides(_config_cache or {})
 
     if _config_cache is None or mtime != _config_mtime:
         try:
@@ -205,7 +229,7 @@ def _load_config() -> dict:
             _config_cache = {}
         _config_mtime = mtime
 
-    return _config_cache
+    return _apply_eval_overrides(_config_cache)
 
 
 def _openai_safe_messages(messages: list) -> list:
