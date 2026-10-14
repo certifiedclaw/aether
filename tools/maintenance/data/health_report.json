@@ -330,7 +330,7 @@
     {
       "file": "core/chat_commands.py",
       "function": "_handle_chat_command",
-      "lines": 193,
+      "lines": 213,
       "at_line": 47
     },
     {
@@ -957,6 +957,14 @@
       "line": 71
     },
     {
+      "file": "core/doctor.py",
+      "line": 383
+    },
+    {
+      "file": "core/doctor.py",
+      "line": 385
+    },
+    {
       "file": "core/observability.py",
       "line": 31
     },
@@ -1276,7 +1284,7 @@
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-10-14T01:11:28.201570+00:00",
-    "files_scanned": 166
+    "generated": "2026-10-14T01:15:21.120775+00:00",
+    "files_scanned": 168
   }
 }

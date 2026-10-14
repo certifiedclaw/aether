@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Do not hand-edit — rerun `python -m tools.maintenance.project_state` (or `run_all`) to refresh. This is meant to be the one file a new session (human or Claude) reads first to get oriented.
 
-Generated: 2026-10-14 01:11 UTC
+Generated: 2026-10-14 01:15 UTC
 Version: Aether v1.0.0
 
 ## Entry points
@@ -21,16 +21,16 @@ Version: Aether v1.0.0
 | `actions/` | 23 | 11,721 |
 | `agent/` | 4 | 1,163 |
 | `config/` | 1 | 27 |
-| `core/` | 48 | 11,193 |
+| `core/` | 49 | 11,604 |
 | `dashboard/` | 3 | 1,255 |
 | `dev_tools/` | 1 | 78 |
 | `integrations/` | 4 | 1,077 |
 | `memory/` | 6 | 1,173 |
 | `plugins/` | 1 | 44 |
 | `security/` | 7 | 1,338 |
-| `tests/` | 37 | 8,165 |
+| `tests/` | 38 | 8,427 |
 | `tools/` | 19 | 2,827 |
-| **Total** | **166** | **45,705** |
+| **Total** | **168** | **46,378** |
 
 ## Modules with docstrings (top-level summary)
 
@@ -71,7 +71,7 @@ Version: Aether v1.0.0
 ### `core/`
 - `core/__init__.py` (2 lines, 0 classes, 0 functions)
 - `core/archive_safety.py` (21 lines, 0 classes, 1 functions)
-- `core/chat_commands.py` (242 lines, 1 classes, 0 functions) — core/chat_commands.py — Aether Built-in Chat Commands
+- `core/chat_commands.py` (262 lines, 1 classes, 0 functions) — core/chat_commands.py — Aether Built-in Chat Commands
 - `core/chat_history.py` (286 lines, 1 classes, 9 functions) — Bounded, atomic local storage for named chat transcripts.
 - `core/config_io.py` (88 lines, 0 classes, 4 functions) — core/config_io.py -- save the settings dialog's values WITHOUT destroying the rest.
 - `core/config_validator.py` (201 lines, 2 classes, 9 functions) — core/config_validator.py — Aether Configuration Validator
@@ -80,6 +80,7 @@ Version: Aether v1.0.0
 - `core/credentials.py` (149 lines, 0 classes, 11 functions) — core/credentials.py -- one place to ask "what is the API key for X?".
 - `core/device_specs.py` (149 lines, 2 classes, 4 functions) — device_specs.py — best-effort local hardware detection + Ollama model
 - `core/diagnostics.py` (135 lines, 1 classes, 2 functions) — diagnostics.py — Aether System Diagnostics
+- `core/doctor.py` (391 lines, 1 classes, 23 functions) — core/doctor.py -- `/doctor`: find what is wrong with an Aether install and say how to fix it.
 - `core/echo.py` (388 lines, 2 classes, 5 functions) — Telling the user's voice apart from our own coming back through the speakers.
 - `core/evaluator.py` (130 lines, 2 classes, 0 functions) — core/evaluator.py — Aether Self-Evaluation System
 - `core/file_watcher.py` (126 lines, 1 classes, 1 functions) — core/file_watcher.py — Aether File Watcher
@@ -167,6 +168,7 @@ Version: Aether v1.0.0
 - `tests/test_dashboard_security.py` (204 lines, 0 classes, 17 functions) — Dashboard: encrypt-then-MAC, random session keys, login lockout (roadmap #33/#34).
 - `tests/test_desktop_sandbox.py` (229 lines, 0 classes, 16 functions) — Roadmap #23: the desktop task sandbox must not be escapable, and model-
 - `tests/test_desktop_timeout.py` (121 lines, 0 classes, 14 functions) — Approved desktop code runs in a child process with a deadline: `while True: pass`
+- `tests/test_doctor.py` (262 lines, 0 classes, 34 functions) — core/doctor.py: every check against a throwaway install; no network, no Ollama.
 - `tests/test_eval_harness.py` (177 lines, 0 classes, 19 functions) — tools/eval_harness.py + the AETHER_EVAL_OVERRIDES hook: no model, no Aether process needed.
 - `tests/test_execution_gates.py` (293 lines, 0 classes, 22 functions) — Tools that execute model-written or model-chosen code must be approved by the USER
 - `tests/test_invariants.py` (675 lines, 1 classes, 51 functions) — Whole-codebase invariants: properties that must hold across ALL tools / ALL inputs.
@@ -213,14 +215,14 @@ Version: Aether v1.0.0
 - `tools/verify_local.py` (355 lines, 1 classes, 11 functions) — tools/verify_local.py -- one-shot health check for a real Aether install.
 
 ## Recent history (git log)
+- 63b3559 2026-10-13 Merge pull request #7 from certifiedclaw/eval-harness
+- 1ac6c67 2026-10-13 Eval harness v1: per-model runs, category scores, run comparison, core suite (roadmap #39)
 - 36d0a2f 2026-10-13 Merge pull request #6 from certifiedclaw/roadmap-feature-wishlist
 - ba00960 2026-10-13 Roadmap: owner feature wishlist (#39-#88), phased F0-F4
 - 53a90bf 2026-10-13 Merge pull request #5 from certifiedclaw/fix-dashboard-test-env
 - 6f974d6 2026-10-13 Merge pull request #4 from certifiedclaw/codex/security-audit-fixes
 - a4cc8ab 2026-10-13 fix: reject late remote approvals
 - 6a50510 2026-10-13 fix: bound MCP server RPC waits
-- 3e0be2b 2026-10-13 fix: keep dashboard credentials out of URLs
-- 87873cf 2026-10-13 fix: cap archive extraction expansion
 
 ## See also
 - `HEALTH_REPORT.md` — automated code health scan

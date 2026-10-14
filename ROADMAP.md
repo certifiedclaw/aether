@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap add/start/done`.
 
-Generated: 2026-10-14 01:11 UTC
+Generated: 2026-10-14 01:15 UTC
 
 ## In progress
 
@@ -15,8 +15,6 @@ Generated: 2026-10-14 01:11 UTC
 
 - [ ] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option `high`
   - Live Gemini key is inside full-folder zips. Verify git history never contained it; rotate if it did.
-- [ ] **#40** [F0] Self-diagnosis command (/doctor): models, disk, permissions, config; auto-fix what it can `high`
-  - Seed: tools/verify_local.py.
 - [ ] **#41** [F0] API server: OpenAI-compatible endpoint so other tools can use Aether's models and memory `high`
   - Lets Orrery, Obsidian organizer, gamepanel share Aether.
 - [ ] **#42** [F0] Graceful degradation: clear messages and automatic fallback when Ollama/model/PC/network is down `high`
@@ -157,3 +155,5 @@ Generated: 2026-10-14 01:11 UTC
 - [x] **#37** run_python is not a sandbox: decide keep (ASK + full-code dialog + scrubbed env, as of v12g) or replace with a real isolation layer
   - v12g: same interpreter, -I, scratch cwd, secret env stripped, timeout clamped 1-60s, dialog shows whole code. Still runs as the user.
 - [x] **#38** Dashboard still binds 0.0.0.0 over plain HTTP by default; add LAN-only/bind option and prefer HTTPS
+- [x] **#40** [F0] Self-diagnosis command (/doctor): models, disk, permissions, config; auto-fix what it can
+  - Seed: tools/verify_local.py.

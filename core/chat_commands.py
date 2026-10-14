@@ -164,6 +164,25 @@ class ChatCommandsMixin:
             self.ui.write_log("SYS: Chat history cleared.")
             self.speak("History cleared.")
             return True
+        if user_text.strip().lower() in ("/doctor", "/doctor fix"):
+            # Backgrounded like /selftest: the checks probe Ollama/remote hosts with real timeouts.
+            apply = user_text.strip().lower().endswith("fix")
+            self.ui.write_log("SYS: Running doctor" + (" (applying safe fixes)" if apply else "") + "…")
+
+            def _doctor():
+                try:
+                    from core import doctor
+                    found = doctor.run_checks()
+                    fixed = doctor.apply_fixes(found) if apply else None
+                    if fixed:
+                        found = doctor.run_checks()
+                    self.ui.write_log(doctor.render(found, fixed))
+                except Exception as e:  # noqa: BLE001 - a diagnostic must never take the app down
+                    self.ui.write_log(f"SYS: Doctor failed: {type(e).__name__}: {e}")
+
+            import threading as _th
+            _th.Thread(target=_doctor, daemon=True, name="aether-doctor").start()
+            return True
         if user_text.strip().lower() in ("/selftest", "run self test", "self test"):
             # Backgrounded: self-test hits Ollama/LLM/audio devices with
             # real timeouts (up to ~30s for the LLM check alone), and this
@@ -219,6 +238,7 @@ class ChatCommandsMixin:
                 "/selftest          Run full system self-test\n"
                 "/crashes           Show recent crash logs\n"
                 "/status            Full system diagnostic\n"
+                "/doctor            Find install problems and how to fix them (/doctor fix applies safe fixes)\n"
                 "/backup            Snapshot memory to zip\n"
                 "/memstats          Memory system statistics\n"
                 "/prune             Remove duplicate/old memories\n"
