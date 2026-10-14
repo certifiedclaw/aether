@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-14 00:41 UTC
+Generated: 2026-10-14 00:42 UTC
+
+## #75 — 2026-10-14 00:42 UTC — Codex
+
+Closed a remote-approval timeout race: ApprovalStore.resolve now checks expiration while holding the store lock and converts late approval attempts into denials before signaling the blocked caller. Added focused late-click and pending-list regressions. The queue remains intentionally memory-only because a restart invalidates the waiting action.
+
+**Touched:** `core/pending_approvals.py`, `tests/test_pending_approvals.py`
+
+**Next steps:** Continue remaining audit items; review the real-time OS-level isolation requirement for generated code separately rather than claiming approval is a sandbox.
+
+---
 
 ## #74 — 2026-10-14 00:41 UTC — Codex
 

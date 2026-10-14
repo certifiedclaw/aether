@@ -1,5 +1,5 @@
 {
-  "next_id": 75,
+  "next_id": 76,
   "entries": [
     {
       "id": 1,
@@ -1002,6 +1002,17 @@
         "tests/test_mcp_bridge.py"
       ],
       "next_steps": "Continue the audit on approval persistence and other lifecycle gaps; generated-code execution remains blocked until an OS-enforced sandbox is available."
+    },
+    {
+      "id": 75,
+      "timestamp": "2026-10-14 00:42 UTC",
+      "by": "Codex",
+      "summary": "Closed a remote-approval timeout race: ApprovalStore.resolve now checks expiration while holding the store lock and converts late approval attempts into denials before signaling the blocked caller. Added focused late-click and pending-list regressions. The queue remains intentionally memory-only because a restart invalidates the waiting action.",
+      "files": [
+        "core/pending_approvals.py",
+        "tests/test_pending_approvals.py"
+      ],
+      "next_steps": "Continue remaining audit items; review the real-time OS-level isolation requirement for generated code separately rather than claiming approval is a sandbox."
     }
   ]
 }

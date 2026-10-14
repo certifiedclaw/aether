@@ -79,13 +79,20 @@ class ApprovalStore:
         False if the approval doesn't exist or was already resolved
         (including by its own timeout)."""
         with self._lock:
+            now = time.time()
             approval = self._approvals.get(approval_id)
             if approval is None or approval.result is not None:
                 return False
-            approval.result = approved
-            approval.resolved_at = time.time()
+            if approval.created_at + approval.timeout <= now:
+                approval.result = False
+                approval.resolved_at = now
+                expired = True
+            else:
+                approval.result = approved
+                approval.resolved_at = now
+                expired = False
         approval.event.set()
-        return True
+        return not expired
 
     def wait(self, approval_id: str, timeout: float) -> bool:
         """Blocks the calling thread until resolve() is called or timeout
