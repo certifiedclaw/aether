@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-14 00:39 UTC
+Generated: 2026-10-14 00:41 UTC
+
+## #74 — 2026-10-14 00:41 UTC — Codex
+
+Bounded MCP stdio RPC waits to 30 seconds, moved stdout parsing to a bounded reader queue, capped individual response lines at 8 MiB, stopped unresponsive processes, and discarded unused stderr so a full pipe cannot deadlock the server. Added a real subprocess initialize/notification/tools-list regression test.
+
+**Touched:** `core/mcp_bridge.py`, `tests/test_mcp_bridge.py`
+
+**Next steps:** Continue the audit on approval persistence and other lifecycle gaps; generated-code execution remains blocked until an OS-enforced sandbox is available.
+
+---
 
 ## #73 — 2026-10-14 00:39 UTC — Codex
 

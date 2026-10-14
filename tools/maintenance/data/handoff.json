@@ -1,5 +1,5 @@
 {
-  "next_id": 74,
+  "next_id": 75,
   "entries": [
     {
       "id": 1,
@@ -991,6 +991,17 @@
         "tests/test_dashboard_security.py"
       ],
       "next_steps": "Continue audit fixes with MCP RPC response timeouts, then review remaining generated-code execution and approval lifecycle risks; keep arbitrary generated code disabled without OS isolation."
+    },
+    {
+      "id": 74,
+      "timestamp": "2026-10-14 00:41 UTC",
+      "by": "Codex",
+      "summary": "Bounded MCP stdio RPC waits to 30 seconds, moved stdout parsing to a bounded reader queue, capped individual response lines at 8 MiB, stopped unresponsive processes, and discarded unused stderr so a full pipe cannot deadlock the server. Added a real subprocess initialize/notification/tools-list regression test.",
+      "files": [
+        "core/mcp_bridge.py",
+        "tests/test_mcp_bridge.py"
+      ],
+      "next_steps": "Continue the audit on approval persistence and other lifecycle gaps; generated-code execution remains blocked until an OS-enforced sandbox is available."
     }
   ]
 }

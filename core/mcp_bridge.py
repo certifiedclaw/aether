@@ -31,13 +31,18 @@ from __future__ import annotations
 import json
 import logging
 import os
+import queue
 import subprocess
 import threading
+import time
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 _NEWLINE = b"\n"
+MCP_RPC_TIMEOUT_SECONDS = 30
+_MCP_STDOUT_QUEUE_SIZE = 16
+_MCP_MAX_LINE_BYTES = 8 * 1024 * 1024
 _MCP_ENV_ALLOWLIST = frozenset({
     "PATH", "HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "SYSTEMROOT",
     "WINDIR", "TEMP", "TMP", "TMPDIR", "HOMEDRIVE", "HOMEPATH", "PATHEXT",
@@ -69,6 +74,7 @@ class MCPServerProcess:
         self._lock = threading.Lock()
         self._msg_id = 0
         self._tools: list[dict] = []
+        self._stdout_queue: queue.Queue[bytes | None] = queue.Queue(maxsize=_MCP_STDOUT_QUEUE_SIZE)
 
     # ── Lifecycle ─────────────────────────────────────────────────────────
 
@@ -76,24 +82,66 @@ class MCPServerProcess:
         if self._proc and self._proc.poll() is None:
             return
         logger.info("MCP: starting server '%s' (%s %s)", self.name, self._command, self._args)
+        self._stdout_queue = queue.Queue(maxsize=_MCP_STDOUT_QUEUE_SIZE)
         self._proc = subprocess.Popen(
             [self._command, *self._args],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
             env=self._env,
         )
-        self._initialize()
-        self._tools = self._fetch_tools()
+        threading.Thread(
+            target=self._read_stdout,
+            args=(self._proc, self._stdout_queue),
+            daemon=True,
+        ).start()
+        try:
+            self._initialize()
+            self._tools = self._fetch_tools()
+        except Exception:
+            self.stop()
+            raise
 
     def stop(self) -> None:
-        if self._proc:
+        proc = self._proc
+        self._proc = None
+        if proc:
             try:
-                self._proc.terminate()
-                self._proc.wait(timeout=5)
+                proc.terminate()
             except Exception:
-                self._proc.kill()
-            self._proc = None
+                pass
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                try:
+                    proc.kill()
+                    proc.wait(timeout=5)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+    @staticmethod
+    def _read_stdout(proc, response_queue: queue.Queue) -> None:
+        try:
+            while True:
+                raw = proc.stdout.readline(_MCP_MAX_LINE_BYTES + 1)
+                if not raw:
+                    response_queue.put(None, timeout=1)
+                    return
+                if len(raw) > _MCP_MAX_LINE_BYTES:
+                    raise ValueError("MCP response line exceeds the size limit")
+                response_queue.put(raw, timeout=1)
+        except (queue.Full, OSError, ValueError) as exc:
+            logger.error("MCP stdout reader stopped: %s", exc)
+            try:
+                proc.terminate()
+            except Exception:
+                pass
+            try:
+                response_queue.put_nowait(None)
+            except queue.Full:
+                pass
 
     def is_alive(self) -> bool:
         return self._proc is not None and self._proc.poll() is None
@@ -115,14 +163,29 @@ class MCPServerProcess:
         with self._lock:
             self._proc.stdin.write(line)
             self._proc.stdin.flush()
-            # Read lines until we get a response for our id
+            deadline = time.monotonic() + MCP_RPC_TIMEOUT_SECONDS
             while True:
-                raw = self._proc.stdout.readline()
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    self.stop()
+                    raise TimeoutError(
+                        f"MCP server '{self.name}' timed out waiting for '{method}'"
+                    )
+                try:
+                    raw = self._stdout_queue.get(timeout=remaining)
+                except queue.Empty as exc:
+                    self.stop()
+                    raise TimeoutError(
+                        f"MCP server '{self.name}' timed out waiting for '{method}'"
+                    ) from exc
                 if not raw:
+                    self.stop()
                     raise RuntimeError(f"MCP server '{self.name}' closed stdout unexpectedly")
                 try:
                     resp = json.loads(raw.decode())
                 except json.JSONDecodeError:
+                    continue
+                if not isinstance(resp, dict):
                     continue
                 if resp.get("id") == msg_id:
                     if "error" in resp:
