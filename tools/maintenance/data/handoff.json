@@ -1,5 +1,5 @@
 {
-  "next_id": 80,
+  "next_id": 81,
   "entries": [
     {
       "id": 1,
@@ -1072,6 +1072,20 @@
         "tests/test_server_mode.py"
       ],
       "next_steps": "User: docker compose up on iansserver, report build errors, pull a model, test dashboard over Tailscale. Then #41 API server, container sandbox for generated code."
+    },
+    {
+      "id": 80,
+      "timestamp": "2026-10-15 21:28 UTC",
+      "by": "Claude Code",
+      "summary": "#43 leak guard: core/leak_guard.py redacts API keys/tokens/private keys/JWT/Luhn cards + exact config secrets from every request to Gemini/OpenAI-API (3 call sites in llm_client); cloud_allow=false refuses cloud and conversation_core stays local; cloud_redact=false disables. Logs counts only. Stacked on PR #9.",
+      "files": [
+        "core/leak_guard.py",
+        "core/llm_client.py",
+        "core/conversation_core.py",
+        "config/config.example.json",
+        "tests/test_leak_guard.py"
+      ],
+      "next_steps": "#41 API server (OpenAI-compatible endpoint), #42 graceful degradation."
     }
   ]
 }

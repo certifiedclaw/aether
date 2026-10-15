@@ -383,10 +383,10 @@
       "id": 43,
       "title": "[F0] Data-leak guard: never send secrets, memory or files to any cloud model",
       "priority": "high",
-      "status": "backlog",
+      "status": "done",
       "notes": "Needed before any cloud backend is enabled.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-15"
     },
     {
       "id": 44,
