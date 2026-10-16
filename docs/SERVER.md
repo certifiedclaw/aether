@@ -52,3 +52,9 @@ previous one, so edits or deletions are detected (tamper-evident, not tamper-pro
 - Chat: `/audit`, `/audit 50 tool=send_message decision=denied hours=24 words`, `/audit verify`
 - Web: `https://<host>:8000/audit` (needs your dashboard login) or `GET /api/audit`
 - Config: `audit_log` (default true), `audit_log_safe` (also log safe-tier calls, default false)
+
+## Speed, memory and cloud usage
+`/perf [hours]` (chat) or `https://<host>:8000/perf` (dashboard login) shows per model and route (local / remote GPU / cloud):
+rounds, median and p95 time, tokens/s, tokens in/out; Aether's memory, host free RAM, and what Ollama has loaded
+(RAM vs GPU). Cloud tokens per day are listed; set `cloud_daily_token_budget` for a heads-up before a free tier
+runs out (warning only, nothing is blocked). Data: `logs/perf.jsonl`, numbers only - no message text.

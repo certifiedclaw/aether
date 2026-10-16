@@ -1,5 +1,5 @@
 {
-  "next_id": 85,
+  "next_id": 86,
   "entries": [
     {
       "id": 1,
@@ -1148,6 +1148,24 @@
         "docs/SERVER.md"
       ],
       "next_steps": "#45 export/import bundle, #47 speed dashboard, #48 auto-update with rollback, container sandbox for generated code."
+    },
+    {
+      "id": 85,
+      "timestamp": "2026-10-16 21:48 UTC",
+      "by": "Claude Code",
+      "summary": "#47 speed dashboard: core/perf_stats.py records every model round (model, route local/remote/cloud, tokens, elapsed, tokens/s; no message text) to logs/perf.jsonl from conversation_core._publish_message_stats; /perf [hours] chat command, authed GET /api/perf and /perf page (median/p95 per model, memory incl. Ollama /api/ps RAM-vs-GPU, cloud tokens per day, optional cloud_daily_token_budget warning). Verified headless against mock Ollama. Limits: no time-to-first-token; mock numbers aren't real speeds - check on real models; Gemini token counts depend on what the stream reports.",
+      "files": [
+        "core/perf_stats.py",
+        "core/conversation_core.py",
+        "core/chat_commands.py",
+        "dashboard/server.py",
+        "dashboard/static/perf.html",
+        "config/config.example.json",
+        "tests/conftest.py",
+        "tests/test_perf_stats.py",
+        "docs/SERVER.md"
+      ],
+      "next_steps": "#45 export/import bundle, #48 auto-update with rollback, container sandbox for generated code."
     }
   ]
 }

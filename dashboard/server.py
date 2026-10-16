@@ -609,6 +609,7 @@ class DashboardServer:
         self._register_approval_routes(app)
         self._register_llm_status_routes(app)
         self._register_audit_routes(app)
+        self._register_perf_routes(app)
         self._register_phone_audio_ws(app)
         self._register_file_routes(app)
         self._register_main_ws(app)
@@ -866,6 +867,25 @@ class DashboardServer:
             ok, msg = audit_log.verify()
             return JSONResponse({"entries": entries, "summary": audit_log.summarize(entries),
                                  "chain": {"ok": ok, "message": msg}})
+
+    # ── speed / memory / cloud-usage (core/perf_stats.py) ────────────────
+
+    def _register_perf_routes(self, app: "FastAPI") -> None:
+        @app.get("/perf", response_class=HTMLResponse)
+        async def perf_page():
+            return HTMLResponse(_read("perf.html"))
+
+        @app.get("/api/perf")
+        async def perf_api(req: Request):
+            if not self._auth(req):
+                return JSONResponse({"error": "Unauthorized"}, status_code=401)
+            from core import perf_stats
+            try:
+                hours = min(24.0 * 30, max(0.0, float(req.query_params.get("hours", "24"))))
+            except ValueError:
+                hours = 24.0
+            return JSONResponse(await asyncio.get_running_loop().run_in_executor(
+                None, perf_stats.full_report, hours))
 
     # ── voice command routes ─────────────────────────────────────────────
 

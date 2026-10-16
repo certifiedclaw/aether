@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-16 21:14 UTC
+Generated: 2026-10-16 21:48 UTC
+
+## #85 — 2026-10-16 21:48 UTC — Claude Code
+
+#47 speed dashboard: core/perf_stats.py records every model round (model, route local/remote/cloud, tokens, elapsed, tokens/s; no message text) to logs/perf.jsonl from conversation_core._publish_message_stats; /perf [hours] chat command, authed GET /api/perf and /perf page (median/p95 per model, memory incl. Ollama /api/ps RAM-vs-GPU, cloud tokens per day, optional cloud_daily_token_budget warning). Verified headless against mock Ollama. Limits: no time-to-first-token; mock numbers aren't real speeds - check on real models; Gemini token counts depend on what the stream reports.
+
+**Touched:** `core/perf_stats.py`, `core/conversation_core.py`, `core/chat_commands.py`, `dashboard/server.py`, `dashboard/static/perf.html`, `config/config.example.json`, `tests/conftest.py`, `tests/test_perf_stats.py`, `docs/SERVER.md`
+
+**Next steps:** #45 export/import bundle, #48 auto-update with rollback, container sandbox for generated code.
+
+---
 
 ## #84 — 2026-10-16 21:14 UTC — Claude Code
 

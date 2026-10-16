@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aether performance</title>
+<style>
+  :root { --bg:#0e1116; --fg:#e6edf3; --mut:#8b949e; --line:#262c36; --bad:#f85149; --card:#161b22; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui,sans-serif; padding:16px; }
+  h1 { font-size:18px; margin:0 0 12px; } h2 { font-size:14px; color:var(--mut); margin:18px 0 6px; }
+  select, a { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:8px; font:inherit; }
+  a { text-decoration:none; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px; margin-bottom:8px; overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; } th, td { text-align:left; padding:4px 10px 4px 0; white-space:nowrap; }
+  th { color:var(--mut); font-weight:500; }
+  .warn { color:var(--bad); }
+</style>
+</head>
+<body>
+<h1>Performance</h1>
+<p><select id="h" aria-label="period"><option value="1">last hour</option><option value="24" selected>last 24 h</option>
+<option value="168">last 7 days</option><option value="720">last 30 days</option></select>
+<a href="/">Back to Aether</a></p>
+<div id="warn" class="warn"></div>
+<h2>Speed by model</h2><div class="card" id="speed"></div>
+<h2>Memory</h2><div class="card" id="mem"></div>
+<h2>Cloud tokens per day</h2><div class="card" id="cloud"></div>
+<script>
+  let token = null;
+  try { token = sessionStorage.getItem('aether_token'); } catch (e) {}
+  const $ = (id) => document.getElementById(id);
+  function table(el, head, rows) {
+    el.textContent = '';
+    if (!rows.length) { el.textContent = 'Nothing recorded yet.'; return; }
+    const t = document.createElement('table'), tr = t.insertRow();
+    head.forEach(h => { const th = document.createElement('th'); th.textContent = h; tr.appendChild(th); });
+    rows.forEach(r => { const row = t.insertRow(); r.forEach(c => { row.insertCell().textContent = c; }); });
+    el.appendChild(t);
+  }
+  async function load() {
+    if (!token) { location.href = '/login'; return; }
+    let r;
+    try { r = await fetch('/api/perf?hours=' + $('h').value, { headers: { Authorization: 'Bearer ' + token } }); }
+    catch (e) { $('speed').textContent = 'Could not reach the server.'; return; }
+    if (r.status === 401) { location.href = '/login'; return; }
+    const j = await r.json();
+    $('warn').textContent = j.warning || '';
+    table($('speed'), ['model (route)', 'rounds', 'median s', 'p95 s', 'tok/s', 'tokens in', 'tokens out'],
+      j.summary.models.map(m => [m.model, m.rounds, m.p50_s, m.p95_s, m.avg_tps ?? 'n/a',
+        m.prompt_tokens.toLocaleString(), m.output_tokens.toLocaleString()]));
+    const m = j.memory, rows = [];
+    if (m.process_mb != null) {
+      rows.push(['Aether process', m.process_mb + ' MB']);
+      rows.push(['Host free / total', m.host_free_mb + ' / ' + m.host_total_mb + ' MB']);
+    }
+    m.loaded.forEach(x => rows.push(['Ollama: ' + x.model, x.size_mb + ' MB (' + (x.gpu_mb ? x.gpu_mb + ' MB on GPU' : 'CPU/RAM') + ')']));
+    table($('mem'), ['what', 'size'], rows);
+    table($('cloud'), ['day', 'tokens'], Object.entries(j.summary.cloud_tokens_by_day).map(([d, t]) => [d, Math.round(t).toLocaleString()]));
+  }
+  $('h').addEventListener('change', load);
+  load();
+</script>
+</body>
+</html>

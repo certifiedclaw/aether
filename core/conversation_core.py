@@ -759,7 +759,7 @@ class ConversationCoreMixin:
                         self.speak(" …")
                     final_assistant_reply = final_content
                     _llm_synthesized = True
-                    self._publish_message_stats(_llm_stats, _round_elapsed)
+                    self._publish_message_stats(_llm_stats, _round_elapsed, _stream_kwargs)
                 elif final_content:
                     assistant_msg = {"role": "assistant", "content": final_content}
                     messages.append(assistant_msg)
@@ -768,7 +768,7 @@ class ConversationCoreMixin:
                     self.speak(final_content)
                     final_assistant_reply = final_content
                     _llm_synthesized = True
-                    self._publish_message_stats(_llm_stats, _round_elapsed)
+                    self._publish_message_stats(_llm_stats, _round_elapsed, _stream_kwargs)
                 break
 
             if self._cancel_current_turn.is_set():
@@ -952,7 +952,7 @@ class ConversationCoreMixin:
             except Exception:
                 pass
 
-    def _publish_message_stats(self, stats: dict, elapsed: float) -> None:
+    def _publish_message_stats(self, stats: dict, elapsed: float, stream_kwargs: dict | None = None) -> None:
         """Sends model/token/timing info from the last LLM round to the
         Message Stats panel. Best-effort — any missing field is shown as
         '—' by the UI rather than a misleading 0."""
@@ -970,6 +970,13 @@ class ConversationCoreMixin:
                         tokens_per_sec = output_tokens / secs
                 elif elapsed > 0:
                     tokens_per_sec = output_tokens / elapsed
+
+            try:
+                from core import perf_stats
+                perf_stats.record(model, perf_stats.route_for(stream_kwargs), prompt_tokens,
+                                  output_tokens, eval_duration, elapsed)
+            except Exception:
+                pass
 
             try:
                 context_window = get_context_window(model)

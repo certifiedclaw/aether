@@ -419,10 +419,10 @@
       "id": 47,
       "title": "[F0] Cost and speed dashboard: tokens/s, memory use, latency per model",
       "priority": "medium",
-      "status": "backlog",
+      "status": "done",
       "notes": "",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-16"
     },
     {
       "id": 48,
