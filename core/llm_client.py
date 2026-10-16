@@ -1344,8 +1344,17 @@ def call_llm_stream(
     except requests.exceptions.ConnectionError as e:
         print(f"[LLM] Stream ConnectionError — trying to restart Ollama… ({e})")
         if ensure_ollama_running():
-            yield from _do_stream()
-            return
+            try:
+                yield from _do_stream()
+                return
+            except requests.exceptions.Timeout:
+                raise RuntimeError("Ollama stream timed out.")
+            except requests.exceptions.RequestException as e2:
+                # Server answers pings but drops the chat connection (crashed runner,
+                # reverse proxy reset...): report it like any other backend failure
+                # so the recovery policy in core/degrade.py can act on it.
+                raise RuntimeError(
+                    f"Cannot connect to Ollama at {url} (connection dropped: {type(e2).__name__})")
         raise RuntimeError(
             f"Cannot connect to Ollama at {url}. "
             "Make sure Ollama is installed and run: ollama serve"

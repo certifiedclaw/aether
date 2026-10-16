@@ -33,3 +33,8 @@ Lets editors/scripts use Aether's configured model (remote-GPU with local fallba
 Text completions only (roles system/user/assistant). Tools, memory, files and approvals are
 not reachable. Off until enabled; 10 bad tokens from an IP locks it out for 10 min.
 Known limits: `temperature`/`max_tokens` are ignored (Aether's own settings apply); token usage reports 0.
+
+## When the model is down (graceful degradation)
+Aether classifies backend failures (Ollama down, model missing, timeout, out of memory, auth, rate limit)
+and recovers: retry once after `retry_wait_s` (default 4s), then `fallback_model` if set, then Gemini only if
+`cloud_fallback` is true. Otherwise you get a plain-language message in chat, never a silent hang.
