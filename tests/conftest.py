@@ -75,3 +75,14 @@ def _isolate_audit_log(tmp_path, monkeypatch):
     al._last_hash.clear()
     yield
     al._last_hash.clear()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_perf_log(tmp_path, monkeypatch):
+    try:
+        import core.perf_stats as ps
+    except Exception:  # noqa: BLE001
+        yield
+        return
+    monkeypatch.setattr(ps, "LOG_FILE", tmp_path / "perf.jsonl")
+    yield

@@ -176,6 +176,18 @@ class ChatCommandsMixin:
             except Exception as e:  # noqa: BLE001
                 self.ui.write_log(f"SYS: Audit log unavailable: {type(e).__name__}: {e}")
             return True
+        if user_text.strip().lower().split(" ")[0] in ("/perf", "/speed"):
+            def _perf():
+                try:
+                    from core import perf_stats
+                    arg = user_text.strip().split(" ", 1)[1].strip() if " " in user_text.strip() else ""
+                    hours = float(arg) if arg.replace(".", "", 1).isdigit() else 24.0
+                    self.ui.write_log("SYS: " + perf_stats.render(perf_stats.full_report(hours)))
+                except Exception as e:  # noqa: BLE001
+                    self.ui.write_log(f"SYS: Performance report unavailable: {type(e).__name__}: {e}")
+            import threading as _th    # probes Ollama /api/ps; keep it off the command loop
+            _th.Thread(target=_perf, daemon=True, name="aether-perf").start()
+            return True
         if user_text.strip().lower() in ("/resources", "/governor"):
             try:
                 from core.resource_governor import get_governor
@@ -258,6 +270,7 @@ class ChatCommandsMixin:
                 "/crashes           Show recent crash logs\n"
                 "/status            Full system diagnostic\n"
                 "/audit [N] [tool=x] [decision=denied] [hours=24] [words]  Show recent tool calls and approvals; /audit verify checks the log hasn't been tampered with\n"
+                "/perf [hours]      Speed per model (median/p95 time, tokens/s), memory use, cloud tokens today\n"
                 "/resources         Show whether background jobs are paused because the machine is busy\n"
                 "/doctor            Find install problems and how to fix them (/doctor fix applies safe fixes)\n"
                 "/backup            Snapshot memory to zip\n"
