@@ -275,6 +275,15 @@ _TOOL_LOCKS: dict[str, threading.Lock] = {}
 _TASK_WHAT = {"computer_control": "mouse and keyboard", "browser_control": "web browser"}
 
 
+def _audit(tool: str, action: str, tier: str, decision: str, params: dict, note: str = "") -> None:
+    """Record the decision in logs/audit.jsonl (core/audit_log.py). Never raises."""
+    try:
+        from core import audit_log
+        audit_log.record(tool, action, tier, decision, params, note=note, turn=_TURN_TEXT)
+    except Exception:  # noqa: BLE001 - auditing must not break the gate
+        pass
+
+
 def begin_turn(user_text: str = "") -> None:
     """Call when a new user request starts. Ends every earlier approval and refusal, so
     permission given for one request can never leak into the next."""
@@ -327,6 +336,7 @@ def _check_task(tool: str, action: str, params: dict, label: str) -> str | None:
         with _STATE_LOCK:
             turn = _TURN
             if _DENIED.get(tool) == turn:
+                _audit(tool, action, TASK, "denied", params, "already refused this request")
                 return f"Cancelled: you did not approve {tool} for this request."
             g = _GRANTS.get(tool)
             if g and g["turn"] == turn and g["expires"] > time.monotonic() and g["left"] > 0:
@@ -336,6 +346,7 @@ def _check_task(tool: str, action: str, params: dict, label: str) -> str | None:
                 covered, said = False, _TURN_TEXT
         if covered:
             logger.info("RISK task-grant %s params=%s", label, sorted((params or {}).keys()))
+            _audit(tool, action, TASK, "allowed", params, "covered by this request's approval")
             return None
 
         cap, ttl = task_max_actions(), task_ttl()
@@ -351,11 +362,14 @@ def _check_task(tool: str, action: str, params: dict, label: str) -> str | None:
 
         with _STATE_LOCK:
             if _TURN != turn:
+                _audit(tool, action, TASK, "denied", params, "new request started while waiting")
                 return "Cancelled: a new request started while waiting, so nothing was done."
             if approved:
                 _GRANTS[tool] = {"turn": turn, "expires": time.monotonic() + ttl, "left": cap - 1}
+                _audit(tool, action, TASK, "approved", params, f"grant: {cap} actions / {ttl}s")
                 return None
             _DENIED[tool] = turn
+        _audit(tool, action, TASK, "denied", params)
         return f"Cancelled: you did not approve {label}, so nothing was done."
 
 
@@ -374,23 +388,29 @@ def check(tool: str, action: str, params: dict) -> str | None:
         code = (params or {}).get("code", "")
         if not isinstance(code, str) or len(code) > APPROVAL_CODE_LIMIT:
             return f"Code too long or invalid (maximum {APPROVAL_CODE_LIMIT} characters)."
+        _audit(tool, action, BLOCK, "blocked", params, "run_python is disabled")
         return RUN_PYTHON_DISABLED
     tier = tier_for(tool, action)
     if _escalates_to_ask(tool, params):
         tier = strictest(tier, ASK)
     label = f"{tool}.{action}" if action else tool
     if tier == SAFE:
+        _audit(tool, action, SAFE, "allowed", params)      # skipped unless audit_log_safe=true
         return None
     if tier == MONITOR:
         logger.info("RISK monitor %s params=%s", label, sorted((params or {}).keys()))
+        _audit(tool, action, MONITOR, "allowed", params)
         return None
     if tier == BLOCK:
+        _audit(tool, action, BLOCK, "blocked", params)
         return f"Blocked: {label} is not allowed."
     if tier == TASK:
         return _check_task(tool, action, params or {}, label)
     from core.safety import confirm_action
     if confirm_action(f"{label}", _detail(tool, action, params)):
+        _audit(tool, action, ASK, "approved", params)
         return None
+    _audit(tool, action, ASK, "denied", params)
     return f"Cancelled: you did not approve {label}, so nothing was done."
 
 

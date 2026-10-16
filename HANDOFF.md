@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-16 01:00 UTC
+Generated: 2026-10-16 21:14 UTC
+
+## #84 — 2026-10-16 21:14 UTC — Claude Code
+
+#44 audit log: core/audit_log.py (hash-chained JSONL, redaction, rotation, read/verify/render) now wired into every decision in core/risk.py (allowed/approved/denied/blocked), /audit and /audit verify chat commands, authed GET /api/audit + /audit web page (textContent-only rendering). tests/conftest.py autouse fixture isolates the log from the real logs/ dir. Limits: tamper-evident not tamper-proof; only gated tools are logged (not plain chat or safe-tier unless audit_log_safe).
+
+**Touched:** `core/audit_log.py`, `core/risk.py`, `core/chat_commands.py`, `dashboard/server.py`, `dashboard/static/audit.html`, `tests/conftest.py`, `tests/test_audit_log.py`, `docs/SERVER.md`
+
+**Next steps:** #45 export/import bundle, #47 speed dashboard, #48 auto-update with rollback, container sandbox for generated code.
+
+---
 
 ## #83 — 2026-10-16 01:00 UTC — Claude Code
 

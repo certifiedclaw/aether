@@ -608,6 +608,7 @@ class DashboardServer:
         self._register_command_routes(app)
         self._register_approval_routes(app)
         self._register_llm_status_routes(app)
+        self._register_audit_routes(app)
         self._register_phone_audio_ws(app)
         self._register_file_routes(app)
         self._register_main_ws(app)
@@ -834,6 +835,37 @@ class DashboardServer:
                 return JSONResponse({"error": "Unauthorized"}, status_code=401)
             from core.llm_client import get_llm_backend_status
             return JSONResponse(get_llm_backend_status())
+
+    # ── audit log viewer (core/audit_log.py) ─────────────────────────────
+
+    def _register_audit_routes(self, app: "FastAPI") -> None:
+        @app.get("/audit", response_class=HTMLResponse)
+        async def audit_page():
+            # Auth is the bearer token the page sends to /api/audit (see "/" above).
+            return HTMLResponse(_read("audit.html"))
+
+        @app.get("/api/audit")
+        async def audit_api(req: Request):
+            if not self._auth(req):
+                return JSONResponse({"error": "Unauthorized"}, status_code=401)
+            from core import audit_log
+            qp = req.query_params
+            try:
+                limit = int(qp.get("limit", "100"))
+            except ValueError:
+                limit = 100
+            since = None
+            try:
+                if qp.get("hours"):
+                    since = time.time() - float(qp["hours"]) * 3600
+            except ValueError:
+                since = None
+            entries = audit_log.read(
+                since=since, tool=qp.get("tool", "")[:60], decision=qp.get("decision", "")[:20],
+                tier=qp.get("tier", "")[:20], text=qp.get("text", "")[:100], limit=limit)
+            ok, msg = audit_log.verify()
+            return JSONResponse({"entries": entries, "summary": audit_log.summarize(entries),
+                                 "chain": {"ok": ok, "message": msg}})
 
     # ── voice command routes ─────────────────────────────────────────────
 

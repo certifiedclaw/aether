@@ -164,6 +164,18 @@ class ChatCommandsMixin:
             self.ui.write_log("SYS: Chat history cleared.")
             self.speak("History cleared.")
             return True
+        if user_text.strip().lower().split(" ")[0] == "/audit":
+            try:
+                from core import audit_log
+                arg = user_text.strip()[len("/audit"):].strip()
+                if arg.lower() == "verify":
+                    ok, msg = audit_log.verify()
+                    self.ui.write_log(f"SYS: Audit log: {'OK' if ok else 'PROBLEM'} - {msg}")
+                else:
+                    self.ui.write_log("SYS: " + audit_log.render(audit_log.read(**audit_log.parse_query(arg))))
+            except Exception as e:  # noqa: BLE001
+                self.ui.write_log(f"SYS: Audit log unavailable: {type(e).__name__}: {e}")
+            return True
         if user_text.strip().lower() in ("/resources", "/governor"):
             try:
                 from core.resource_governor import get_governor
@@ -245,6 +257,7 @@ class ChatCommandsMixin:
                 "/selftest          Run full system self-test\n"
                 "/crashes           Show recent crash logs\n"
                 "/status            Full system diagnostic\n"
+                "/audit [N] [tool=x] [decision=denied] [hours=24] [words]  Show recent tool calls and approvals; /audit verify checks the log hasn't been tampered with\n"
                 "/resources         Show whether background jobs are paused because the machine is busy\n"
                 "/doctor            Find install problems and how to fix them (/doctor fix applies safe fixes)\n"
                 "/backup            Snapshot memory to zip\n"

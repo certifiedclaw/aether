@@ -44,3 +44,11 @@ Scheduled tasks and proactive check-ins pause while the host is busy (Palworld, 
 CPU average >= `governor_cpu_busy` (85%) or free RAM < `governor_ram_min_free_mb` (1500). They resume when load
 drops, or after `governor_max_defer_s` (1h) so nothing starves. Your own messages are never held back.
 `/resources` shows the current state. Inside Docker the host's CPU/RAM are what is measured.
+
+## Audit log
+Every gated tool call and approval (allowed / approved / denied / blocked) is appended to `logs/audit.jsonl`
+(0600, rotated at 5 MB, 3 files kept). Secrets in parameters are redacted. Each line includes the hash of the
+previous one, so edits or deletions are detected (tamper-evident, not tamper-proof).
+- Chat: `/audit`, `/audit 50 tool=send_message decision=denied hours=24 words`, `/audit verify`
+- Web: `https://<host>:8000/audit` (needs your dashboard login) or `GET /api/audit`
+- Config: `audit_log` (default true), `audit_log_safe` (also log safe-tier calls, default false)
