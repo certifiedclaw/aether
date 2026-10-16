@@ -21,6 +21,7 @@ class ScheduledTask:
         self.fn           = fn
         self.interval_sec = interval_sec
         self.last_run: float = 0.0
+        self.deferred_since: float | None = None   # set while the resource governor holds it back
 
 
 class TaskScheduler:
@@ -51,6 +52,7 @@ class TaskScheduler:
                 existing.fn           = fn
                 existing.interval_sec = interval_sec
                 existing.last_run     = 0.0
+                existing.deferred_since = None
                 log.info("Scheduled task updated: %s (every %.0fs)", name, interval_sec)
             else:
                 self._tasks.append(ScheduledTask(name, fn, interval_sec))
@@ -89,6 +91,19 @@ class TaskScheduler:
 
     # ── Internal ───────────────────────────────────────────────────────────
 
+    @staticmethod
+    def _governor_allows(task, now: float) -> bool:
+        try:
+            from core.resource_governor import get_governor
+            if task.deferred_since is None:
+                task.deferred_since = now
+            if get_governor().allow_background(now - task.deferred_since):
+                return True
+            log.info("Task '%s' deferred: host is busy", task.name)
+            return False
+        except Exception:  # noqa: BLE001 - the governor must never stop a task from running
+            return True
+
     def _loop(self):
         while not self._stop_event.is_set():
             now = time.monotonic()
@@ -96,6 +111,11 @@ class TaskScheduler:
                 tasks_snapshot = list(self._tasks)
             for task in tasks_snapshot:
                 if now - task.last_run >= task.interval_sec:
+                    # Yield to a busy host (Palworld, a game...); stays due and runs
+                    # once the load drops, or after governor_max_defer_s.
+                    if not self._governor_allows(task, now):
+                        continue
+                    task.deferred_since = None
                     task.last_run = now
                     try:
                         task.fn()

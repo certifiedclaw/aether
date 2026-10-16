@@ -38,3 +38,9 @@ Known limits: `temperature`/`max_tokens` are ignored (Aether's own settings appl
 Aether classifies backend failures (Ollama down, model missing, timeout, out of memory, auth, rate limit)
 and recovers: retry once after `retry_wait_s` (default 4s), then `fallback_model` if set, then Gemini only if
 `cloud_fallback` is true. Otherwise you get a plain-language message in chat, never a silent hang.
+
+## Sharing the box (resource governor)
+Scheduled tasks and proactive check-ins pause while the host is busy (Palworld, a game, other containers):
+CPU average >= `governor_cpu_busy` (85%) or free RAM < `governor_ram_min_free_mb` (1500). They resume when load
+drops, or after `governor_max_defer_s` (1h) so nothing starves. Your own messages are never held back.
+`/resources` shows the current state. Inside Docker the host's CPU/RAM are what is measured.
