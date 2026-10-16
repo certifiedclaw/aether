@@ -46,8 +46,9 @@
     if (r.status === 401) { location.href = '/login'; return; }
     const j = await r.json();
     $('warn').textContent = j.warning || '';
-    table($('speed'), ['model (route)', 'rounds', 'median s', 'p95 s', 'tok/s', 'tokens in', 'tokens out'],
-      j.summary.models.map(m => [m.model, m.rounds, m.p50_s, m.p95_s, m.avg_tps ?? 'n/a',
+    table($('speed'), ['model (route)', 'rounds', 'first token s (median / p95)', 'round s (median / p95)', 'tok/s', 'tokens in', 'tokens out'],
+      j.summary.models.map(m => [m.model, m.rounds,
+        m.ttft_p50_s == null ? 'n/a' : m.ttft_p50_s + ' / ' + m.ttft_p95_s, m.p50_s + ' / ' + m.p95_s, m.avg_tps ?? 'n/a',
         m.prompt_tokens.toLocaleString(), m.output_tokens.toLocaleString()]));
     const m = j.memory, rows = [];
     if (m.process_mb != null) {

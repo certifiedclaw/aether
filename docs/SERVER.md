@@ -55,6 +55,6 @@ previous one, so edits or deletions are detected (tamper-evident, not tamper-pro
 
 ## Speed, memory and cloud usage
 `/perf [hours]` (chat) or `https://<host>:8000/perf` (dashboard login) shows per model and route (local / remote GPU / cloud):
-rounds, median and p95 time, tokens/s, tokens in/out; Aether's memory, host free RAM, and what Ollama has loaded
+rounds, time to first token, median and p95 round time, tokens/s, tokens in/out; Aether's memory, host free RAM, and what Ollama has loaded
 (RAM vs GPU). Cloud tokens per day are listed; set `cloud_daily_token_budget` for a heads-up before a free tier
 runs out (warning only, nothing is blocked). Data: `logs/perf.jsonl`, numbers only - no message text.

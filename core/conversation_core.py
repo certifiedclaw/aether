@@ -974,7 +974,8 @@ class ConversationCoreMixin:
             try:
                 from core import perf_stats
                 perf_stats.record(model, perf_stats.route_for(stream_kwargs), prompt_tokens,
-                                  output_tokens, eval_duration, elapsed)
+                                  output_tokens, eval_duration, elapsed,
+                                  ttft_s=stats.get("ttft_s"))
             except Exception:
                 pass
 
@@ -989,6 +990,7 @@ class ConversationCoreMixin:
                 "output_tokens":  output_tokens,
                 "elapsed":        elapsed,
                 "tokens_per_sec": tokens_per_sec,
+                "ttft_s":         stats.get("ttft_s"),
                 "context_window": context_window,
             })
         except Exception:

@@ -34,7 +34,8 @@ def test_tps_falls_back_to_elapsed_and_handles_missing_numbers(log):
 
 def test_no_message_text_is_stored(log):
     rec(log)
-    assert set(ps.read(path=log)[0]) == {"ts", "model", "route", "prompt_tokens", "output_tokens", "elapsed_s", "tps"}
+    assert set(ps.read(path=log)[0]) == {"ts", "model", "route", "prompt_tokens", "output_tokens",
+                                         "elapsed_s", "ttft_s", "tps"}
 
 
 def test_disabled_by_config(log, monkeypatch):
@@ -137,3 +138,64 @@ def test_dashboard_perf_endpoint(monkeypatch, log):
     r = c.get("/api/perf?hours=junk", headers={"Authorization": "Bearer tok"})
     assert r.status_code == 200 and r.json()["summary"]["models"][0]["rounds"] == 1
     assert "Performance" in c.get("/perf").text
+
+
+def test_time_to_first_token_recorded_summarized_and_rendered(log):
+    for tt in (0.2, 0.4, 0.6, 3.0):
+        ps.record("m", "local", 10, 10, 1e9, 5.0, path=log, ttft_s=tt)
+    ps.record("m", "local", 10, 10, 1e9, 5.0, path=log)                 # round with no first-token reading
+    ps.record("m", "local", 10, 10, 1e9, 5.0, path=log, ttft_s="junk")
+    entries = ps.read(path=log)
+    assert entries[0]["ttft_s"] == 0.2 and entries[4]["ttft_s"] is None and entries[5]["ttft_s"] is None
+    row = ps.summarize(entries)["models"][0]
+    assert row["ttft_p50_s"] == 0.6 and row["ttft_p95_s"] == 3.0        # unknowns are ignored, not counted as 0
+    rep = {"hours": 24.0, "summary": ps.summarize(entries), "warning": "",
+           "memory": {"process_mb": None, "loaded": []}}
+    assert "first token 0.6s (p95 3.0s)" in ps.render(rep)
+    no_tt = ps.summarize([{"ts": time.time(), "model": "x", "route": "local", "elapsed_s": 1, "tps": 5}])
+    assert no_tt["models"][0]["ttft_p50_s"] is None
+
+
+def test_ollama_stream_reports_ttft(monkeypatch):
+    """Real stream parsing: ttft is measured from request start to the first content chunk."""
+    from core import llm_client as lc
+    import json as _json
+
+    class Resp:
+        status_code = 200
+        def raise_for_status(self): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def iter_lines(self):
+            yield _json.dumps({"message": {"content": ""}, "done": False}).encode()      # empty: not a first token
+            time.sleep(0.05)
+            yield _json.dumps({"message": {"content": "Hello there."}, "done": False}).encode()
+            yield _json.dumps({"message": {"content": ""}, "done": True, "eval_count": 3,
+                               "eval_duration": 1_000_000_000}).encode()
+
+    monkeypatch.setattr(lc, "get_llm_provider", lambda: "ollama")
+    monkeypatch.setattr(lc, "get_llm_settings", lambda: ("http://x", "m"))
+    monkeypatch.setattr(lc.requests, "post", lambda *a, **k: Resp())
+    done = [e for e in lc.call_llm_stream([{"role": "user", "content": "hi"}]) if e["type"] == "done"][0]
+    assert done["stats"]["ttft_s"] is not None and 0.04 <= done["stats"]["ttft_s"] < 2.0
+
+
+def test_openai_stream_reports_ttft(monkeypatch):
+    from core import llm_client as lc
+
+    class Resp:
+        status_code = 200
+        text = ""
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def iter_lines(self):
+            yield b'data: {"choices":[{"delta":{"role":"assistant"},"finish_reason":null}]}'
+            time.sleep(0.05)
+            yield b'data: {"choices":[{"delta":{"content":"Hi there."},"finish_reason":null}]}'
+            yield b'data: [DONE]'
+
+    monkeypatch.setattr(lc, "_load_config", lambda: {"llm_provider": "openai", "llm_url": "http://x",
+                                                      "llm_model": "m"})
+    monkeypatch.setattr(lc.requests, "post", lambda *a, **k: Resp())
+    done = [e for e in lc.call_llm_stream([{"role": "user", "content": "hi"}]) if e["type"] == "done"][0]
+    assert done["stats"]["ttft_s"] is not None and done["stats"]["ttft_s"] >= 0.04

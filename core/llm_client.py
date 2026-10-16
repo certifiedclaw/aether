@@ -859,6 +859,8 @@ def _stream_openai_once(
         payload["tools"]       = tools
         payload["tool_choice"] = "auto"
 
+    _t0 = time.monotonic()
+    _ttft = None       # seconds from request start to the first content/tool-call chunk
     try:
         with requests.post(endpoint, json=payload, headers=_auth_headers(provider),
                             timeout=timeout, stream=True) as resp:
@@ -897,6 +899,8 @@ def _stream_openai_once(
                         choice = chunk.get("choices", [{}])[0]
                         delta  = choice.get("delta", {})
                         text   = delta.get("content") or ""
+                        if _ttft is None and (text or delta.get("tool_calls")):
+                            _ttft = time.monotonic() - _t0
 
                         full_content += text
                         buf          += text
@@ -973,6 +977,7 @@ def _stream_openai_once(
                 "eval_duration":  None,
                 "total_duration": None,
                 "truncated":      _hit_length,
+                "ttft_s":         _ttft,
             }
 
             yield {
@@ -1250,6 +1255,8 @@ def call_llm_stream(
         payload["tools"] = tools
 
     def _do_stream() -> Generator[dict, None, None]:
+        _t0 = time.monotonic()
+        _ttft = None   # seconds from request start to the first content/tool-call chunk
         with requests.post(endpoint, json=payload, timeout=timeout, stream=True) as resp:
             resp.raise_for_status()
             full_content = ""
@@ -1266,6 +1273,8 @@ def call_llm_stream(
 
                 msg   = chunk.get("message", {})
                 delta = msg.get("content") or ""
+                if _ttft is None and (delta or msg.get("tool_calls")):
+                    _ttft = time.monotonic() - _t0
 
                 full_content += delta
                 buf          += delta
@@ -1304,6 +1313,7 @@ def call_llm_stream(
                         "eval_duration":  chunk.get("eval_duration"),       # ns
                         "total_duration": chunk.get("total_duration"),      # ns
                         "truncated":      chunk.get("done_reason") == "length",
+                        "ttft_s":         _ttft,
                     }
 
                     yield {
@@ -1336,7 +1346,7 @@ def call_llm_stream(
                                 "eval_duration": None, "total_duration": None,
                                 # Connection closed before Ollama ever sent a final
                                 # "done" chunk — content is very likely incomplete.
-                                "truncated": True},
+                                "truncated": True, "ttft_s": _ttft},
             }
 
     try:

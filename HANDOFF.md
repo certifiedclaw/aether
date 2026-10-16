@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-16 21:48 UTC
+Generated: 2026-10-16 22:05 UTC
+
+## #86 — 2026-10-16 22:05 UTC — Claude Code
+
+#47 follow-up: time-to-first-token. llm_client measures request-start to first content/tool-call chunk (Ollama and OpenAI-compatible streams) -> stats.ttft_s -> perf.jsonl -> median/p95 in /perf, /api/perf, perf page, live stats payload. Unknown readings are ignored, never counted as 0. Tests parse real stream bodies for both paths.
+
+**Touched:** `core/llm_client.py`, `core/perf_stats.py`, `core/conversation_core.py`, `dashboard/static/perf.html`, `tests/test_perf_stats.py`, `docs/SERVER.md`
+
+**Next steps:** Clarify 'auto logo' request with the user; #45, #48, container sandbox.
+
+---
 
 ## #85 — 2026-10-16 21:48 UTC — Claude Code
 

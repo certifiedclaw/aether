@@ -50,14 +50,14 @@ def _num(v):
 
 
 def record(model, route: str, prompt_tokens, output_tokens, eval_ns, elapsed_s,
-           path: Path | None = None) -> None:
+           path: Path | None = None, ttft_s=None) -> None:
     """Append one round. Never raises."""
     try:
         cfg = _cfg()
         v = cfg.get("perf_log", True)
         if (v.strip().lower() in ("0", "false", "no", "off")) if isinstance(v, str) else (v is False):
             return
-        out_t, ev, el = _num(output_tokens), _num(eval_ns), _num(elapsed_s)
+        out_t, ev, el, tt = _num(output_tokens), _num(eval_ns), _num(elapsed_s), _num(ttft_s)
         tps = None
         if out_t:
             if ev:
@@ -67,6 +67,7 @@ def record(model, route: str, prompt_tokens, output_tokens, eval_ns, elapsed_s,
         entry = {"ts": round(time.time(), 1), "model": str(model or "?")[:80], "route": route,
                  "prompt_tokens": _num(prompt_tokens), "output_tokens": out_t,
                  "elapsed_s": round(el, 2) if el is not None else None,
+                 "ttft_s": round(tt, 3) if tt is not None else None,
                  "tps": round(tps, 2) if tps else None}
         path = Path(path) if path else LOG_FILE
         with _lock:
@@ -127,10 +128,12 @@ def summarize(entries: list[dict]) -> dict:
     cloud_by_day: dict[str, float] = {}
     for e in entries:
         key = f"{e.get('model', '?')} ({e.get('route', '?')})"
-        m = models.setdefault(key, {"n": 0, "el": [], "tps": [], "prompt": 0.0, "output": 0.0})
+        m = models.setdefault(key, {"n": 0, "el": [], "tt": [], "tps": [], "prompt": 0.0, "output": 0.0})
         m["n"] += 1
         if e.get("elapsed_s") is not None:
             m["el"].append(e["elapsed_s"])
+        if e.get("ttft_s") is not None:
+            m["tt"].append(e["ttft_s"])
         if e.get("tps"):
             m["tps"].append(e["tps"])
         m["prompt"] += e.get("prompt_tokens") or 0
@@ -140,9 +143,11 @@ def summarize(entries: list[dict]) -> dict:
             cloud_by_day[day] = cloud_by_day.get(day, 0) + (e.get("prompt_tokens") or 0) + (e.get("output_tokens") or 0)
     rows = []
     for key, m in models.items():
-        el = sorted(m["el"])
+        el, tt = sorted(m["el"]), sorted(m["tt"])
         rows.append({"model": key, "rounds": m["n"],
                      "p50_s": round(_pct(el, 0.5), 2), "p95_s": round(_pct(el, 0.95), 2),
+                     "ttft_p50_s": round(_pct(tt, 0.5), 2) if tt else None,
+                     "ttft_p95_s": round(_pct(tt, 0.95), 2) if tt else None,
                      "avg_tps": round(sum(m["tps"]) / len(m["tps"]), 1) if m["tps"] else None,
                      "prompt_tokens": int(m["prompt"]), "output_tokens": int(m["output"])})
     rows.sort(key=lambda r: -r["rounds"])
@@ -206,7 +211,9 @@ def render(rep: dict) -> str:
         lines.append("  no model rounds recorded yet")
     for r in s["models"]:
         tps = f"{r['avg_tps']} tok/s" if r["avg_tps"] else "tok/s n/a"
-        lines.append(f"  {r['model']}: {r['rounds']} rounds, median {r['p50_s']}s, p95 {r['p95_s']}s, {tps}, "
+        first = (f"first token {r['ttft_p50_s']}s (p95 {r['ttft_p95_s']}s), "
+                 if r.get("ttft_p50_s") is not None else "")
+        lines.append(f"  {r['model']}: {r['rounds']} rounds, {first}round median {r['p50_s']}s, p95 {r['p95_s']}s, {tps}, "
                      f"{r['prompt_tokens']:,} in / {r['output_tokens']:,} out tokens")
     if s["cloud_tokens_by_day"]:
         lines.append("  cloud tokens/day: " + ", ".join(f"{d} {int(t):,}" for d, t in s["cloud_tokens_by_day"].items()))

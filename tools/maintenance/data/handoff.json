@@ -1,5 +1,5 @@
 {
-  "next_id": 86,
+  "next_id": 87,
   "entries": [
     {
       "id": 1,
@@ -1166,6 +1166,21 @@
         "docs/SERVER.md"
       ],
       "next_steps": "#45 export/import bundle, #48 auto-update with rollback, container sandbox for generated code."
+    },
+    {
+      "id": 86,
+      "timestamp": "2026-10-16 22:05 UTC",
+      "by": "Claude Code",
+      "summary": "#47 follow-up: time-to-first-token. llm_client measures request-start to first content/tool-call chunk (Ollama and OpenAI-compatible streams) -> stats.ttft_s -> perf.jsonl -> median/p95 in /perf, /api/perf, perf page, live stats payload. Unknown readings are ignored, never counted as 0. Tests parse real stream bodies for both paths.",
+      "files": [
+        "core/llm_client.py",
+        "core/perf_stats.py",
+        "core/conversation_core.py",
+        "dashboard/static/perf.html",
+        "tests/test_perf_stats.py",
+        "docs/SERVER.md"
+      ],
+      "next_steps": "Clarify 'auto logo' request with the user; #45, #48, container sandbox."
     }
   ]
 }
