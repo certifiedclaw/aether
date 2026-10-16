@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-16 00:50 UTC
+Generated: 2026-10-16 01:00 UTC
+
+## #83 — 2026-10-16 01:00 UTC — Claude Code
+
+#46 resource governor: core/resource_governor.py (host CPU moving average + free RAM, hysteresis, max-defer so nothing starves, never blocks user turns, broken sensor = allow). Gates TaskScheduler tasks and the proactive loop; /resources command; config governor_*. Smoke-tested with real psutil under CPU load. Limitation: does not throttle LLM inference itself (a user turn always runs); Docker 'host' view depends on /proc not being virtualised (lxcfs).
+
+**Touched:** `core/resource_governor.py`, `core/task_scheduler.py`, `main.py`, `core/chat_commands.py`, `config/config.example.json`, `docs/SERVER.md`, `tests/test_resource_governor.py`
+
+**Next steps:** #44 audit log viewer, #45 export/import bundle, #47 speed dashboard, #48 auto-update w/ rollback, container sandbox for generated code.
+
+---
 
 ## #82 — 2026-10-16 00:50 UTC — Claude Code
 

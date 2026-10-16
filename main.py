@@ -650,6 +650,10 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             if self._proactive is None:
                 continue
             try:
+                # Unprompted chatter yields to a busy host (core/resource_governor.py).
+                from core.resource_governor import get_governor
+                if not get_governor().allow_background():
+                    continue
                 if self._proactive.should_trigger(self._last_user_speech):
                     try:
                         from memory.memory_manager import load_memory

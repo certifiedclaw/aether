@@ -164,6 +164,13 @@ class ChatCommandsMixin:
             self.ui.write_log("SYS: Chat history cleared.")
             self.speak("History cleared.")
             return True
+        if user_text.strip().lower() in ("/resources", "/governor"):
+            try:
+                from core.resource_governor import get_governor
+                self.ui.write_log("SYS: " + get_governor().status())
+            except Exception as e:  # noqa: BLE001
+                self.ui.write_log(f"SYS: Resource status unavailable: {type(e).__name__}: {e}")
+            return True
         if user_text.strip().lower() in ("/doctor", "/doctor fix"):
             # Backgrounded like /selftest: the checks probe Ollama/remote hosts with real timeouts.
             apply = user_text.strip().lower().endswith("fix")
@@ -238,6 +245,7 @@ class ChatCommandsMixin:
                 "/selftest          Run full system self-test\n"
                 "/crashes           Show recent crash logs\n"
                 "/status            Full system diagnostic\n"
+                "/resources         Show whether background jobs are paused because the machine is busy\n"
                 "/doctor            Find install problems and how to fix them (/doctor fix applies safe fixes)\n"
                 "/backup            Snapshot memory to zip\n"
                 "/memstats          Memory system statistics\n"

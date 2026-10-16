@@ -1,5 +1,5 @@
 {
-  "next_id": 83,
+  "next_id": 84,
   "entries": [
     {
       "id": 1,
@@ -1115,6 +1115,22 @@
         "tests/test_degrade.py"
       ],
       "next_steps": "#44-#50 (audit log viewer, export/import, resource governor, speed dashboard, auto-update), then container sandbox for generated code."
+    },
+    {
+      "id": 83,
+      "timestamp": "2026-10-16 01:00 UTC",
+      "by": "Claude Code",
+      "summary": "#46 resource governor: core/resource_governor.py (host CPU moving average + free RAM, hysteresis, max-defer so nothing starves, never blocks user turns, broken sensor = allow). Gates TaskScheduler tasks and the proactive loop; /resources command; config governor_*. Smoke-tested with real psutil under CPU load. Limitation: does not throttle LLM inference itself (a user turn always runs); Docker 'host' view depends on /proc not being virtualised (lxcfs).",
+      "files": [
+        "core/resource_governor.py",
+        "core/task_scheduler.py",
+        "main.py",
+        "core/chat_commands.py",
+        "config/config.example.json",
+        "docs/SERVER.md",
+        "tests/test_resource_governor.py"
+      ],
+      "next_steps": "#44 audit log viewer, #45 export/import bundle, #47 speed dashboard, #48 auto-update w/ rollback, container sandbox for generated code."
     }
   ]
 }
