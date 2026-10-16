@@ -1,5 +1,5 @@
 {
-  "next_id": 82,
+  "next_id": 83,
   "entries": [
     {
       "id": 1,
@@ -1100,6 +1100,21 @@
         "tests/test_openai_api.py"
       ],
       "next_steps": "#42 graceful degradation, #44-#50."
+    },
+    {
+      "id": 82,
+      "timestamp": "2026-10-16 00:50 UTC",
+      "by": "Claude Code",
+      "summary": "#42 graceful degradation: core/degrade.py (classify failures + recovery policy) wired into the turn loop in conversation_core (retry once after retry_wait_s, fallback_model for missing/OOM/timeout, opt-in cloud_fallback honoring cloud_allow, clear user message on give-up). Fixed a real bug: Ollama up but dropping the chat connection raised a raw ConnectionError ('A critical error occurred') - now a RuntimeError. Verified end to end against a flaky mock Ollama (brief outage recovers; sustained outage gives clear message).",
+      "files": [
+        "core/degrade.py",
+        "core/conversation_core.py",
+        "core/llm_client.py",
+        "config/config.example.json",
+        "docs/SERVER.md",
+        "tests/test_degrade.py"
+      ],
+      "next_steps": "#44-#50 (audit log viewer, export/import, resource governor, speed dashboard, auto-update), then container sandbox for generated code."
     }
   ]
 }

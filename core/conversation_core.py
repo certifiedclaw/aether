@@ -67,9 +67,19 @@ from core.llm_client import (
     get_gemini_settings,
     GEMINI_BASE_URL,
     get_context_window,
+    get_llm_settings,
 )
+from core import degrade as _degrade
 
 logger = logging.getLogger("aether")
+
+
+def _load_cfg_for_degrade() -> dict:
+    try:
+        from core.llm_client import _load_config
+        return _load_config()
+    except Exception:  # noqa: BLE001
+        return {}
 
 # Matches assistant text that is ENTIRELY a call-looking expression, e.g.
 # `save_memory(category="greetings", key="hello", value="")`. Anchored at
@@ -557,7 +567,8 @@ class ConversationCoreMixin:
             _llm_stats: dict = {}
 
             _round_start = time.monotonic()
-            for _attempt in (0, 1):
+            _wait_done = False
+            for _attempt in range(_degrade.MAX_ATTEMPTS):
                 try:
                     for event in call_llm_stream(
                             messages, tools, cancel_event=self._cancel_current_turn,
@@ -592,7 +603,39 @@ class ConversationCoreMixin:
                         _streamed.clear()
                         final_content, final_tool_calls, _llm_stats = "", [], {}
                         continue
-                    self.speak_error("LLM", e)
+                    # Local backend failed: classify and follow the recovery policy
+                    # (retry once, fallback model, opt-in cloud) instead of giving up.
+                    _fail = _degrade.classify(e)
+                    _cfg_now = _load_cfg_for_degrade()
+                    _gkey, _gmodel = get_gemini_settings()
+                    _act = _degrade.plan_recovery(
+                        _fail, _attempt, _cfg_now,
+                        current_model=(_stream_kwargs.get("model_override") or get_llm_settings()[1]),
+                        on_cloud=bool(_stream_kwargs) and _stream_kwargs.get("provider_override") == "gemini",
+                        has_gemini_key=bool(_gkey))
+                    if _act.kind != "give_up":
+                        self.ui.write_log(f"WRN: LLM failed ({e}) - {_act.note}")
+                        self._obs.count(f"llm.recover.{_act.kind}")
+                        _streamed.clear()
+                        final_content, final_tool_calls, _llm_stats = "", [], {}
+                        if _act.kind == "wait_retry":
+                            if self._cancel_current_turn.wait(_act.wait_s):
+                                _turn_cancelled = True
+                                break
+                        elif _act.kind == "switch_model":
+                            _stream_kwargs = {"provider_override": "ollama",
+                                              "url_override": get_llm_settings()[0],
+                                              "model_override": _act.model}
+                        elif _act.kind == "cloud":
+                            _stream_kwargs = {"provider_override": "gemini",
+                                              "url_override": GEMINI_BASE_URL,
+                                              "model_override": _gmodel}
+                            messages = compress_if_needed(
+                                messages, token_budget=max(500, _CLOUD_HISTORY_BUDGET - estimate_tool_tokens(tools)))
+                        continue
+                    self.ui.write_log(f"ERR: LLM - {e}")
+                    self.ui.write_log(f"Aether: {_fail.message}")
+                    self.speak(_fail.message)
                     if not self.ui.muted:
                         self.ui.set_state("LISTENING")
                     return

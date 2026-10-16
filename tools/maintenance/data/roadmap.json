@@ -374,10 +374,10 @@
       "id": 42,
       "title": "[F0] Graceful degradation: clear messages and automatic fallback when Ollama/model/PC/network is down",
       "priority": "high",
-      "status": "backlog",
+      "status": "done",
       "notes": "",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-16"
     },
     {
       "id": 43,

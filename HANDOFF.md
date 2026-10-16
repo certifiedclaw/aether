@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-15 21:30 UTC
+Generated: 2026-10-16 00:50 UTC
+
+## #82 — 2026-10-16 00:50 UTC — Claude Code
+
+#42 graceful degradation: core/degrade.py (classify failures + recovery policy) wired into the turn loop in conversation_core (retry once after retry_wait_s, fallback_model for missing/OOM/timeout, opt-in cloud_fallback honoring cloud_allow, clear user message on give-up). Fixed a real bug: Ollama up but dropping the chat connection raised a raw ConnectionError ('A critical error occurred') - now a RuntimeError. Verified end to end against a flaky mock Ollama (brief outage recovers; sustained outage gives clear message).
+
+**Touched:** `core/degrade.py`, `core/conversation_core.py`, `core/llm_client.py`, `config/config.example.json`, `docs/SERVER.md`, `tests/test_degrade.py`
+
+**Next steps:** #44-#50 (audit log viewer, export/import, resource governor, speed dashboard, auto-update), then container sandbox for generated code.
+
+---
 
 ## #81 — 2026-10-15 21:30 UTC — Claude Code
 
