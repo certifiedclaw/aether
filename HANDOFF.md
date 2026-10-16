@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-14 22:40 UTC
+Generated: 2026-10-15 21:28 UTC
+
+## #80 — 2026-10-15 21:28 UTC — Claude Code
+
+#43 leak guard: core/leak_guard.py redacts API keys/tokens/private keys/JWT/Luhn cards + exact config secrets from every request to Gemini/OpenAI-API (3 call sites in llm_client); cloud_allow=false refuses cloud and conversation_core stays local; cloud_redact=false disables. Logs counts only. Stacked on PR #9.
+
+**Touched:** `core/leak_guard.py`, `core/llm_client.py`, `core/conversation_core.py`, `config/config.example.json`, `tests/test_leak_guard.py`
+
+**Next steps:** #41 API server (OpenAI-compatible endpoint), #42 graceful degradation.
+
+---
 
 ## #79 — 2026-10-14 22:40 UTC — Claude Code
 

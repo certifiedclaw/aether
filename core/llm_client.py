@@ -232,6 +232,12 @@ def _load_config() -> dict:
     return _apply_eval_overrides(_config_cache)
 
 
+def _guarded(messages: list, provider: str) -> list:
+    """Scrub secrets from messages bound for a hosted provider (core/leak_guard.py)."""
+    from core.leak_guard import guard_messages
+    return guard_messages(messages, provider)
+
+
 def _openai_safe_messages(messages: list) -> list:
     """Convert Ollama-style history to the strict OpenAI/Gemini shape.
 
@@ -611,7 +617,7 @@ def call_llm(
     endpoint = _chat_completions_endpoint(url, provider)
     payload: dict = {
         "model": model,
-        "messages": _openai_safe_messages(messages),
+        "messages": _guarded(_openai_safe_messages(messages), provider),
     }
 
     if provider in ("openai", "openai_api"):
@@ -702,7 +708,7 @@ def call_llm_text(
         # the closest equivalent and only some servers honor it.
         endpoint = _chat_completions_endpoint(url, provider)
         token_param = "max_completion_tokens" if provider == "openai_api" else "max_tokens"
-        payload  = {"model": m, "messages": _openai_safe_messages(messages), "stream": False, token_param: num_predict}
+        payload  = {"model": m, "messages": _guarded(_openai_safe_messages(messages), provider), "stream": False, token_param: num_predict}
         try:
             resp = requests.post(endpoint, json=payload, headers=_auth_headers(provider), timeout=timeout)
             resp.raise_for_status()
@@ -844,7 +850,7 @@ def _stream_openai_once(
 
     payload: dict = {
         "model":      model,
-        "messages":   _openai_safe_messages(messages),
+        "messages":   _guarded(_openai_safe_messages(messages), provider),
         "stream":     True,
         ("max_completion_tokens" if provider == "openai_api" else "max_tokens"):
             _cloud_max_tokens(provider),

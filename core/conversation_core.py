@@ -469,7 +469,11 @@ class ConversationCoreMixin:
         # failing the turn.
         _stream_kwargs: dict = {}
         _primary_provider = get_llm_provider()
-        if _route.tier == _Tier.HARD and _primary_provider != "gemini":
+        from core.leak_guard import cloud_allowed as _cloud_allowed
+        _cloud_ok = _cloud_allowed()
+        if not _cloud_ok and _route.tier == _Tier.HARD:
+            self.ui.write_log("SYS: cloud_allow=false - staying on the local model for this turn")
+        if _cloud_ok and _route.tier == _Tier.HARD and _primary_provider != "gemini":
             _gem_key, _gem_model = get_gemini_settings()
             if _gem_key:
                 _stream_kwargs = {
@@ -486,7 +490,7 @@ class ConversationCoreMixin:
         # local models are unreliable at structured tool calls. This sends the
         # message, injected memory and tool results to Google, so every such
         # turn is logged visibly.
-        if not _stream_kwargs:
+        if _cloud_ok and not _stream_kwargs:
             from core.llm_client import get_config_flag as _cfg_flag
             _gem_key2, _gem_model2 = get_gemini_settings()
             if _wants_gemini_tools(user_text, flag=_cfg_flag("gemini_for_tools"),
