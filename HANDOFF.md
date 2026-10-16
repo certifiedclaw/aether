@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-14 01:15 UTC
+Generated: 2026-10-14 22:40 UTC
+
+## #79 — 2026-10-14 22:40 UTC — Claude Code
+
+Server mode: AETHER_SKIP_INSTALL (default on headless) stops boot pip/playwright installs; fixed headless boot crashes (HeadlessUI missing set_chat_sessions/clear_log/on_stop_command; pyautogui import KeyError without DISPLAY); headless skips STT/TTS unless AETHER_HEADLESS_VOICE=1. Added Dockerfile, compose, entrypoint, requirements-server.txt, docs/SERVER.md. Eval harness verified end to end against a mock Ollama. Docker build itself NOT run (no daemon).
+
+**Touched:** `main.py`, `core/installer.py`, `core/headless_ui.py`, `actions/{send_message`, `computer_settings`, `desktop`, `computer_control}.py`, `Dockerfile`, `docker-compose.yml`, `docker/entrypoint.sh`, `requirements-server.txt`, `docs/SERVER.md`, `tests/test_server_mode.py`
+
+**Next steps:** User: docker compose up on iansserver, report build errors, pull a model, test dashboard over Tailscale. Then #41 API server, container sandbox for generated code.
+
+---
 
 ## #78 — 2026-10-14 01:15 UTC — Claude Code
 

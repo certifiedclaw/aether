@@ -15,7 +15,7 @@ from datetime import datetime
 try:
     import pyautogui
     _PYAUTOGUI = True
-except ImportError:
+except Exception:  # ImportError, or no DISPLAY on a headless server
     _PYAUTOGUI = False
 
 _OS = platform.system()  # "Windows" | "Darwin" | "Linux"

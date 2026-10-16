@@ -1,0 +1,14 @@
+.git
+**/__pycache__
+*.pyc
+*.zip
+*.bak
+.env
+# secrets / personal state never go into an image
+config/api_keys.json
+config/certs
+data
+logs
+memory/long_term.json
+tests
+code_dump.txt

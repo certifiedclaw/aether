@@ -59,6 +59,11 @@ def _bootstrap() -> None:
     need = [pkg for mod, pkg in _BASE_PKGS if _ilu.find_spec(mod) is None]
     if not need:
         return
+    _skip = _os.environ.get("AETHER_SKIP_INSTALL", "").strip().lower()
+    if _skip in ("1", "true", "yes") or (HEADLESS and _skip not in ("0", "false", "no")):
+        print(f"[Aether] Missing packages ({', '.join(need)}) but runtime installs are "
+              "disabled (server mode) - continuing; install them in the image.")
+        return
     print(f"\n[Aether] First-run setup — installing: {', '.join(need)}")
     print("[Aether] This happens only once.\n")
     _sp.run([_sys.executable, "-m", "pip", "install", *need], check=True)
@@ -890,7 +895,15 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
                 finally:
                     _warmup_done.set()
 
+            _voice_off = HEADLESS and _os.environ.get(
+                "AETHER_HEADLESS_VOICE", "").strip().lower() not in ("1", "true", "yes")
+
             def _do_stt():
+                if _voice_off:
+                    self.ui.write_log("SYS: Headless - STT skipped (AETHER_HEADLESS_VOICE=1 to enable).")
+                    self.ui.mark_startup_ready("stt")
+                    _stt_done.set()
+                    return
                 try:
                     self.ui.write_log(f"SYS: Loading {stt_engine.upper()} STT…")
                     if stt_engine == "vosk":
@@ -911,6 +924,13 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
                     _stt_done.set()
 
             def _do_tts():
+                if _voice_off:
+                    self.ui.write_log("SYS: Headless - TTS skipped (AETHER_HEADLESS_VOICE=1 to enable).")
+                    self.ui.mark_startup_ready("tts")
+                    self.ui.set_startup_status("● All systems ready.")
+                    self.ui.hide_startup_panel()
+                    self._tts_ready.set()
+                    return
                 try:
                     self.ui.write_log(f"SYS: Loading {tts_engine.upper()} TTS…")
                     if tts_engine == "kokoro":
@@ -965,6 +985,9 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
                 # sound transcribed as prompts, barge-in interrupting replies).
                 self.ui.write_log("SYS: Mic disabled (headless stdin replay).")
                 threading.Event().wait()   # the stdin driver ends the process
+            elif _voice_off:
+                self.ui.write_log("SYS: Headless server idle - drive me via the dashboard.")
+                threading.Event().wait()
             elif stt_engine == "vosk":
                 self._listen_vosk()
             else:
