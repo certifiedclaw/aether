@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aether audit log</title>
+<style>
+  :root { --bg:#0e1116; --fg:#e6edf3; --mut:#8b949e; --line:#262c36; --ok:#3fb950; --warn:#d29922; --bad:#f85149; --card:#161b22; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui,sans-serif; padding:16px; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  #chain { color:var(--mut); margin-bottom:12px; }
+  form { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  input, select, button { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:8px; font:inherit; }
+  button { cursor:pointer; }
+  #sum { color:var(--mut); margin-bottom:8px; }
+  .row { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px; margin-bottom:8px; overflow-wrap:anywhere; }
+  .row b.approved, .row b.allowed { color:var(--ok); }
+  .row b.denied { color:var(--warn); }
+  .row b.blocked { color:var(--bad); }
+  .meta { color:var(--mut); font-size:12px; }
+  code { color:var(--mut); }
+  a { color:#58a6ff; }
+</style>
+</head>
+<body>
+<h1>Audit log</h1>
+<div id="chain">Checking…</div>
+<form id="f">
+  <input name="text" placeholder="search" aria-label="search">
+  <input name="tool" placeholder="tool" aria-label="tool" size="12">
+  <select name="decision" aria-label="decision">
+    <option value="">any decision</option><option>approved</option><option>denied</option>
+    <option>blocked</option><option>allowed</option>
+  </select>
+  <select name="hours" aria-label="period">
+    <option value="">all time</option><option value="1">last hour</option>
+    <option value="24">last 24 h</option><option value="168">last 7 days</option>
+  </select>
+  <button type="submit">Filter</button>
+  <a href="/">Back to Aether</a>
+</form>
+<div id="sum"></div>
+<div id="list"></div>
+<script>
+  // The login page stores the bearer token here; the API checks it on every request.
+  let token = null;
+  try { token = sessionStorage.getItem('aether_token'); } catch (e) {}
+  const list = document.getElementById('list');
+  const note = (t) => { list.textContent = ''; const d = document.createElement('div'); d.className = 'row'; d.textContent = t; list.appendChild(d); };
+
+  async function load() {
+    if (!token) { location.href = '/login'; return; }
+    const q = new URLSearchParams(new FormData(document.getElementById('f')));
+    for (const [k, v] of [...q]) if (!v) q.delete(k);
+    q.set('limit', '200');
+    let r;
+    try { r = await fetch('/api/audit?' + q, { headers: { Authorization: 'Bearer ' + token } }); }
+    catch (e) { note('Could not reach the server.'); return; }
+    if (r.status === 401) { location.href = '/login'; return; }
+    const j = await r.json();
+    document.getElementById('chain').textContent =
+      (j.chain.ok ? 'Chain intact: ' : 'WARNING - ') + j.chain.message;
+    document.getElementById('chain').style.color = j.chain.ok ? '' : 'var(--bad)';
+    const s = j.summary;
+    document.getElementById('sum').textContent = s.count + ' entries - ' +
+      Object.entries(s.by_decision).map(([k, v]) => k + ' ' + v).join(', ');
+    list.textContent = '';
+    if (!j.entries.length) { note('No matching entries.'); return; }
+    for (const e of j.entries) {
+      const row = document.createElement('div'); row.className = 'row';
+      const head = document.createElement('div');
+      const dec = document.createElement('b'); dec.className = String(e.decision); dec.textContent = e.decision;
+      head.append(dec, ' ', (e.tool || '') + (e.action ? '.' + e.action : ''), ' ');
+      const tier = document.createElement('span'); tier.className = 'meta'; tier.textContent = '[' + e.tier + ']';
+      head.append(tier);
+      const meta = document.createElement('div'); meta.className = 'meta';
+      meta.textContent = new Date(e.ts * 1000).toLocaleString() + (e.note ? ' - ' + e.note : '') + (e.turn ? ' - request: ' + e.turn : '');
+      const p = document.createElement('code'); p.textContent = JSON.stringify(e.params || {});
+      row.append(head, meta, p); list.appendChild(row);
+    }
+  }
+  document.getElementById('f').addEventListener('submit', (ev) => { ev.preventDefault(); load(); });
+  load();
+</script>
+</body>
+</html>

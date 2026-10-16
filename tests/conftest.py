@@ -61,3 +61,17 @@ def _isolate_live_report(tmp_path, monkeypatch):
     monkeypatch.setattr(lr, "_JSONL_PATH", tmp_path / "logs" / "live_turns.jsonl", raising=False)
     monkeypatch.setattr(lr, "_REPORT_PATH", tmp_path / "logs" / "live_report.md", raising=False)
     yield
+
+
+@pytest.fixture(autouse=True)
+def _isolate_audit_log(tmp_path, monkeypatch):
+    """Gated-tool tests must never write into the real logs/audit.jsonl."""
+    try:
+        import core.audit_log as al
+    except Exception:  # noqa: BLE001
+        yield
+        return
+    monkeypatch.setattr(al, "LOG_FILE", tmp_path / "audit.jsonl")
+    al._last_hash.clear()
+    yield
+    al._last_hash.clear()

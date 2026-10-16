@@ -392,10 +392,10 @@
       "id": 44,
       "title": "[F0] Audit log viewer: searchable timeline of every tool call and approval",
       "priority": "medium",
-      "status": "backlog",
+      "status": "done",
       "notes": "",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-16"
     },
     {
       "id": 45,

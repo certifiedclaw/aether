@@ -1,5 +1,5 @@
 {
-  "next_id": 84,
+  "next_id": 85,
   "entries": [
     {
       "id": 1,
@@ -1131,6 +1131,23 @@
         "tests/test_resource_governor.py"
       ],
       "next_steps": "#44 audit log viewer, #45 export/import bundle, #47 speed dashboard, #48 auto-update w/ rollback, container sandbox for generated code."
+    },
+    {
+      "id": 84,
+      "timestamp": "2026-10-16 21:14 UTC",
+      "by": "Claude Code",
+      "summary": "#44 audit log: core/audit_log.py (hash-chained JSONL, redaction, rotation, read/verify/render) now wired into every decision in core/risk.py (allowed/approved/denied/blocked), /audit and /audit verify chat commands, authed GET /api/audit + /audit web page (textContent-only rendering). tests/conftest.py autouse fixture isolates the log from the real logs/ dir. Limits: tamper-evident not tamper-proof; only gated tools are logged (not plain chat or safe-tier unless audit_log_safe).",
+      "files": [
+        "core/audit_log.py",
+        "core/risk.py",
+        "core/chat_commands.py",
+        "dashboard/server.py",
+        "dashboard/static/audit.html",
+        "tests/conftest.py",
+        "tests/test_audit_log.py",
+        "docs/SERVER.md"
+      ],
+      "next_steps": "#45 export/import bundle, #47 speed dashboard, #48 auto-update with rollback, container sandbox for generated code."
     }
   ]
 }
