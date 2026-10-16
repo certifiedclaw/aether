@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-15 21:28 UTC
+Generated: 2026-10-15 21:30 UTC
+
+## #81 — 2026-10-15 21:30 UTC — Claude Code
+
+#41 done: OpenAI-compatible API (dashboard/openai_api.py) mounted on the dashboard; /v1/models and /v1/chat/completions (+SSE streaming); off until api_server_enabled + api_server_token(>=24 chars); constant-time bearer check, lockout after 10 bad tries, input limits, roles system/user/assistant only, no tools/memory exposed. Goes through call_llm_stream so remote-GPU fallback and leak guard apply. Stacked on PR #10.
+
+**Touched:** `dashboard/openai_api.py`, `dashboard/server.py`, `config/config.example.json`, `docs/SERVER.md`, `tests/test_openai_api.py`
+
+**Next steps:** #42 graceful degradation, #44-#50.
+
+---
 
 ## #80 — 2026-10-15 21:28 UTC — Claude Code
 

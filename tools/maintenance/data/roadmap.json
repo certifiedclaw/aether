@@ -1,5 +1,5 @@
 {
-  "next_id": 89,
+  "next_id": 90,
   "items": [
     {
       "id": 1,
@@ -365,10 +365,10 @@
       "id": 41,
       "title": "[F0] API server: OpenAI-compatible endpoint so other tools can use Aether's models and memory",
       "priority": "high",
-      "status": "backlog",
+      "status": "done",
       "notes": "Lets Orrery, Obsidian organizer, gamepanel share Aether.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-15"
     },
     {
       "id": 42,
@@ -792,6 +792,15 @@
       "notes": "HP ProDesk 600 G4 (i5-8500, 32GB, HDD; NVMe planned). Docker + headless Aether + Ollama, behind Tailscale/Authelia. Needs free -h / ollama list output from the server.",
       "created": "2026-10-14",
       "updated": "2026-10-14"
+    },
+    {
+      "id": 89,
+      "title": "[F2] API server: optional memory-aware mode (read-only recall) and per-client tokens with usage logging",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "#41 shipped model-only access. Memory/tools deliberately not exposed; add only with per-client scopes.",
+      "created": "2026-10-15",
+      "updated": "2026-10-15"
     }
   ]
 }

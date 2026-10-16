@@ -602,6 +602,7 @@ class DashboardServer:
             except Exception as e:
                 print(f"[Aether] secure router not mounted: {e}")
 
+        self._mount_openai_api(app)
         self._register_static_routes(app)
         self._register_auth_routes(app)
         self._register_command_routes(app)
@@ -612,6 +613,19 @@ class DashboardServer:
         self._register_main_ws(app)
 
         return app
+
+    def _mount_openai_api(self, app: "FastAPI") -> None:
+        """OpenAI-compatible /v1 routes (dashboard/openai_api.py). Routes are always
+        registered but answer 404 until api_server_enabled + api_server_token are set."""
+        try:
+            from core import llm_client as _llm
+            from .openai_api import build_router
+            app.include_router(build_router(
+                lambda: _llm._load_config(),
+                lambda *a, **k: _llm.call_llm_stream(*a, **k),
+                lambda: _llm.get_llm_settings()[1]))
+        except Exception as e:
+            print(f"[Aether] OpenAI-compatible API not mounted: {e}")
 
     # ── static / login page routes ────────────────────────────────────────
 

@@ -19,3 +19,17 @@ no pip/browser downloads at boot), `AETHER_DASHBOARD_HOST`, `AETHER_HEADLESS_VOI
   Aether falls back to the server's CPU model when the PC is off.
 - Dependency set: `requirements-server.txt`.
 - Not tested in CI: the Docker build itself (no daemon in the sandbox). Report any build error.
+
+## OpenAI-compatible API
+Lets editors/scripts use Aether's configured model (remote-GPU with local fallback, leak guard included).
+
+    # config/api_keys.json
+    "api_server_enabled": true,
+    "api_server_token": "<python -c 'import secrets;print(secrets.token_urlsafe(32))'>"
+
+    curl -k https://<host>:8000/v1/chat/completions -H "Authorization: Bearer <token>" \
+      -H "Content-Type: application/json" -d '{"messages":[{"role":"user","content":"hi"}]}'
+
+Text completions only (roles system/user/assistant). Tools, memory, files and approvals are
+not reachable. Off until enabled; 10 bad tokens from an IP locks it out for 10 min.
+Known limits: `temperature`/`max_tokens` are ignored (Aether's own settings apply); token usage reports 0.
