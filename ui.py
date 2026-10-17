@@ -679,6 +679,36 @@ class LogWidget(QTextEdit):
         self.ensureCursorVisible()
 
 
+class MessageInput(QPlainTextEdit):
+    sendRequested = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setPlaceholderText("Ask Aether anything…  (/help for commands)")
+        self.setToolTip(
+            "Enter adds a new line. Press Ctrl+Enter or use Send to send."
+        )
+        self.setAccessibleName("Message Aether")
+        self.setTabChangesFocus(True)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.textChanged.connect(self._fit_height)
+        self._fit_height()
+
+    def keyPressEvent(self, event):
+        if (
+            event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter)
+            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        ):
+            self.sendRequested.emit()
+            return
+        super().keyPressEvent(event)
+
+    def _fit_height(self):
+        line_height = self.fontMetrics().lineSpacing()
+        lines = min(max(self.document().blockCount(), 1), 4)
+        self.setFixedHeight(max(40, min(92, lines * line_height + 16)))
+
+
 class StatsBar(QWidget):
     """
     Compact "Message Stats" panel — shows the metrics for the most recent
@@ -2009,6 +2039,8 @@ class MainWindow(QMainWindow):
         sc_collapse.activated.connect(self._toggle_collapse)
         sc_newchat = QShortcut(QKeySequence("Ctrl+Shift+N"), self)
         sc_newchat.activated.connect(self._request_new_chat)
+        sc_focus_input = QShortcut(QKeySequence("Ctrl+L"), self)
+        sc_focus_input.activated.connect(self._focus_input)
 
         self._collapsed = False
         self._saved_size = None
@@ -2320,7 +2352,7 @@ class MainWindow(QMainWindow):
         activity_lay = QVBoxLayout(activity_tab)
         activity_lay.setContentsMargins(6, 7, 6, 7)
         activity_lay.setSpacing(6)
-        activity_lay.addWidget(_sec("ACTIVITY LOG"))
+        activity_lay.addWidget(_sec("CONVERSATION & ACTIVITY"))
         chat_row = QHBoxLayout()
         self._chat_combo = QComboBox()
         self._chat_combo.setToolTip("Select a saved conversation")
@@ -2335,7 +2367,7 @@ class MainWindow(QMainWindow):
         self._log.setMinimumHeight(140)
         activity_lay.addWidget(self._log, stretch=1)
 
-        activity_lay.addWidget(_sec("MESSAGE STATS"))
+        activity_lay.addWidget(_sec("ABOUT THE LAST REPLY"))
         self._stats_bar = StatsBar()
         activity_lay.addWidget(self._stats_bar)
         self._right_tabs.addTab(activity_tab, "Activity")
@@ -2353,7 +2385,7 @@ class MainWindow(QMainWindow):
         actions_content_lay = QVBoxLayout(actions_content)
         actions_content_lay.setContentsMargins(6, 7, 6, 7)
         actions_content_lay.setSpacing(6)
-        actions_content_lay.addWidget(_sec("FILE UPLOAD"))
+        actions_content_lay.addWidget(_sec("ADD A FILE"))
         self._drop_zone = FileDropZone()
         self._drop_zone.file_selected.connect(self._on_file_selected)
         actions_content_lay.addWidget(self._drop_zone)
@@ -2364,7 +2396,7 @@ class MainWindow(QMainWindow):
         self._file_hint.setWordWrap(True)
         actions_content_lay.addWidget(self._file_hint)
 
-        actions_content_lay.addWidget(_sec("QUICK ACTIONS"))
+        actions_content_lay.addWidget(_sec("CHOOSE AN ACTION"))
         quick_actions = QGridLayout()
         quick_actions.setContentsMargins(0, 0, 0, 0)
         quick_actions.setHorizontalSpacing(5)
@@ -2418,8 +2450,25 @@ class MainWindow(QMainWindow):
         self._right_tabs.addTab(actions_tab, "Actions")
         lay.addWidget(self._right_tabs, stretch=1)
 
-        lay.addWidget(_sec("COMMAND INPUT"))
+        chat_header = QHBoxLayout()
+        chat_header.addWidget(_sec("SEND A MESSAGE"))
+        chat_header.addStretch()
+        self._chat_status_lbl = QLabel("Ready to help")
+        self._chat_status_lbl.setAccessibleName("Aether status")
+        self._chat_status_lbl.setFont(QFont(FONT_BODY, 7, QFont.Weight.Bold))
+        self._chat_status_lbl.setStyleSheet(
+            f"color: {C.GREEN}; background: transparent;"
+        )
+        chat_header.addWidget(self._chat_status_lbl)
+        lay.addLayout(chat_header)
         lay.addLayout(self._build_input_row())
+        input_hint = QLabel(
+            "Enter for a new line  ·  Ctrl+Enter to send  ·  Ctrl+L to focus"
+        )
+        input_hint.setFont(QFont(FONT_BODY, 7))
+        input_hint.setStyleSheet(f"color: {C.TEXT_DIM}; background: transparent;")
+        lay.addWidget(input_hint)
+        self._build_prompt_suggestions(lay)
 
         self._mute_btn = QPushButton("🎙  MICROPHONE ACTIVE")
         self._mute_btn.setFixedHeight(30)
@@ -2949,23 +2998,23 @@ class MainWindow(QMainWindow):
 
     def _build_input_row(self) -> QHBoxLayout:
         row = QHBoxLayout(); row.setSpacing(5)
-        self._input = QLineEdit()
-        self._input.setPlaceholderText("Type a command or question…")
+        self._input = MessageInput()
         self._input.setFont(QFont(FONT_BODY, 9))
-        self._input.setFixedHeight(30)
         self._input.setStyleSheet(f"""
-            QLineEdit {{
+            QPlainTextEdit {{
                 background: #000d14; color: {C.WHITE};
-                border: 1px solid {C.BORDER}; border-radius: 3px; padding: 3px 7px;
+                border: 1px solid {C.BORDER}; border-radius: 4px; padding: 6px 8px;
             }}
-            QLineEdit:focus {{ border: 1px solid {C.PRI}; }}
+            QPlainTextEdit:focus {{ border: 1px solid {C.PRI}; }}
         """)
-        self._input.returnPressed.connect(self._send)
+        self._input.sendRequested.connect(self._send)
+        self._input.textChanged.connect(self._update_prompt_suggestions)
         row.addWidget(self._input)
 
         self._send_btn = QPushButton("Send")
-        self._send_btn.setFixedSize(48, 30)
-        self._send_btn.setFont(QFont(FONT_BODY, 8, QFont.Weight.Bold))
+        self._send_btn.setFixedSize(58, 40)
+        self._send_btn.setAccessibleName("Send message")
+        self._send_btn.setFont(QFont(FONT_BODY, 9, QFont.Weight.Bold))
         self._send_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._send_btn.setStyleSheet(f"""
             QPushButton {{
@@ -2973,7 +3022,13 @@ class MainWindow(QMainWindow):
                 border: 1px solid {C.PRI_DIM}; border-radius: 3px;
             }}
             QPushButton:hover {{ background: {C.PRI_GHO}; border: 1px solid {C.PRI}; }}
+            QPushButton:disabled {{
+                background: {C.PANEL}; color: {C.TEXT_DIM};
+                border: 1px solid {C.BORDER};
+            }}
         """)
+        self._send_btn.setEnabled(False)
+        self._input.textChanged.connect(self._update_send_button)
         self._send_btn.clicked.connect(self._send)
         row.addWidget(self._send_btn)
 
@@ -2993,6 +3048,63 @@ class MainWindow(QMainWindow):
         self._stop_btn.hide()
         row.addWidget(self._stop_btn)
         return row
+
+    def _build_prompt_suggestions(self, parent_layout: QVBoxLayout) -> None:
+        self._prompt_suggestions = QWidget()
+        self._prompt_suggestions.setStyleSheet("background: transparent;")
+        row = QHBoxLayout(self._prompt_suggestions)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(5)
+
+        label = QLabel("Try:")
+        label.setFont(QFont(FONT_BODY, 7, QFont.Weight.Bold))
+        label.setStyleSheet(f"color: {C.TEXT_DIM}; background: transparent;")
+        row.addWidget(label)
+
+        for title, prompt in (
+            ("Get started", "What can you help me with?"),
+            ("Research", "Research the latest AI news"),
+        ):
+            button = QPushButton(title)
+            button.setAccessibleName(f"Use example: {prompt}")
+            button.setToolTip(f"Put “{prompt}” in the message box")
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.setStyleSheet(f"""
+                QPushButton {{
+                    background: {C.PANEL2}; color: {C.TEXT_MED};
+                    border: 1px solid {C.BORDER}; border-radius: 3px;
+                    padding: 4px 7px;
+                }}
+                QPushButton:hover {{
+                    color: {C.PRI}; border-color: {C.PRI_DIM};
+                }}
+            """)
+            button.clicked.connect(
+                lambda _checked=False, value=prompt: self._use_prompt(value)
+            )
+            row.addWidget(button)
+
+        row.addStretch()
+        parent_layout.addWidget(self._prompt_suggestions)
+
+    def _update_prompt_suggestions(self) -> None:
+        self._prompt_suggestions.setVisible(
+            not bool(self._input.toPlainText().strip())
+        )
+
+    def _use_prompt(self, prompt: str) -> None:
+        if self._input.toPlainText().strip():
+            return
+        self._input.setPlainText(prompt)
+        self._input.setFocus()
+        cursor = self._input.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)
+        self._input.setTextCursor(cursor)
+
+    def _update_send_button(self) -> None:
+        self._send_btn.setEnabled(
+            bool(self._input.toPlainText().strip())
+        )
 
     def _build_footer(self) -> QWidget:
         w = QWidget()
@@ -3060,15 +3172,30 @@ class MainWindow(QMainWindow):
             """)
 
     def _send(self):
-        txt = self._input.text().strip()
-        if not txt: return
+        txt = self._input.toPlainText().strip()
+        if not txt or not self.on_text_command:
+            return
         self._input.clear()
-        if self.on_text_command:
-            threading.Thread(target=self.on_text_command, args=(txt,), daemon=True).start()
+        threading.Thread(target=self.on_text_command, args=(txt,), daemon=True).start()
+
+    def _focus_input(self):
+        self._input.setFocus()
 
     def _apply_state(self, state: str):
         self.orb.state    = state
         self.orb.speaking = (state == "SPEAKING")
+        status = {
+            "LISTENING": ("Ready to help", C.GREEN),
+            "THINKING": ("Thinking…", C.ACC2),
+            "PROCESSING": ("Working on it…", C.ACC2),
+            "SPEAKING": ("Speaking…", C.PRI),
+            "MUTED": ("Microphone muted", C.TEXT_MED),
+            "ERROR": ("Something went wrong — check Activity", C.RED),
+        }.get(state, (state.replace("_", " ").title(), C.TEXT_MED))
+        self._chat_status_lbl.setText(status[0])
+        self._chat_status_lbl.setStyleSheet(
+            f"color: {status[1]}; background: transparent;"
+        )
         show_stop = state in ("THINKING", "PROCESSING", "SPEAKING") and bool(self.on_stop_command)
         self._send_btn.setVisible(not show_stop)
         self._stop_btn.setVisible(show_stop)

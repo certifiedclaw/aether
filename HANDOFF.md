@@ -2,7 +2,47 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-17 03:03 UTC
+Generated: 2026-10-17 18:25 UTC
+
+## #101 — 2026-10-17 18:25 UTC — GitHub Copilot (Copilot CLI)
+
+Added a compact live status label beside the chat composer so users can tell when Aether is ready, thinking, processing a tool, speaking, muted, or has encountered an error; error text points to Activity for details. Extended UI regression checks across thinking, processing, error, and ready transitions. Focused UI tests pass (88).
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Check status label visibility at the user's preferred window size and refine if it crowds the composer.
+
+---
+
+## #100 — 2026-10-17 18:22 UTC — GitHub Copilot (Copilot CLI)
+
+Replaced the single-line chat field with a compact multiline composer that grows to four lines, uses Enter for line breaks and Ctrl+Enter to send, and keeps the Send button flow. Updated starter prompts and empty/draft handling for the plain-text editor; regression coverage exercises newline insertion, keyboard send, and retained drafts.
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Try composing a longer request in the desktop app; adjust the four-line height cap if it crowds the sidebar on the user's display.
+
+---
+
+## #99 — 2026-10-17 18:16 UTC — GitHub Copilot (Copilot CLI)
+
+Added first-use chat prompts that populate the composer without sending, hide while the user is typing, and return after the field is cleared; renamed UI section headings with clearer, user-oriented language. Regression tests cover insertion, visibility, and preservation of an existing draft; 88 UI tests pass.
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Verify the starter prompts and refreshed labels in the running desktop app; gather feedback before broader visual changes.
+
+---
+
+## #98 — 2026-10-17 03:15 UTC — GitHub Copilot (Copilot CLI)
+
+Polished desktop chat input with friendlier prompt/help guidance, a Ctrl+L focus shortcut, larger send controls, clear empty-send disabled state, and text retention when no command handler is connected. Added regression coverage for the chat input flow; 88 related UI tests pass.
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Try the chat composer and Ctrl+L shortcut in the desktop app; consider broader visual simplification after gathering user feedback.
+
+---
 
 ## #97 — 2026-10-17 03:03 UTC — GitHub Copilot (Copilot CLI)
 
