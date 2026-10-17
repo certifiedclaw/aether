@@ -3,14 +3,12 @@ import json
 import platform
 from pathlib import Path
 
-_CONFIG_PATH = Path(__file__).parent / "api_keys.json"
+from core import config_home as _config_home
+
+_CONFIG_PATH = _config_home.config_path()
 
 def get_config() -> dict:
-    try:
-        with open(_CONFIG_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {}
+    return _config_home.load_config(_CONFIG_PATH)
 
 def get_os() -> str:
     """Returns 'windows' | 'mac' | 'linux' — detected at runtime, not from config."""

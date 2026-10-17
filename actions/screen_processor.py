@@ -43,7 +43,8 @@ def _base_dir() -> Path:
 
 
 _BASE        = _base_dir()
-_CONFIG_PATH = _BASE / "config" / "api_keys.json"
+from core import config_home as _config_home
+_CONFIG_PATH = _config_home.config_path()
 
 _IMG_MAX_W = 640
 _IMG_MAX_H = 360
@@ -51,17 +52,13 @@ _JPEG_Q    = 60
 
 
 def _load_config() -> dict:
-    try:
-        return json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
+    return _config_home.load_config(_CONFIG_PATH)
 
 
 def _save_config_key(key: str, value) -> None:
     try:
-        cfg = _load_config()
-        cfg[key] = value
-        _CONFIG_PATH.write_text(json.dumps(cfg, indent=4), encoding="utf-8")
+        from core.config_io import save_config   # atomic, merges, keeps every other setting
+        save_config(_CONFIG_PATH, {key: value})
     except Exception as e:
         print(f"[Vision] ⚠️ Could not save config key '{key}': {e}")
 

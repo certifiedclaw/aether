@@ -10,8 +10,9 @@ def get_base_dir() -> Path:
 
 
 BASE_DIR    = get_base_dir()
-CONFIG_DIR  = BASE_DIR / "config"
-CONFIG_FILE = CONFIG_DIR / "api_keys.json"
+from core import config_home as _config_home
+CONFIG_FILE = _config_home.config_path()
+CONFIG_DIR  = CONFIG_FILE.parent
 
 
 def ensure_config_dir() -> None:

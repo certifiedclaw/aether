@@ -14,9 +14,8 @@ def _base_dir() -> Path:
 
 def _get_os() -> str:
     try:
-        cfg = json.loads(
-            (_base_dir() / "config" / "api_keys.json").read_text(encoding="utf-8")
-        )
+        from core import config_home
+        cfg = config_home.load_config()
         return cfg.get("os_system", "windows").lower()
     except Exception:
         return "windows"
