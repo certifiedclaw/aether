@@ -36,13 +36,7 @@ def save_config(cfg: dict) -> None:
 
 
 def load_api_keys() -> dict:
-    if not CONFIG_FILE.exists():
-        return {}
-    try:
-        return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-    except Exception as e:
-        print(f"❌ Failed to load api_keys.json: {e}")
-        return {}
+    return _config_home.load_config(CONFIG_FILE)   # never raises; falls back to last good copy
 
 
 class _MarkConfigAdapter:

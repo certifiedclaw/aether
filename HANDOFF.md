@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-17 22:55 UTC
+Generated: 2026-10-17 23:33 UTC
+
+## #111 — 2026-10-17 23:33 UTC — Claude Code
+
+Merged Codex branch (PR #16) with ElevenLabs cloud_allow/redact gate + eval test fix. Config now lives in per-user dir (core/config_home.py): one-time copy migration, last-good fallback on JSON typos, doctor warns on stale legacy copy, protected from file tools, Docker uses AETHER_CONFIG_DIR=/app/config.
+
+**Touched:** `core/config_home.py`, `core/doctor.py`, `core/protected_paths.py`, `dashboard/server.py`, `Dockerfile`, `tests/test_config_home.py`
+
+**Next steps:** Same fix for data/ and memory/long_term.json; verify migration on real Windows; #48 auto-update with rollback
+
+---
 
 ## #110 — 2026-10-17 22:55 UTC — GitHub Copilot (Copilot CLI)
 

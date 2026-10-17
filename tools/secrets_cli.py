@@ -30,7 +30,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core import credentials  # noqa: E402
 
-DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / "config" / "api_keys.json"
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from core import config_home as _config_home
+DEFAULT_CONFIG = _config_home.config_path()
 
 
 def _load(path: Path) -> dict:

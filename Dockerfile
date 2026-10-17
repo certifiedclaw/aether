@@ -3,7 +3,7 @@ FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
     AETHER_HEADLESS=1 AETHER_SKIP_INSTALL=1 AETHER_SKIP_MAINTENANCE=1 \
-    AETHER_DASHBOARD_HOST=0.0.0.0
+    AETHER_DASHBOARD_HOST=0.0.0.0 AETHER_CONFIG_DIR=/app/config
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends openssl libsndfile1 curl \

@@ -1,5 +1,5 @@
 {
-  "next_id": 111,
+  "next_id": 112,
   "entries": [
     {
       "id": 1,
@@ -1541,6 +1541,21 @@
         "MAINTENANCE.md"
       ],
       "next_steps": "Continue with roadmap #61 (personal search across files, notes, and chats); it was confirmed backlog on origin/master. Check the current branch and origin/master before implementing."
+    },
+    {
+      "id": 111,
+      "timestamp": "2026-10-17 23:33 UTC",
+      "by": "Claude Code",
+      "summary": "Merged Codex branch (PR #16) with ElevenLabs cloud_allow/redact gate + eval test fix. Config now lives in per-user dir (core/config_home.py): one-time copy migration, last-good fallback on JSON typos, doctor warns on stale legacy copy, protected from file tools, Docker uses AETHER_CONFIG_DIR=/app/config.",
+      "files": [
+        "core/config_home.py",
+        "core/doctor.py",
+        "core/protected_paths.py",
+        "dashboard/server.py",
+        "Dockerfile",
+        "tests/test_config_home.py"
+      ],
+      "next_steps": "Same fix for data/ and memory/long_term.json; verify migration on real Windows; #48 auto-update with rollback"
     }
   ]
 }

@@ -153,7 +153,8 @@ def check_env() -> None:
         line(_l)
     global ENV_BLOCKER
     ENV_BLOCKER = None
-    cfg_path = ROOT / "config" / "api_keys.json"
+    from core import config_home as _ch
+    cfg_path = _ch.config_path(ROOT)
     line("Config    :")
     cfg: dict = {}
     try:

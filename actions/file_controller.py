@@ -23,6 +23,11 @@ _SAFE_ROOTS: list[Path] = [
 # never reachable through the file tool: a MONITOR-tier write there would let the model
 # rewrite its own gates or drop in a plugin without any prompt.
 _PROTECTED_ROOTS: list[Path] = [Path(__file__).resolve().parent.parent]
+try:   # the per-user config folder holds the live api_keys.json and TLS keys
+    from core import config_home as _config_home
+    _PROTECTED_ROOTS.append(_config_home.config_dir())
+except Exception:   # noqa: BLE001
+    pass
 
 def _is_safe_path(target: Path) -> bool:
     """Verilen path _SAFE_ROOTS içinde mi? Değilse işlemi reddet."""
