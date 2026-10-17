@@ -138,7 +138,11 @@ def test_run_suite_with_fake_runner(monkeypatch):
     def fake_run(cmd, timeout, env=None, stdin_path=None):
         seen["env"], seen["timeout"] = env, timeout
         seen["prompts"] = stdin_path.read_text(encoding="utf-8").splitlines()
-        return 0, "", "", 1.0
+        output = (
+            f"[Aether] >>> (2) timed out after 30s — continuing\n"
+            f"[Aether] stdin closed — {len(cases)} line(s) sent.\n"
+        )
+        return 0, output, "", 1.0
 
     monkeypatch.setattr(vl, "_MemoryIsolation", NoIso)
     monkeypatch.setattr(eh, "model_installed", lambda url, model, timeout=5.0: (True, "ok"))
@@ -150,6 +154,9 @@ def test_run_suite_with_fake_runner(monkeypatch):
     assert seen["env"]["AETHER_HEADLESS"] == "1" and seen["env"]["AETHER_SKIP_MAINTENANCE"] == "1"
     assert seen["prompts"] == [c["prompt"] for c in cases] and seen["timeout"] == 30 * len(cases) + 120
     assert res["n"] == len(cases) and res["model"] == "llama3.2:3b"
+    assert res["replay"] == {"lines_sent": len(cases), "timed_out_lines": [2]}
+    assert "replay_prompt_timeouts" in {w["check"] for w in res["whole_run"]}
+    assert "main.py replay" in eh.render_result(res)
 
 
 def test_run_suite_refuses_when_model_missing(monkeypatch):

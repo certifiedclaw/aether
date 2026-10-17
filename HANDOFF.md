@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-16 22:05 UTC
+Generated: 2026-10-17 03:09 UTC
+
+## #87 — 2026-10-17 03:09 UTC — GitHub Copilot (Copilot CLI)
+
+Completed and calibrated roadmap #39: added 50+ core evaluation cases for a 107-case total suite, fixed stale-reply grading false positives and recorded main.py replay counts/timeouts. Live qwen2.5:1.5b result was 98/107 (92%), p50 1.48s, p95 4.39s; one tool-loop exhaustion and nine answer-quality misses remain model/product issues.
+
+**Touched:** `tests/eval_suite_core.json`, `tests/test_eval_harness.py`, `tests/test_live_grader.py`, `tools/eval_harness.py`, `tools/live_grader.py`, `tools/maintenance/data/roadmap.json`, `ROADMAP.md`
+
+**Next steps:** Use the calibrated harness to establish baselines for the models intended for deployment, then use those measurements when implementing per-tier local model selection in roadmap #51.
+
+---
 
 ## #86 — 2026-10-16 22:05 UTC — Claude Code
 

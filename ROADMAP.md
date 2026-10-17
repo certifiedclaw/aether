@@ -2,23 +2,21 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap add/start/done`.
 
-Generated: 2026-10-17 02:40 UTC
+Generated: 2026-10-17 03:03 UTC
 
 ## In progress
 
 - [ ] **#10** Finish the except-pass sweep across actions/ (~90 blocks unreviewed) `low`
   - Handoff #15's sweep covered core/, security/, agent/, dashboard/server.py, main.py, core/llm_client.py (~20 of 111 bare except-pass blocks). This session covered the 62 pass-only (zero-logging, highest-risk shape) blocks specifically in actions/ -- reviewed all of them; found one dead-code path (see #16) but no active silently-broken call like the 3 prior real bugs. Still unreviewed: the ~235 'except Exception as e: log...' blocks across the whole codebase (lower risk shape since they at least log, but not zero -- worth a pass if time allows) and actions/'s non-pass-only except blocks.
-- [ ] **#39** [F0] Evaluation harness: 100+ fixed prompts, scored after every change `high`
-  - Foundation. Also the benchmark for choosing the iansserver model.
 - [ ] **#88** [F0] Deploy Aether always-on on iansserver (Docker, headless, small CPU model, PC GPU as optional boost) `high`
   - HP ProDesk 600 G4 (i5-8500, 32GB, HDD; NVMe planned). Docker + headless Aether + Ollama, behind Tailscale/Authelia. Needs free -h / ollama list output from the server.
 
 ## Backlog
 
 - [ ] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option `high`
-  - Live Gemini key is inside full-folder zips. Verify git history never contained it; rotate if it did.
+  - Repository protections already implemented: config/api_keys.json is ignored, example templates are present, and credentials resolve environment -> OS keyring -> local file with a migration CLI. Confirmed the config file is not tracked in this Git history. Previously shared full-folder archives are outside this checkout; the owner still needs to check/remove any such archives and rotate keys if one contained them.
 - [ ] **#51** [F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones `high`
-  - ~800 lines. Depends on F0 eval harness.
+  - Partial implementation already exists: core/tier_router.py classifies QUICK/EVERYDAY/HARD, and conversation_core.py uses QUICK to skip tools/context and can escalate HARD turns to Gemini. It does not currently pass local tier model choices into call_llm_stream; `_route.model` is not applied, so local turns still use the configured model. Complete this item by adding safe, configurable local/remote per-tier selection with fallback when a configured model is unavailable, guided by #39 baselines.
 - [ ] **#52** [F1] Prompt and tool-schema tuning per model, driven by benchmark results `high`
   - ~500 lines.
 - [ ] **#59** [F2] Web search with sources `high`
@@ -149,6 +147,8 @@ Generated: 2026-10-17 02:40 UTC
 - [x] **#37** run_python is not a sandbox: decide keep (ASK + full-code dialog + scrubbed env, as of v12g) or replace with a real isolation layer
   - v12g: same interpreter, -I, scratch cwd, secret env stripped, timeout clamped 1-60s, dialog shows whole code. Still runs as the user.
 - [x] **#38** Dashboard still binds 0.0.0.0 over plain HTTP by default; add LAN-only/bind option and prefer HTTPS
+- [x] **#39** [F0] Evaluation harness: 100+ fixed prompts, scored after every change
+  - Completed and calibrated through Aether main.py: 107 prompts (83 core + 24 smoke); qwen2.5:1.5b scored 98/107 (92%), p50 1.48s, p95 4.39s, with all 107 inputs delivered and no driver timeouts. The remaining failures and one exhausted tool loop are model/product findings, not evaluation-harness failures. The machine-specific result is saved locally in logs/eval/roadmap-all-qwen15b.json.
 - [x] **#40** [F0] Self-diagnosis command (/doctor): models, disk, permissions, config; auto-fix what it can
   - Seed: tools/verify_local.py.
 - [x] **#41** [F0] API server: OpenAI-compatible endpoint so other tools can use Aether's models and memory

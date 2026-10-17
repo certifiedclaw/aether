@@ -20,6 +20,7 @@ import argparse
 import json
 import os
 import platform
+import re
 import sys
 import time
 import urllib.request
@@ -121,6 +122,13 @@ def render_result(r: dict) -> str:
            f"latency p50 {r['latency_ms']['p50']}ms  p95 {r['latency_ms']['p95']}ms", "", "by category:"]
     for cat, v in r["categories"].items():
         out.append(f"  {cat:<12} {v['passed']:>2}/{v['n']:<2} {v['score']:.0%}")
+    replay = r.get("replay")
+    if replay:
+        sent = replay.get("lines_sent")
+        sent_text = "unknown prompts sent" if sent is None else f"{sent} prompts sent"
+        timed_out = replay.get("timed_out_lines", [])
+        out.append(f"\nmain.py replay: {sent_text}; "
+                   + (f"timed out on input line(s) {timed_out}" if timed_out else "no input timeouts"))
     bad = [c for c in r["cases"] if not c["pass"]]
     if bad:
         out.append("\nfailed cases:")
@@ -210,8 +218,8 @@ def run_suite(label: str, suite: str, model: str | None, url: str | None, per_ca
     timeout = per_case_s * len(cases) + 120
     run = runner or vl.run
     with vl._MemoryIsolation():
-        rc, _so, se, dt = run([sys.executable, "main.py"], timeout, env=env, stdin_path=prompts)
-    turns = live_grader.load_turns(started - 1)
+        rc, so, se, dt = run([sys.executable, "main.py"], timeout, env=env, stdin_path=prompts)
+    turns = live_grader.load_turns(started)
     meta = {
         "label": label, "suite": suite, "model": model, "url": url,
         "started": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(started)),
@@ -219,6 +227,22 @@ def run_suite(label: str, suite: str, model: str | None, url: str | None, per_ca
         "python": platform.python_version(), "platform": platform.platform(),
     }
     result = build_result(cases, turns, meta)
+    sent = re.findall(r"stdin closed\s+[—-]\s+(\d+)\s+line\(s\) sent", so or "")
+    timeouts = [int(n) for n in re.findall(r"\[Aether\] >>> \((\d+)\) timed out after", so or "")]
+    result["replay"] = {
+        "lines_sent": int(sent[-1]) if sent else None,
+        "timed_out_lines": timeouts,
+    }
+    if sent and int(sent[-1]) != len(cases):
+        result["whole_run"].append({
+            "severity": "FAIL", "check": "replay_prompt_count",
+            "detail": f"Aether main.py sent {sent[-1]} prompts for {len(cases)} cases",
+        })
+    if timeouts:
+        result["whole_run"].append({
+            "severity": "FAIL", "check": "replay_prompt_timeouts",
+            "detail": f"Aether main.py timed out waiting for turns on input line(s): {timeouts}",
+        })
     if "Traceback (most recent call last)" in (se or ""):
         result["whole_run"].append({"severity": "FAIL", "check": "stderr_traceback",
                                     "detail": f"{se.count('Traceback (most recent call last)')} traceback(s) in stderr"})

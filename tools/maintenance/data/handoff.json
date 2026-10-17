@@ -1,5 +1,5 @@
 {
-  "next_id": 87,
+  "next_id": 88,
   "entries": [
     {
       "id": 1,
@@ -1181,6 +1181,22 @@
         "docs/SERVER.md"
       ],
       "next_steps": "Clarify 'auto logo' request with the user; #45, #48, container sandbox."
+    },
+    {
+      "id": 87,
+      "timestamp": "2026-10-17 03:09 UTC",
+      "by": "GitHub Copilot (Copilot CLI)",
+      "summary": "Completed and calibrated roadmap #39: added 50+ core evaluation cases for a 107-case total suite, fixed stale-reply grading false positives and recorded main.py replay counts/timeouts. Live qwen2.5:1.5b result was 98/107 (92%), p50 1.48s, p95 4.39s; one tool-loop exhaustion and nine answer-quality misses remain model/product issues.",
+      "files": [
+        "tests/eval_suite_core.json",
+        "tests/test_eval_harness.py",
+        "tests/test_live_grader.py",
+        "tools/eval_harness.py",
+        "tools/live_grader.py",
+        "tools/maintenance/data/roadmap.json",
+        "ROADMAP.md"
+      ],
+      "next_steps": "Use the calibrated harness to establish baselines for the models intended for deployment, then use those measurements when implementing per-tier local model selection in roadmap #51."
     }
   ]
 }
