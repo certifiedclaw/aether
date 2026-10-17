@@ -1,5 +1,5 @@
 {
-  "next_id": 87,
+  "next_id": 97,
   "entries": [
     {
       "id": 1,
@@ -1181,6 +1181,132 @@
         "docs/SERVER.md"
       ],
       "next_steps": "Clarify 'auto logo' request with the user; #45, #48, container sandbox."
+    },
+    {
+      "id": 87,
+      "timestamp": "2026-10-17 02:18 UTC",
+      "by": "GitHub Copilot",
+      "summary": "Added a searchable direct-action launcher with schema-driven forms; deferred streamed TTS until tool-call intent is resolved; corrected ElevenLabs voice defaults and surfaced runtime synthesis errors.",
+      "files": [
+        "ui.py",
+        "main.py",
+        "core/conversation_core.py",
+        "core/tts.py",
+        "readme.md",
+        "tests/test_action_launcher.py",
+        "tests/test_tts_elevenlabs.py",
+        "tests/test_tool_call_recovery.py",
+        "tests/test_all_critical.py"
+      ],
+      "next_steps": "Owner: try the Actions launcher and run a real ElevenLabs speech test with the configured key; verify API/account-specific errors if synthesis still fails."
+    },
+    {
+      "id": 88,
+      "timestamp": "2026-10-17 02:22 UTC",
+      "by": "GitHub Copilot",
+      "summary": "Improved the desktop action UI with eight labeled quick-launch buttons including Research, and gave the full searchable action catalog friendly names and capability-oriented search.",
+      "files": [
+        "ui.py",
+        "tests/test_action_launcher.py"
+      ],
+      "next_steps": "Owner: launch the desktop app, verify the Quick Actions panel fits the right sidebar at normal screen size, and try Research and Browse All Actions."
+    },
+    {
+      "id": 89,
+      "timestamp": "2026-10-17 02:24 UTC",
+      "by": "GitHub Copilot",
+      "summary": "Routed the desktop Research quick action to the existing LangChain multi-step ReAct research action with a focused task/context form; falls back visibly to single-query web search only if the integration is unavailable.",
+      "files": [
+        "ui.py",
+        "tests/test_action_launcher.py"
+      ],
+      "next_steps": "Owner: with LangChain enabled, click Quick Actions > Research and confirm Aether runs its multi-step research agent; if disabled, verify the form indicates it is a single-search fallback."
+    },
+    {
+      "id": 90,
+      "timestamp": "2026-10-17 02:27 UTC",
+      "by": "GitHub Copilot",
+      "summary": "Reorganized the desktop right sidebar into Activity and Actions tabs, keeping chat input and microphone controls visible while giving the activity log more space; added scrolling for actions and a regression test for default-window layout.",
+      "files": [
+        "ui.py",
+        "tests/test_action_launcher.py"
+      ],
+      "next_steps": "Owner: open the desktop app and verify the new Activity/Actions tabs and scroll area at normal and minimum window sizes."
+    },
+    {
+      "id": 91,
+      "timestamp": "2026-10-17 02:29 UTC",
+      "by": "GitHub Copilot",
+      "summary": "Polished the full action catalog with category filters, multi-line task cards and stronger search; organized tools into research, files, computer, media, productivity, coding, and system groups. Verified sidebar layout down to minimum window size.",
+      "files": [
+        "ui.py",
+        "tests/test_action_launcher.py"
+      ],
+      "next_steps": "Owner: test categories and text search in Browse All Actions at runtime."
+    },
+    {
+      "id": 92,
+      "timestamp": "2026-10-17 02:33 UTC",
+      "by": "GitHub Copilot",
+      "summary": "Reviewed actual default-size UI renders. Found several unsupported emoji/icon glyphs displaying as empty squares; replaced visible labels with readable text and widened Send/Stop controls. Verified screenshot after loading bundled fonts.",
+      "files": [
+        "ui.py",
+        "tests/test_action_launcher.py"
+      ],
+      "next_steps": "Owner: check the Actions tab and live audio/state transitions in the desktop app; the offscreen render can only confirm the static UI."
+    },
+    {
+      "id": 93,
+      "timestamp": "2026-10-17 02:36 UTC",
+      "by": "GitHub Copilot (Copilot CLI)",
+      "summary": "Completed the final visual review of the setup/configuration and action catalog dialogs. Replaced remaining unsupported UI icon glyphs and improved catalog description contrast; rerendered dialogs and verified focused UI tests and Python compilation.",
+      "files": [
+        "ui.py"
+      ],
+      "next_steps": "No UI follow-up identified; continue with runtime verification if needed."
+    },
+    {
+      "id": 94,
+      "timestamp": "2026-10-17 02:37 UTC",
+      "by": "GitHub Copilot (Copilot CLI)",
+      "summary": "Removed a final unsupported star glyph from the recommended local-model button after visual reinspection; the recommendation remains distinguished by bold styling and its highlighted button color. Re-rendered setup UI and reran focused checks.",
+      "files": [
+        "ui.py"
+      ],
+      "next_steps": "No UI follow-up identified; continue with runtime verification if needed."
+    },
+    {
+      "id": 95,
+      "timestamp": "2026-10-17 02:41 UTC",
+      "by": "GitHub Copilot (Copilot CLI)",
+      "summary": "Advanced roadmap #39 evaluation harness: expanded the fixed-prompt all suite from 57 to 107 cases (83 core + 24 smoke), added a test enforcing the 100-case target and regex validation, and adjusted the HTTP expansion expectation to accept both 'Hypertext' and 'Hyper Text' based on the owner's qwen2.5:1.5b run. Refreshed stale maintenance reports; targeted harness/grader tests pass. New cases still need a live-model calibration run.",
+      "files": [
+        "tests/eval_suite_core.json",
+        "tests/test_eval_harness.py",
+        "PROJECT_STATE.md",
+        "HEALTH_REPORT.md",
+        "ROADMAP.md",
+        "MAINTENANCE.md"
+      ],
+      "next_steps": "Run python -m tools.eval_harness run --label <model> --suite all against Aether/Ollama, inspect failures for bad expectations versus model/product failures, then revise cases and establish model baselines."
+    },
+    {
+      "id": 96,
+      "timestamp": "2026-10-17 02:47 UTC",
+      "by": "GitHub Copilot (Copilot CLI)",
+      "summary": "Refreshed the README as a current user guide for installation, action browsing/research, providers and privacy, shortcuts, chat commands, headless/dashboard modes, and evaluation/testing. Prepared the prior UI, ElevenLabs, and tool-response fixes for the branch; focused UI/voice/tool-loop tests pass.",
+      "files": [
+        "readme.md",
+        "ui.py",
+        "main.py",
+        "core/conversation_core.py",
+        "core/tts.py",
+        "tests/test_action_launcher.py",
+        "tests/test_tts_elevenlabs.py",
+        "tests/test_all_critical.py",
+        "tests/test_tool_call_recovery.py"
+      ],
+      "next_steps": "Run the full suite and live application/evaluation checks when the user's Ollama environment is available."
     }
   ]
 }
