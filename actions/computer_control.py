@@ -30,14 +30,12 @@ def _base_dir() -> Path:
 
 
 _BASE         = _base_dir()
-_CONFIG_PATH  = _BASE / "config" / "api_keys.json"
+from core import config_home as _config_home
+_CONFIG_PATH  = _config_home.config_path()
 _MEMORY_PATH  = _BASE / "memory" / "long_term.json"
 
 def _load_config() -> dict:
-    try:
-        return json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
+    return _config_home.load_config(_CONFIG_PATH)
 
 def _get_os() -> str:
     import platform
@@ -303,9 +301,9 @@ def _screen_find(description: str) -> tuple[int, int] | None:
         import requests as _req
         import json as _json
 
-        cfg_path = Path(__file__).resolve().parent.parent / "config" / "api_keys.json"
+        cfg_path = _config_home.config_path()
         try:
-            cfg = _json.loads(cfg_path.read_text(encoding="utf-8"))
+            cfg = _config_home.load_config(cfg_path)
         except Exception:
             cfg = {}
 

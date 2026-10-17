@@ -14,7 +14,7 @@ _ROOT = Path(__file__).resolve().parent.parent
 
 _PROTECTED_FILES = ("config/api_keys.json", "config/api_keys.json.corrupt")
 _PROTECTED_DIRS = ("config/certs", "data/security")
-_PROTECTED_NAMES = frozenset({"api_keys.json"})
+_PROTECTED_NAMES = frozenset({"api_keys.json", "api_keys.json.last_good", "api_keys.json.corrupt"})
 _PROTECTED_SUFFIXES = frozenset({".pem", ".key"})
 
 
@@ -29,6 +29,14 @@ def is_protected(path) -> bool:
         for rel in _PROTECTED_FILES:
             if p == (_ROOT / rel).resolve():
                 return True
+        # the live per-user config folder (api_keys.json, .last_good, .corrupt, certs/)
+        try:
+            from core import config_home
+            home = config_home.config_dir().resolve()
+            if p == home or home in p.parents:
+                return True
+        except Exception:  # noqa: BLE001
+            return True
         for rel in _PROTECTED_DIRS:
             d = (_ROOT / rel).resolve()
             if p == d or d in p.parents:

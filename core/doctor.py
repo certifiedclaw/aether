@@ -70,19 +70,24 @@ def _git(root: Path, *args: str) -> int | None:
 
 # ── config loading (never raises) ───────────────────────────────────────────────
 def _load_cfg(root: Path) -> tuple[dict, Finding]:
-    p = root / "config" / "api_keys.json"
+    from core import config_home
+    p = config_home.config_path(root)
     if not p.exists():
-        return {}, Finding("Config file", WARN, "config/api_keys.json is missing; built-in defaults are in use.",
+        return {}, Finding("Config file", WARN, f"{p} is missing; built-in defaults are in use.",
                            "Copy it from your previous Aether folder, or from config/config.example.json.")
     try:
         d = json.loads(p.read_text(encoding="utf-8"))
         if not isinstance(d, dict):
             raise ValueError("not a JSON object")
-        return d, Finding("Config file", OK, "config/api_keys.json is valid.")
+        return d, Finding("Config file", OK, f"{p} is valid.")
     except Exception as e:  # noqa: BLE001
         bak = p.with_name(p.name + ".corrupt")
+        good = config_home.last_good_path(p)
+        if good.exists():
+            return config_home.load_config(p), Finding("Config file", WARN, f"{p} cannot be read ({type(e).__name__}); Aether is using the last good copy ({good.name}).",
+                               "Fix the JSON (a missing comma or quote is the usual cause); settings changes are ignored until you do.")
         extra = f" A backup of an earlier bad copy exists at {bak.name}." if bak.exists() else ""
-        return {}, Finding("Config file", FAIL, f"config/api_keys.json cannot be read ({type(e).__name__}).{extra}",
+        return {}, Finding("Config file", FAIL, f"{p} cannot be read ({type(e).__name__}).{extra}",
                            "Fix the JSON (a missing comma or quote is the usual cause) or restore your last copy.")
 
 
@@ -106,14 +111,29 @@ def check_python() -> Finding:
 
 
 def check_config_permissions(root: Path) -> Finding | None:
-    p = root / "config" / "api_keys.json"
+    from core import config_home
+    p = config_home.config_path(root)
     if os.name != "posix" or not p.exists():
         return None
     mode = p.stat().st_mode & 0o777
     if mode & 0o077:
-        return Finding("Config permissions", WARN, f"config/api_keys.json is readable by other users (mode {mode:o}).",
-                       "chmod 600 config/api_keys.json", auto="chmod_config")
+        return Finding("Config permissions", WARN, f"{p} is readable by other users (mode {mode:o}).",
+                       f"chmod 600 {p}", auto="chmod_config")
     return Finding("Config permissions", OK, "only the owner can read the config file.")
+
+
+def check_config_location(root: Path) -> Finding | None:
+    """Tell the user where the live config is, and flag a stale old in-app copy."""
+    from core import config_home
+    if root != ROOT:
+        return None
+    live = config_home.config_path(root)
+    old = config_home.stale_legacy_copy()
+    if old is not None:
+        return Finding("Config location", WARN,
+                       f"live settings are in {live}, but an older, different copy remains at {old}; the old one is ignored.",
+                       f"Edit {live} (or delete {old} once you are happy).")
+    return Finding("Config location", OK, f"settings live in {live} and survive version upgrades.")
 
 
 def check_secret_storage(root: Path, cfg: dict) -> Finding | None:
@@ -272,7 +292,8 @@ def check_remote(cfg: dict) -> Finding | None:
 def check_dashboard(root: Path, env: dict | None = None) -> Finding:
     env = os.environ if env is None else env
     host = (env.get("AETHER_DASHBOARD_HOST") or "127.0.0.1").strip().lower()
-    certs = root / "config" / "certs"
+    from core import config_home
+    certs = config_home.certs_dir(root)
     tls = (certs / "aether.key").exists() and (certs / "aether.crt").exists()
     if host in _LOOPBACK:
         return Finding("Dashboard exposure", OK, "bound to this machine only (127.0.0.1).")
@@ -323,9 +344,10 @@ def _fix_make_dirs(root: Path) -> str:
 
 
 def _fix_chmod_config(root: Path) -> str:
-    p = root / "config" / "api_keys.json"
+    from core import config_home
+    p = config_home.config_path(root)
     os.chmod(p, 0o600)
-    return "set config/api_keys.json to owner-only (600)"
+    return f"set {p} to owner-only (600)"
 
 
 AUTO_FIXES = {"make_dirs": _fix_make_dirs, "chmod_config": _fix_chmod_config}
@@ -345,7 +367,7 @@ def apply_fixes(findings: list[Finding], root: Path = ROOT) -> list[str]:
 def run_checks(root: Path = ROOT) -> list[Finding]:
     cfg, cfg_finding = _load_cfg(root)
     found: list[Finding] = [check_python(), cfg_finding]
-    for item in (check_config_permissions(root), check_secret_storage(root, cfg)):
+    for item in (check_config_permissions(root), check_config_location(root), check_secret_storage(root, cfg)):
         if item:
             found.append(item)
     found += check_git_secrets(root)

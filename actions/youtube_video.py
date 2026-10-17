@@ -31,7 +31,8 @@ def _get_base_dir() -> Path:
 
 
 BASE_DIR        = _get_base_dir()
-API_CONFIG_PATH = BASE_DIR / "config" / "api_keys.json"
+from core import config_home as _config_home
+API_CONFIG_PATH = _config_home.config_path()
 
 HEADERS = {
     "User-Agent": (

@@ -58,3 +58,20 @@ previous one, so edits or deletions are detected (tamper-evident, not tamper-pro
 rounds, time to first token, median and p95 round time, tokens/s, tokens in/out; Aether's memory, host free RAM, and what Ollama has loaded
 (RAM vs GPU). Cloud tokens per day are listed; set `cloud_daily_token_budget` for a heads-up before a free tier
 runs out (warning only, nothing is blocked). Data: `logs/perf.jsonl`, numbers only - no message text.
+
+## Where the config lives (all platforms)
+
+Settings are no longer inside the version folder, so upgrading Aether no longer means copying
+`api_keys.json` by hand.
+
+| OS | Folder |
+|---|---|
+| Windows | `%APPDATA%\Aether` |
+| macOS | `~/Library/Application Support/Aether` |
+| Linux | `$XDG_CONFIG_HOME/aether` or `~/.config/aether` |
+| Docker | `/app/config` (the `aether_config` volume, via `AETHER_CONFIG_DIR`) |
+
+Override with `AETHER_CONFIG_DIR`. On first run after upgrading, your old `<app>/config/api_keys.json`
+and `certs/` are **copied** there (originals are never deleted). A typo in the JSON no longer wipes your
+settings: Aether keeps using `api_keys.json.last_good` and `python -m core.doctor` tells you. Doctor also
+warns if an old, different copy is left in the app folder.

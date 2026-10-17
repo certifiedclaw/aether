@@ -15,6 +15,11 @@ test suite (test_all_critical.py, test_core.py) cleanly.
 """
 collect_ignore = ["stress_test.py"]
 
+# Hermetic config: never read or write the developer's real per-user Aether config.
+import os as _os
+import tempfile as _tempfile
+_os.environ.setdefault("AETHER_CONFIG_DIR", _tempfile.mkdtemp(prefix="aether_test_cfg_"))
+
 
 import pytest  # noqa: E402
 

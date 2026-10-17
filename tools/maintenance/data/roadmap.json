@@ -1,5 +1,5 @@
 {
-  "next_id": 90,
+  "next_id": 91,
   "items": [
     {
       "id": 1,
@@ -801,6 +801,15 @@
       "notes": "#41 shipped model-only access. Memory/tools deliberately not exposed; add only with per-client scopes.",
       "created": "2026-10-15",
       "updated": "2026-10-15"
+    },
+    {
+      "id": 90,
+      "title": "Config survives version upgrades (user-dir config, last-good fallback)",
+      "priority": "high",
+      "status": "done",
+      "notes": "core/config_home.py; extend same treatment to data/ and memory/long_term.json",
+      "created": "2026-10-17",
+      "updated": "2026-10-17"
     }
   ]
 }

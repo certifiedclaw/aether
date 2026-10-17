@@ -434,9 +434,10 @@ def _screen_debug_action(description, file_path, player, speak=None) -> str:
         from pathlib import Path as _Path
 
         cfg          = {}
-        cfg_file     = _Path(__file__).resolve().parent.parent / "config" / "api_keys.json"
+        from core import config_home as _config_home
+        cfg_file     = _config_home.config_path()
         try:
-            cfg = _json.loads(cfg_file.read_text(encoding="utf-8"))
+            cfg = _config_home.load_config(cfg_file)
         except Exception:
             pass
 

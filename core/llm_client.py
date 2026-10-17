@@ -55,7 +55,8 @@ def get_base_dir() -> Path:
 
 
 BASE_DIR    = get_base_dir()
-CONFIG_PATH = BASE_DIR / "config" / "api_keys.json"
+from core import config_home as _config_home
+CONFIG_PATH = _config_home.config_path()
 
 _DEFAULTS = {
     "llm_url":      "http://localhost:11434",
@@ -224,10 +225,7 @@ def _load_config() -> dict:
         return _apply_eval_overrides(_config_cache or {})
 
     if _config_cache is None or mtime != _config_mtime:
-        try:
-            _config_cache = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-        except Exception:
-            _config_cache = {}
+        _config_cache = _config_home.load_config(CONFIG_PATH)   # keeps last good copy on a typo
         _config_mtime = mtime
 
     return _apply_eval_overrides(_config_cache)

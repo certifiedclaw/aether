@@ -500,7 +500,8 @@ class DashboardServer:
 
     @staticmethod
     def _ssl_enabled() -> bool:
-        certs = BASE_DIR / "config" / "certs"
+        from core import config_home as _ch
+        certs = _ch.certs_dir()
         return (certs / "aether.key").exists() and (certs / "aether.crt").exists()
 
     def get_url(self) -> str:
@@ -1099,8 +1100,9 @@ class DashboardServer:
         """Second HTTPS server on PORT+1 sharing the same app and in-memory state.
         Chrome HTTPS-upgrades any bare IP:PORT the user types, so this port also needs TLS.
         User types IP:8001 → Chrome tries https → self-signed cert warning → accept once → done."""
-        ssl_key  = BASE_DIR / "config" / "certs" / "aether.key"
-        ssl_cert = BASE_DIR / "config" / "certs" / "aether.crt"
+        from core import config_home as _ch
+        ssl_key  = _ch.certs_dir() / "aether.key"
+        ssl_cert = _ch.certs_dir() / "aether.crt"
         asyncio.get_event_loop().run_in_executor(None, _ensure_network_access, PORT + 1)
         cfg = uvicorn.Config(
             self.app, host=self._host, port=PORT + 1, log_level="warning",
@@ -1116,8 +1118,9 @@ class DashboardServer:
             return
 
         use_ssl  = self._ssl_enabled()
-        ssl_key  = BASE_DIR / "config" / "certs" / "aether.key"
-        ssl_cert = BASE_DIR / "config" / "certs" / "aether.crt"
+        from core import config_home as _ch
+        ssl_key  = _ch.certs_dir() / "aether.key"
+        ssl_cert = _ch.certs_dir() / "aether.crt"
         if not self._remote_access_allowed(self._host, use_ssl):
             print("[Dashboard] Remote access disabled: set up TLS certificates in config/certs first.")
             return

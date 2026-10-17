@@ -10,8 +10,9 @@ def get_base_dir() -> Path:
 
 
 BASE_DIR    = get_base_dir()
-CONFIG_DIR  = BASE_DIR / "config"
-CONFIG_FILE = CONFIG_DIR / "api_keys.json"
+from core import config_home as _config_home
+CONFIG_FILE = _config_home.config_path()
+CONFIG_DIR  = CONFIG_FILE.parent
 
 
 def ensure_config_dir() -> None:
@@ -35,13 +36,7 @@ def save_config(cfg: dict) -> None:
 
 
 def load_api_keys() -> dict:
-    if not CONFIG_FILE.exists():
-        return {}
-    try:
-        return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-    except Exception as e:
-        print(f"❌ Failed to load api_keys.json: {e}")
-        return {}
+    return _config_home.load_config(CONFIG_FILE)   # never raises; falls back to last good copy
 
 
 class _MarkConfigAdapter:
