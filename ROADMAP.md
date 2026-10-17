@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap add/start/done`.
 
-Generated: 2026-10-14 01:15 UTC
+Generated: 2026-10-17 02:40 UTC
 
 ## In progress
 
@@ -10,16 +10,13 @@ Generated: 2026-10-14 01:15 UTC
   - Handoff #15's sweep covered core/, security/, agent/, dashboard/server.py, main.py, core/llm_client.py (~20 of 111 bare except-pass blocks). This session covered the 62 pass-only (zero-logging, highest-risk shape) blocks specifically in actions/ -- reviewed all of them; found one dead-code path (see #16) but no active silently-broken call like the 3 prior real bugs. Still unreviewed: the ~235 'except Exception as e: log...' blocks across the whole codebase (lower risk shape since they at least log, but not zero -- worth a pass if time allows) and actions/'s non-pass-only except blocks.
 - [ ] **#39** [F0] Evaluation harness: 100+ fixed prompts, scored after every change `high`
   - Foundation. Also the benchmark for choosing the iansserver model.
+- [ ] **#88** [F0] Deploy Aether always-on on iansserver (Docker, headless, small CPU model, PC GPU as optional boost) `high`
+  - HP ProDesk 600 G4 (i5-8500, 32GB, HDD; NVMe planned). Docker + headless Aether + Ollama, behind Tailscale/Authelia. Needs free -h / ollama list output from the server.
 
 ## Backlog
 
 - [ ] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option `high`
   - Live Gemini key is inside full-folder zips. Verify git history never contained it; rotate if it did.
-- [ ] **#41** [F0] API server: OpenAI-compatible endpoint so other tools can use Aether's models and memory `high`
-  - Lets Orrery, Obsidian organizer, gamepanel share Aether.
-- [ ] **#42** [F0] Graceful degradation: clear messages and automatic fallback when Ollama/model/PC/network is down `high`
-- [ ] **#43** [F0] Data-leak guard: never send secrets, memory or files to any cloud model `high`
-  - Needed before any cloud backend is enabled.
 - [ ] **#51** [F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones `high`
   - ~800 lines. Depends on F0 eval harness.
 - [ ] **#52** [F1] Prompt and tool-schema tuning per model, driven by benchmark results `high`
@@ -27,13 +24,8 @@ Generated: 2026-10-14 01:15 UTC
 - [ ] **#59** [F2] Web search with sources `high`
   - ~600 lines.
 - [ ] **#60** [F2] Document Q&A over PDFs, notes, Obsidian, with citations `high`
-- [ ] **#88** [F0] Deploy Aether always-on on iansserver (Docker, headless, small CPU model, PC GPU as optional boost) `high`
-  - HP ProDesk 600 G4 (i5-8500, 32GB, HDD; NVMe planned). Docker + headless Aether + Ollama, behind Tailscale/Authelia. Needs free -h / ollama list output from the server.
-- [ ] **#44** [F0] Audit log viewer: searchable timeline of every tool call and approval `medium`
 - [ ] **#45** [F0] Export and import everything (chats, memory, settings) as one portable bundle `medium`
   - Needed to move to iansserver.
-- [ ] **#46** [F0] Resource governor: pause heavy jobs when other containers (Palworld) need CPU/RAM `medium`
-- [ ] **#47** [F0] Cost and speed dashboard: tokens/s, memory use, latency per model `medium`
 - [ ] **#48** [F0] Auto-update with rollback: pull, run tests, roll back on failure `medium`
 - [ ] **#53** [F1] Self-check pass: model re-reads its answer for obvious mistakes `medium`
   - ~300 lines.
@@ -101,6 +93,8 @@ Generated: 2026-10-14 01:15 UTC
 - [ ] **#86** [F4] Gaming helper (patch notes, mod updates, library summary) `low`
   - Builds on game_updater.
 - [ ] **#87** [F4] Learning tutor: quizzes from your own notes `low`
+- [ ] **#89** [F2] API server: optional memory-aware mode (read-only recall) and per-client tokens with usage logging `low`
+  - #41 shipped model-only access. Memory/tools deliberately not exposed; add only with per-client scopes.
 
 ## Done
 
@@ -157,3 +151,11 @@ Generated: 2026-10-14 01:15 UTC
 - [x] **#38** Dashboard still binds 0.0.0.0 over plain HTTP by default; add LAN-only/bind option and prefer HTTPS
 - [x] **#40** [F0] Self-diagnosis command (/doctor): models, disk, permissions, config; auto-fix what it can
   - Seed: tools/verify_local.py.
+- [x] **#41** [F0] API server: OpenAI-compatible endpoint so other tools can use Aether's models and memory
+  - Lets Orrery, Obsidian organizer, gamepanel share Aether.
+- [x] **#42** [F0] Graceful degradation: clear messages and automatic fallback when Ollama/model/PC/network is down
+- [x] **#43** [F0] Data-leak guard: never send secrets, memory or files to any cloud model
+  - Needed before any cloud backend is enabled.
+- [x] **#44** [F0] Audit log viewer: searchable timeline of every tool call and approval
+- [x] **#46** [F0] Resource governor: pause heavy jobs when other containers (Palworld) need CPU/RAM
+- [x] **#47** [F0] Cost and speed dashboard: tokens/s, memory use, latency per model

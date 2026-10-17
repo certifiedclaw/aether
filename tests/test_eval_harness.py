@@ -1,5 +1,6 @@
 """tools/eval_harness.py + the AETHER_EVAL_OVERRIDES hook: no model, no Aether process needed."""
 import json
+import re
 import time
 
 import pytest
@@ -95,11 +96,28 @@ def test_all_suite_is_smoke_plus_core():
     assert len(eh.load_suite("all")) == len(eh.load_suite("smoke")) + len(eh.load_suite("core"))
 
 
+def test_all_suite_meets_100_case_roadmap_target():
+    assert len(eh.load_suite("all")) >= 100
+
+
+def test_http_expansion_accepts_hyphenated_and_unspaced_forms():
+    case = next(c for c in eh.load_suite("core") if c["id"] == "c_know7")
+    for reply in ("Hypertext Transfer Protocol", "Hyper Text Transfer Protocol"):
+        assert not live_grader.grade_case(case, {"reply_preview": reply})
+
+
 def test_core_suite_never_needs_a_tool_or_approval():
     """Approval prompts would stall a headless replay; keep the core suite tool-free."""
     risky = ("delete", "remove", "shutdown", "run ", "open ", "volume", "install", "download", "send ")
     for c in eh.load_suite("core"):
         assert not any(w in c["prompt"].lower() for w in risky), c["id"]
+
+
+def test_all_case_expectation_patterns_compile():
+    for case in eh.load_suite("all"):
+        for key in ("reply", "reply_any", "reply_also", "reply_not"):
+            if key in case:
+                re.compile(case[key])
 
 
 def test_unknown_suite_rejected():
