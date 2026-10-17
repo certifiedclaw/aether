@@ -10,6 +10,11 @@
   "_comment_llm_url":      "For OpenAI-compatible: set llm_url to e.g. 'http://localhost:1234'",
   "llm_url":      "http://localhost:11434",
 
+  "_comment_llm_tiers": "Optional Ollama-only model routing by turn complexity. Leave blank to use the normal configured model; a missing model safely falls back. Each model must already be installed on the currently selected local or remote Ollama host.",
+  "llm_quick_model": "",
+  "llm_everyday_model": "",
+  "llm_hard_model": "",
+
   "_comment_llm_remote": "── Optional: prefer a remote PC (e.g. your gaming rig's GPU) for inference, falling back to CPU on this machine if it's off/unreachable. Only takes effect if llm_remote_url is set -- leave unset for single-host behavior (the default, unchanged).",
   "_comment_llm_remote_url":   "Ollama on your other PC, reachable over LAN or Tailscale, e.g. 'http://192.168.1.50:11434'",
   "llm_remote_url":   "",

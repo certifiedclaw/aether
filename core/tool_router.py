@@ -18,6 +18,8 @@ category falls back to a small baseline of commonly-needed tools rather
 than either the full catalog or nothing. A miscategorized turn should
 degrade gracefully (missing a rarely-needed tool for one turn) rather than
 silently fail outright — same philosophy as tier_router's own heuristics.
+Explicit output-only requests with no action category are the exception:
+tools can derail a simple formatting answer, so those turns get no schema.
 """
 
 from __future__ import annotations
@@ -74,16 +76,28 @@ _BASELINE = ["open_app", "web_search", "weather_report", "send_message", "save_m
 _ALWAYS_THROUGH = {"save_memory", "undo", "goal_manager",
                     "langchain", "open_interpreter", "llama_index"}
 
+_RESPONSE_ONLY = re.compile(r"\b(?:output|reply|respond|return)\s+only\b", re.I)
+
+
+def _is_clear_response_only(text: str) -> bool:
+    """Avoid advertising action tools for explicit output-only requests."""
+    return bool(_RESPONSE_ONLY.search(text or "")) and not any(
+        pattern.search(text or "") for pattern, _ in _CATEGORIES
+    )
+
 
 def select_tool_names(user_text: str) -> set[str]:
     """Union of every category this turn's text matches, or the baseline
-    set if nothing matches."""
+    set if nothing matches. Explicit output-only requests with no action
+    category receive no tools rather than the fallback baseline."""
     text = user_text or ""
     matched: set[str] = set()
     for pattern, names in _CATEGORIES:
         if pattern.search(text):
             matched.update(names)
     if not matched:
+        if _is_clear_response_only(text):
+            return set()
         matched.update(_BASELINE)
     return matched | _ALWAYS_THROUGH
 
@@ -99,6 +113,8 @@ _HARD_EXTRA = {"web_search", "agent_task", "code_helper", "dev_agent", "browser_
 
 
 def select_tool_names_hard(user_text: str) -> set[str]:
+    if _is_clear_response_only(user_text or ""):
+        return set()
     return select_tool_names(user_text) | _HARD_EXTRA
 
 

@@ -139,6 +139,31 @@ def _get_or_build_index(docs, collection_name: str = "aether"):
         return VectorStoreIndex.from_documents(docs)
 
 
+def _cited_result(result) -> str:
+    """Render a LlamaIndex answer with source labels and PDF page metadata."""
+    answer = str(result).strip()
+    source_nodes = getattr(result, "source_nodes", None) or []
+    sources = []
+    for source_node in source_nodes:
+        node = getattr(source_node, "node", source_node)
+        metadata = getattr(node, "metadata", {}) or {}
+        path = metadata.get("file_path") or metadata.get("filename") or ""
+        name = metadata.get("file_name") or (Path(str(path)).name if path else "")
+        if not name:
+            name = "Retrieved document passage"
+        page = (
+            metadata.get("page_label")
+            or metadata.get("page_number")
+            or metadata.get("page")
+        )
+        label = f"{name}, page {page}" if page not in (None, "") else str(name)
+        sources.append(label)
+    if not sources:
+        return answer
+    refs = "\n".join(f"[{i}] {label}" for i, label in enumerate(sources, 1))
+    return f"{answer}\n\nSources:\n{refs}" if answer else f"Sources:\n{refs}"
+
+
 # ── Public API ────────────────────────────────────────────────────────────
 
 def li_index_path(path: str, collection: str = "aether") -> str:
@@ -195,21 +220,23 @@ def li_query(query: str, collection: str = "aether", mode: str = "auto") -> str:
                 )
 
         if mode == "vector" or mode == "auto":
-            engine = idx.as_query_engine(similarity_top_k=5)
+            from llama_index.core.query_engine import CitationQueryEngine
+            engine = CitationQueryEngine.from_args(idx, similarity_top_k=5)
             result = engine.query(query)
-            return str(result)
+            return _cited_result(result)
 
         elif mode == "summary":
             from llama_index.core import SummaryIndex
             # Re-fetch docs for summary index — limited to small collections
             engine = idx.as_query_engine(response_mode="tree_summarize")
             result = engine.query(query)
-            return str(result)
+            return _cited_result(result)
 
         elif mode == "sub":
+            from llama_index.core.query_engine import CitationQueryEngine
             from llama_index.core.query_engine import SubQuestionQueryEngine
             from llama_index.core.tools import QueryEngineTool, ToolMetadata
-            base = idx.as_query_engine(similarity_top_k=5)
+            base = CitationQueryEngine.from_args(idx, similarity_top_k=5)
             tool = QueryEngineTool(
                 query_engine=base,
                 metadata=ToolMetadata(name=collection, description=f"Index: {collection}"),
@@ -218,7 +245,7 @@ def li_query(query: str, collection: str = "aether", mode: str = "auto") -> str:
                 query_engine_tools=[tool], verbose=False
             )
             result = engine.query(query)
-            return str(result)
+            return _cited_result(result)
 
         else:
             return f"Unknown mode '{mode}'. Use: auto | vector | summary | sub"
@@ -246,7 +273,7 @@ def li_summarize_path(path: str) -> str:
         idx    = SummaryIndex.from_documents(docs)
         engine = idx.as_query_engine(response_mode="tree_summarize")
         result = engine.query("Provide a comprehensive summary of all the documents.")
-        return str(result)
+        return _cited_result(result)
     except ImportError:
         return "Install: pip install llama-index llama-index-llms-ollama"
     except Exception as e:

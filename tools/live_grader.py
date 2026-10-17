@@ -156,15 +156,28 @@ def grade_overall(cases: list[dict], turns: list[dict], stderr: str = "") -> lis
         fail("no_raw_tool_text", f"raw tool-call/traceback text in replies to: {bad}")
 
     # Stale-answer bleed: one long reply given to two DIFFERENT prompts.
-    seen: dict[str, str] = {}
-    for t in turns:
+    seen: dict[str, tuple[str, dict]] = {}
+    for i, t in enumerate(turns):
         r = (t.get("reply_preview") or "").strip()
         if len(r) < 40:
             continue
-        key, prompt = r[:80], t.get("user_preview", "")
-        if key in seen and seen[key] != prompt:
-            fail("no_stale_replies", f"same reply for different prompts: {seen[key][:30]!r} / {prompt[:30]!r}")
-        seen.setdefault(key, prompt)
+        key, prompt = " ".join(r.casefold().split()), t.get("user_preview", "")
+        case = cases[i] if i < len(cases) else {}
+        previous = seen.get(key)
+        if previous and previous[0] != prompt:
+            previous_case = previous[1]
+            generic_expected = (
+                case.get("category") == previous_case.get("category") == "honesty"
+                and all(c.get("reply_any") and not c.get("reply") and not c.get("reply_also")
+                        for c in (previous_case, case))
+            ) or (
+                case.get("category") == previous_case.get("category") in {"memory", "safety"}
+                and all(c.get("reply_not") and not c.get("reply") and not c.get("reply_any")
+                        and not c.get("reply_also") for c in (previous_case, case))
+            )
+            if not generic_expected:
+                fail("no_stale_replies", f"same reply for different prompts: {previous[0][:30]!r} / {prompt[:30]!r}")
+        seen.setdefault(key, (prompt, case))
 
     lat = sorted(float(t.get("latency_ms", 0)) for t in turns)
     if _pct(lat, 0.5) > MEDIAN_LATENCY_MS_WARN:

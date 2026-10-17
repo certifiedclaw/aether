@@ -2,7 +2,247 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-16 22:05 UTC
+Generated: 2026-10-17 22:55 UTC
+
+## #110 — 2026-10-17 22:55 UTC — GitHub Copilot (Copilot CLI)
+
+Completed roadmap #60 with source and PDF-page citations across basic RAG, PDF search, and LlamaIndex retrieval. Completed roadmap #45 with portable CLI export/import for chats, memory, goals, basic RAG and Chroma indexes, and non-secret settings; imports validate archives and write a recovery bundle. Focused suites passed (47 passed, 1 skipped), changed Python files compile, and diff checks pass. The broader critical suite has a repeatable unrelated TaskScheduler timing failure.
+
+**Touched:** `actions/pdf_tools.py`, `memory/rag.py`, `integrations/llama_index_rag.py`, `core/tool_declarations.py`, `core/portable_bundle.py`, `core/config_io.py`, `tests/test_document_citations.py`, `tests/test_portable_bundle.py`, `readme.md`, `tools/maintenance/data/roadmap.json`, `ROADMAP.md`, `tools/maintenance/data/handoff.json`, `HANDOFF.md`, `PROJECT_STATE.md`, `HEALTH_REPORT.md`, `MAINTENANCE.md`
+
+**Next steps:** Continue with roadmap #61 (personal search across files, notes, and chats); it was confirmed backlog on origin/master. Check the current branch and origin/master before implementing.
+
+---
+
+## #109 — 2026-10-17 22:42 UTC — GitHub Copilot (Copilot CLI)
+
+Completed roadmap #59: direct DuckDuckGo search and comparison now instruct summaries to use numbered citations and append exact source URLs; only HTTP(S) links are included, and no valid results produces an explicit message. Wired LangChain search to the same source-backed result formatting and collect/deduplicate those URLs into multi-step research final output. Updated web_search tool description and README. Added regression tests for direct search, comparison, no-result filtering, LangChain search, research source extraction, summary citation instructions, and tool description. 163 related tests passed; compile and diff checks passed. No live external search request was made.
+
+**Touched:** `actions/web_search.py`, `integrations/langchain_tools.py`, `core/tool_declarations.py`, `tests/test_web_search.py`, `readme.md`, `tools/maintenance/data/roadmap.json`, `ROADMAP.md`, `tools/maintenance/data/handoff.json`, `HANDOFF.md`
+
+**Next steps:** Continue with the next actionable roadmap item not already completed on the current branch; check origin/master first and avoid duplicating completed items.
+
+---
+
+## #108 — 2026-10-17 22:38 UTC — GitHub Copilot (Copilot CLI)
+
+Completed roadmap #52 with repeated clean Qwen 2.5 1.5B evidence. Profile-enabled full suites scored 102/107 twice; matched no-guidance controls scored 94/107 and 89/107. Average improvement was 10.5 cases (9.8 percentage points), concentrated in personal-fact honesty (control 1/8 twice; profile 7/8 and 8/8). Mean p50 increased about 131 ms; p95 remains host-sensitive. The real non-executing schema benchmark scored 8/8, so tool schemas were not changed. Fixed the JSON-only failure by requiring arguments/parameters for recovered calls; isolated chat history for eval and added --disable-model-guidance to run controls. Reverse spelling/translation remain inconsistent, with no reliable prompt tweak found; documented as model limitations rather than overfitting. Focused 77 tests passed, changed Python files compile, and diff checks pass.
+
+**Touched:** `core/conversation_core.py`, `core/chat_history.py`, `core/prompt_builder.py`, `core/tool_router.py`, `tools/eval_harness.py`, `tests/test_tool_call_recovery.py`, `tests/test_chat_history.py`, `tests/test_eval_harness.py`, `tests/test_routing_and_paths.py`, `readme.md`, `tests/eval_suite_tool_calls.json`, `tools/maintenance/data/roadmap.json`, `ROADMAP.md`, `tools/maintenance/data/handoff.json`, `HANDOFF.md`
+
+**Next steps:** Continue with the next roadmap item not yet done on origin/master; preserve the no-guidance benchmark control and isolated-chat evaluation behavior for future comparisons.
+
+---
+
+## #107 — 2026-10-17 22:24 UTC — GitHub Copilot (Copilot CLI)
+
+Added a reproducible no-profile control flag to the evaluation harness and completed one isolated 107-case control/profile pair on Qwen 2.5 1.5B. Without model guidance: 94/107 (88%), p50 2.914s, p95 5.649s. With profile: 102/107 (95%), p50 2.981s, p95 6.226s; comparison lists 11 fixes (mostly personal-fact honesty) and 3 regressions (one latency threshold, two reasoning cases). A repeated 3-case reasoning subset scored 2/3 in both conditions and missed the same syllogism case, showing no repeatable reasoning improvement. Full profile run still misses reverse spelling and translation; clean JSON-only passes after the earlier parser fix. Direct safe tool-call suite previously passed 8/8, so schemas remain unchanged. Focused 77 tests passed.
+
+**Touched:** `core/prompt_builder.py`, `tools/eval_harness.py`, `tests/test_eval_harness.py`, `readme.md`, `tools/maintenance/data/roadmap.json`, `ROADMAP.md`, `tools/maintenance/data/handoff.json`, `HANDOFF.md`
+
+**Next steps:** Repeat controlled Qwen full-suite runs with and without the profile to test whether the 8-case score difference is stable, especially the personal-fact gains and reasoning regressions. Keep #52 open and avoid tuning a single reversal example unless a general prompt proves reliable.
+
+---
+
+## #106 — 2026-10-17 20:13 UTC — GitHub Copilot (Copilot CLI)
+
+Fixed the JSON-only replay failure: the bare JSON tool-call recovery path treated any object with a top-level name field as a tool call, discarding valid {name, age} output as an unknown tool and exhausting the loop. Recovery now requires arguments/parameters, with regression tests. Isolated evaluation named-chat history through a temporary AETHER_CHAT_HISTORY_PATH so benchmarks no longer read or overwrite the user's saved transcript. In a clean main.py replay, c_fmt1 passed; the three-target run scored 2/3 (JSON and French translation passed, reverse spelling still failed). Focused 75 tests passed.
+
+**Touched:** `core/conversation_core.py`, `core/chat_history.py`, `tools/eval_harness.py`, `tests/test_tool_call_recovery.py`, `tests/test_chat_history.py`, `tests/test_eval_harness.py`, `readme.md`, `tools/maintenance/data/roadmap.json`, `ROADMAP.md`, `tools/maintenance/data/handoff.json`, `HANDOFF.md`
+
+**Next steps:** Rerun the full Qwen 2.5 1.5B baseline and candidate suites with isolated chat history, then investigate c_instr6's unreliable reversal output; keep roadmap #52 in progress until results are comparable and stable.
+
+---
+
+## #105 — 2026-10-17 20:04 UTC — GitHub Copilot
+
+Added --case-id replay filtering to the evaluation harness and tested Qwen 2.5 1.5B on the remaining JSON, reversal, and translation failures in isolation; it still returned the JSON exhaustion fallback, 'rstar', and 'Merci'. The no-tools route was confirmed for the JSON-only request. Eight direct model tool-call cases using Aether's routed schemas pass at temperature 0, with calls never executed. Full-suite results remain noisy (98-103/107 versus saved 98/107), and recent p50 latency is 3.57-3.73s versus 1.48s baseline, so #52 remains in progress and schemas remain unchanged. Focused tests pass (204).
+
+**Touched:** `tools/eval_harness.py`, `tests/test_eval_harness.py`, `readme.md`, `tools/maintenance/data/roadmap.json`, `ROADMAP.md`, `tools/maintenance/data/handoff.json`, `HANDOFF.md`
+
+**Next steps:** Investigate the empty JSON-only Qwen response despite zero tools, and identify whether long system/history context or model streaming produces the empty round. Then repeat full and tool-call benchmarks on a controlled host; leave #52 in progress until quality and latency improvements are reproducible.
+
+---
+
+## #104 — 2026-10-17 19:58 UTC — GitHub Copilot
+
+Continued roadmap #52 with Qwen 2.5 1.5B prompt guidance and explicit no-tools routing for output-only requests. Added an eight-case Ollama tool-call evaluation using Aether's everyday-filtered schemas; calls are recorded and graded but never executed. Qwen scored 8/8 at temperature 0; the apparent volume action mismatch was an alias already accepted by computer_settings, so no schema edit was made. Full 107-case prompt-profile runs varied from 98 to 103/107 versus a saved 98/107 baseline, and recent p50 latency was 3.57-3.73s versus 1.48s in the saved run; empty JSON response exhaustion and other prompt misses remain, so #52 is still in progress. Added roadmap note editing via the maintenance CLI and updated #52 evidence.
+
+**Touched:** `core/prompt_builder.py`, `core/tool_router.py`, `tools/eval_harness.py`, `tools/maintenance/roadmap.py`, `tests/eval_suite_tool_calls.json`, `tests/test_eval_harness.py`, `tests/test_routing_and_paths.py`, `tests/test_apply_roadmap.py`, `readme.md`, `tools/maintenance/data/roadmap.json`, `ROADMAP.md`, `tools/maintenance/data/handoff.json`, `HANDOFF.md`
+
+**Next steps:** Investigate why Qwen returns an empty reply to the JSON-only core case even with zero tools; then run repeated all-suite and tool-call benchmarks under controlled host load. Keep #52 in progress until prompt quality and latency changes are reproducible.
+
+---
+
+## #103 — 2026-10-17 18:51 UTC — GitHub Copilot
+
+Refined the Qwen 2.5 1.5B prompt profile with explicit target-language translation and literal spelling guidance. Focused routing/prompt tests passed (23); the isolated 83-case core evaluation scored 78/83 (94%), matching the saved baseline score while fixing some prior misses and exposing different instruction/reasoning misses. No tool schemas were changed because current evaluation cases do not exercise genuine model tool calls.
+
+**Touched:** `core/prompt_builder.py`, `logs/eval/roadmap52-core-qwen15b.json`, `tools/maintenance/data/handoff.json`, `HANDOFF.md`
+
+**Next steps:** Continue roadmap #52: design a safe isolated benchmark that records actual model-issued tool calls without executing real-world actions, then use repeatable clean baseline/candidate runs to decide whether any per-model tool-schema change is justified. Keep #52 in progress until this evidence exists.
+
+---
+
+## #102 — 2026-10-17 18:31 UTC — GitHub Copilot (Copilot CLI)
+
+Completed roadmap #51 with optional per-tier Ollama model settings for QUICK, EVERYDAY and local HARD turns. The active local/remote Ollama host is checked for the configured tag; missing or unavailable tags fall back to the endpoint's configured default with a visible warning. Gemini HARD escalation and opted-in cloud tool routing retain precedence; OpenAI-compatible providers are unchanged. Added resolver/cache/routing and eval-override coverage; 132 targeted tests pass.
+
+**Touched:** `core/llm_client.py`, `core/conversation_core.py`, `config/config.example.json`, `readme.md`, `tests/test_routing_and_paths.py`, `tests/test_eval_harness.py`, `tools/maintenance/data/roadmap.json`, `ROADMAP.md`
+
+**Next steps:** Run calibrated evaluations on the intended quick/everyday/hard model combinations and tune tier assignments from measured latency and quality.
+
+---
+
+## #101 — 2026-10-17 18:25 UTC — GitHub Copilot (Copilot CLI)
+
+Added a compact live status label beside the chat composer so users can tell when Aether is ready, thinking, processing a tool, speaking, muted, or has encountered an error; error text points to Activity for details. Extended UI regression checks across thinking, processing, error, and ready transitions. Focused UI tests pass (88).
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Check status label visibility at the user's preferred window size and refine if it crowds the composer.
+
+---
+
+## #100 — 2026-10-17 18:22 UTC — GitHub Copilot (Copilot CLI)
+
+Replaced the single-line chat field with a compact multiline composer that grows to four lines, uses Enter for line breaks and Ctrl+Enter to send, and keeps the Send button flow. Updated starter prompts and empty/draft handling for the plain-text editor; regression coverage exercises newline insertion, keyboard send, and retained drafts.
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Try composing a longer request in the desktop app; adjust the four-line height cap if it crowds the sidebar on the user's display.
+
+---
+
+## #99 — 2026-10-17 18:16 UTC — GitHub Copilot (Copilot CLI)
+
+Added first-use chat prompts that populate the composer without sending, hide while the user is typing, and return after the field is cleared; renamed UI section headings with clearer, user-oriented language. Regression tests cover insertion, visibility, and preservation of an existing draft; 88 UI tests pass.
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Verify the starter prompts and refreshed labels in the running desktop app; gather feedback before broader visual changes.
+
+---
+
+## #98 — 2026-10-17 03:15 UTC — GitHub Copilot (Copilot CLI)
+
+Polished desktop chat input with friendlier prompt/help guidance, a Ctrl+L focus shortcut, larger send controls, clear empty-send disabled state, and text retention when no command handler is connected. Added regression coverage for the chat input flow; 88 related UI tests pass.
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Try the chat composer and Ctrl+L shortcut in the desktop app; consider broader visual simplification after gathering user feedback.
+
+---
+
+## #97 — 2026-10-17 03:03 UTC — GitHub Copilot (Copilot CLI)
+
+Completed roadmap #39 through the actual Aether main.py replay path: full 107-case suite (83 core + 24 smoke) against qwen2.5:1.5b, 98/107 (92%), p50 1.48s/p95 4.39s, all inputs delivered without timeouts. Fixed grader false positives for shared prefixes and expected generic honesty/memory/safety responses; captured main.py prompt counts/timeouts in result JSON and terminal output. Marked #39 done. Inspected roadmap #25 and confirmed repo-side ignore/example/env/keyring support plus no tracked config/api_keys.json in current Git history; prior shared ZIP cleanup/key rotation remains owner-side. Inspected #51 in conversation_core.py: tier classification and Gemini HARD escalation exist, but local _route.model choices are not applied. Updated roadmap notes to prevent redoing completed work and identify the remaining gap.
+
+**Touched:** `tools/live_grader.py`, `tools/eval_harness.py`, `tests/test_live_grader.py`, `tests/test_eval_harness.py`, `tools/maintenance/data/roadmap.json`, `ROADMAP.md`, `HEALTH_REPORT.md`, `PROJECT_STATE.md`, `MAINTENANCE.md`
+
+**Next steps:** Implement roadmap #51's missing local per-tier model selection, using #39 benchmark baselines and preserving fallback to the configured model when an optional tier model is unavailable.
+
+---
+
+## #96 — 2026-10-17 02:47 UTC — GitHub Copilot (Copilot CLI)
+
+Refreshed the README as a current user guide for installation, action browsing/research, providers and privacy, shortcuts, chat commands, headless/dashboard modes, and evaluation/testing. Prepared the prior UI, ElevenLabs, and tool-response fixes for the branch; focused UI/voice/tool-loop tests pass.
+
+**Touched:** `readme.md`, `ui.py`, `main.py`, `core/conversation_core.py`, `core/tts.py`, `tests/test_action_launcher.py`, `tests/test_tts_elevenlabs.py`, `tests/test_all_critical.py`, `tests/test_tool_call_recovery.py`
+
+**Next steps:** Run the full suite and live application/evaluation checks when the user's Ollama environment is available.
+
+---
+
+## #95 — 2026-10-17 02:41 UTC — GitHub Copilot (Copilot CLI)
+
+Advanced roadmap #39 evaluation harness: expanded the fixed-prompt all suite from 57 to 107 cases (83 core + 24 smoke), added a test enforcing the 100-case target and regex validation, and adjusted the HTTP expansion expectation to accept both 'Hypertext' and 'Hyper Text' based on the owner's qwen2.5:1.5b run. Refreshed stale maintenance reports; targeted harness/grader tests pass. New cases still need a live-model calibration run.
+
+**Touched:** `tests/eval_suite_core.json`, `tests/test_eval_harness.py`, `PROJECT_STATE.md`, `HEALTH_REPORT.md`, `ROADMAP.md`, `MAINTENANCE.md`
+
+**Next steps:** Run python -m tools.eval_harness run --label <model> --suite all against Aether/Ollama, inspect failures for bad expectations versus model/product failures, then revise cases and establish model baselines.
+
+---
+
+## #94 — 2026-10-17 02:37 UTC — GitHub Copilot (Copilot CLI)
+
+Removed a final unsupported star glyph from the recommended local-model button after visual reinspection; the recommendation remains distinguished by bold styling and its highlighted button color. Re-rendered setup UI and reran focused checks.
+
+**Touched:** `ui.py`
+
+**Next steps:** No UI follow-up identified; continue with runtime verification if needed.
+
+---
+
+## #93 — 2026-10-17 02:36 UTC — GitHub Copilot (Copilot CLI)
+
+Completed the final visual review of the setup/configuration and action catalog dialogs. Replaced remaining unsupported UI icon glyphs and improved catalog description contrast; rerendered dialogs and verified focused UI tests and Python compilation.
+
+**Touched:** `ui.py`
+
+**Next steps:** No UI follow-up identified; continue with runtime verification if needed.
+
+---
+
+## #92 — 2026-10-17 02:33 UTC — GitHub Copilot
+
+Reviewed actual default-size UI renders. Found several unsupported emoji/icon glyphs displaying as empty squares; replaced visible labels with readable text and widened Send/Stop controls. Verified screenshot after loading bundled fonts.
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Owner: check the Actions tab and live audio/state transitions in the desktop app; the offscreen render can only confirm the static UI.
+
+---
+
+## #91 — 2026-10-17 02:29 UTC — GitHub Copilot
+
+Polished the full action catalog with category filters, multi-line task cards and stronger search; organized tools into research, files, computer, media, productivity, coding, and system groups. Verified sidebar layout down to minimum window size.
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Owner: test categories and text search in Browse All Actions at runtime.
+
+---
+
+## #90 — 2026-10-17 02:27 UTC — GitHub Copilot
+
+Reorganized the desktop right sidebar into Activity and Actions tabs, keeping chat input and microphone controls visible while giving the activity log more space; added scrolling for actions and a regression test for default-window layout.
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Owner: open the desktop app and verify the new Activity/Actions tabs and scroll area at normal and minimum window sizes.
+
+---
+
+## #89 — 2026-10-17 02:24 UTC — GitHub Copilot
+
+Routed the desktop Research quick action to the existing LangChain multi-step ReAct research action with a focused task/context form; falls back visibly to single-query web search only if the integration is unavailable.
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Owner: with LangChain enabled, click Quick Actions > Research and confirm Aether runs its multi-step research agent; if disabled, verify the form indicates it is a single-search fallback.
+
+---
+
+## #88 — 2026-10-17 02:22 UTC — GitHub Copilot
+
+Improved the desktop action UI with eight labeled quick-launch buttons including Research, and gave the full searchable action catalog friendly names and capability-oriented search.
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Owner: launch the desktop app, verify the Quick Actions panel fits the right sidebar at normal screen size, and try Research and Browse All Actions.
+
+---
+
+## #87 — 2026-10-17 02:18 UTC — GitHub Copilot
+
+Added a searchable direct-action launcher with schema-driven forms; deferred streamed TTS until tool-call intent is resolved; corrected ElevenLabs voice defaults and surfaced runtime synthesis errors.
+
+**Touched:** `ui.py`, `main.py`, `core/conversation_core.py`, `core/tts.py`, `readme.md`, `tests/test_action_launcher.py`, `tests/test_tts_elevenlabs.py`, `tests/test_tool_call_recovery.py`, `tests/test_all_critical.py`
+
+**Next steps:** Owner: try the Actions launcher and run a real ElevenLabs speech test with the configured key; verify API/account-specific errors if synthesis still fails.
+
+---
 
 ## #86 — 2026-10-16 22:05 UTC — Claude Code
 

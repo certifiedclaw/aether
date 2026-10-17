@@ -27,9 +27,10 @@ from PyQt6.QtGui import (
     QRadialGradient, QShortcut,
 )
 from PyQt6.QtWidgets import (
-    QApplication, QComboBox, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QLabel,
-    QLineEdit, QMainWindow, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QTextEdit,
-    QVBoxLayout, QWidget, QProgressBar,
+    QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog,
+    QFormLayout, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMainWindow,
+    QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSizePolicy, QTextEdit,
+    QTabWidget, QVBoxLayout, QWidget, QProgressBar,
 )
 
 def _base_dir() -> Path:
@@ -679,6 +680,36 @@ class LogWidget(QTextEdit):
         self.ensureCursorVisible()
 
 
+class MessageInput(QPlainTextEdit):
+    sendRequested = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setPlaceholderText("Ask Aether anything…  (/help for commands)")
+        self.setToolTip(
+            "Enter adds a new line. Press Ctrl+Enter or use Send to send."
+        )
+        self.setAccessibleName("Message Aether")
+        self.setTabChangesFocus(True)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.textChanged.connect(self._fit_height)
+        self._fit_height()
+
+    def keyPressEvent(self, event):
+        if (
+            event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter)
+            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        ):
+            self.sendRequested.emit()
+            return
+        super().keyPressEvent(event)
+
+    def _fit_height(self):
+        line_height = self.fontMetrics().lineSpacing()
+        lines = min(max(self.document().blockCount(), 1), 4)
+        self.setFixedHeight(max(40, min(92, lines * line_height + 16)))
+
+
 class StatsBar(QWidget):
     """
     Compact "Message Stats" panel — shows the metrics for the most recent
@@ -1049,7 +1080,7 @@ class _DropCanvas(QWidget):
 
         p.setFont(QFont(FONT_BODY, 9, QFont.Weight.Bold))
         p.setPen(QPen(qcol(C.RED, 180), 1))
-        p.drawText(QRectF(W - 34, 0, 28, H), Qt.AlignmentFlag.AlignCenter, "✕")
+        p.drawText(QRectF(W - 34, 0, 28, H), Qt.AlignmentFlag.AlignCenter, "X")
 
     def mousePressEvent(self, e):
         z = self._z
@@ -1132,10 +1163,10 @@ class SetupOverlay(QWidget):
 
         # ── Header ──────────────────────────────────────────────────── #
         if mode == "config":
-            layout.addWidget(self._lbl("◈  CONFIGURATION", 12, True))
+            layout.addWidget(self._lbl("CONFIGURATION", 12, True))
             layout.addWidget(self._lbl("Update Aether\u2019s settings and click Apply.", 8, col=C.PRI_DIM))
         else:
-            layout.addWidget(self._lbl("◈  INITIALISATION REQUIRED", 12, True))
+            layout.addWidget(self._lbl("INITIALISATION REQUIRED", 12, True))
             layout.addWidget(self._lbl("Configure Aether before first boot.", 8, col=C.PRI_DIM))
         layout.addWidget(self._sep())
 
@@ -1144,7 +1175,7 @@ class SetupOverlay(QWidget):
         self._build_tts_section(layout, _init)
 
         # Set correct initial state for TTS UI
-        self._update_tts_ui(self._sel_tts)
+        self._set_tts(self._sel_tts)
 
         self._build_action_buttons(layout, mode)
 
@@ -1216,7 +1247,7 @@ class SetupOverlay(QWidget):
         layout.addWidget(self._lbl("SPEECH-TO-TEXT ENGINE", 7, col=C.TEXT_DIM,
                                align=Qt.AlignmentFlag.AlignLeft))
         stt_row, self._stt_btns = self._toggle_row(
-            [("whisper","🎙 Whisper"), ("vosk","🔊 Vosk")],
+            [("whisper","Whisper"), ("vosk","Vosk")],
             lambda: self._sel_stt,
             self._set_stt,
         )
@@ -1289,9 +1320,9 @@ class SetupOverlay(QWidget):
         # Top-level choice: local models or hosted model APIs.
         engine_row, self._engine_btns = self._toggle_row(
             [
-                ("local",  "🖥  Local (Ollama / LM Studio)"),
-                ("gemini", "✨  Gemini (cloud API key)"),
-                ("openai_api", "✦  OpenAI API (usage billed separately)"),
+                ("local",  "Local (Ollama / LM Studio)"),
+                ("gemini", "Gemini (cloud API key)"),
+                ("openai_api", "OpenAI API (usage billed separately)"),
             ],
             lambda: self._sel_engine,
             self._set_engine,
@@ -1307,8 +1338,8 @@ class SetupOverlay(QWidget):
 
         llm_prov_row, self._llm_prov_btns = self._toggle_row(
             [
-                ("ollama", "🦙 Ollama"),
-                ("openai", "🔌 LM Studio / OpenAI"),
+                ("ollama", "Ollama"),
+                ("openai", "LM Studio / OpenAI"),
             ],
             lambda: self._sel_local_sub,
             self._set_llm_provider,
@@ -1335,8 +1366,7 @@ class SetupOverlay(QWidget):
         reco_row = QHBoxLayout(); reco_row.setSpacing(4)
         self._reco_btns: list[QPushButton] = []
         for rec in self._model_recs:
-            label = f"★ {rec.tag}" if rec.recommended else rec.tag
-            b = QPushButton(label)
+            b = QPushButton(rec.tag)
             b.setFixedHeight(24)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setFont(QFont(FONT_BODY, 7, QFont.Weight.Bold if rec.recommended else QFont.Weight.Normal))
@@ -1456,7 +1486,7 @@ class SetupOverlay(QWidget):
         layout.addWidget(self._lbl("TEXT-TO-SPEECH ENGINE", 7, col=C.TEXT_DIM,
                                align=Qt.AlignmentFlag.AlignLeft))
         tts_row, self._tts_btns = self._toggle_row(
-            [("edgetts","🔈 EdgeTTS"), ("kokoro","🤖 Kokoro"), ("elevenlabs","⚡ ElevenLabs")],
+            [("edgetts","EdgeTTS"), ("kokoro","Kokoro"), ("elevenlabs","ElevenLabs")],
             lambda: self._sel_tts,
             self._set_tts,
         )
@@ -1551,7 +1581,7 @@ class SetupOverlay(QWidget):
         btn_row = QHBoxLayout(); btn_row.setSpacing(8)
 
         if mode == "config":
-            cancel_btn = QPushButton("✕  CANCEL")
+            cancel_btn = QPushButton("CANCEL")
             cancel_btn.setFont(QFont(FONT_BODY, 9, QFont.Weight.Bold))
             cancel_btn.setFixedHeight(34)
             cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1567,7 +1597,7 @@ class SetupOverlay(QWidget):
             cancel_btn.clicked.connect(self.hide)
             btn_row.addWidget(cancel_btn)
 
-        btn_label = "▸  APPLY CHANGES" if mode == "config" else "▸  INITIALISE SYSTEMS"
+        btn_label = "APPLY CHANGES" if mode == "config" else "INITIALISE SYSTEMS"
         init_btn = QPushButton(btn_label)
         init_btn.setFont(QFont(FONT_BODY, 10, QFont.Weight.Bold))
         init_btn.setFixedHeight(34)
@@ -1698,6 +1728,11 @@ class SetupOverlay(QWidget):
 
     def _set_tts(self, key: str):
         self._sel_tts = key
+        if key == "elevenlabs" and hasattr(self, "_tts_voice_input"):
+            voice = self._tts_voice_input.text().strip()
+            if (not voice or voice.endswith("Neural") or
+                    voice.startswith(("af_", "am_", "bf_", "bm_", "jf_", "jm_"))):
+                self._tts_voice_input.setText("pNInz6obpgDQGcFmaJgB")
         if not hasattr(self, "_tts_btns"):
             return
         for k, btn in self._tts_btns.items():
@@ -1809,7 +1844,7 @@ class StartupPanel(QWidget):
         lay.setSpacing(10)
 
         # ── Title ──────────────────────────────────────────────────────
-        title = QLabel("◈  SYSTEMS INITIALISING")
+        title = QLabel("SYSTEMS INITIALISING")
         title.setFont(QFont(FONT_BODY, 11, QFont.Weight.Bold))
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setStyleSheet(f"color: {C.PRI}; background: transparent;")
@@ -1887,7 +1922,7 @@ class StartupPanel(QWidget):
         row = self._rows[key]
         ok     = status == "ready"
         color  = row["color"] if ok else C.RED
-        label  = "READY  ✓" if ok else "ERROR  ✗"
+        label  = "READY" if ok else "ERROR"
 
         bar = row["bar"]
         bar.setRange(0, 100)
@@ -1933,6 +1968,8 @@ class MainWindow(QMainWindow):
 
         self.on_text_command  = None
         self.on_stop_command  = None
+        self.on_action_catalog = None
+        self.on_action_command = None
         self._muted           = False
         self._current_file: str | None = None
 
@@ -2003,6 +2040,8 @@ class MainWindow(QMainWindow):
         sc_collapse.activated.connect(self._toggle_collapse)
         sc_newchat = QShortcut(QKeySequence("Ctrl+Shift+N"), self)
         sc_newchat.activated.connect(self._request_new_chat)
+        sc_focus_input = QShortcut(QKeySequence("Ctrl+L"), self)
+        sc_focus_input.activated.connect(self._focus_input)
 
         self._collapsed = False
         self._saved_size = None
@@ -2215,7 +2254,7 @@ class MainWindow(QMainWindow):
         lay.setContentsMargins(8, 10, 8, 10)
         lay.setSpacing(6)
 
-        hdr = QLabel("◈ SYSTEM")
+        hdr = QLabel("SYSTEM STATUS")
         hdr.setFont(QFont(FONT_BODY, 7, QFont.Weight.Bold))
         hdr.setStyleSheet(f"color: {C.PRI}; background: transparent; "
                           f"border-bottom: 1px solid {C.BORDER}; padding-bottom: 4px;")
@@ -2285,50 +2324,152 @@ class MainWindow(QMainWindow):
         lay.setSpacing(6)
 
         def _sec(txt):
-            l = QLabel(f"▸ {txt}")
+            l = QLabel(txt)
             l.setFont(QFont(FONT_BODY, 7, QFont.Weight.Bold))
             l.setStyleSheet(f"color: {C.TEXT_MED}; background: transparent;")
             return l
 
-        lay.addWidget(_sec("ACTIVITY LOG"))
+        self._right_tabs = QTabWidget()
+        self._right_tabs.setDocumentMode(True)
+        self._right_tabs.setStyleSheet(f"""
+            QTabWidget::pane {{
+                background: {C.DARK}; border: 1px solid {C.BORDER};
+                border-radius: 3px;
+            }}
+            QTabBar::tab {{
+                background: {C.PANEL}; color: {C.TEXT_DIM};
+                border: 1px solid {C.BORDER}; border-bottom: none;
+                padding: 7px 13px; min-width: 75px;
+            }}
+            QTabBar::tab:selected {{
+                background: {C.PANEL2}; color: {C.PRI};
+                border-color: {C.PRI_DIM};
+            }}
+            QTabBar::tab:hover:!selected {{ color: {C.TEXT}; }}
+        """)
+
+        activity_tab = QWidget()
+        activity_tab.setStyleSheet("background: transparent;")
+        activity_lay = QVBoxLayout(activity_tab)
+        activity_lay.setContentsMargins(6, 7, 6, 7)
+        activity_lay.setSpacing(6)
+        activity_lay.addWidget(_sec("CONVERSATION & ACTIVITY"))
         chat_row = QHBoxLayout()
         self._chat_combo = QComboBox()
         self._chat_combo.setToolTip("Select a saved conversation")
         self._chat_combo.currentTextChanged.connect(self._on_chat_selected)
         chat_row.addWidget(self._chat_combo, stretch=1)
-        new_chat_btn = QPushButton("＋ New")
+        new_chat_btn = QPushButton("New chat")
         new_chat_btn.setToolTip("Start a new conversation (Ctrl+Shift+N)")
         new_chat_btn.clicked.connect(self._request_new_chat)
         chat_row.addWidget(new_chat_btn)
-        lay.addLayout(chat_row)
+        activity_lay.addLayout(chat_row)
         self._log = LogWidget()
-        lay.addWidget(self._log, stretch=1)
+        self._log.setMinimumHeight(140)
+        activity_lay.addWidget(self._log, stretch=1)
 
-        lay.addWidget(_sec("MESSAGE STATS"))
+        activity_lay.addWidget(_sec("ABOUT THE LAST REPLY"))
         self._stats_bar = StatsBar()
-        lay.addWidget(self._stats_bar)
+        activity_lay.addWidget(self._stats_bar)
+        self._right_tabs.addTab(activity_tab, "Activity")
 
-        sep = QFrame(); sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet(f"color: {C.BORDER}; margin: 2px 0;")
-        lay.addWidget(sep)
-
-        lay.addWidget(_sec("FILE UPLOAD"))
+        actions_tab = QWidget()
+        actions_tab.setStyleSheet("background: transparent;")
+        actions_lay = QVBoxLayout(actions_tab)
+        actions_lay.setContentsMargins(0, 0, 0, 0)
+        actions_scroll = QScrollArea()
+        actions_scroll.setWidgetResizable(True)
+        actions_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        actions_scroll.setStyleSheet("QScrollArea { background: transparent; }")
+        actions_content = QWidget()
+        actions_content.setStyleSheet("background: transparent;")
+        actions_content_lay = QVBoxLayout(actions_content)
+        actions_content_lay.setContentsMargins(6, 7, 6, 7)
+        actions_content_lay.setSpacing(6)
+        actions_content_lay.addWidget(_sec("ADD A FILE"))
         self._drop_zone = FileDropZone()
         self._drop_zone.file_selected.connect(self._on_file_selected)
-        lay.addWidget(self._drop_zone)
+        actions_content_lay.addWidget(self._drop_zone)
 
         self._file_hint = QLabel("No file loaded — drop or click above to upload")
         self._file_hint.setFont(QFont(FONT_BODY, 7))
         self._file_hint.setStyleSheet(f"color: {C.TEXT_MED}; background: transparent;")
         self._file_hint.setWordWrap(True)
-        lay.addWidget(self._file_hint)
+        actions_content_lay.addWidget(self._file_hint)
 
-        sep2 = QFrame(); sep2.setFrameShape(QFrame.Shape.HLine)
-        sep2.setStyleSheet(f"color: {C.BORDER}; margin: 2px 0;")
-        lay.addWidget(sep2)
+        actions_content_lay.addWidget(_sec("CHOOSE AN ACTION"))
+        quick_actions = QGridLayout()
+        quick_actions.setContentsMargins(0, 0, 0, 0)
+        quick_actions.setHorizontalSpacing(5)
+        quick_actions.setVerticalSpacing(5)
+        self._quick_action_buttons = {}
+        for index, (label, name) in enumerate([
+            ("Research", "research"),
+            ("Write code", "code_helper"),
+            ("Files", "file_controller"),
+            ("PC control", "computer_settings"),
+            ("Weather", "weather_report"),
+            ("Reminder", "reminder"),
+            ("Analyze screen", "screen_process"),
+            ("YouTube", "youtube_video"),
+        ]):
+            button = QPushButton(label)
+            button.setToolTip(f"Open the {label.split(maxsplit=1)[-1]} form")
+            button.setMinimumHeight(34)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.setStyleSheet(f"""
+                QPushButton {{
+                    background: {C.PANEL2}; color: {C.TEXT};
+                    border: 1px solid {C.BORDER}; border-radius: 4px;
+                    padding: 4px; text-align: left;
+                }}
+                QPushButton:hover {{ color: {C.PRI}; border: 1px solid {C.PRI_DIM}; }}
+            """)
+            button.clicked.connect(
+                lambda _checked=False, selected=name: self._open_named_action(selected)
+            )
+            quick_actions.addWidget(button, index // 2, index % 2)
+            self._quick_action_buttons[name] = button
+        actions_content_lay.addLayout(quick_actions)
 
-        lay.addWidget(_sec("COMMAND INPUT"))
+        actions_btn = QPushButton("BROWSE ALL ACTIONS")
+        actions_btn.setFixedHeight(32)
+        actions_btn.setFont(QFont(FONT_BODY, 8, QFont.Weight.Bold))
+        actions_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        actions_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {C.SEC_GHO}; color: {C.ACC2};
+                border: 1px solid {C.SEC_DIM}; border-radius: 3px;
+            }}
+            QPushButton:hover {{ background: #28133a; border: 1px solid {C.SEC}; }}
+        """)
+        actions_btn.clicked.connect(self._open_action_catalog)
+        actions_content_lay.addWidget(actions_btn)
+        actions_content_lay.addStretch()
+        actions_scroll.setWidget(actions_content)
+        actions_lay.addWidget(actions_scroll)
+        self._right_tabs.addTab(actions_tab, "Actions")
+        lay.addWidget(self._right_tabs, stretch=1)
+
+        chat_header = QHBoxLayout()
+        chat_header.addWidget(_sec("SEND A MESSAGE"))
+        chat_header.addStretch()
+        self._chat_status_lbl = QLabel("Ready to help")
+        self._chat_status_lbl.setAccessibleName("Aether status")
+        self._chat_status_lbl.setFont(QFont(FONT_BODY, 7, QFont.Weight.Bold))
+        self._chat_status_lbl.setStyleSheet(
+            f"color: {C.GREEN}; background: transparent;"
+        )
+        chat_header.addWidget(self._chat_status_lbl)
+        lay.addLayout(chat_header)
         lay.addLayout(self._build_input_row())
+        input_hint = QLabel(
+            "Enter for a new line  ·  Ctrl+Enter to send  ·  Ctrl+L to focus"
+        )
+        input_hint.setFont(QFont(FONT_BODY, 7))
+        input_hint.setStyleSheet(f"color: {C.TEXT_DIM}; background: transparent;")
+        lay.addWidget(input_hint)
+        self._build_prompt_suggestions(lay)
 
         self._mute_btn = QPushButton("🎙  MICROPHONE ACTIVE")
         self._mute_btn.setFixedHeight(30)
@@ -2338,7 +2479,7 @@ class MainWindow(QMainWindow):
         self._style_mute_btn()
         lay.addWidget(self._mute_btn)
 
-        fs_btn = QPushButton("⛶  FULLSCREEN  [F11]")
+        fs_btn = QPushButton("FULLSCREEN  [F11]")
         fs_btn.setFixedHeight(26)
         fs_btn.setFont(QFont(FONT_BODY, 7))
         fs_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -2354,7 +2495,7 @@ class MainWindow(QMainWindow):
         fs_btn.clicked.connect(self._toggle_fullscreen)
         lay.addWidget(fs_btn)
 
-        cfg_btn = QPushButton("⚙  CONFIGURE")
+        cfg_btn = QPushButton("CONFIGURE")
         cfg_btn.setFixedHeight(26)
         cfg_btn.setFont(QFont(FONT_BODY, 7))
         cfg_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -2371,6 +2512,469 @@ class MainWindow(QMainWindow):
         lay.addWidget(cfg_btn)
 
         return w
+
+    def _open_named_action(self, name: str) -> None:
+        if not self.on_action_catalog:
+            QMessageBox.information(self, "Actions", "Aether's action catalog is not ready yet.")
+            return
+        try:
+            tools = self.on_action_catalog()
+        except Exception as exc:
+            QMessageBox.critical(self, "Actions unavailable", str(exc))
+            return
+        if name == "research":
+            research = next(
+                (tool.get("function", {}) for tool in tools or []
+                 if tool.get("function", {}).get("name") == "langchain"),
+                None,
+            )
+            if research:
+                research = dict(research)
+                research["description"] = (
+                    "Multi-step research using web search and Wikipedia. "
+                    "Describe the question or topic to investigate."
+                )
+                research["preset_args"] = {"action": "research"}
+                research["parameters"] = {
+                    "type": "object",
+                    "properties": {
+                        "task": {
+                            "type": "string",
+                            "description": "What should the research agent investigate?",
+                        },
+                        "context": {
+                            "type": "string",
+                            "description": "Optional background or constraints",
+                        },
+                    },
+                    "required": ["task"],
+                }
+                self._open_action_form(research)
+                return
+            web_search = next(
+                (tool.get("function", {}) for tool in tools or []
+                 if tool.get("function", {}).get("name") == "web_search"),
+                None,
+            )
+            if web_search:
+                web_search = dict(web_search)
+                web_search["description"] = (
+                    "The multi-step research integration is unavailable. "
+                    "This fallback performs a single web search."
+                )
+                web_search["parameters"] = {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Topic or question to search for",
+                        },
+                    },
+                    "required": ["query"],
+                }
+                self._open_action_form(web_search)
+                return
+        for tool in tools or []:
+            function = tool.get("function", {})
+            if function.get("name") == name:
+                self._open_action_form(function)
+                return
+        QMessageBox.information(
+            self, "Action unavailable",
+            f"{name.replace('_', ' ').capitalize()} is not enabled in the current setup.",
+        )
+
+    def _open_action_catalog(self) -> None:
+        if not self.on_action_catalog:
+            QMessageBox.information(self, "Actions", "Aether's action catalog is not ready yet.")
+            return
+        try:
+            tools = self.on_action_catalog()
+        except Exception as exc:
+            QMessageBox.critical(self, "Actions unavailable", str(exc))
+            return
+
+        entries = []
+        for tool in tools or []:
+            function = tool.get("function", {})
+            name = function.get("name")
+            if name:
+                entries.append(function)
+        friendly_names = {
+            "open_app": "Open an app or website",
+            "web_search": "Research the web",
+            "langchain": "Multi-step research (web and Wikipedia)",
+            "weather_report": "Check weather",
+            "send_message": "Send a message",
+            "reminder": "Set a reminder",
+            "youtube_video": "YouTube videos",
+            "screen_process": "Analyze screen or camera",
+            "computer_settings": "Computer settings and controls",
+            "browser_control": "Control a web browser",
+            "file_controller": "Manage files and folders",
+            "desktop_control": "Manage the desktop",
+            "code_helper": "Write or work with code",
+            "dev_agent": "Build a software project",
+            "agent_task": "Run a multi-step task",
+            "computer_control": "Control mouse and keyboard",
+            "game_updater": "Manage game updates",
+            "flight_finder": "Find flights",
+            "file_processor": "Analyze an uploaded file",
+            "osint_lookup": "Authorized OSINT lookup",
+            "pdf_tool": "Work with a PDF",
+            "rag_query": "Search indexed documents",
+            "undo": "Undo a file operation",
+            "shutdown_aether": "Shut down Aether",
+            "save_memory": "Save a memory",
+        }
+        entries.sort(
+            key=lambda item: friendly_names.get(
+                item["name"], item["name"].replace("_", " ").capitalize()
+            ).casefold()
+        )
+        quick_commands = [
+            ("/help", "List chat commands"),
+            ("/status", "Run system diagnostics"),
+            ("/doctor", "Check installation and runtime health"),
+            ("/doctor fix", "Apply safe doctor fixes"),
+            ("/selftest", "Run subsystem self-tests"),
+            ("/crashes", "Show recent crash reports"),
+            ("/audit", "Review recent tool calls and approvals"),
+            ("/audit verify", "Verify the audit log chain"),
+            ("/perf", "Show model speed and resource statistics"),
+            ("/resources", "Show resource governor status"),
+            ("/backup", "Back up memory"),
+            ("/memstats", "Show memory statistics"),
+            ("/prune", "Remove duplicate and old memories"),
+            ("/clear", "Clear chat history"),
+            ("/newchat", "Start a new saved chat"),
+            ("/chats", "List saved chats"),
+        ]
+        if not entries and not quick_commands:
+            QMessageBox.information(self, "Actions", "No actions are currently available.")
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Aether actions and commands ({len(entries) + len(quick_commands)})")
+        dialog.resize(560, 620)
+        dialog.setStyleSheet(f"""
+            QDialog {{ background: {C.DARK}; color: {C.TEXT}; }}
+            QLineEdit, QComboBox, QPlainTextEdit {{
+                background: #000d14; color: {C.TEXT};
+                border: 1px solid {C.BORDER}; border-radius: 3px; padding: 5px;
+            }}
+            QPushButton {{
+                background: {C.PANEL2}; color: {C.TEXT};
+                border: 1px solid {C.BORDER}; border-radius: 3px; padding: 5px 8px;
+            }}
+            QPushButton:hover {{ color: {C.PRI}; border-color: {C.PRI_DIM}; }}
+        """)
+        layout = QVBoxLayout(dialog)
+        intro = QLabel(
+            "Choose a task, fill in its details, and run it. "
+            "Search by task or capability; approval gates still apply to sensitive actions."
+        )
+        intro.setStyleSheet(f"color: {C.TEXT_MED}; background: transparent;")
+        intro.setWordWrap(True)
+        layout.addWidget(intro)
+
+        search = QLineEdit()
+        search.setPlaceholderText("Search actions…")
+        search.setClearButtonEnabled(True)
+        layout.addWidget(search)
+
+        categories = QComboBox()
+        category_names = [
+            "All categories",
+            "Research & web",
+            "Files & documents",
+            "Computer & browser",
+            "Media & travel",
+            "Productivity",
+            "Code & projects",
+            "System & memory",
+            "Chat commands",
+        ]
+        categories.addItems(category_names)
+        layout.addWidget(categories)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet(f"QScrollArea {{ border: 1px solid {C.BORDER}; }}")
+        container = QWidget()
+        buttons_layout = QVBoxLayout(container)
+        buttons_layout.setContentsMargins(6, 6, 6, 6)
+        buttons_layout.setSpacing(5)
+
+        action_buttons = []
+        for command, description in quick_commands:
+            button = QPushButton(f"{command}\n{description}")
+            button.setAccessibleName(f"Command {command}")
+            button.setToolTip(description)
+            button.setMinimumHeight(42)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.setStyleSheet(f"""
+                QPushButton {{
+                    background: {C.PANEL2}; color: {C.ACC2};
+                    border: 1px solid {C.BORDER}; border-radius: 4px;
+                    padding: 6px 9px; text-align: left;
+                }}
+                QPushButton:hover {{ border: 1px solid {C.ACC2}; }}
+            """)
+
+            def _run_quick_command(_checked=False, selected=command):
+                if not self.on_text_command:
+                    QMessageBox.information(dialog, "Actions unavailable", "Aether is not ready.")
+                    return
+                dialog.accept()
+                self.on_text_command(selected)
+
+            button.clicked.connect(_run_quick_command)
+            buttons_layout.addWidget(button)
+            action_buttons.append(
+                (button, f"{command} {description}".casefold(), "Chat commands")
+            )
+
+        for function in entries:
+            name = function["name"]
+            description = str(function.get("description", "")).strip()
+            display_name = friendly_names.get(name, name.replace("_", " ").capitalize())
+            summary = description if len(description) <= 110 else description[:107].rstrip() + "…"
+            button = QPushButton(f"{display_name}\n{summary}")
+            button.setAccessibleName(display_name)
+            button.setToolTip(description)
+            button.setMinimumHeight(56)
+            button.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+            )
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.setStyleSheet(f"""
+                QPushButton {{
+                    background: {C.PANEL2}; color: {C.TEXT};
+                    border: 1px solid {C.BORDER}; border-radius: 4px;
+                    padding: 6px 9px; text-align: left;
+                }}
+                QPushButton:hover {{ color: {C.PRI}; border: 1px solid {C.PRI_DIM}; }}
+            """)
+            button.clicked.connect(
+                lambda _checked=False, selected=function: (
+                    dialog.accept(), self._open_action_form(selected)
+                )
+            )
+            buttons_layout.addWidget(button)
+            action_buttons.append(
+                (
+                    button,
+                    f"{display_name} {name} {description}".casefold(),
+                    self._action_category(name),
+                )
+            )
+        buttons_layout.addStretch()
+        scroll.setWidget(container)
+        layout.addWidget(scroll, stretch=1)
+
+        def _filter_actions(query: str = "") -> None:
+            needle = query.casefold().strip()
+            selected_category = categories.currentText()
+            for button, searchable, category in action_buttons:
+                category_matches = (
+                    selected_category == "All categories"
+                    or category == selected_category
+                )
+                button.setVisible(category_matches and (not needle or needle in searchable))
+
+        search.textChanged.connect(_filter_actions)
+        categories.currentTextChanged.connect(lambda _category: _filter_actions(search.text()))
+        _filter_actions()
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.reject)
+        layout.addWidget(close_btn)
+        dialog.exec()
+
+    @staticmethod
+    def _action_category(name: str) -> str:
+        categories = {
+            "Research & web": {
+                "web_search", "langchain", "open_interpreter", "llama_index",
+                "mcp.call", "osint_lookup",
+            },
+            "Files & documents": {
+                "file_controller", "file_processor", "pdf_tool", "rag_query",
+                "memory_tool", "undo",
+            },
+            "Computer & browser": {
+                "open_app", "browser_control", "computer_settings",
+                "computer_control", "desktop_control", "screen_process",
+            },
+            "Media & travel": {
+                "youtube_video", "flight_finder", "weather_report",
+            },
+            "Productivity": {
+                "send_message", "reminder", "agent_task", "goal_manager",
+                "goal_create", "goal_update", "goal_complete", "goal_cancel",
+                "goal_list", "goal_add_subtask",
+            },
+            "Code & projects": {"code_helper", "dev_agent", "game_updater"},
+            "System & memory": {
+                "diagnostics", "crash_report", "obs_report", "observability",
+                "shutdown_aether", "save_memory", "extra_tool",
+            },
+        }
+        for category, names in categories.items():
+            if name in names:
+                return category
+        return "System & memory"
+
+    def _open_action_form(self, function: dict) -> None:
+        name = function["name"]
+        description = str(function.get("description", "")).strip()
+        schema = function.get("parameters", {})
+        properties = schema.get("properties", {})
+        required = set(schema.get("required", []))
+        preset_args = dict(function.get("preset_args", {}))
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Run {name}")
+        dialog.resize(560, 620)
+        dialog.setStyleSheet(f"""
+            QDialog {{ background: {C.DARK}; color: {C.TEXT}; }}
+            QLineEdit, QComboBox, QPlainTextEdit {{
+                background: #000d14; color: {C.TEXT};
+                border: 1px solid {C.BORDER}; border-radius: 3px; padding: 5px;
+            }}
+            QPushButton {{
+                background: {C.PANEL2}; color: {C.TEXT};
+                border: 1px solid {C.BORDER}; border-radius: 3px; padding: 5px 8px;
+            }}
+            QPushButton:hover {{ color: {C.PRI}; border-color: {C.PRI_DIM}; }}
+        """)
+        layout = QVBoxLayout(dialog)
+        description_label = QLabel(description or "Run this action with the values below.")
+        description_label.setTextFormat(Qt.TextFormat.PlainText)
+        description_label.setStyleSheet(f"color: {C.TEXT_MED}; background: transparent;")
+        description_label.setWordWrap(True)
+        layout.addWidget(description_label)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet(f"QScrollArea {{ border: 1px solid {C.BORDER}; }}")
+        form_widget = QWidget()
+        form = QFormLayout(form_widget)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        fields = {}
+
+        for field_name, field_schema in properties.items():
+            field_type = field_schema.get("type", "string")
+            field_description = str(field_schema.get("description", "")).strip()
+            label = QLabel(f"{field_name}{' *' if field_name in required else ''}")
+            label.setTextFormat(Qt.TextFormat.PlainText)
+            label.setStyleSheet(f"color: {C.TEXT_MED}; background: transparent;")
+            label.setToolTip(field_description)
+            default = field_schema.get("default")
+
+            if field_type == "boolean":
+                widget = QCheckBox()
+                widget.setChecked(bool(default))
+                widget.setToolTip(field_description)
+            elif field_type in ("array", "object"):
+                widget = QPlainTextEdit()
+                widget.setPlaceholderText(
+                    "Enter valid JSON " + ("array" if field_type == "array" else "object")
+                )
+                widget.setFixedHeight(72)
+                if default is not None:
+                    widget.setPlainText(json.dumps(default, ensure_ascii=False))
+                widget.setToolTip(field_description)
+            elif field_schema.get("enum"):
+                widget = QComboBox()
+                for choice in field_schema["enum"]:
+                    widget.addItem(str(choice), userData=choice)
+                if default is not None:
+                    index = widget.findData(default)
+                    if index >= 0:
+                        widget.setCurrentIndex(index)
+                widget.setToolTip(field_description)
+            else:
+                widget = QLineEdit()
+                widget.setPlaceholderText(field_description or field_type)
+                if default is not None:
+                    widget.setText(str(default))
+                widget.setToolTip(field_description)
+
+            form.addRow(label, widget)
+            fields[field_name] = (field_type, widget, field_name in required)
+
+        scroll.setWidget(form_widget)
+        layout.addWidget(scroll, stretch=1)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok
+        )
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Run action")
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        def _run_action() -> None:
+            args = dict(preset_args)
+            for field_name, (field_type, widget, is_required) in fields.items():
+                if isinstance(widget, QCheckBox):
+                    args[field_name] = widget.isChecked()
+                    continue
+                if isinstance(widget, QComboBox):
+                    value = widget.currentData()
+                elif isinstance(widget, QPlainTextEdit):
+                    text = widget.toPlainText().strip()
+                    if not text:
+                        if is_required:
+                            QMessageBox.warning(dialog, "Required value", f"{field_name} is required.")
+                            return
+                        continue
+                    try:
+                        value = json.loads(text)
+                    except json.JSONDecodeError as exc:
+                        QMessageBox.warning(dialog, "Invalid JSON", f"{field_name}: {exc}")
+                        return
+                    if field_type == "array" and not isinstance(value, list):
+                        QMessageBox.warning(dialog, "Invalid value", f"{field_name} must be a JSON array.")
+                        return
+                    if field_type == "object" and not isinstance(value, dict):
+                        QMessageBox.warning(dialog, "Invalid value", f"{field_name} must be a JSON object.")
+                        return
+                else:
+                    value = widget.text().strip()
+                    if not value:
+                        if is_required:
+                            QMessageBox.warning(dialog, "Required value", f"{field_name} is required.")
+                            return
+                        continue
+                    if field_type == "integer":
+                        try:
+                            value = int(value)
+                        except ValueError:
+                            QMessageBox.warning(dialog, "Invalid value", f"{field_name} must be an integer.")
+                            return
+                    elif field_type == "number":
+                        try:
+                            value = float(value)
+                        except ValueError:
+                            QMessageBox.warning(dialog, "Invalid value", f"{field_name} must be a number.")
+                            return
+                        if not math.isfinite(value):
+                            QMessageBox.warning(dialog, "Invalid value", f"{field_name} must be finite.")
+                            return
+                args[field_name] = value
+
+            if not self.on_action_command:
+                QMessageBox.information(dialog, "Actions unavailable", "Aether is not ready to run actions.")
+                return
+            try:
+                self.on_action_command(name, args)
+            except Exception as exc:
+                QMessageBox.critical(dialog, "Action could not start", str(exc))
+                return
+            dialog.accept()
+
+        buttons.accepted.connect(_run_action)
+        dialog.exec()
 
     def _set_chat_sessions(self, titles: list[str], active_title: str) -> None:
         self._chat_combo.blockSignals(True)
@@ -2395,23 +2999,23 @@ class MainWindow(QMainWindow):
 
     def _build_input_row(self) -> QHBoxLayout:
         row = QHBoxLayout(); row.setSpacing(5)
-        self._input = QLineEdit()
-        self._input.setPlaceholderText("Type a command or question…")
+        self._input = MessageInput()
         self._input.setFont(QFont(FONT_BODY, 9))
-        self._input.setFixedHeight(30)
         self._input.setStyleSheet(f"""
-            QLineEdit {{
+            QPlainTextEdit {{
                 background: #000d14; color: {C.WHITE};
-                border: 1px solid {C.BORDER}; border-radius: 3px; padding: 3px 7px;
+                border: 1px solid {C.BORDER}; border-radius: 4px; padding: 6px 8px;
             }}
-            QLineEdit:focus {{ border: 1px solid {C.PRI}; }}
+            QPlainTextEdit:focus {{ border: 1px solid {C.PRI}; }}
         """)
-        self._input.returnPressed.connect(self._send)
+        self._input.sendRequested.connect(self._send)
+        self._input.textChanged.connect(self._update_prompt_suggestions)
         row.addWidget(self._input)
 
-        self._send_btn = QPushButton("▸")
-        self._send_btn.setFixedSize(30, 30)
-        self._send_btn.setFont(QFont(FONT_BODY, 11, QFont.Weight.Bold))
+        self._send_btn = QPushButton("Send")
+        self._send_btn.setFixedSize(58, 40)
+        self._send_btn.setAccessibleName("Send message")
+        self._send_btn.setFont(QFont(FONT_BODY, 9, QFont.Weight.Bold))
         self._send_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._send_btn.setStyleSheet(f"""
             QPushButton {{
@@ -2419,12 +3023,18 @@ class MainWindow(QMainWindow):
                 border: 1px solid {C.PRI_DIM}; border-radius: 3px;
             }}
             QPushButton:hover {{ background: {C.PRI_GHO}; border: 1px solid {C.PRI}; }}
+            QPushButton:disabled {{
+                background: {C.PANEL}; color: {C.TEXT_DIM};
+                border: 1px solid {C.BORDER};
+            }}
         """)
+        self._send_btn.setEnabled(False)
+        self._input.textChanged.connect(self._update_send_button)
         self._send_btn.clicked.connect(self._send)
         row.addWidget(self._send_btn)
 
-        self._stop_btn = QPushButton("■")
-        self._stop_btn.setFixedSize(30, 30)
+        self._stop_btn = QPushButton("Stop")
+        self._stop_btn.setFixedSize(48, 30)
         self._stop_btn.setToolTip("Stop the current response")
         self._stop_btn.setFont(QFont(FONT_BODY, 9, QFont.Weight.Bold))
         self._stop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -2439,6 +3049,63 @@ class MainWindow(QMainWindow):
         self._stop_btn.hide()
         row.addWidget(self._stop_btn)
         return row
+
+    def _build_prompt_suggestions(self, parent_layout: QVBoxLayout) -> None:
+        self._prompt_suggestions = QWidget()
+        self._prompt_suggestions.setStyleSheet("background: transparent;")
+        row = QHBoxLayout(self._prompt_suggestions)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(5)
+
+        label = QLabel("Try:")
+        label.setFont(QFont(FONT_BODY, 7, QFont.Weight.Bold))
+        label.setStyleSheet(f"color: {C.TEXT_DIM}; background: transparent;")
+        row.addWidget(label)
+
+        for title, prompt in (
+            ("Get started", "What can you help me with?"),
+            ("Research", "Research the latest AI news"),
+        ):
+            button = QPushButton(title)
+            button.setAccessibleName(f"Use example: {prompt}")
+            button.setToolTip(f"Put “{prompt}” in the message box")
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.setStyleSheet(f"""
+                QPushButton {{
+                    background: {C.PANEL2}; color: {C.TEXT_MED};
+                    border: 1px solid {C.BORDER}; border-radius: 3px;
+                    padding: 4px 7px;
+                }}
+                QPushButton:hover {{
+                    color: {C.PRI}; border-color: {C.PRI_DIM};
+                }}
+            """)
+            button.clicked.connect(
+                lambda _checked=False, value=prompt: self._use_prompt(value)
+            )
+            row.addWidget(button)
+
+        row.addStretch()
+        parent_layout.addWidget(self._prompt_suggestions)
+
+    def _update_prompt_suggestions(self) -> None:
+        self._prompt_suggestions.setVisible(
+            not bool(self._input.toPlainText().strip())
+        )
+
+    def _use_prompt(self, prompt: str) -> None:
+        if self._input.toPlainText().strip():
+            return
+        self._input.setPlainText(prompt)
+        self._input.setFocus()
+        cursor = self._input.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)
+        self._input.setTextCursor(cursor)
+
+    def _update_send_button(self) -> None:
+        self._send_btn.setEnabled(
+            bool(self._input.toPlainText().strip())
+        )
 
     def _build_footer(self) -> QWidget:
         w = QWidget()
@@ -2488,7 +3155,7 @@ class MainWindow(QMainWindow):
 
     def _style_mute_btn(self):
         if self._muted:
-            self._mute_btn.setText("🔇  MICROPHONE MUTED")
+            self._mute_btn.setText("MICROPHONE MUTED")
             self._mute_btn.setStyleSheet(f"""
                 QPushButton {{
                     background: #140006; color: {C.MUTED_C};
@@ -2496,7 +3163,7 @@ class MainWindow(QMainWindow):
                 }}
             """)
         else:
-            self._mute_btn.setText("🎙  MICROPHONE ACTIVE")
+            self._mute_btn.setText("MICROPHONE ACTIVE")
             self._mute_btn.setStyleSheet(f"""
                 QPushButton {{
                     background: #00140a; color: {C.GREEN};
@@ -2506,15 +3173,30 @@ class MainWindow(QMainWindow):
             """)
 
     def _send(self):
-        txt = self._input.text().strip()
-        if not txt: return
+        txt = self._input.toPlainText().strip()
+        if not txt or not self.on_text_command:
+            return
         self._input.clear()
-        if self.on_text_command:
-            threading.Thread(target=self.on_text_command, args=(txt,), daemon=True).start()
+        threading.Thread(target=self.on_text_command, args=(txt,), daemon=True).start()
+
+    def _focus_input(self):
+        self._input.setFocus()
 
     def _apply_state(self, state: str):
         self.orb.state    = state
         self.orb.speaking = (state == "SPEAKING")
+        status = {
+            "LISTENING": ("Ready to help", C.GREEN),
+            "THINKING": ("Thinking…", C.ACC2),
+            "PROCESSING": ("Working on it…", C.ACC2),
+            "SPEAKING": ("Speaking…", C.PRI),
+            "MUTED": ("Microphone muted", C.TEXT_MED),
+            "ERROR": ("Something went wrong — check Activity", C.RED),
+        }.get(state, (state.replace("_", " ").title(), C.TEXT_MED))
+        self._chat_status_lbl.setText(status[0])
+        self._chat_status_lbl.setStyleSheet(
+            f"color: {status[1]}; background: transparent;"
+        )
         show_stop = state in ("THINKING", "PROCESSING", "SPEAKING") and bool(self.on_stop_command)
         self._send_btn.setVisible(not show_stop)
         self._stop_btn.setVisible(show_stop)
@@ -2652,6 +3334,22 @@ class AetherUI:
     @on_stop_command.setter
     def on_stop_command(self, cb):
         self._win.on_stop_command = cb
+
+    @property
+    def on_action_catalog(self):
+        return self._win.on_action_catalog
+
+    @on_action_catalog.setter
+    def on_action_catalog(self, cb):
+        self._win.on_action_catalog = cb
+
+    @property
+    def on_action_command(self):
+        return self._win.on_action_command
+
+    @on_action_command.setter
+    def on_action_command(self, cb):
+        self._win.on_action_command = cb
 
     @property
     def on_reconfigure(self):

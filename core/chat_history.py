@@ -16,6 +16,9 @@ _ALLOWED_ROLES = {"assistant", "tool", "user"}
 
 
 def history_path() -> Path:
+    override = os.environ.get("AETHER_CHAT_HISTORY_PATH")
+    if override:
+        return Path(override).expanduser()
     return Path.home() / ".aether" / "chat_history.json"
 
 

@@ -69,6 +69,15 @@ def test_never_marks_anything_done_and_renders_the_markdown(scratch, tmp_path):
     assert "Egress log" in md and "get_secret" in md
 
 
+def test_note_command_updates_only_the_selected_item(scratch, capsys):
+    roadmap.cmd_note(__import__("argparse").Namespace(id=2, notes="Measured benchmark evidence"))
+    updated = json.loads(scratch.read_text())
+    assert updated["items"][1]["notes"] == "Measured benchmark evidence"
+    assert updated["items"][1]["status"] == "backlog"
+    assert updated["items"][0] == BASELINE["items"][0]
+    assert "Updated notes for #2" in capsys.readouterr().out
+
+
 def test_planned_list_is_well_formed():
     titles = [t for _, t, _ in ar.PLANNED]
     assert len({ar._norm(t) for t in titles}) == len(titles)     # no duplicates in the list itself

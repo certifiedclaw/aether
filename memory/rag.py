@@ -100,8 +100,15 @@ class RAGEngine:
         try:
             if path.suffix.lower() == ".pdf":
                 try:
-                    import fitz; doc = fitz.open(str(path))
-                    text = "\n\n".join(page.get_text() for page in doc); doc.close(); return text
+                    import fitz
+                    doc = fitz.open(str(path))
+                    try:
+                        return "\n\n".join(
+                            f"[Page {i + 1}]\n{page.get_text()}"
+                            for i, page in enumerate(doc)
+                        )
+                    finally:
+                        doc.close()
                 except ImportError: return ""
             if path.suffix.lower() == ".docx":
                 try:
@@ -113,21 +120,55 @@ class RAGEngine:
 
     def _chunk(self, text: str, source: Path) -> list[dict]:
         step = max(1, self._chunk_size - self._overlap)
-        return [{"text": text[i:i+self._chunk_size].strip(), "source": str(source), "offset": i}
-                for i in range(0, len(text), step) if len(text[i:i+self._chunk_size].strip()) >= 40]
+        markers = list(re.finditer(r"\[Page\s+(\d+)\]\s*", text))
+        segments = []
+        if markers:
+            for index, marker in enumerate(markers):
+                end = markers[index + 1].start() if index + 1 < len(markers) else len(text)
+                segments.append((text[marker.end():end], marker.end(), int(marker.group(1))))
+        else:
+            segments.append((text, 0, None))
+
+        chunks = []
+        for segment, segment_offset, page in segments:
+            for i in range(0, len(segment), step):
+                chunk_text = segment[i:i + self._chunk_size].strip()
+                if len(chunk_text) < 40:
+                    continue
+                chunks.append({
+                    "text": chunk_text,
+                    "source": str(source),
+                    "offset": segment_offset + i,
+                    "page": page,
+                })
+        return chunks
 
     def query(self, question: str, router=None) -> str:
         if not self._chunks: return "No documents indexed. Use index_file() or index_directory()."
         relevant = self._hybrid_retrieve(question)
         if not relevant: return "No relevant content found."
-        context = "\n\n---\n\n".join(f"[{c['source'].split(os.sep)[-1]}]\n{c['text']}" for c in relevant)
-        if not router: return f"Relevant context:\n\n{context[:2000]}"
-        prompt = (f"Answer using ONLY the context below. Say 'not found' if the answer isn't there.\n\n"
+        entries = []
+        sources = []
+        for i, chunk in enumerate(relevant, 1):
+            filename = Path(chunk["source"]).name
+            page = chunk.get("page")
+            chunk_number = chunk.get("offset", 0) // max(1, self._chunk_size - self._overlap) + 1
+            location = f"{filename}, page {page}" if page else f"{filename}, chunk {chunk_number}"
+            sources.append(f"[{i}] {location}")
+            entries.append(f"[{i}] {location}\n{chunk['text']}")
+        context = "\n\n---\n\n".join(entries)
+        if not router:
+            answer = f"Relevant context:\n\n{context[:2000]}"
+        else:
+            prompt = (f"Answer using ONLY the context below. Cite supported facts with the matching "
+                      f"source marker such as [1]. Say 'not found' if the answer isn't there.\n\n"
                   f"Context:\n{context}\n\nQuestion: {question}")
-        try:
-            from core.llm_client import call_llm_text
-            return call_llm_text(prompt)
-        except Exception as e: return f"RAG query error: {e}"
+            try:
+                from core.llm_client import call_llm_text
+                answer = call_llm_text(prompt)
+            except Exception as e:
+                return f"RAG query error: {e}"
+        return f"{answer}\n\nSources:\n" + "\n".join(sources)
 
     def _hybrid_retrieve(self, query: str) -> list[dict]:
         n = len(self._chunks)

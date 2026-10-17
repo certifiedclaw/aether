@@ -23,7 +23,11 @@ def _open(path: str):
 def extract_text(path: str, max_pages: int = 50) -> str:
     try:
         doc = _open(path)
-        pages = [page.get_text() for i, page in enumerate(doc) if i < max_pages]
+        pages = [
+            f"[Page {i + 1}]\n{page.get_text()}"
+            for i, page in enumerate(doc)
+            if i < max_pages
+        ]
         if len(doc) > max_pages:
             pages.append(f"\n[truncated at {max_pages} pages]")
         doc.close()
@@ -64,22 +68,37 @@ def extract_tables(path: str) -> str:
 
 def search_in_document(path: str, query: str, context_chars: int = 200) -> str:
     try:
-        text = extract_text(path)
-        q = query.lower()
-        tl = text.lower()
-        matches, start = [], 0
-        while len(matches) < 10:
-            pos = tl.find(q, start)
-            if pos == -1:
+        if not query.strip():
+            return "Please provide a search query."
+        doc = _open(path)
+        try:
+            pages = [(i + 1, page.get_text()) for i, page in enumerate(doc)]
+        finally:
+            doc.close()
+        matches = []
+        for page_number, text in pages:
+            lower_text = text.lower()
+            start = 0
+            while len(matches) < 10:
+                position = lower_text.find(query.lower(), start)
+                if position == -1:
+                    break
+                start_at = max(0, position - context_chars)
+                end_at = min(len(text), position + len(query) + context_chars)
+                excerpt = text[start_at:end_at].replace("\n", " ").strip()
+                matches.append((page_number, excerpt))
+                start = position + 1
+            if len(matches) >= 10:
                 break
-            s = max(0, pos - context_chars)
-            e = min(len(text), pos + len(query) + context_chars)
-            matches.append(f"…{text[s:e].replace(chr(10),' ').strip()}…")
-            start = pos + 1
         if not matches:
             return f"'{query}' not found in {Path(path).name}"
-        return f"{len(matches)} occurrence(s) of '{query}':\n\n" + \
-               "\n\n".join(f"[{i+1}] {m}" for i, m in enumerate(matches))
+        return (
+            f"{len(matches)} occurrence(s) of '{query}' in {Path(path).name}:\n\n"
+            + "\n\n".join(
+                f"[{i}] {Path(path).name}, page {page}: …{excerpt}…"
+                for i, (page, excerpt) in enumerate(matches, 1)
+            )
+        )
     except Exception as e:
         return f"Search error: {e}"
 

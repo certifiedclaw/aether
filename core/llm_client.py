@@ -194,6 +194,7 @@ def _ollama_missing_model_message(model: str, url: str) -> str:
 _EVAL_OVERRIDE_KEYS = frozenset({
     "llm_model", "llm_url", "ollama_url", "llm_provider",
     "llm_remote_url", "llm_remote_model", "llm_local_url", "llm_local_model",
+    "llm_quick_model", "llm_everyday_model", "llm_hard_model",
 })
 
 
@@ -411,6 +412,15 @@ _DEFAULT_HEALTH_CHECK_TIMEOUT  = 2.5    # seconds to wait for the remote host to
 _endpoint_lock  = threading.Lock()
 _endpoint_cache = {"checked_at": 0.0, "using": None}   # using: "remote" | "local" | None
 
+_TIER_MODEL_KEYS = {
+    "quick": "llm_quick_model",
+    "everyday": "llm_everyday_model",
+    "hard": "llm_hard_model",
+}
+_OLLAMA_MODELS_TTL = 20.0
+_ollama_models_lock = threading.Lock()
+_ollama_models_cache: dict[str, tuple[float, set[str] | None]] = {}
+
 
 def _probe_ollama(url: str, timeout: float) -> bool:
     try:
@@ -481,6 +491,64 @@ def get_llm_settings() -> tuple[str, str]:
             print(f"[LLM] Remote host unreachable ({remote_url}) -- falling back to local CPU ({local_url}).")
 
     return (remote_url, remote_model) if reachable else (local_url, local_model)
+
+
+def _installed_ollama_models(url: str) -> set[str] | None:
+    """Return cached model tags for an Ollama endpoint, or None if unavailable."""
+    now = time.monotonic()
+    with _ollama_models_lock:
+        cached = _ollama_models_cache.get(url)
+        if cached and now - cached[0] < _OLLAMA_MODELS_TTL:
+            return cached[1]
+
+    try:
+        response = requests.get(f"{url}/api/tags", timeout=2.5)
+        if response.status_code != 200:
+            names = None
+        else:
+            payload = response.json()
+            models = payload.get("models") if isinstance(payload, dict) else None
+            names = (
+                {entry["name"] for entry in models
+                 if isinstance(entry, dict) and isinstance(entry.get("name"), str)}
+                if isinstance(models, list) else None
+            )
+    except (requests.RequestException, ValueError, TypeError):
+        names = None
+
+    with _ollama_models_lock:
+        _ollama_models_cache[url] = (now, names)
+    return names
+
+
+def get_tier_model_settings(tier: str) -> tuple[str, str, str, str]:
+    """Resolve an optional Ollama model override for a conversation tier.
+
+    Returns (url, model, status, requested_model). Status is "default" when
+    unconfigured, "configured" when the requested tag is installed, "missing"
+    when the tag isn't installed, or "unavailable" when Ollama's tag list
+    can't be checked. Missing/unavailable overrides fall back to the model
+    selected by get_llm_settings(), including its remote/local host decision.
+    """
+    tier_key = _TIER_MODEL_KEYS.get(str(tier).strip().lower())
+    url, default_model = get_llm_settings()
+    if not tier_key:
+        return url, default_model, "default", ""
+
+    requested = _load_config().get(tier_key)
+    if not isinstance(requested, str) or not requested.strip():
+        return url, default_model, "default", ""
+    requested = requested.strip()
+
+    installed = _installed_ollama_models(url)
+    if installed is None:
+        return url, default_model, "unavailable", requested
+    installed_match = requested in installed or (
+        ":" not in requested and f"{requested}:latest" in installed
+    )
+    if not installed_match:
+        return url, default_model, "missing", requested
+    return url, requested, "configured", requested
 
 
 def get_llm_backend_status() -> dict:
