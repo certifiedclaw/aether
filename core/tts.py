@@ -366,6 +366,11 @@ class ElevenLabsTTSEngine:
     def speak(self, text: str) -> None:
         if not self.api_key:
             raise RuntimeError("ElevenLabs API key is missing; add it in Configure.")
+        # Spoken text leaves the machine: honour cloud_allow and redact secrets.
+        from core.leak_guard import cloud_allowed, redact_text
+        if not cloud_allowed():
+            raise RuntimeError("ElevenLabs TTS blocked: cloud_allow is false in config.")
+        text, _ = redact_text(text)
         import requests
         headers = {
             "xi-api-key":   self.api_key,

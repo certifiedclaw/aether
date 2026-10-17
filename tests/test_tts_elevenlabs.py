@@ -63,3 +63,11 @@ def test_tts_player_propagates_synthesis_errors(tts):
     with pytest.raises(RuntimeError, match="rejected the request"):
         player.speak("Hello.")
     assert not player.is_playing
+
+
+def test_elevenlabs_blocked_when_cloud_disallowed(tts, monkeypatch):
+    from core import leak_guard
+    monkeypatch.setattr(leak_guard, "cloud_allowed", lambda cfg=None: False)
+    engine = tts.ElevenLabsTTSEngine("api-key")
+    with pytest.raises(RuntimeError, match="cloud_allow"):
+        engine.speak("hello")

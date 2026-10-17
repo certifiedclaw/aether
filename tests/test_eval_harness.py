@@ -306,6 +306,7 @@ def test_run_suite_can_disable_model_guidance_for_control(monkeypatch):
         seen["env"] = env
         return 0, "", "", 1.0
 
+    monkeypatch.setattr(eh, "model_installed", lambda *a, **k: (True, "ok"))
     monkeypatch.setattr(vl, "_MemoryIsolation", NoIso)
     monkeypatch.setattr(
         live_grader, "load_turns",
