@@ -3,6 +3,7 @@
 import json
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 def _get_base_dir() -> Path:
@@ -31,16 +32,55 @@ def _ddg_search(query: str, max_results: int = 6) -> list[dict]:
     return results
 
 
-def _format_ddg(query: str, results: list[dict]) -> str:
+def _usable_results(results: list[dict]) -> list[dict]:
+    """Keep only search entries with a link that can be presented as a source."""
+    usable = []
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        url = str(result.get("url") or "").strip()
+        try:
+            parsed = urlsplit(url)
+        except ValueError:
+            continue
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            continue
+        usable.append({
+            "title": str(result.get("title") or url).strip(),
+            "snippet": str(result.get("snippet") or "").strip(),
+            "url": url,
+        })
+    return usable
+
+
+def _format_ddg(query: str, results: list[dict], *, include_urls: bool = True) -> str:
     if not results:
-        return f"No results found for: {query}"
+        return f"No web results found for: {query}"
     lines = [f"Search results for: {query}\n"]
     for i, r in enumerate(results, 1):
-        if r.get("title"):   lines.append(f"{i}. {r['title']}")
+        lines.append(f"[{i}] {r['title']}")
         if r.get("snippet"): lines.append(f"   {r['snippet']}")
-        if r.get("url"):     lines.append(f"   {r['url']}")
+        if include_urls:
+            lines.append(f"   {r['url']}")
         lines.append("")
     return "\n".join(lines).strip()
+
+
+def _format_sources(results: list[dict]) -> str:
+    if not results:
+        return ""
+    lines = ["Sources:"]
+    for i, result in enumerate(results, 1):
+        lines.append(f"[{i}] {result['title']} — {result['url']}")
+    return "\n".join(lines)
+
+
+def _append_sources(answer: str, results: list[dict]) -> str:
+    sources = _format_sources(results)
+    answer = (answer or "").strip()
+    if not sources:
+        return answer
+    return f"{answer}\n\n{sources}" if answer else sources
 
 
 def _llm_summarize(query: str, raw_results: str) -> str:
@@ -48,12 +88,15 @@ def _llm_summarize(query: str, raw_results: str) -> str:
         from core.llm_client import call_llm_text
         system = (
             "You are Aether. Summarize web search results clearly and concisely. "
-            "Answer the user's query directly. Be factual. Address user as 'sir'."
+            "Answer the user's query directly and support factual claims with "
+            "the supplied numbered citations, such as [1]. Never invent sources "
+            "or citation numbers. Be factual."
         )
         prompt = (
             f"User question: {query}\n\n"
             f"Web search results:\n{raw_results[:4000]}\n\n"
-            "Answer the question based on these results:"
+            "Answer the question based on these results and cite the relevant "
+            "sources using their supplied numbers:"
         )
         return call_llm_text(prompt, system=system)
     except Exception:
@@ -61,21 +104,26 @@ def _llm_summarize(query: str, raw_results: str) -> str:
 
 
 def _compare(items: list[str], aspect: str) -> str:
-    all_results: dict[str, list] = {}
-    for item in items:
-        try:
-            all_results[item] = _ddg_search(f"{item} {aspect}", max_results=3)
-        except Exception:
-            all_results[item] = []
-
+    source_results: list[dict] = []
     lines = [f"Comparison — {aspect.upper()}", "─" * 40]
     for item in items:
+        try:
+            results = _usable_results(_ddg_search(f"{item} {aspect}", max_results=3))[:2]
+        except Exception:
+            results = []
+
         lines.append(f"\n▸ {item}")
-        for r in all_results.get(item, [])[:2]:
-            if r.get("snippet"):
-                lines.append(f"  • {r['snippet']}")
+        for result in results:
+            source_results.append(result)
+            source_number = len(source_results)
+            lines.append(
+                f"[{source_number}] {result['title']}\n"
+                f"  {result['snippet']}\n"
+                f"  {result['url']}"
+            )
     raw = "\n".join(lines)
-    return _llm_summarize(f"Compare {', '.join(items)} regarding {aspect}", raw)
+    answer = _llm_summarize(f"Compare {', '.join(items)} regarding {aspect}", raw)
+    return _append_sources(answer, source_results)
 
 
 def web_search(
@@ -116,11 +164,14 @@ def web_search(
             print(f"[WebSearch] 📊 Comparing: {items}")
             return _compare(items, aspect)
 
-        results = _ddg_search(query)
+        results = _usable_results(_ddg_search(query))
+        if not results:
+            return f"No web results found for: {query}"
         raw     = _format_ddg(query, results)
         print(f"[WebSearch] ✅ DDG: {len(results)} result(s).")
         # Let Ollama summarise the results for a cleaner spoken response
-        return _llm_summarize(query, raw)
+        answer = _llm_summarize(query, raw)
+        return _append_sources(answer, results)
 
     except Exception as e:
         print(f"[WebSearch] ❌ Failed: {e}")

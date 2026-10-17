@@ -401,10 +401,10 @@
       "id": 45,
       "title": "[F0] Export and import everything (chats, memory, settings) as one portable bundle",
       "priority": "medium",
-      "status": "backlog",
-      "notes": "Needed to move to iansserver.",
+      "status": "done",
+      "notes": "Implemented portable ZIP export/import for named chats, long-term memory, SQLite memory, goals, basic RAG index, Chroma/LlamaIndex index, and non-secret settings. Import validates the manifest, archive size, member paths, JSON, and SQLite integrity; rejects symlinks/traversal; replaces non-secret settings while preserving destination credentials; and writes a recovery bundle before replacement. CLI usage and close-app requirement are documented in README. Round-trip and safety tests pass; 47 focused tests passed (1 skipped), changed Python files compile, diff check passes. Verified #45 was backlog on origin/master before starting.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-17"
     },
     {
       "id": 46,
@@ -464,10 +464,10 @@
       "id": 52,
       "title": "[F1] Prompt and tool-schema tuning per model, driven by benchmark results",
       "priority": "high",
-      "status": "backlog",
-      "notes": "~500 lines.",
+      "status": "done",
+      "notes": "Completed Qwen 2.5 1.5B prompt/schema tuning with repeat isolated full-suite evidence and a safe model tool-call benchmark. Two profile-enabled runs scored 102/107 both times (95%); the matched no-guidance controls scored 94/107 and 89/107 (88% and 83%), an average gain of 10.5 cases / 9.8 percentage points. Personal-fact honesty rose from 1/8 in both controls to 7/8 and 8/8 with the profile. Average p50 was 3.10s with profile vs 2.97s without (+131ms); p95 varied and remains host-sensitive. Improvements are concentrated in honesty, with some per-case variation in reasoning/instruction; reversal and translation are not consistently solved. The actual tool-call suite scored 8/8; no schema change was warranted. JSON-only output now passes after fixing bare JSON misclassification in tool-call recovery. Evaluation CLI supports --disable-model-guidance for repeatable control runs and isolates chat history. Remaining weak cases are model capability limits, not evidence for further prompt/schema edits in this item.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-17"
     },
     {
       "id": 53,
@@ -527,19 +527,19 @@
       "id": 59,
       "title": "[F2] Web search with sources",
       "priority": "high",
-      "status": "backlog",
-      "notes": "~600 lines.",
+      "status": "done",
+      "notes": "Implemented source-backed web search across Aether direct search, comparison, LangChain search, and multi-step LangChain research. Search summaries are instructed to cite supplied numbered results and now always include a deterministic Sources list with verified HTTP(S) URLs; results without valid links are excluded, and an empty usable set returns an explicit no-results message. Comparison sources are collected per item, and research carries deduplicated pages from its web-search observations into the final answer. Updated the tool description and README. Mocked regression coverage passed (163 related tests); Python compilation and diff checks pass. No live DuckDuckGo request was made during verification.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-17"
     },
     {
       "id": 60,
       "title": "[F2] Document Q&A over PDFs, notes, Obsidian, with citations",
       "priority": "high",
-      "status": "backlog",
-      "notes": "",
+      "status": "done",
+      "notes": "Completed source-cited document Q&A for PDFs, Markdown, and Obsidian folders. Basic RAG keeps PDF page boundaries, cites filenames/pages in prompts and replies, and PDF search returns page-numbered excerpts with blank/no-match handling. LlamaIndex vector/sub-query modes use CitationQueryEngine for inline references with a matching source list; summary results list source metadata. Added usage documentation and mocked regression tests; 31 focused tests passed (1 skipped), changed Python files compile, and git diff --check passes. The broader critical suite also exposed a repeatable unrelated TaskScheduler timing failure; scheduler code was not changed.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-17"
     },
     {
       "id": 61,

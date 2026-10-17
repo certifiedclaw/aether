@@ -1,0 +1,77 @@
+{
+  "_comment": "Direct Ollama API tool-call checks using Aether's real everyday-routed schemas. The harness records and grades calls only; it never executes them.",
+  "cases": [
+    {
+      "id": "tc_web_search",
+      "prompt": "Search the web for the official Python 3.14 release notes.",
+      "tool": "web_search",
+      "argument_patterns": {
+        "query": "Python.*3[.]14"
+      }
+    },
+    {
+      "id": "tc_weather",
+      "prompt": "Get the current weather in Paris, France.",
+      "tool": "weather_report",
+      "argument_patterns": {
+        "city": "Paris"
+      }
+    },
+    {
+      "id": "tc_file_list",
+      "prompt": "List the files in my Downloads folder.",
+      "tool": "file_controller",
+      "argument_patterns": {
+        "action": "^list$",
+        "path": "Downloads"
+      }
+    },
+    {
+      "id": "tc_browser_navigate",
+      "prompt": "Navigate the browser to https://example.com.",
+      "tool": "browser_control",
+      "argument_patterns": {
+        "action": "^go_to$",
+        "url": "https://example[.]com"
+      }
+    },
+    {
+      "id": "tc_reminder",
+      "prompt": "Set a reminder for 2026-10-20 at 15:30 with the message: check email.",
+      "tool": "reminder",
+      "argument_patterns": {
+        "date": "^2026-10-20$",
+        "time": "^15:30$",
+        "message": "check email"
+      }
+    },
+    {
+      "id": "tc_send_message",
+      "prompt": "Send a WhatsApp message to Alex with exactly this text: I will arrive at 3:30.",
+      "tool": "send_message",
+      "argument_patterns": {
+        "receiver": "Alex",
+        "message_text": "^I will arrive at 3:30[.]?$",
+        "platform": "WhatsApp"
+      }
+    },
+    {
+      "id": "tc_volume",
+      "prompt": "Set the computer volume to 40 percent.",
+      "tool": "computer_settings",
+      "argument_patterns": {
+        "action": "^(volume_set|set_volume|volume)$",
+        "value": "^40$"
+      }
+    },
+    {
+      "id": "tc_youtube",
+      "prompt": "Play the song Take On Me by a-ha on YouTube.",
+      "tool": "youtube_video",
+      "argument_patterns": {
+        "action": "^play$",
+        "query": "Take On Me"
+      }
+    }
+  ]
+}

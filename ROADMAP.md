@@ -1,8 +1,8 @@
 # Aether — Roadmap
 
-> **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap add/start/done`.
+> **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-17 18:31 UTC
+Generated: 2026-10-17 22:55 UTC
 
 ## In progress
 
@@ -15,13 +15,6 @@ Generated: 2026-10-17 18:31 UTC
 
 - [ ] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option `high`
   - Repository protections already implemented: config/api_keys.json is ignored, example templates are present, and credentials resolve environment -> OS keyring -> local file with a migration CLI. Confirmed the config file is not tracked in this Git history. Previously shared full-folder archives are outside this checkout; the owner still needs to check/remove any such archives and rotate keys if one contained them.
-- [ ] **#52** [F1] Prompt and tool-schema tuning per model, driven by benchmark results `high`
-  - ~500 lines.
-- [ ] **#59** [F2] Web search with sources `high`
-  - ~600 lines.
-- [ ] **#60** [F2] Document Q&A over PDFs, notes, Obsidian, with citations `high`
-- [ ] **#45** [F0] Export and import everything (chats, memory, settings) as one portable bundle `medium`
-  - Needed to move to iansserver.
 - [ ] **#48** [F0] Auto-update with rollback: pull, run tests, roll back on failure `medium`
 - [ ] **#53** [F1] Self-check pass: model re-reads its answer for obvious mistakes `medium`
   - ~300 lines.
@@ -155,7 +148,15 @@ Generated: 2026-10-17 18:31 UTC
 - [x] **#43** [F0] Data-leak guard: never send secrets, memory or files to any cloud model
   - Needed before any cloud backend is enabled.
 - [x] **#44** [F0] Audit log viewer: searchable timeline of every tool call and approval
+- [x] **#45** [F0] Export and import everything (chats, memory, settings) as one portable bundle
+  - Implemented portable ZIP export/import for named chats, long-term memory, SQLite memory, goals, basic RAG index, Chroma/LlamaIndex index, and non-secret settings. Import validates the manifest, archive size, member paths, JSON, and SQLite integrity; rejects symlinks/traversal; replaces non-secret settings while preserving destination credentials; and writes a recovery bundle before replacement. CLI usage and close-app requirement are documented in README. Round-trip and safety tests pass; 47 focused tests passed (1 skipped), changed Python files compile, diff check passes. Verified #45 was backlog on origin/master before starting.
 - [x] **#46** [F0] Resource governor: pause heavy jobs when other containers (Palworld) need CPU/RAM
 - [x] **#47** [F0] Cost and speed dashboard: tokens/s, memory use, latency per model
 - [x] **#51** [F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones
   - Completed: optional llm_quick_model, llm_everyday_model and llm_hard_model select per-tier models for Ollama conversations. Aether checks the currently selected Ollama host (including remote/local fallback); a missing or uncheckable tag falls back to that host's configured default and is logged. Gemini HARD escalation and opted-in Gemini tool routing retain precedence; OpenAI-compatible providers are unchanged. See core/llm_client.py, core/conversation_core.py and config/config.example.json.
+- [x] **#52** [F1] Prompt and tool-schema tuning per model, driven by benchmark results
+  - Completed Qwen 2.5 1.5B prompt/schema tuning with repeat isolated full-suite evidence and a safe model tool-call benchmark. Two profile-enabled runs scored 102/107 both times (95%); the matched no-guidance controls scored 94/107 and 89/107 (88% and 83%), an average gain of 10.5 cases / 9.8 percentage points. Personal-fact honesty rose from 1/8 in both controls to 7/8 and 8/8 with the profile. Average p50 was 3.10s with profile vs 2.97s without (+131ms); p95 varied and remains host-sensitive. Improvements are concentrated in honesty, with some per-case variation in reasoning/instruction; reversal and translation are not consistently solved. The actual tool-call suite scored 8/8; no schema change was warranted. JSON-only output now passes after fixing bare JSON misclassification in tool-call recovery. Evaluation CLI supports --disable-model-guidance for repeatable control runs and isolates chat history. Remaining weak cases are model capability limits, not evidence for further prompt/schema edits in this item.
+- [x] **#59** [F2] Web search with sources
+  - Implemented source-backed web search across Aether direct search, comparison, LangChain search, and multi-step LangChain research. Search summaries are instructed to cite supplied numbered results and now always include a deterministic Sources list with verified HTTP(S) URLs; results without valid links are excluded, and an empty usable set returns an explicit no-results message. Comparison sources are collected per item, and research carries deduplicated pages from its web-search observations into the final answer. Updated the tool description and README. Mocked regression coverage passed (163 related tests); Python compilation and diff checks pass. No live DuckDuckGo request was made during verification.
+- [x] **#60** [F2] Document Q&A over PDFs, notes, Obsidian, with citations
+  - Completed source-cited document Q&A for PDFs, Markdown, and Obsidian folders. Basic RAG keeps PDF page boundaries, cites filenames/pages in prompts and replies, and PDF search returns page-numbered excerpts with blank/no-match handling. LlamaIndex vector/sub-query modes use CitationQueryEngine for inline references with a matching source list; summary results list source metadata. Added usage documentation and mocked regression tests; 31 focused tests passed (1 skipped), changed Python files compile, and git diff --check passes. The broader critical suite also exposed a repeatable unrelated TaskScheduler timing failure; scheduler code was not changed.

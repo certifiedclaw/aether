@@ -1,4 +1,5 @@
 """tools/eval_harness.py + the AETHER_EVAL_OVERRIDES hook: no model, no Aether process needed."""
+import io
 import json
 import re
 import time
@@ -120,6 +121,102 @@ def test_all_case_expectation_patterns_compile():
                 re.compile(case[key])
 
 
+def test_tool_call_cases_are_supported_by_the_everyday_router():
+    from core.tool_declarations import TOOL_DECLARATIONS, _to_ollama_tools
+    from core.tool_router import filter_tools
+
+    declarations = _to_ollama_tools(TOOL_DECLARATIONS)
+    cases = eh.load_tool_cases()
+    assert len(cases) >= 4
+    for case in cases:
+        available = {
+            (tool.get("function") or {}).get("name")
+            for tool in filter_tools(declarations, case["prompt"])
+        }
+        assert case["tool"] in available, case["id"]
+        for pattern in case["argument_patterns"].values():
+            re.compile(pattern)
+
+
+def test_grade_tool_call_requires_one_correct_schema_shaped_call():
+    case = {
+        "id": "tool-test", "tool": "weather_report",
+        "argument_patterns": {"city": "Paris"},
+    }
+    response = {"message": {"tool_calls": [{
+        "function": {"name": "weather_report", "arguments": {"city": "Paris, France"}},
+    }]}}
+    row = eh.grade_tool_call(case, response, 12.5)
+    assert row["pass"] and row["tool"] == "weather_report"
+    assert row["latency_ms"] == 12
+
+    response["message"]["tool_calls"].append(response["message"]["tool_calls"][0])
+    assert not eh.grade_tool_call(case, response, 1)["pass"]
+    wrong_tool = {"message": {"tool_calls": [{
+        "function": {"name": "web_search", "arguments": {"city": "Paris"}},
+    }]}}
+    assert not eh.grade_tool_call(case, wrong_tool, 1)["pass"]
+    assert not eh.grade_tool_call(case, {"message": {"content": "It is sunny."}}, 1)["pass"]
+
+
+def test_tool_call_suite_uses_live_schemas_and_never_dispatches(monkeypatch):
+    monkeypatch.setattr(eh, "model_installed", lambda *a, **k: (True, "ok"))
+    seen = []
+    args_by_id = {
+        "tc_web_search": {"query": "Python 3.14 official release notes"},
+        "tc_weather": {"city": "Paris, France"},
+        "tc_file_list": {"action": "list", "path": "Downloads"},
+        "tc_browser_navigate": {"action": "go_to", "url": "https://example.com"},
+        "tc_reminder": {"date": "2026-10-20", "time": "15:30", "message": "check email"},
+        "tc_send_message": {
+            "receiver": "Alex", "message_text": "I will arrive at 3:30.",
+            "platform": "WhatsApp",
+        },
+        "tc_volume": {"action": "volume_set", "value": "40"},
+        "tc_youtube": {"action": "play", "query": "Take On Me by a-ha"},
+    }
+
+    def fake_urlopen(request, timeout):
+        body = json.loads(request.data.decode("utf-8"))
+        prompt = body["messages"][1]["content"]
+        case = next(c for c in eh.load_tool_cases() if c["prompt"] == prompt)
+        names = {(t.get("function") or {}).get("name") for t in body["tools"]}
+        assert case["tool"] in names
+        assert timeout == 8 and request.full_url == "http://ollama.test/api/chat"
+        seen.append(body)
+        answer = {
+            "message": {"content": "", "tool_calls": [{
+                "function": {
+                    "name": case["tool"],
+                    "arguments": args_by_id[case["id"]],
+                },
+            }]},
+        }
+        return io.BytesIO(json.dumps(answer).encode("utf-8"))
+
+    monkeypatch.setattr(eh.urllib.request, "urlopen", fake_urlopen)
+    result = eh.run_tool_call_suite("safe-tools", "qwen2.5:1.5b", "http://ollama.test/", 8)
+    assert result["passed"] == result["n"] == 8
+    assert result["suite"] == "tool_calls"
+    assert result["execution_policy"].endswith("none were executed.")
+    assert len(seen) == result["n"]
+    assert all(request["options"] == {"temperature": 0} for request in seen)
+    assert all("tools" in request for request in seen)
+
+
+def test_tool_call_suite_records_backend_errors(monkeypatch):
+    import urllib.error
+
+    monkeypatch.setattr(eh, "model_installed", lambda *a, **k: (True, "ok"))
+    monkeypatch.setattr(
+        eh.urllib.request, "urlopen",
+        lambda *a, **k: (_ for _ in ()).throw(urllib.error.URLError("offline")),
+    )
+    result = eh.run_tool_call_suite("offline", "qwen2.5:1.5b", None, 1)
+    assert result["passed"] == 0 and result["exit_code"] == 1
+    assert all("Ollama request failed" in row["fails"][0] for row in result["cases"])
+
+
 def test_unknown_suite_rejected():
     with pytest.raises(ValueError):
         eh.load_suite("nope")
@@ -138,6 +235,12 @@ def test_run_suite_with_fake_runner(monkeypatch):
     def fake_run(cmd, timeout, env=None, stdin_path=None):
         seen["env"], seen["timeout"] = env, timeout
         seen["prompts"] = stdin_path.read_text(encoding="utf-8").splitlines()
+        monkeypatch.setenv("AETHER_CHAT_HISTORY_PATH", env["AETHER_CHAT_HISTORY_PATH"])
+        from core.chat_history import ChatSessionStore
+        isolated_store = ChatSessionStore()
+        assert isolated_store.active_messages == []
+        isolated_store.save_current([{"role": "user", "content": "temporary replay"}])
+        seen["chat_path"] = isolated_store.path
         output = (
             f"[Aether] >>> (2) timed out after 30s — continuing\n"
             f"[Aether] stdin closed — {len(cases)} line(s) sent.\n"
@@ -152,11 +255,68 @@ def test_run_suite_with_fake_runner(monkeypatch):
     ov = json.loads(seen["env"]["AETHER_EVAL_OVERRIDES"])
     assert ov["llm_model"] == "llama3.2:3b" and ov["llm_url"] == "http://10.0.0.5:11434"
     assert seen["env"]["AETHER_HEADLESS"] == "1" and seen["env"]["AETHER_SKIP_MAINTENANCE"] == "1"
+    assert seen["env"]["AETHER_CHAT_HISTORY_PATH"] == str(seen["chat_path"])
+    assert not seen["chat_path"].exists()
     assert seen["prompts"] == [c["prompt"] for c in cases] and seen["timeout"] == 30 * len(cases) + 120
     assert res["n"] == len(cases) and res["model"] == "llama3.2:3b"
     assert res["replay"] == {"lines_sent": len(cases), "timed_out_lines": [2]}
     assert "replay_prompt_timeouts" in {w["check"] for w in res["whole_run"]}
     assert "main.py replay" in eh.render_result(res)
+
+
+def test_run_suite_can_replay_selected_case_ids(monkeypatch):
+    from tools import verify_local as vl
+
+    class NoIso:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    seen = {}
+
+    def fake_run(cmd, timeout, env=None, stdin_path=None):
+        seen["prompts"] = stdin_path.read_text(encoding="utf-8").splitlines()
+        return 0, "[Aether] stdin closed — 1 line(s) sent.\n", "", 1.0
+
+    monkeypatch.setattr(vl, "_MemoryIsolation", NoIso)
+    monkeypatch.setattr(
+        live_grader, "load_turns",
+        lambda since, path=None: [_turn("Spell drawer backwards.", "reward")],
+    )
+    result = eh.run_suite(
+        "selected", "core", None, None, 30, runner=fake_run,
+        case_ids=["c_instr6"],
+    )
+    assert seen["prompts"] == ["Spell drawer backwards."]
+    assert [case["id"] for case in result["cases"]] == ["c_instr6"]
+    assert result["replay"]["lines_sent"] == 1
+    with pytest.raises(ValueError, match="unknown case id"):
+        eh.run_suite("bad-case", "core", None, None, 30, case_ids=["not-a-case"])
+
+
+def test_run_suite_can_disable_model_guidance_for_control(monkeypatch):
+    from tools import verify_local as vl
+
+    class NoIso:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    seen = {}
+
+    def fake_run(cmd, timeout, env=None, stdin_path=None):
+        seen["env"] = env
+        return 0, "", "", 1.0
+
+    monkeypatch.setattr(vl, "_MemoryIsolation", NoIso)
+    monkeypatch.setattr(
+        live_grader, "load_turns",
+        lambda since, path=None: [_turn("Spell drawer backwards.", "reward")],
+    )
+    eh.run_suite(
+        "control", "core", "qwen2.5:1.5b", None, 30,
+        runner=fake_run, case_ids=["c_instr6"], disable_model_guidance=True,
+    )
+
+    assert seen["env"]["AETHER_EVAL_DISABLE_MODEL_GUIDANCE"] == "1"
 
 
 def test_run_suite_refuses_when_model_missing(monkeypatch):
@@ -192,6 +352,17 @@ def test_override_hook_off_by_default(monkeypatch):
     monkeypatch.delenv("AETHER_EVAL_OVERRIDES", raising=False)
     cfg = {"llm_model": "big:8b"}
     assert lc._apply_eval_overrides(cfg) is cfg
+
+
+def test_model_prompt_guidance_can_be_disabled_only_for_evaluation(monkeypatch):
+    from core.prompt_builder import model_prompt_guidance
+
+    monkeypatch.setenv("AETHER_EVAL_DISABLE_MODEL_GUIDANCE", "1")
+    monkeypatch.delenv("AETHER_EVAL_OVERRIDES", raising=False)
+    assert model_prompt_guidance("qwen2.5:1.5b")
+
+    monkeypatch.setenv("AETHER_EVAL_OVERRIDES", '{"llm_model":"qwen2.5:1.5b"}')
+    assert model_prompt_guidance("qwen2.5:1.5b") == ""
 
 
 def test_list_survives_results_with_missing_metadata(tmp_path, monkeypatch, capsys):

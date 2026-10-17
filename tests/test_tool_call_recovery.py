@@ -38,6 +38,11 @@ def test_bare_and_fenced_json():
     assert _parse_tagged_tool_calls('Here is {"name": "a", "arguments": {}} ok') is None
 
 
+def test_json_data_with_name_field_is_not_recovered_as_tool_call():
+    assert _parse_tagged_tool_calls('{"name": "Sam", "age": 30}') is None
+    assert _parse_tagged_tool_calls('```json\n{"name": "Sam", "age": 30}\n```') is None
+
+
 def test_rejects_bad_json():
     assert _parse_tagged_tool_calls("Sure, I set the volume.") is None
     assert _parse_tagged_tool_calls('<tool_call>{not json}</tool_call>') is None

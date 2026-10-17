@@ -88,6 +88,14 @@ ElevenLabs requires an API key and a valid voice ID. Edge TTS is the default onl
 - **Speech synthesis:** Edge TTS and ElevenLabs contact their respective services. Kokoro is the offline option.
 - **Plugins and desktop actions:** Plugins execute as trusted Python code. Only enable plugins you have reviewed. Some desktop and file actions can make changes to your computer; approval gates apply to sensitive operations.
 
+Web search returns a concise answer with numbered, directly verifiable source links. Comparison results include links for each item, and multi-step research carries the pages used into its final source list.
+
+### Ask questions about your documents
+
+Use the chat to ask Aether to index a PDF, Markdown notes folder, or Obsidian vault, then ask questions about the indexed material. For example: “Index `C:\Notes\Obsidian`” and then “What did I write about local backups?” Answers from the built-in RAG engine include numbered source references with filenames and PDF page numbers when available. LlamaIndex retrieval answers include inline citations and a matching source list; summaries include their source list. Markdown files are supported without a separate Obsidian export.
+
+Create a portable bundle of chats, memory, indexed documents, goals, and non-secret settings with `python -m core.portable_bundle export [path.zip]`. Restore one with `python -m core.portable_bundle import path.zip`; importing replaces current data after saving a recovery bundle under `data/backups/`. Close Aether before either operation to keep the snapshot consistent and ensure restored files are not overwritten by in-memory state. API credentials are never included; configure them separately on the destination machine.
+
 ## Desktop controls
 
 The right side of the main window separates **Activity** from **Actions**. Quick actions provide common starting points; **Browse All Actions** searches the currently available tools. Availability depends on which integrations and dependencies are enabled.
@@ -131,13 +139,19 @@ For a server without a desktop display, set `AETHER_HEADLESS=1`. Headless mode s
 
 ## Evaluation and tests
 
-The fixed-prompt evaluation harness can replay the smoke suite, core suite, or both against an installed Ollama model. It temporarily isolates replay memory and writes results under `logs/eval/`.
+The fixed-prompt evaluation harness can replay the smoke suite, core suite, or both against an installed Ollama model. It temporarily isolates replay memory and redirects chat history to a disposable file, so existing memories and conversations neither affect nor receive benchmark turns. Results are written under `logs/eval/`.
 
 ```powershell
 python -m tools.eval_harness run --label qwen --suite all --model qwen2.5:7b
+python -m tools.eval_harness run --label qwen-format --suite core --case-id c_fmt1 --model qwen2.5:1.5b
+python -m tools.eval_harness run --label qwen-control --suite all --model qwen2.5:1.5b --disable-model-guidance
+python -m tools.eval_harness run-tools --label qwen-tools --model qwen2.5:7b
+python -m tools.eval_harness compare qwen-tools qwen-tools-candidate
 python -m tools.eval_harness list
 python -m tools.eval_harness show qwen
 ```
+
+`run-tools` sends eight prompts directly to Ollama with Aether's real everyday-routed tool schemas at temperature 0 for more repeatable comparisons. It records and grades the model's tool-call name and arguments but never executes a call, so the benchmark cannot launch apps, browse, or read/write files. Results are saved with the other evaluations and can be compared across models or schema revisions.
 
 Run the automated test suite with:
 

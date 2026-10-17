@@ -1,5 +1,5 @@
 {
-  "next_id": 103,
+  "next_id": 111,
   "entries": [
     {
       "id": 1,
@@ -1386,6 +1386,161 @@
         "ROADMAP.md"
       ],
       "next_steps": "Run calibrated evaluations on the intended quick/everyday/hard model combinations and tune tier assignments from measured latency and quality."
+    },
+    {
+      "id": 103,
+      "timestamp": "2026-10-17 18:51 UTC",
+      "by": "GitHub Copilot",
+      "summary": "Refined the Qwen 2.5 1.5B prompt profile with explicit target-language translation and literal spelling guidance. Focused routing/prompt tests passed (23); the isolated 83-case core evaluation scored 78/83 (94%), matching the saved baseline score while fixing some prior misses and exposing different instruction/reasoning misses. No tool schemas were changed because current evaluation cases do not exercise genuine model tool calls.",
+      "files": [
+        "core/prompt_builder.py",
+        "logs/eval/roadmap52-core-qwen15b.json",
+        "tools/maintenance/data/handoff.json",
+        "HANDOFF.md"
+      ],
+      "next_steps": "Continue roadmap #52: design a safe isolated benchmark that records actual model-issued tool calls without executing real-world actions, then use repeatable clean baseline/candidate runs to decide whether any per-model tool-schema change is justified. Keep #52 in progress until this evidence exists."
+    },
+    {
+      "id": 104,
+      "timestamp": "2026-10-17 19:58 UTC",
+      "by": "GitHub Copilot",
+      "summary": "Continued roadmap #52 with Qwen 2.5 1.5B prompt guidance and explicit no-tools routing for output-only requests. Added an eight-case Ollama tool-call evaluation using Aether's everyday-filtered schemas; calls are recorded and graded but never executed. Qwen scored 8/8 at temperature 0; the apparent volume action mismatch was an alias already accepted by computer_settings, so no schema edit was made. Full 107-case prompt-profile runs varied from 98 to 103/107 versus a saved 98/107 baseline, and recent p50 latency was 3.57-3.73s versus 1.48s in the saved run; empty JSON response exhaustion and other prompt misses remain, so #52 is still in progress. Added roadmap note editing via the maintenance CLI and updated #52 evidence.",
+      "files": [
+        "core/prompt_builder.py",
+        "core/tool_router.py",
+        "tools/eval_harness.py",
+        "tools/maintenance/roadmap.py",
+        "tests/eval_suite_tool_calls.json",
+        "tests/test_eval_harness.py",
+        "tests/test_routing_and_paths.py",
+        "tests/test_apply_roadmap.py",
+        "readme.md",
+        "tools/maintenance/data/roadmap.json",
+        "ROADMAP.md",
+        "tools/maintenance/data/handoff.json",
+        "HANDOFF.md"
+      ],
+      "next_steps": "Investigate why Qwen returns an empty reply to the JSON-only core case even with zero tools; then run repeated all-suite and tool-call benchmarks under controlled host load. Keep #52 in progress until prompt quality and latency changes are reproducible."
+    },
+    {
+      "id": 105,
+      "timestamp": "2026-10-17 20:04 UTC",
+      "by": "GitHub Copilot",
+      "summary": "Added --case-id replay filtering to the evaluation harness and tested Qwen 2.5 1.5B on the remaining JSON, reversal, and translation failures in isolation; it still returned the JSON exhaustion fallback, 'rstar', and 'Merci'. The no-tools route was confirmed for the JSON-only request. Eight direct model tool-call cases using Aether's routed schemas pass at temperature 0, with calls never executed. Full-suite results remain noisy (98-103/107 versus saved 98/107), and recent p50 latency is 3.57-3.73s versus 1.48s baseline, so #52 remains in progress and schemas remain unchanged. Focused tests pass (204).",
+      "files": [
+        "tools/eval_harness.py",
+        "tests/test_eval_harness.py",
+        "readme.md",
+        "tools/maintenance/data/roadmap.json",
+        "ROADMAP.md",
+        "tools/maintenance/data/handoff.json",
+        "HANDOFF.md"
+      ],
+      "next_steps": "Investigate the empty JSON-only Qwen response despite zero tools, and identify whether long system/history context or model streaming produces the empty round. Then repeat full and tool-call benchmarks on a controlled host; leave #52 in progress until quality and latency improvements are reproducible."
+    },
+    {
+      "id": 106,
+      "timestamp": "2026-10-17 20:13 UTC",
+      "by": "GitHub Copilot (Copilot CLI)",
+      "summary": "Fixed the JSON-only replay failure: the bare JSON tool-call recovery path treated any object with a top-level name field as a tool call, discarding valid {name, age} output as an unknown tool and exhausting the loop. Recovery now requires arguments/parameters, with regression tests. Isolated evaluation named-chat history through a temporary AETHER_CHAT_HISTORY_PATH so benchmarks no longer read or overwrite the user's saved transcript. In a clean main.py replay, c_fmt1 passed; the three-target run scored 2/3 (JSON and French translation passed, reverse spelling still failed). Focused 75 tests passed.",
+      "files": [
+        "core/conversation_core.py",
+        "core/chat_history.py",
+        "tools/eval_harness.py",
+        "tests/test_tool_call_recovery.py",
+        "tests/test_chat_history.py",
+        "tests/test_eval_harness.py",
+        "readme.md",
+        "tools/maintenance/data/roadmap.json",
+        "ROADMAP.md",
+        "tools/maintenance/data/handoff.json",
+        "HANDOFF.md"
+      ],
+      "next_steps": "Rerun the full Qwen 2.5 1.5B baseline and candidate suites with isolated chat history, then investigate c_instr6's unreliable reversal output; keep roadmap #52 in progress until results are comparable and stable."
+    },
+    {
+      "id": 107,
+      "timestamp": "2026-10-17 22:24 UTC",
+      "by": "GitHub Copilot (Copilot CLI)",
+      "summary": "Added a reproducible no-profile control flag to the evaluation harness and completed one isolated 107-case control/profile pair on Qwen 2.5 1.5B. Without model guidance: 94/107 (88%), p50 2.914s, p95 5.649s. With profile: 102/107 (95%), p50 2.981s, p95 6.226s; comparison lists 11 fixes (mostly personal-fact honesty) and 3 regressions (one latency threshold, two reasoning cases). A repeated 3-case reasoning subset scored 2/3 in both conditions and missed the same syllogism case, showing no repeatable reasoning improvement. Full profile run still misses reverse spelling and translation; clean JSON-only passes after the earlier parser fix. Direct safe tool-call suite previously passed 8/8, so schemas remain unchanged. Focused 77 tests passed.",
+      "files": [
+        "core/prompt_builder.py",
+        "tools/eval_harness.py",
+        "tests/test_eval_harness.py",
+        "readme.md",
+        "tools/maintenance/data/roadmap.json",
+        "ROADMAP.md",
+        "tools/maintenance/data/handoff.json",
+        "HANDOFF.md"
+      ],
+      "next_steps": "Repeat controlled Qwen full-suite runs with and without the profile to test whether the 8-case score difference is stable, especially the personal-fact gains and reasoning regressions. Keep #52 open and avoid tuning a single reversal example unless a general prompt proves reliable."
+    },
+    {
+      "id": 108,
+      "timestamp": "2026-10-17 22:38 UTC",
+      "by": "GitHub Copilot (Copilot CLI)",
+      "summary": "Completed roadmap #52 with repeated clean Qwen 2.5 1.5B evidence. Profile-enabled full suites scored 102/107 twice; matched no-guidance controls scored 94/107 and 89/107. Average improvement was 10.5 cases (9.8 percentage points), concentrated in personal-fact honesty (control 1/8 twice; profile 7/8 and 8/8). Mean p50 increased about 131 ms; p95 remains host-sensitive. The real non-executing schema benchmark scored 8/8, so tool schemas were not changed. Fixed the JSON-only failure by requiring arguments/parameters for recovered calls; isolated chat history for eval and added --disable-model-guidance to run controls. Reverse spelling/translation remain inconsistent, with no reliable prompt tweak found; documented as model limitations rather than overfitting. Focused 77 tests passed, changed Python files compile, and diff checks pass.",
+      "files": [
+        "core/conversation_core.py",
+        "core/chat_history.py",
+        "core/prompt_builder.py",
+        "core/tool_router.py",
+        "tools/eval_harness.py",
+        "tests/test_tool_call_recovery.py",
+        "tests/test_chat_history.py",
+        "tests/test_eval_harness.py",
+        "tests/test_routing_and_paths.py",
+        "readme.md",
+        "tests/eval_suite_tool_calls.json",
+        "tools/maintenance/data/roadmap.json",
+        "ROADMAP.md",
+        "tools/maintenance/data/handoff.json",
+        "HANDOFF.md"
+      ],
+      "next_steps": "Continue with the next roadmap item not yet done on origin/master; preserve the no-guidance benchmark control and isolated-chat evaluation behavior for future comparisons."
+    },
+    {
+      "id": 109,
+      "timestamp": "2026-10-17 22:42 UTC",
+      "by": "GitHub Copilot (Copilot CLI)",
+      "summary": "Completed roadmap #59: direct DuckDuckGo search and comparison now instruct summaries to use numbered citations and append exact source URLs; only HTTP(S) links are included, and no valid results produces an explicit message. Wired LangChain search to the same source-backed result formatting and collect/deduplicate those URLs into multi-step research final output. Updated web_search tool description and README. Added regression tests for direct search, comparison, no-result filtering, LangChain search, research source extraction, summary citation instructions, and tool description. 163 related tests passed; compile and diff checks passed. No live external search request was made.",
+      "files": [
+        "actions/web_search.py",
+        "integrations/langchain_tools.py",
+        "core/tool_declarations.py",
+        "tests/test_web_search.py",
+        "readme.md",
+        "tools/maintenance/data/roadmap.json",
+        "ROADMAP.md",
+        "tools/maintenance/data/handoff.json",
+        "HANDOFF.md"
+      ],
+      "next_steps": "Continue with the next actionable roadmap item not already completed on the current branch; check origin/master first and avoid duplicating completed items."
+    },
+    {
+      "id": 110,
+      "timestamp": "2026-10-17 22:55 UTC",
+      "by": "GitHub Copilot (Copilot CLI)",
+      "summary": "Completed roadmap #60 with source and PDF-page citations across basic RAG, PDF search, and LlamaIndex retrieval. Completed roadmap #45 with portable CLI export/import for chats, memory, goals, basic RAG and Chroma indexes, and non-secret settings; imports validate archives and write a recovery bundle. Focused suites passed (47 passed, 1 skipped), changed Python files compile, and diff checks pass. The broader critical suite has a repeatable unrelated TaskScheduler timing failure.",
+      "files": [
+        "actions/pdf_tools.py",
+        "memory/rag.py",
+        "integrations/llama_index_rag.py",
+        "core/tool_declarations.py",
+        "core/portable_bundle.py",
+        "core/config_io.py",
+        "tests/test_document_citations.py",
+        "tests/test_portable_bundle.py",
+        "readme.md",
+        "tools/maintenance/data/roadmap.json",
+        "ROADMAP.md",
+        "tools/maintenance/data/handoff.json",
+        "HANDOFF.md",
+        "PROJECT_STATE.md",
+        "HEALTH_REPORT.md",
+        "MAINTENANCE.md"
+      ],
+      "next_steps": "Continue with roadmap #61 (personal search across files, notes, and chats); it was confirmed backlog on origin/master. Check the current branch and origin/master before implementing."
     }
   ]
 }

@@ -23,6 +23,7 @@ Requires: pip install langchain langchain-community langchain-ollama duckduckgo-
 from __future__ import annotations
 
 import logging
+import re
 from functools import lru_cache
 from typing import Any
 
@@ -136,17 +137,44 @@ def _llm_from_config() -> Any:
 
 def lc_web_search(query: str, num_results: int = 5) -> str:
     """
-    DuckDuckGo web search via LangChain tool.
-    No API key required. Returns a clean text summary.
+    DuckDuckGo web search with numbered results and directly verifiable URLs.
     """
     try:
-        from langchain_community.tools import DuckDuckGoSearchRun
-        tool = DuckDuckGoSearchRun()
-        return tool.run(query)
+        from actions.web_search import (
+            _append_sources, _ddg_search, _format_ddg, _usable_results,
+        )
+        results = _usable_results(_ddg_search(query, max_results=num_results))
+        if not results:
+            return f"No web results found for: {query}"
+        formatted = _format_ddg(query, results, include_urls=False)
+        return _append_sources(formatted, results)
     except ImportError:
-        return _unavailable("tool", "langchain-community duckduckgo-search")
+        return _unavailable("tool", "duckduckgo-search")
     except Exception as e:
         return f"Web search error: {e}"
+
+
+def _research_source_rows(intermediate_steps) -> list[dict]:
+    """Collect and deduplicate URLs emitted by the research agent's search tool."""
+    rows = []
+    seen = set()
+    source_re = re.compile(r"^\[\d+\]\s+(.+?)\s+—\s+(https?://\S+)$")
+    for action, observation in intermediate_steps or []:
+        if getattr(action, "tool", "") != "web_search":
+            continue
+        in_sources = False
+        for line in str(observation).splitlines():
+            if line.strip() == "Sources:":
+                in_sources = True
+                continue
+            if not in_sources:
+                continue
+            match = source_re.match(line.strip())
+            if not match or match.group(2) in seen:
+                continue
+            seen.add(match.group(2))
+            rows.append({"title": match.group(1), "url": match.group(2)})
+    return rows
 
 
 # ── Wikipedia ─────────────────────────────────────────────────────────────
@@ -234,7 +262,8 @@ def lc_research_agent(task: str, extra_context: str = "") -> str:
     """
     try:
         AgentExecutor, create_react_agent, hub = _agent_imports()
-        from langchain_community.tools import DuckDuckGoSearchRun, WikipediaQueryRun
+        from langchain_core.tools import Tool
+        from langchain_community.tools import WikipediaQueryRun
         from langchain_community.utilities import WikipediaAPIWrapper
         PromptTemplate = _prompt_template_cls()
 
@@ -246,8 +275,14 @@ def lc_research_agent(task: str, extra_context: str = "") -> str:
         except Exception:
             _max_iter = 4
         tools = [
-            DuckDuckGoSearchRun(name="web_search",
-                                description="Search the web for current information"),
+            Tool(
+                name="web_search",
+                func=lc_web_search,
+                description=(
+                    "Search the web. Returns numbered titles, snippets, and source URLs. "
+                    "Use those exact sources in the final answer; do not invent citations."
+                ),
+            ),
             WikipediaQueryRun(
                 name="wikipedia",
                 description="Look up factual information on Wikipedia",
@@ -277,11 +312,16 @@ def lc_research_agent(task: str, extra_context: str = "") -> str:
         executor = AgentExecutor(
             agent=agent, tools=tools,
             max_iterations=_max_iter, verbose=False,
-            handle_parsing_errors=True,
+            handle_parsing_errors=True, return_intermediate_steps=True,
         )
         full_task = f"{extra_context}\n\n{task}".strip() if extra_context else task
         result    = executor.invoke({"input": full_task})
-        return result.get("output", str(result))
+        output = result.get("output", str(result))
+        source_rows = _research_source_rows(result.get("intermediate_steps", []))
+        if source_rows:
+            from actions.web_search import _append_sources
+            output = _append_sources(output, source_rows)
+        return output
 
     except ImportError as e:
         logger.warning("LangChain research agent unavailable: %s", e)

@@ -145,9 +145,13 @@ _VOLUME_ALIASES = {"set_volume", "volume_control", "volume", "change_volume",
 
 
 def _call_from_obj(obj) -> tuple[str, dict] | None:
-    if not isinstance(obj, dict) or not isinstance(obj.get("name"), str):
+    if (
+        not isinstance(obj, dict)
+        or not isinstance(obj.get("name"), str)
+        or not ("arguments" in obj or "parameters" in obj)
+    ):
         return None
-    args = obj.get("arguments", obj.get("parameters", {}))
+    args = obj.get("arguments", obj.get("parameters"))
     if isinstance(args, str):
         try:
             args = json.loads(args)
@@ -224,7 +228,8 @@ class ConversationCoreMixin:
     """
 
     def _prepare_conversation_messages(self, user_text: str, light: bool = False, tools: list | None = None,
-                                       history_budget: int | None = None):
+                                       history_budget: int | None = None,
+                                       model_name: str = ""):
         """Log the incoming message, store it to memory, trim history, and
         build the compressed message list to send to the LLM.
 
@@ -272,7 +277,12 @@ class ConversationCoreMixin:
             self._conversation = trimmed
 
         messages = [
-            {"role": "system", "content": self._build_system_prompt(user_text, light=light)}
+            {
+                "role": "system",
+                "content": self._build_system_prompt(
+                    user_text, light=light, model_name=model_name
+                ),
+            }
         ] + list(self._conversation)
 
         # ── NEW: compress context to fit token window ─────────────────
@@ -531,11 +541,14 @@ class ConversationCoreMixin:
         # checks the selected local/remote host and falls back to its configured
         # default model if the requested tag is absent or the host cannot be
         # checked. Hosted and OpenAI-compatible providers keep their own routing.
+        _prompt_model = ""
         if not _stream_kwargs:
             (_local_route, _tier_status, _tier_model, _requested_model) = (
                 _local_tier_stream_route(_route.tier, _primary_provider)
             )
             _stream_kwargs.update(_local_route)
+            if _primary_provider == "ollama":
+                _prompt_model = _tier_model
             if _tier_status == "configured":
                 self.ui.write_log(
                     f"SYS: using {_route.tier.value} tier model {_tier_model}"
@@ -545,6 +558,8 @@ class ConversationCoreMixin:
                     f"WRN: {_route.tier.value} tier model {_requested_model} "
                     f"is {_tier_status}; using configured model {_tier_model}"
                 )
+        elif _stream_kwargs.get("provider_override") == "ollama":
+            _prompt_model = _stream_kwargs.get("model_override", "")
 
         # Tool exposure scales with tier: QUICK gets none (see above),
         # EVERYDAY gets only the category-relevant subset (core/tool_router)
@@ -559,6 +574,7 @@ class ConversationCoreMixin:
             _turn_tools = _filter_tools_for_turn(self._tools_for_current_turn(), user_text)
         messages, _active_mem = self._prepare_conversation_messages(
             user_text, light=_is_quick, tools=_turn_tools,
+            model_name=_prompt_model,
             history_budget=(_CLOUD_HISTORY_BUDGET
                             if _stream_kwargs or _primary_provider in ("gemini", "openai_api")
                             else None),
@@ -738,7 +754,10 @@ class ConversationCoreMixin:
                         final_content = ""
                 if (not _tagged and final_content and
                         ("<tool_call" in final_content or
-                         (final_content.lstrip().startswith(("{", "```")) and '"name"' in final_content))):
+                         (final_content.lstrip().startswith(("{", "```"))
+                          and '"name"' in final_content
+                          and ('"arguments"' in final_content or
+                               '"parameters"' in final_content)))):
                     self.ui.write_log(
                         "WRN: reply looks like a tool call but could not be parsed: "
                         + final_content[:200].replace("\n", " ")

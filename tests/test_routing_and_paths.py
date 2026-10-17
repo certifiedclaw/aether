@@ -110,11 +110,54 @@ def test_stream_tier_routing_only_overrides_ollama_models(monkeypatch):
     )
 
 
+def test_qwen_15b_prompt_guidance_targets_benchmark_failures(monkeypatch):
+    import sys
+    from types import ModuleType
+
+    from core.prompt_builder import model_prompt_guidance
+    from core.prompt_builder import PromptBuilderMixin
+
+    guidance = model_prompt_guidance("qwen2.5:1.5b")
+    assert "exact output constraints" in guidance
+    assert "check each premise" in guidance.lower()
+    assert "translate the exact word" in guidance.lower()
+    assert "without tools" in guidance
+    assert "never invent" in guidance.lower()
+    assert model_prompt_guidance("qwen2.5:1.5b-instruct-q4_K_M") == guidance
+    assert model_prompt_guidance("qwen2.5:7b") == ""
+    assert model_prompt_guidance("qwen3:8b") == ""
+    assert model_prompt_guidance("") == ""
+
+    main = ModuleType("main")
+    main._load_system_prompt = lambda: "base prompt"
+    main.load_memory = lambda: {}
+    main._LANGCHAIN_OK = main._OI_OK = main._LLAMA_OK = False
+    monkeypatch.setitem(sys.modules, "main", main)
+
+    class PromptBuilder(PromptBuilderMixin):
+        _hybrid_mem = _semantic_mem = _goals = _mcp = _plugins = None
+
+    builder = PromptBuilder()
+    tuned = builder._build_system_prompt(model_name="qwen2.5:1.5b")
+    untuned = builder._build_system_prompt(model_name="qwen2.5:7b")
+    assert guidance in tuned
+    assert guidance not in untuned
+
+
 def test_tool_router_selects_right_tools():
     assert "computer_settings" in tool_router.select_tool_names("Turn the volume down a little.")
     assert "file_controller" in tool_router.select_tool_names("List the files on my desktop.")
     both = tool_router.select_tool_names("Turn the volume down a little, then tell me the weather in London.")
     assert {"computer_settings", "weather_report"} <= both
+
+
+def test_explicit_output_only_requests_do_not_get_action_tools():
+    prompt = "Write a JSON object with keys name and age. Output only JSON."
+    assert tool_router.select_tool_names(prompt) == set()
+    assert tool_router.select_tool_names_hard(prompt) == set()
+
+    prompt_with_action = "Output only JSON and search the web for Python 3.14."
+    assert "web_search" in tool_router.select_tool_names(prompt_with_action)
 
 
 def test_known_folder_none_off_windows():
