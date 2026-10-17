@@ -28,6 +28,88 @@ def test_greeting_pattern_still_quick():
     assert tier_router.classify("Hello.").tier == tier_router.Tier.QUICK
 
 
+def test_tier_model_uses_installed_configured_tag_and_selected_host(monkeypatch):
+    from core import llm_client
+
+    monkeypatch.setattr(llm_client, "_ollama_models_cache", {})
+    monkeypatch.setattr(llm_client, "_load_config", lambda: {
+        "llm_quick_model": "qwen2.5:1.5b",
+    })
+    monkeypatch.setattr(
+        llm_client, "get_llm_settings",
+        lambda: ("http://gpu-box:11434", "qwen2.5:7b"),
+    )
+    response = mock.Mock(status_code=200)
+    response.json.return_value = {"models": [{"name": "qwen2.5:1.5b"}]}
+    request = mock.Mock(return_value=response)
+    monkeypatch.setattr(llm_client.requests, "get", request)
+
+    assert llm_client.get_tier_model_settings("quick") == (
+        "http://gpu-box:11434", "qwen2.5:1.5b", "configured", "qwen2.5:1.5b",
+    )
+    request.assert_called_once_with("http://gpu-box:11434/api/tags", timeout=2.5)
+
+
+def test_tier_model_missing_tag_falls_back_to_selected_default(monkeypatch):
+    from core import llm_client
+
+    monkeypatch.setattr(llm_client, "_ollama_models_cache", {})
+    monkeypatch.setattr(llm_client, "_load_config", lambda: {
+        "llm_hard_model": "qwen3:14b",
+    })
+    monkeypatch.setattr(
+        llm_client, "get_llm_settings",
+        lambda: ("http://localhost:11434", "qwen2.5:7b"),
+    )
+    response = mock.Mock(status_code=200)
+    response.json.return_value = {"models": [{"name": "qwen2.5:7b"}]}
+    monkeypatch.setattr(llm_client.requests, "get", mock.Mock(return_value=response))
+
+    assert llm_client.get_tier_model_settings("hard") == (
+        "http://localhost:11434", "qwen2.5:7b", "missing", "qwen3:14b",
+    )
+
+
+def test_tier_model_unavailable_check_falls_back_and_is_cached(monkeypatch):
+    from core import llm_client
+
+    monkeypatch.setattr(llm_client, "_ollama_models_cache", {})
+    monkeypatch.setattr(llm_client, "_load_config", lambda: {
+        "llm_everyday_model": "llama3.2:3b",
+    })
+    monkeypatch.setattr(
+        llm_client, "get_llm_settings",
+        lambda: ("http://remote:11434", "qwen2.5:7b"),
+    )
+    request = mock.Mock(side_effect=llm_client.requests.ConnectionError("offline"))
+    monkeypatch.setattr(llm_client.requests, "get", request)
+
+    expected = ("http://remote:11434", "qwen2.5:7b", "unavailable", "llama3.2:3b")
+    assert llm_client.get_tier_model_settings("everyday") == expected
+    assert llm_client.get_tier_model_settings("everyday") == expected
+    request.assert_called_once()
+
+
+def test_stream_tier_routing_only_overrides_ollama_models(monkeypatch):
+    from core import conversation_core as cc
+
+    monkeypatch.setattr(
+        cc, "get_tier_model_settings",
+        lambda tier: ("http://localhost:11434", "qwen2.5:1.5b", "configured", "qwen2.5:1.5b"),
+    )
+    assert cc._local_tier_stream_route(tier_router.Tier.QUICK, "ollama") == (
+        {
+            "provider_override": "ollama",
+            "url_override": "http://localhost:11434",
+            "model_override": "qwen2.5:1.5b",
+        },
+        "configured", "qwen2.5:1.5b", "qwen2.5:1.5b",
+    )
+    assert cc._local_tier_stream_route(tier_router.Tier.QUICK, "gemini") == (
+        {}, "default", "", "",
+    )
+
+
 def test_tool_router_selects_right_tools():
     assert "computer_settings" in tool_router.select_tool_names("Turn the volume down a little.")
     assert "file_controller" in tool_router.select_tool_names("List the files on my desktop.")

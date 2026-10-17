@@ -455,8 +455,8 @@
       "id": 51,
       "title": "[F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones",
       "priority": "high",
-      "status": "backlog",
-      "notes": "Partial implementation already exists: core/tier_router.py classifies QUICK/EVERYDAY/HARD, and conversation_core.py uses QUICK to skip tools/context and can escalate HARD turns to Gemini. It does not currently pass local tier model choices into call_llm_stream; `_route.model` is not applied, so local turns still use the configured model. Complete this item by adding safe, configurable local/remote per-tier selection with fallback when a configured model is unavailable, guided by #39 baselines.",
+      "status": "done",
+      "notes": "Completed: optional llm_quick_model, llm_everyday_model and llm_hard_model select per-tier models for Ollama conversations. Aether checks the currently selected Ollama host (including remote/local fallback); a missing or uncheckable tag falls back to that host's configured default and is logged. Gemini HARD escalation and opted-in Gemini tool routing retain precedence; OpenAI-compatible providers are unchanged. See core/llm_client.py, core/conversation_core.py and config/config.example.json.",
       "created": "2026-10-14",
       "updated": "2026-10-17"
     },

@@ -67,6 +67,8 @@ At first launch, Aether opens its setup screen. Choose the speech recognition, m
 
 Use **Configure** in the desktop UI to change providers and settings without manually editing JSON. Configuration is stored in `config/api_keys.json`; `config/config.example.json` documents the available settings. Keep real credentials out of source control and shared archives.
 
+For Ollama, you can optionally set `llm_quick_model`, `llm_everyday_model`, and `llm_hard_model` in `config/api_keys.json` to use different installed models for different kinds of turns. Leave a value blank to use your normal configured model. If a selected model is not installed or Ollama cannot be checked, Aether falls back to the configured model and reports that in Activity. These tier settings do not override hosted providers; when Gemini escalation is enabled for a HARD turn, that existing cloud route takes precedence.
+
 API keys can be supplied through environment variables, the operating system keyring, or the local configuration file. The environment/keyring options are preferable for secrets. The optional helper supports checking secret sources, storing keys in the keyring, and migrating keys:
 
 ```powershell

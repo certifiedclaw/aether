@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap add/start/done`.
 
-Generated: 2026-10-17 03:03 UTC
+Generated: 2026-10-17 18:31 UTC
 
 ## In progress
 
@@ -15,8 +15,6 @@ Generated: 2026-10-17 03:03 UTC
 
 - [ ] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option `high`
   - Repository protections already implemented: config/api_keys.json is ignored, example templates are present, and credentials resolve environment -> OS keyring -> local file with a migration CLI. Confirmed the config file is not tracked in this Git history. Previously shared full-folder archives are outside this checkout; the owner still needs to check/remove any such archives and rotate keys if one contained them.
-- [ ] **#51** [F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones `high`
-  - Partial implementation already exists: core/tier_router.py classifies QUICK/EVERYDAY/HARD, and conversation_core.py uses QUICK to skip tools/context and can escalate HARD turns to Gemini. It does not currently pass local tier model choices into call_llm_stream; `_route.model` is not applied, so local turns still use the configured model. Complete this item by adding safe, configurable local/remote per-tier selection with fallback when a configured model is unavailable, guided by #39 baselines.
 - [ ] **#52** [F1] Prompt and tool-schema tuning per model, driven by benchmark results `high`
   - ~500 lines.
 - [ ] **#59** [F2] Web search with sources `high`
@@ -159,3 +157,5 @@ Generated: 2026-10-17 03:03 UTC
 - [x] **#44** [F0] Audit log viewer: searchable timeline of every tool call and approval
 - [x] **#46** [F0] Resource governor: pause heavy jobs when other containers (Palworld) need CPU/RAM
 - [x] **#47** [F0] Cost and speed dashboard: tokens/s, memory use, latency per model
+- [x] **#51** [F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones
+  - Completed: optional llm_quick_model, llm_everyday_model and llm_hard_model select per-tier models for Ollama conversations. Aether checks the currently selected Ollama host (including remote/local fallback); a missing or uncheckable tag falls back to that host's configured default and is logged. Gemini HARD escalation and opted-in Gemini tool routing retain precedence; OpenAI-compatible providers are unchanged. See core/llm_client.py, core/conversation_core.py and config/config.example.json.

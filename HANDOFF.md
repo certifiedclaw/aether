@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-17 18:25 UTC
+Generated: 2026-10-17 18:31 UTC
+
+## #102 — 2026-10-17 18:31 UTC — GitHub Copilot (Copilot CLI)
+
+Completed roadmap #51 with optional per-tier Ollama model settings for QUICK, EVERYDAY and local HARD turns. The active local/remote Ollama host is checked for the configured tag; missing or unavailable tags fall back to the endpoint's configured default with a visible warning. Gemini HARD escalation and opted-in cloud tool routing retain precedence; OpenAI-compatible providers are unchanged. Added resolver/cache/routing and eval-override coverage; 132 targeted tests pass.
+
+**Touched:** `core/llm_client.py`, `core/conversation_core.py`, `config/config.example.json`, `readme.md`, `tests/test_routing_and_paths.py`, `tests/test_eval_harness.py`, `tools/maintenance/data/roadmap.json`, `ROADMAP.md`
+
+**Next steps:** Run calibrated evaluations on the intended quick/everyday/hard model combinations and tune tier assignments from measured latency and quality.
+
+---
 
 ## #101 — 2026-10-17 18:25 UTC — GitHub Copilot (Copilot CLI)
 

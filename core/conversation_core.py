@@ -68,10 +68,24 @@ from core.llm_client import (
     GEMINI_BASE_URL,
     get_context_window,
     get_llm_settings,
+    get_tier_model_settings,
 )
 from core import degrade as _degrade
 
 logger = logging.getLogger("aether")
+
+
+def _local_tier_stream_route(tier: _Tier, provider: str) -> tuple[dict, str, str, str]:
+    if provider != "ollama":
+        return {}, "default", "", ""
+    url, model, status, requested = get_tier_model_settings(tier.value)
+    if status == "default":
+        return {}, status, model, requested
+    return {
+        "provider_override": "ollama",
+        "url_override": url,
+        "model_override": model,
+    }, status, model, requested
 
 
 def _load_cfg_for_degrade() -> dict:
@@ -512,6 +526,25 @@ class ConversationCoreMixin:
                     "model_override":    _gem_model2,
                 }
                 self.ui.write_log("SYS: tool turn routed to Gemini (cloud, opt-in gemini_for_tools)")
+
+        # Optional tier-specific models are supported for Ollama. The resolver
+        # checks the selected local/remote host and falls back to its configured
+        # default model if the requested tag is absent or the host cannot be
+        # checked. Hosted and OpenAI-compatible providers keep their own routing.
+        if not _stream_kwargs:
+            (_local_route, _tier_status, _tier_model, _requested_model) = (
+                _local_tier_stream_route(_route.tier, _primary_provider)
+            )
+            _stream_kwargs.update(_local_route)
+            if _tier_status == "configured":
+                self.ui.write_log(
+                    f"SYS: using {_route.tier.value} tier model {_tier_model}"
+                )
+            elif _tier_status in ("missing", "unavailable"):
+                self.ui.write_log(
+                    f"WRN: {_route.tier.value} tier model {_requested_model} "
+                    f"is {_tier_status}; using configured model {_tier_model}"
+                )
 
         # Tool exposure scales with tier: QUICK gets none (see above),
         # EVERYDAY gets only the category-relevant subset (core/tool_router)

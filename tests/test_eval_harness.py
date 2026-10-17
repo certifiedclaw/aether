@@ -169,10 +169,12 @@ def test_run_suite_refuses_when_model_missing(monkeypatch):
 def test_override_hook_applies_only_allowlisted_string_keys(monkeypatch):
     from core import llm_client as lc
     monkeypatch.setenv("AETHER_EVAL_OVERRIDES", json.dumps(
-        {"llm_model": "tiny:1b", "gemini_api_key": "STOLEN", "llm_url": 5, "llm_provider": "ollama"}))
+        {"llm_model": "tiny:1b", "llm_quick_model": "tiny:1b",
+         "gemini_api_key": "STOLEN", "llm_url": 5, "llm_provider": "ollama"}))
     base = {"llm_model": "big:8b", "gemini_api_key": "real"}
     out = lc._apply_eval_overrides(base)
     assert out["llm_model"] == "tiny:1b" and out["llm_provider"] == "ollama"
+    assert out["llm_quick_model"] == "tiny:1b"
     assert out["gemini_api_key"] == "real" and "llm_url" not in out    # secrets and non-strings ignored
     assert base["llm_model"] == "big:8b"                               # input (the file cache) untouched
 
