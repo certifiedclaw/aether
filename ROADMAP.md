@@ -1,39 +1,20 @@
 # Aether — Roadmap
 
-> **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap add/start/done`.
+> **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-14 01:15 UTC
+Generated: 2026-10-17 22:55 UTC
 
 ## In progress
 
 - [ ] **#10** Finish the except-pass sweep across actions/ (~90 blocks unreviewed) `low`
   - Handoff #15's sweep covered core/, security/, agent/, dashboard/server.py, main.py, core/llm_client.py (~20 of 111 bare except-pass blocks). This session covered the 62 pass-only (zero-logging, highest-risk shape) blocks specifically in actions/ -- reviewed all of them; found one dead-code path (see #16) but no active silently-broken call like the 3 prior real bugs. Still unreviewed: the ~235 'except Exception as e: log...' blocks across the whole codebase (lower risk shape since they at least log, but not zero -- worth a pass if time allows) and actions/'s non-pass-only except blocks.
-- [ ] **#39** [F0] Evaluation harness: 100+ fixed prompts, scored after every change `high`
-  - Foundation. Also the benchmark for choosing the iansserver model.
+- [ ] **#88** [F0] Deploy Aether always-on on iansserver (Docker, headless, small CPU model, PC GPU as optional boost) `high`
+  - HP ProDesk 600 G4 (i5-8500, 32GB, HDD; NVMe planned). Docker + headless Aether + Ollama, behind Tailscale/Authelia. Needs free -h / ollama list output from the server.
 
 ## Backlog
 
 - [ ] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option `high`
-  - Live Gemini key is inside full-folder zips. Verify git history never contained it; rotate if it did.
-- [ ] **#41** [F0] API server: OpenAI-compatible endpoint so other tools can use Aether's models and memory `high`
-  - Lets Orrery, Obsidian organizer, gamepanel share Aether.
-- [ ] **#42** [F0] Graceful degradation: clear messages and automatic fallback when Ollama/model/PC/network is down `high`
-- [ ] **#43** [F0] Data-leak guard: never send secrets, memory or files to any cloud model `high`
-  - Needed before any cloud backend is enabled.
-- [ ] **#51** [F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones `high`
-  - ~800 lines. Depends on F0 eval harness.
-- [ ] **#52** [F1] Prompt and tool-schema tuning per model, driven by benchmark results `high`
-  - ~500 lines.
-- [ ] **#59** [F2] Web search with sources `high`
-  - ~600 lines.
-- [ ] **#60** [F2] Document Q&A over PDFs, notes, Obsidian, with citations `high`
-- [ ] **#88** [F0] Deploy Aether always-on on iansserver (Docker, headless, small CPU model, PC GPU as optional boost) `high`
-  - HP ProDesk 600 G4 (i5-8500, 32GB, HDD; NVMe planned). Docker + headless Aether + Ollama, behind Tailscale/Authelia. Needs free -h / ollama list output from the server.
-- [ ] **#44** [F0] Audit log viewer: searchable timeline of every tool call and approval `medium`
-- [ ] **#45** [F0] Export and import everything (chats, memory, settings) as one portable bundle `medium`
-  - Needed to move to iansserver.
-- [ ] **#46** [F0] Resource governor: pause heavy jobs when other containers (Palworld) need CPU/RAM `medium`
-- [ ] **#47** [F0] Cost and speed dashboard: tokens/s, memory use, latency per model `medium`
+  - Repository protections already implemented: config/api_keys.json is ignored, example templates are present, and credentials resolve environment -> OS keyring -> local file with a migration CLI. Confirmed the config file is not tracked in this Git history. Previously shared full-folder archives are outside this checkout; the owner still needs to check/remove any such archives and rotate keys if one contained them.
 - [ ] **#48** [F0] Auto-update with rollback: pull, run tests, roll back on failure `medium`
 - [ ] **#53** [F1] Self-check pass: model re-reads its answer for obvious mistakes `medium`
   - ~300 lines.
@@ -101,6 +82,8 @@ Generated: 2026-10-14 01:15 UTC
 - [ ] **#86** [F4] Gaming helper (patch notes, mod updates, library summary) `low`
   - Builds on game_updater.
 - [ ] **#87** [F4] Learning tutor: quizzes from your own notes `low`
+- [ ] **#89** [F2] API server: optional memory-aware mode (read-only recall) and per-client tokens with usage logging `low`
+  - #41 shipped model-only access. Memory/tools deliberately not exposed; add only with per-client scopes.
 
 ## Done
 
@@ -155,5 +138,25 @@ Generated: 2026-10-14 01:15 UTC
 - [x] **#37** run_python is not a sandbox: decide keep (ASK + full-code dialog + scrubbed env, as of v12g) or replace with a real isolation layer
   - v12g: same interpreter, -I, scratch cwd, secret env stripped, timeout clamped 1-60s, dialog shows whole code. Still runs as the user.
 - [x] **#38** Dashboard still binds 0.0.0.0 over plain HTTP by default; add LAN-only/bind option and prefer HTTPS
+- [x] **#39** [F0] Evaluation harness: 100+ fixed prompts, scored after every change
+  - Completed and calibrated through Aether main.py: 107 prompts (83 core + 24 smoke); qwen2.5:1.5b scored 98/107 (92%), p50 1.48s, p95 4.39s, with all 107 inputs delivered and no driver timeouts. The remaining failures and one exhausted tool loop are model/product findings, not evaluation-harness failures. The machine-specific result is saved locally in logs/eval/roadmap-all-qwen15b.json.
 - [x] **#40** [F0] Self-diagnosis command (/doctor): models, disk, permissions, config; auto-fix what it can
   - Seed: tools/verify_local.py.
+- [x] **#41** [F0] API server: OpenAI-compatible endpoint so other tools can use Aether's models and memory
+  - Lets Orrery, Obsidian organizer, gamepanel share Aether.
+- [x] **#42** [F0] Graceful degradation: clear messages and automatic fallback when Ollama/model/PC/network is down
+- [x] **#43** [F0] Data-leak guard: never send secrets, memory or files to any cloud model
+  - Needed before any cloud backend is enabled.
+- [x] **#44** [F0] Audit log viewer: searchable timeline of every tool call and approval
+- [x] **#45** [F0] Export and import everything (chats, memory, settings) as one portable bundle
+  - Implemented portable ZIP export/import for named chats, long-term memory, SQLite memory, goals, basic RAG index, Chroma/LlamaIndex index, and non-secret settings. Import validates the manifest, archive size, member paths, JSON, and SQLite integrity; rejects symlinks/traversal; replaces non-secret settings while preserving destination credentials; and writes a recovery bundle before replacement. CLI usage and close-app requirement are documented in README. Round-trip and safety tests pass; 47 focused tests passed (1 skipped), changed Python files compile, diff check passes. Verified #45 was backlog on origin/master before starting.
+- [x] **#46** [F0] Resource governor: pause heavy jobs when other containers (Palworld) need CPU/RAM
+- [x] **#47** [F0] Cost and speed dashboard: tokens/s, memory use, latency per model
+- [x] **#51** [F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones
+  - Completed: optional llm_quick_model, llm_everyday_model and llm_hard_model select per-tier models for Ollama conversations. Aether checks the currently selected Ollama host (including remote/local fallback); a missing or uncheckable tag falls back to that host's configured default and is logged. Gemini HARD escalation and opted-in Gemini tool routing retain precedence; OpenAI-compatible providers are unchanged. See core/llm_client.py, core/conversation_core.py and config/config.example.json.
+- [x] **#52** [F1] Prompt and tool-schema tuning per model, driven by benchmark results
+  - Completed Qwen 2.5 1.5B prompt/schema tuning with repeat isolated full-suite evidence and a safe model tool-call benchmark. Two profile-enabled runs scored 102/107 both times (95%); the matched no-guidance controls scored 94/107 and 89/107 (88% and 83%), an average gain of 10.5 cases / 9.8 percentage points. Personal-fact honesty rose from 1/8 in both controls to 7/8 and 8/8 with the profile. Average p50 was 3.10s with profile vs 2.97s without (+131ms); p95 varied and remains host-sensitive. Improvements are concentrated in honesty, with some per-case variation in reasoning/instruction; reversal and translation are not consistently solved. The actual tool-call suite scored 8/8; no schema change was warranted. JSON-only output now passes after fixing bare JSON misclassification in tool-call recovery. Evaluation CLI supports --disable-model-guidance for repeatable control runs and isolates chat history. Remaining weak cases are model capability limits, not evidence for further prompt/schema edits in this item.
+- [x] **#59** [F2] Web search with sources
+  - Implemented source-backed web search across Aether direct search, comparison, LangChain search, and multi-step LangChain research. Search summaries are instructed to cite supplied numbered results and now always include a deterministic Sources list with verified HTTP(S) URLs; results without valid links are excluded, and an empty usable set returns an explicit no-results message. Comparison sources are collected per item, and research carries deduplicated pages from its web-search observations into the final answer. Updated the tool description and README. Mocked regression coverage passed (163 related tests); Python compilation and diff checks pass. No live DuckDuckGo request was made during verification.
+- [x] **#60** [F2] Document Q&A over PDFs, notes, Obsidian, with citations
+  - Completed source-cited document Q&A for PDFs, Markdown, and Obsidian folders. Basic RAG keeps PDF page boundaries, cites filenames/pages in prompts and replies, and PDF search returns page-numbered excerpts with blank/no-match handling. LlamaIndex vector/sub-query modes use CitationQueryEngine for inline references with a matching source list; summary results list source metadata. Added usage documentation and mocked regression tests; 31 focused tests passed (1 skipped), changed Python files compile, and git diff --check passes. The broader critical suite also exposed a repeatable unrelated TaskScheduler timing failure; scheduler code was not changed.

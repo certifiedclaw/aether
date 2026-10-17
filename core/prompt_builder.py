@@ -26,8 +26,37 @@ tool_dispatch.py.
 """
 
 from datetime import datetime
+import os
 
 from memory.memory_manager import format_memory_for_prompt
+
+
+def model_prompt_guidance(model_name: str) -> str:
+    """Small benchmark-driven prompt addition for the calibrated Qwen 1.5B."""
+    if (
+        os.environ.get("AETHER_EVAL_DISABLE_MODEL_GUIDANCE") == "1"
+        and os.environ.get("AETHER_EVAL_OVERRIDES")
+    ):
+        return ""
+    normalized = (model_name or "").strip().lower()
+    family, separator, tag = normalized.partition(":")
+    if family != "qwen2.5" or not separator or not tag.startswith("1.5b"):
+        return ""
+    return (
+        "[QWEN 2.5 1.5B RESPONSE GUIDANCE]\n"
+        "Follow exact output constraints: requested case, word count, and "
+        "JSON-only formats. For translation, translate the exact word into "
+        "the requested language; do not substitute a related response. To "
+        "spell a word backwards, copy every letter once from last to first, "
+        "then verify by reversing the result. Answer the requested attribute, "
+        "not a related object (a "
+        "color question needs a color); calculate totals when asked. Check "
+        "each premise before drawing a logic conclusion. For personal facts, "
+        "use only this conversation or supplied memory; if absent, say you "
+        "do not know. Never invent them. For text-only, translation, math, "
+        "or formatting requests, answer directly without tools; use tools "
+        "only for requested actions or retrieval."
+    )
 
 
 class PromptBuilderMixin:
@@ -36,9 +65,12 @@ class PromptBuilderMixin:
     Mixed into AetherLocal — see module docstring above.
     """
 
-    def _build_system_prompt(self, user_text: str = "", light: bool = False) -> str:
+    def _build_system_prompt(
+        self, user_text: str = "", light: bool = False, model_name: str = ""
+    ) -> str:
         """Build the system prompt.
 
+        `model_name` adds only benchmark-backed guidance for that model.
         `light=True` skips the expensive/verbose additions (memory-engine
         retrieval, active goals, MCP/plugin/integration inventories) for
         turns classified as trivial small talk by tier_router — those turns
@@ -56,6 +88,9 @@ class PromptBuilderMixin:
             f"Use this to calculate exact times for reminders."
         )
         parts = [sys_p]
+        model_guidance = model_prompt_guidance(model_name)
+        if model_guidance:
+            parts.append(model_guidance)
         if mem_str:
             parts.append(mem_str)
 

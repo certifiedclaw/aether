@@ -63,10 +63,22 @@ def merge_for_save(existing: dict, new: dict) -> dict:
     return merged
 
 
-def save_config(path: Path, new: dict, indent: int = 4) -> dict:
-    """Merge `new` into the config file at `path`, atomically. Returns what was written."""
+def save_config(path: Path, new: dict, indent: int = 4, replace: bool = False) -> dict:
+    """Save config atomically; merge by default, or replace non-secret settings."""
     path = Path(path)
-    merged = merge_for_save(_read_existing(path), new)
+    existing = _read_existing(path)
+    if replace:
+        merged = dict(new)
+        secret_updates = {
+            name: new[name] for name in credentials.SECRET_NAMES if name in new
+        }
+        for name in credentials.SECRET_NAMES:
+            if name not in merged and name in existing:
+                merged[name] = existing[name]
+        if secret_updates:
+            merged.update(merge_for_save({}, secret_updates))
+    else:
+        merged = merge_for_save(existing, new)
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists() and not _is_valid_object(path):
         try:   # keep what we cannot parse: it may hold settings worth recovering by hand

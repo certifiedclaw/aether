@@ -115,3 +115,12 @@ def test_new_chat_auto_titles_from_first_user_message(tmp_path):
     store.save_current([{"role": "user", "content": "  Explain   local chat sessions  "}])
 
     assert store.active_title == "Explain local chat sessions"
+
+
+def test_history_path_can_be_overridden_for_isolated_runs(tmp_path, monkeypatch):
+    from core.chat_history import history_path
+
+    isolated_path = tmp_path / "isolated" / "chat_history.json"
+    monkeypatch.setenv("AETHER_CHAT_HISTORY_PATH", str(isolated_path))
+
+    assert history_path() == isolated_path

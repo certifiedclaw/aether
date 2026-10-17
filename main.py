@@ -405,6 +405,8 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
 
         self.ui.on_text_command = self._on_text_command
         self.ui.on_stop_command = self._stop_current_response
+        self.ui.on_action_catalog = self._tools_for_current_turn
+        self.ui.on_action_command = self._on_action_command
         self._refresh_chat_list()
         self._render_chat_history()
 
@@ -452,7 +454,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
                     self.ui.set_state("SPEAKING")
                     self._tts.speak(text)
             except Exception as e:
-                print(f"[TTS] speak error: {e}")
+                self.ui.write_log(f"ERR: Speech synthesis failed: {e}")
             finally:
                 self._tts_queue.task_done()
                 if self._tts_queue.empty():
@@ -591,6 +593,21 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
     def _on_text_command(self, text: str) -> None:
         self._text_queue.put(text)
 
+    def _on_action_command(self, name: str, args: dict) -> None:
+        self._text_queue.put(("action", name, args))
+
+    def _run_action_from_ui(self, name: str, args: dict) -> None:
+        with self._conversation_lock:
+            self.ui.write_log(f"SYS: Running action from Actions: {name}")
+            try:
+                result = self._execute_tool(name, args)
+            except Exception as exc:
+                logger.exception("Direct UI action failed: %s", name)
+                self.ui.write_log(f"ERR: {name} — {exc}")
+                return
+            if result != "__SILENT__":
+                self.ui.write_log(f"Aether: {result}")
+
     def _stop_current_response(self) -> None:
         self._cancel_current_turn.set()
         self._interrupt_speaking(reason="response stopped")
@@ -686,9 +703,12 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
     def _text_command_loop(self) -> None:
         while True:
             try:
-                text = self._text_queue.get(timeout=0.5)
-                if text.strip():
-                    self._process_message(text)
+                command = self._text_queue.get(timeout=0.5)
+                if (isinstance(command, tuple) and len(command) == 3
+                        and command[0] == "action"):
+                    self._run_action_from_ui(command[1], command[2])
+                elif isinstance(command, str) and command.strip():
+                    self._process_message(command)
             except queue.Empty:
                 pass
 

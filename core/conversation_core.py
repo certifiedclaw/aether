@@ -68,10 +68,24 @@ from core.llm_client import (
     GEMINI_BASE_URL,
     get_context_window,
     get_llm_settings,
+    get_tier_model_settings,
 )
 from core import degrade as _degrade
 
 logger = logging.getLogger("aether")
+
+
+def _local_tier_stream_route(tier: _Tier, provider: str) -> tuple[dict, str, str, str]:
+    if provider != "ollama":
+        return {}, "default", "", ""
+    url, model, status, requested = get_tier_model_settings(tier.value)
+    if status == "default":
+        return {}, status, model, requested
+    return {
+        "provider_override": "ollama",
+        "url_override": url,
+        "model_override": model,
+    }, status, model, requested
 
 
 def _load_cfg_for_degrade() -> dict:
@@ -131,9 +145,13 @@ _VOLUME_ALIASES = {"set_volume", "volume_control", "volume", "change_volume",
 
 
 def _call_from_obj(obj) -> tuple[str, dict] | None:
-    if not isinstance(obj, dict) or not isinstance(obj.get("name"), str):
+    if (
+        not isinstance(obj, dict)
+        or not isinstance(obj.get("name"), str)
+        or not ("arguments" in obj or "parameters" in obj)
+    ):
         return None
-    args = obj.get("arguments", obj.get("parameters", {}))
+    args = obj.get("arguments", obj.get("parameters"))
     if isinstance(args, str):
         try:
             args = json.loads(args)
@@ -210,7 +228,8 @@ class ConversationCoreMixin:
     """
 
     def _prepare_conversation_messages(self, user_text: str, light: bool = False, tools: list | None = None,
-                                       history_budget: int | None = None):
+                                       history_budget: int | None = None,
+                                       model_name: str = ""):
         """Log the incoming message, store it to memory, trim history, and
         build the compressed message list to send to the LLM.
 
@@ -258,7 +277,12 @@ class ConversationCoreMixin:
             self._conversation = trimmed
 
         messages = [
-            {"role": "system", "content": self._build_system_prompt(user_text, light=light)}
+            {
+                "role": "system",
+                "content": self._build_system_prompt(
+                    user_text, light=light, model_name=model_name
+                ),
+            }
         ] + list(self._conversation)
 
         # ── NEW: compress context to fit token window ─────────────────
@@ -513,6 +537,30 @@ class ConversationCoreMixin:
                 }
                 self.ui.write_log("SYS: tool turn routed to Gemini (cloud, opt-in gemini_for_tools)")
 
+        # Optional tier-specific models are supported for Ollama. The resolver
+        # checks the selected local/remote host and falls back to its configured
+        # default model if the requested tag is absent or the host cannot be
+        # checked. Hosted and OpenAI-compatible providers keep their own routing.
+        _prompt_model = ""
+        if not _stream_kwargs:
+            (_local_route, _tier_status, _tier_model, _requested_model) = (
+                _local_tier_stream_route(_route.tier, _primary_provider)
+            )
+            _stream_kwargs.update(_local_route)
+            if _primary_provider == "ollama":
+                _prompt_model = _tier_model
+            if _tier_status == "configured":
+                self.ui.write_log(
+                    f"SYS: using {_route.tier.value} tier model {_tier_model}"
+                )
+            elif _tier_status in ("missing", "unavailable"):
+                self.ui.write_log(
+                    f"WRN: {_route.tier.value} tier model {_requested_model} "
+                    f"is {_tier_status}; using configured model {_tier_model}"
+                )
+        elif _stream_kwargs.get("provider_override") == "ollama":
+            _prompt_model = _stream_kwargs.get("model_override", "")
+
         # Tool exposure scales with tier: QUICK gets none (see above),
         # EVERYDAY gets only the category-relevant subset (core/tool_router)
         # instead of the full ~28-tool catalog on every ordinary turn, and
@@ -526,6 +574,7 @@ class ConversationCoreMixin:
             _turn_tools = _filter_tools_for_turn(self._tools_for_current_turn(), user_text)
         messages, _active_mem = self._prepare_conversation_messages(
             user_text, light=_is_quick, tools=_turn_tools,
+            model_name=_prompt_model,
             history_budget=(_CLOUD_HISTORY_BUDGET
                             if _stream_kwargs or _primary_provider in ("gemini", "openai_api")
                             else None),
@@ -578,7 +627,6 @@ class ConversationCoreMixin:
                                 _turn_cancelled = True
                                 break
                             _streamed.append(event["text"])
-                            self.speak(event["text"])
                         elif event["type"] == "done":
                             final_content    = event["content"]
                             final_tool_calls = event["tool_calls"]
@@ -706,7 +754,10 @@ class ConversationCoreMixin:
                         final_content = ""
                 if (not _tagged and final_content and
                         ("<tool_call" in final_content or
-                         (final_content.lstrip().startswith(("{", "```")) and '"name"' in final_content))):
+                         (final_content.lstrip().startswith(("{", "```"))
+                          and '"name"' in final_content
+                          and ('"arguments"' in final_content or
+                               '"parameters"' in final_content)))):
                     self.ui.write_log(
                         "WRN: reply looks like a tool call but could not be parsed: "
                         + final_content[:200].replace("\n", " ")
@@ -751,6 +802,8 @@ class ConversationCoreMixin:
 
             if not final_tool_calls:
                 if _streamed:
+                    for sentence in _streamed:
+                        self.speak(sentence)
                     assistant_msg = {"role": "assistant", "content": final_content}
                     messages.append(assistant_msg)
                     self._conversation.append(assistant_msg)

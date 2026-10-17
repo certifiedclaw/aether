@@ -11,6 +11,7 @@ Usage:
     python -m tools.maintenance.roadmap list
     python -m tools.maintenance.roadmap add "Audit agent/executor.py" --priority high --notes "Never audited per PERFORMANCE_NOTES.md"
     python -m tools.maintenance.roadmap start <id>
+    python -m tools.maintenance.roadmap note <id> --notes "Current evidence and next step"
     python -m tools.maintenance.roadmap done <id>
     python -m tools.maintenance.roadmap render      # writes ROADMAP.md
 """
@@ -116,6 +117,18 @@ def cmd_done(args):
     _set_status(args.id, "done")
 
 
+def cmd_note(args):
+    data = _load()
+    for item in data["items"]:
+        if item["id"] == args.id:
+            item["notes"] = args.notes
+            item["updated"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            _save(data)
+            print(f"Updated notes for #{args.id}")
+            return
+    print(f"No item with id {args.id}")
+
+
 def cmd_list(args):
     data = _load()
     items = data["items"]
@@ -130,7 +143,7 @@ def render_markdown(data: dict) -> str:
     lines.append("# Aether — Roadmap")
     lines.append("")
     lines.append("> **Auto-rendered** from `tools/maintenance/data/roadmap.json`. "
-                  "Don't hand-edit this file — use `python -m tools.maintenance.roadmap add/start/done`.")
+                  "Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.")
     lines.append("")
     lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
     lines.append("")
@@ -182,6 +195,11 @@ def main():
     p_start = sub.add_parser("start", help="Mark item in-progress")
     p_start.add_argument("id", type=int)
     p_start.set_defaults(func=cmd_start)
+
+    p_note = sub.add_parser("note", help="Update an item's progress notes")
+    p_note.add_argument("id", type=int)
+    p_note.add_argument("--notes", required=True)
+    p_note.set_defaults(func=cmd_note)
 
     p_done = sub.add_parser("done", help="Mark item done")
     p_done.add_argument("id", type=int)

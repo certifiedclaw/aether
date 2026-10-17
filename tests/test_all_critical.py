@@ -822,6 +822,8 @@ def test_setup_overlay_refactor_preserves_behavior():
     ov._engine_btns["local"].click()
     assert ov._sel_llm_provider == "openai"
     assert set(ov._tts_btns.keys()) == {"edgetts", "kokoro", "elevenlabs"}
+    ov._tts_btns["elevenlabs"].click()
+    assert ov._tts_voice_input.text() == "pNInz6obpgDQGcFmaJgB"
     assert len(ov.findChildren(QLineEdit)) > 0
     assert len(ov.findChildren(QComboBox)) > 0
 

@@ -41,7 +41,10 @@ TOOL_DECLARATIONS = [
     },
     {
         "name": "web_search",
-        "description": "Searches the web for any information.",
+        "description": (
+            "Searches the web and returns a concise answer with numbered source links. "
+            "Use those supplied sources for citations; never invent citations."
+        ),
         "parameters": {
             "type": "OBJECT",
             "properties": {
@@ -416,7 +419,8 @@ TOOL_DECLARATIONS = [
         "description": (
             "Query your locally indexed documents (Obsidian vault, PDFs, Markdown notes). "
             "Use for: 'search my notes about X', 'what does my doc say about Y', "
-            "'index this folder', 'add this file to my knowledge base'."
+            "'index this folder', 'add this file to my knowledge base'. "
+            "Include the source filename and PDF page in answers when available."
         ),
         "parameters": {
             "type": "OBJECT",
