@@ -1,289 +1,165 @@
-# 🌌 Aether — Your Ethereal Local Intelligence
+# Aether
 
-> A fully local, privacy-first voice AI assistant with a premium ethereal sci-fi HUD.
-> Cross-platform, runs entirely on local hardware. No cloud APIs required.
+Aether is a desktop voice and chat assistant built around local inference. It combines a PyQt6 interface, Ollama-compatible language models, speech recognition, speech synthesis, memory, and tools for research and desktop tasks.
 
----
+Local is the default, not a requirement: optional hosted model providers, web research, Edge TTS, ElevenLabs, and other integrations may send requests to external services. Review the provider and its data policy before enabling it.
 
-## Maintenance toolkit
+## What you can do
 
-Start-of-session orientation lives in **[`MAINTENANCE.md`](MAINTENANCE.md)** — auto-generated, always current. Regenerate it (and everything it links to) with:
+- **Talk or type:** Use the microphone for speech input, or send text in the desktop chat.
+- **Browse actions:** Use the **Actions** tab for quick tasks, or choose **Browse All Actions** to search enabled capabilities, fill in action details, and launch them directly. Sensitive actions continue to use Aether's approval checks.
+- **Research:** Start a multi-step research task from the Research quick action when that integration is enabled. If it is unavailable, Aether offers a single-search fallback.
+- **Choose voice and model providers:** Configure Whisper or Vosk; Edge TTS, Kokoro, or ElevenLabs; and a local Ollama/LM Studio server or supported hosted providers.
+- **Use local memory:** Aether can retain facts and chat history locally between turns. It also includes memory backup, export/import, and maintenance commands.
+- **Connect optional integrations:** Use document retrieval, LangChain research, LlamaIndex, MCP servers, plugins, and the web dashboard when configured.
+- **Run without a desktop:** Headless mode is available for server use and scripted text testing.
 
-```
-python -m tools.maintenance.run_all
-```
-
-This replaces the old habit of writing a new `IMPROVEMENTS_V*.md` snapshot every few sessions. See `tools/maintenance/__init__.py` for details.
-
----
-
-## Screenshots
-
-<p align="center">
-  <img src="docs/screenshots/aether-full-ui.png" alt="Aether main window" width="800"><br>
-  <em>The main HUD — Aether Core orb, system panel, activity log, and controls</em>
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/orb-listening.png" alt="Aether orb — listening" width="260">
-  <img src="docs/screenshots/orb-thinking.png" alt="Aether orb — thinking" width="260">
-  <img src="docs/screenshots/orb-speaking.png" alt="Aether orb — speaking" width="260">
-</p>
-<p align="center"><em>The Aether Core orb — listening, thinking, and speaking states</em></p>
-
-> These are placeholder renders generated headlessly (no live model/system data). Swap them out for real screenshots taken on your machine once you've got Aether running — that'll show off actual CPU/GPU readings, a live conversation, and your chosen face image if you use one.
-
----
-
-## Overview
-
-Aether is a fully local, real-time voice and visual AI agent. It combines offline speech recognition, a locally hosted LLM (via Ollama), and text-to-speech to deliver a privacy-first personal assistant with OS-level control capabilities.
-
-Successor to the previous mark, which used the Google Gemini Live API. Aether removes all cloud LLM dependencies while adding streaming responses, a dynamic configuration UI, and multi-language support.
-
----
-
-## Architecture
-
-```
-Microphone → STT (Whisper / Vosk)
-                  ↓
-           Ollama LLM (tool calling + streaming)
-                  ↓
-         Tool Execution (OS, Browser, Files …)
-                  ↓
-           TTS (EdgeTTS / Kokoro / ElevenLabs)
-                  ↓
-              Speaker
-```
-
-### Core Components
-
-| Layer | Technology | Notes |
-|-------|-----------|-------|
-| **STT** | faster-whisper / Vosk | Fully offline. Auto language detection or forced locale. |
-| **LLM** | Ollama (any model) | qwen2.5, llama3.2, mistral, etc. Streaming + tool calling. |
-| **TTS** | EdgeTTS / Kokoro / ElevenLabs | EdgeTTS = free + internet. Kokoro = fully offline. |
-| **UI** | PyQt6 | Ethereal cyan/purple HUD — glowing "Aether Core" orb, conversation log, system monitor. |
-| **Agent** | Custom task queue | Multi-step planner + executor + error recovery. |
-
----
-
-## Features
-
-- **Streaming responses** — TTS starts speaking on the first sentence, not after the full response
-- **Tool calling** — 20 built-in tools: browser control, file management, weather, YouTube, messaging, screen analysis, code helper, game updater, flight finder, and more
-- **Long-term memory** — Silently saves personal facts; recalled in every conversation
-- **Hybrid memory** — BM25 keyword + dense semantic + cross-encoder reranker for accurate recall across sessions
-- **Goal manager** — Persistent goals survive restarts; the LLM always knows your active goals and sub-tasks
-- **RAG engine** — Index your Obsidian vault, PDFs, Markdown files; query from them by voice
-- **Plugin system** — Reviewed plugin files load on matching SHA-256 trust entries; see `docs/PLUGIN_SECURITY.md`
-- **Live configuration** — Change LLM model, STT engine, TTS voice without restarting (⚙ Configure button)
-- **Ollama auto-start** — Automatically launches `ollama serve` if it's not running
-- **Multi-language STT** — Set `stt_language` to `auto` (Whisper detects) or a specific locale (`tr`, `de`, `fr`, …)
-- **Cross-platform** — Windows, macOS, Linux (OS detected automatically at runtime)
-- **File drop zone** — Drag and drop images, PDFs, Word docs, CSV, audio, video for AI processing
-- **OSINT toolkit** — WHOIS, DNS, subdomain enumeration, breach checks, port scan, Google dorks, IP geolocation
-- **MCP bridge** — Connect external MCP servers (Obsidian, GitHub, Postgres, …) via config
-- **Self-evaluator** — Scores every response; logs failures with reason and score to `logs/events.jsonl`
-- **Observability** — Structured event log, in-memory metrics, lightweight tracing around every tool call
-- **Loop guard** — Detects when the LLM is stuck calling the same tool and breaks the cycle automatically
-- **Crash logger** — Structured JSON crash reports in `logs/crashes/` for every unhandled exception
-- **Self-test mode** — `/selftest` runs an end-to-end check of every subsystem and prints a pass/fail report
-- **Memory tools** — `/backup`, `/memstats`, `/prune` to manage, snapshot, and clean the memory DB
-- **Config validation** — Startup check catches bad keys, unreachable Ollama, unknown engines before a crash
-- **v3 integrations** — Optional LangChain (web search, Wikipedia, ReAct research), LlamaIndex (production RAG), Open Interpreter (natural language shell)
-- **Web dashboard / phone remote** *(new, ported from Mark-XLVIII)* — Local FastAPI dashboard (default `http://<this-pc-ip>:8000`) with QR-code phone pairing, AES-256 encrypted text commands, live log streaming over WebSocket, and file upload/download. Requires `fastapi`, `uvicorn`, `cryptography`, `python-multipart`. **Note:** upstream's phone-mic → cloud realtime-audio pipeline (built for Gemini Live) was not ported, since Aether's voice stack is local Whisper STT rather than a cloud realtime session — the endpoint accepts audio frames but nothing currently consumes them. Text commands and file transfer are fully wired.
-- **Proactive check-ins** *(new, ported from Mark-XLVIII)* — After a configurable idle period (`proactive_min_silence_secs`, default 15 min), Aether hands your memory context to the LLM and lets it decide whether there's something worth saying unprompted, with a cooldown (`proactive_check_cooldown`, default 10 min) between check-ins.
-- **System resource monitor** *(new, ported from Mark-XLVIII)* — Background CPU/RAM/temperature/GPU polling with cross-platform, subprocess-free readings (ctypes/NVML/psutil); triggers a spoken warning when a threshold is crossed, with a 5-minute cooldown per metric.
-
----
-
-## Web Dashboard
-
-Starts automatically on boot if its dependencies are installed:
-
-```bash
-pip install fastapi "uvicorn[standard]" cryptography python-multipart
-```
-
-Open `http://<this-pc-ip>:8000` in a browser on the same network, or use the QR-code pairing flow from the desktop UI to connect a phone. Commands sent from the dashboard are AES-256-CBC encrypted client-side and land in the same text-command pipeline as typed input in the desktop app.
-
----
-
-## Chat Commands
-
-| Command | Action |
-|---------|--------|
-| `/selftest` | Run full system self-test |
-| `/crashes` | Show recent crash logs |
-| `/backup` | Snapshot memory to a zip file |
-| `/memstats` | Show memory system statistics |
-| `/prune` | Remove duplicate / old memories from DB |
-| `/status` or `"status"` | Full system diagnostic (Ollama, GPU, packages, …) |
-| `/clear` | Clear chat history and session memory |
-| `obs report` | Show observability metrics and tool call counts |
-
----
+The app is cross-platform, but available actions, audio devices, and optional dependencies vary by operating system and configuration.
 
 ## Requirements
 
-- Python 3.11 or 3.12
-- [Ollama](https://ollama.com) installed and a model pulled (e.g. `ollama pull qwen2.5:7b`)
-- A microphone
+- Python 3.10 or newer. Python 3.11 or 3.12 is recommended by the installer scripts.
+- [Ollama](https://ollama.com) for the default local language-model backend, and at least one model pulled locally.
+- A microphone and speakers/headphones for voice interaction.
+- Internet access only for features that use external services or download dependencies/models.
 
----
+For example, install Ollama, then download a model:
 
-## Installation (Recommended)
+```powershell
+ollama pull qwen2.5:7b
+```
 
-For the cleanest setup with no dependency conflicts, use the provided installer scripts that create an isolated virtual environment:
+## Install and launch
 
-### Windows Users
-1. Double-click `install.bat` to create a virtual environment and install dependencies
-2. Double-click `run.bat` to activate the environment and launch Aether
+Clone or download this repository and open a terminal in the project folder.
 
-### Linux/macOS Users
-1. Make the scripts executable: `chmod +x install.sh run.sh`
-2. Run the installer: `./install.sh`
-3. Launch the application: `./run.sh`
+### Windows
 
-The installer scripts will:
-- Check for Python 3.11+
-- Create a virtual environment in `venv/`
-- Install required packages from `requirements.txt`
-- Provide activation scripts for easy launching
+Run `install.bat`, then `run.bat`. The installer creates a `venv` and installs dependencies. It asks whether `run.bat` should start the desktop app or headless mode; you can change this later in `aether_mode.txt`.
 
----
+### Linux or macOS
 
-## Quick Start
+Use Python 3.11 or 3.12, then run:
 
 ```bash
-# 1. Install Ollama → https://ollama.com
-#    Then pull a model:
-ollama pull qwen2.5:7b
+chmod +x install.sh run.sh
+./install.sh
+./run.sh
+```
 
-# 2. Clone / download the project and launch
-cd Aether
+### Manual launch
+
+You can also create and activate a virtual environment yourself, install dependencies, and launch the app:
+
+```bash
+python -m venv .venv
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+# Linux/macOS:
+# source .venv/bin/activate
+python -m pip install -r requirements.txt
 python main.py
 ```
 
-That's it. On first run Aether:
-1. Auto-installs base packages (PyQt6, numpy …) and restarts once
-2. Opens the **Initialisation** overlay — choose STT engine, LLM model, TTS engine
-3. Click **INITIALISE SYSTEMS** — engine packages install in the background (progress shown in log)
-4. Aether comes online
+At first launch, Aether opens its setup screen. Choose the speech recognition, model, and speech synthesis options, then initialize. Some optional engines download models or install their packages on first use.
 
-After setup, use the **⚙ CONFIGURE** button in the right panel to change any setting at any time without restarting.
+## Configure Aether
 
----
+Use **Configure** in the desktop UI to change providers and settings without manually editing JSON. Configuration is stored in `config/api_keys.json`; `config/config.example.json` documents the available settings. Keep real credentials out of source control and shared archives.
 
-## Configuration (`config/api_keys.json`)
+API keys can be supplied through environment variables, the operating system keyring, or the local configuration file. The environment/keyring options are preferable for secrets. The optional helper supports checking secret sources, storing keys in the keyring, and migrating keys:
 
-```json
-{
-    "stt_engine":         "whisper",
-    "stt_model":          "base",
-    "stt_language":       "auto",
-    "llm_url":            "http://localhost:11434",
-    "llm_model":          "qwen2.5:7b",
-    "tts_engine":         "edgetts",
-    "tts_voice":          "en-US-GuyNeural",
-    "elevenlabs_api_key": ""
-}
+```powershell
+python tools\secrets_cli.py status
+python -m pip install keyring
+python tools\secrets_cli.py set elevenlabs_api_key
 ```
 
-| Key | Values | Default |
-|-----|--------|---------|
-| `stt_engine` | `whisper` / `vosk` | `whisper` |
-| `stt_model` | `tiny` / `base` / `small` / `medium` / `large-v3` | `base` |
-| `stt_language` | `auto` or ISO code (`tr`, `en`, `de` …) | `auto` |
-| `llm_url` | Ollama API base URL | `http://localhost:11434` |
-| `llm_model` | Any model pulled in Ollama | `qwen2.5:7b` |
-| `tts_engine` | `edgetts` / `kokoro` / `elevenlabs` | `edgetts` |
-| `tts_voice` | Voice name / ID depending on engine | `en-US-GuyNeural` |
+ElevenLabs requires an API key and a valid voice ID. Edge TTS is the default online voice option; Kokoro runs locally after its model is installed.
 
----
+### Provider and privacy notes
 
-## Built-in Tools
+- **Ollama:** Local inference by default. The model must already be installed with `ollama pull <model>`.
+- **LM Studio:** Use its local OpenAI-compatible server URL and select the matching provider in Configure.
+- **Gemini / OpenAI API:** Optional hosted inference. Aether has cloud redaction controls; review `cloud_allow`, `cloud_redact`, and fallback settings in `config/config.example.json`.
+- **Web and research tools:** Search requests go to the configured search/research providers.
+- **Speech synthesis:** Edge TTS and ElevenLabs contact their respective services. Kokoro is the offline option.
+- **Plugins and desktop actions:** Plugins execute as trusted Python code. Only enable plugins you have reviewed. Some desktop and file actions can make changes to your computer; approval gates apply to sensitive operations.
 
-| Tool | Description |
-|------|-------------|
-| `open_app` | Opens any application or website |
-| `web_search` | Web search and compare mode |
-| `weather_report` | Current weather for any city |
-| `send_message` | WhatsApp / Telegram messaging |
-| `reminder` | Timed reminders via Task Scheduler |
-| `youtube_video` | Play, summarize, trending videos |
-| `screen_process` | Screen capture + vision model analysis |
-| `computer_settings` | Volume, brightness, window management, shortcuts |
-| `browser_control` | Full Playwright browser automation |
-| `file_controller` | File/folder CRUD, search, disk usage |
-| `desktop_control` | Wallpaper, organize, clean desktop |
-| `code_helper` | Write, edit, explain, run code |
-| `dev_agent` | Build complete multi-file projects |
-| `agent_task` | Multi-step autonomous task execution |
-| `computer_control` | Direct mouse/keyboard control |
-| `game_updater` | Steam / Epic Games install & update |
-| `flight_finder` | Google Flights search |
-| `file_processor` | Process images, PDFs, CSV, audio, video |
+## Desktop controls
 
-The arbitrary Python execution tool is disabled until an OS-enforced sandbox
-is available; a confirmation dialog alone is not a security boundary.
+The right side of the main window separates **Activity** from **Actions**. Quick actions provide common starting points; **Browse All Actions** searches the currently available tools. Availability depends on which integrations and dependencies are enabled.
 
----
-
-## Keyboard Shortcuts
-
-| Key | Action |
-|-----|--------|
-| `F4` | Mute / unmute microphone |
+| Shortcut | Action |
+| --- | --- |
+| `F4` | Mute or unmute the microphone |
 | `F11` | Toggle fullscreen |
-| `Ctrl+Alt+A` | Show / hide window from anywhere |
-| `Esc` | Collapse the HUD down to just the orb (press again to restore) |
+| `Ctrl+Alt+A` | Show or hide the window |
+| `Esc` | Collapse the window to the orb or restore it |
+| `Ctrl+Shift+N` | Start a new chat |
 
----
+## Chat commands
 
-## TTS Engine Comparison
+Enter these in the chat input:
 
-| Engine | Internet | Quality | Cost |
-|--------|----------|---------|------|
-| EdgeTTS | Required | Good | Free |
-| Kokoro | No | Excellent | Free (local model ~100 MB) |
-| ElevenLabs | Required | Best | Paid API |
+| Command | Purpose |
+| --- | --- |
+| `/help` | List chat commands |
+| `/status` | Run system diagnostics |
+| `/doctor` | Check installation, configuration, and runtime health |
+| `/doctor fix` | Apply safe fixes found by the doctor |
+| `/selftest` | Run subsystem self-tests |
+| `/audit` | View recent gated actions and approvals |
+| `/audit verify` | Verify the audit log chain |
+| `/perf [hours]` | Show model timing, speed, memory, and usage statistics |
+| `/resources` | Show resource-governor status |
+| `/crashes` | Show recent crash reports |
+| `/backup` | Back up memory |
+| `/memstats` | Show memory statistics |
+| `/prune` | Remove duplicate or old memory records |
+| `/export [path]` | Export memory |
+| `/import <path>` | Import a memory export |
+| `/clear` | Clear the current conversation history |
 
----
+## Optional web dashboard and headless mode
 
-## Notes on v3 Integrations
+The FastAPI dashboard is optional and requires its listed server dependencies. The desktop app uses loopback by default. To use the dashboard from another device, deliberately configure a reachable interface and protect access; do not expose it directly to the public internet. See [`docs/SERVER.md`](docs/SERVER.md) for HTTPS, remote access, authentication, the OpenAI-compatible text API, and server deployment.
 
-`open-interpreter` depends on `litellm` which can conflict with `langchain` and `llama-index`.
-If you hit dependency errors, install them in separate virtual environments or pin known-good versions.
+For a server without a desktop display, set `AETHER_HEADLESS=1`. Headless mode skips the Qt interface and microphone/audio by default; the dashboard provides remote interaction. Set `AETHER_HEADLESS_VOICE=1` only when the server has configured audio devices. For scripted text replay, see `tests/live_test_script.txt`.
 
-Also: if Ollama is running but you haven't pulled your configured model yet, run:
+## Evaluation and tests
 
-```bash
-ollama pull qwen3:8b   # or whatever llm_model is set to in your config
+The fixed-prompt evaluation harness can replay the smoke suite, core suite, or both against an installed Ollama model. It temporarily isolates replay memory and writes results under `logs/eval/`.
+
+```powershell
+python -m tools.eval_harness run --label qwen --suite all --model qwen2.5:7b
+python -m tools.eval_harness list
+python -m tools.eval_harness show qwen
 ```
 
-Aether will suggest this automatically if the model is missing, but it's faster to do it before first launch.
+Run the automated test suite with:
 
----
+```powershell
+python -m pytest tests -q
+```
 
-## Customising the System Prompt
+The evaluation harness tests do not require a running model; an actual evaluation run does.
 
-Aether's core personality and rules live in `core/prompt.txt`. You can edit this file to change how Aether responds — its tone, response length limits, tool routing priorities, and memory trigger rules — without touching any Python code.
+## Project documentation
 
-The file is hot-loaded each time a message is processed, so changes take effect immediately (no restart needed).
+- [`HANDOFF.md`](HANDOFF.md) — recent work and handoff notes
+- [`MAINTENANCE.md`](MAINTENANCE.md) — index to generated project reports
+- [`ROADMAP.md`](ROADMAP.md) — active backlog
+- [`docs/SERVER.md`](docs/SERVER.md) — headless, dashboard, and API server details
+- [`docs/PLUGIN_SECURITY.md`](docs/PLUGIN_SECURITY.md) — plugin trust model
+- [`docs/TESTING.md`](docs/TESTING.md) — manual pre-release test checklist
 
-Key sections in `prompt.txt`:
-- **IDENTITY** — name, personality, tone
-- **TOOL CALLING RULES** — when to call tools vs. reply in text
-- **BRIEFING** — hard response length limits (default: 3 sentences max)
-- **MEMORY RULE** — what personal facts to silently save
-- **TOOL ROUTING** — which tool to use for which task type
-- **INTEGRATION TOOLS** — LangChain / Open Interpreter / LlamaIndex routing guide
+Refresh generated maintenance reports with:
 
----
+```powershell
+python -m tools.maintenance.run_all --skip-deps
+```
 
 ## License
 
-MIT
+MIT.

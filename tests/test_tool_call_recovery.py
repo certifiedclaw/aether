@@ -64,6 +64,19 @@ def test_stream_hold_back():
     assert not _is_tool_tag_prefix("<b>bold</b> reply")
 
 
+def test_streamed_speech_waits_until_tool_calls_are_ruled_out():
+    import inspect
+    from core.conversation_core import ConversationCoreMixin
+
+    source = inspect.getsource(ConversationCoreMixin._process_message_inner)
+    sentence_branch = source.split('if event["type"] == "sentence":', 1)[1].split(
+        'elif event["type"] == "done":', 1
+    )[0]
+    final_reply_branch = source.split("if not final_tool_calls:", 1)[1]
+    assert "self.speak(" not in sentence_branch
+    assert "for sentence in _streamed:" in final_reply_branch
+
+
 def test_hf_offline_restored():
     from core.hf_offline import allow_online
     os.environ["HF_HUB_OFFLINE"] = "1"

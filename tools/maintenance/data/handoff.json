@@ -1,5 +1,5 @@
 {
-  "next_id": 87,
+  "next_id": 88,
   "entries": [
     {
       "id": 1,
@@ -1181,6 +1181,24 @@
         "docs/SERVER.md"
       ],
       "next_steps": "Clarify 'auto logo' request with the user; #45, #48, container sandbox."
+    },
+    {
+      "id": 87,
+      "timestamp": "2026-10-17 03:09 UTC",
+      "by": "GitHub Copilot (Copilot CLI)",
+      "summary": "Published the searchable UI action browser and quick-action flows with Research routing, improved voice/tool-loop handling including ElevenLabs coverage, and rewrote the README as a user guide. Added focused regression tests for launcher, tool recovery, and ElevenLabs behavior.",
+      "files": [
+        "ui.py",
+        "main.py",
+        "core/conversation_core.py",
+        "core/tts.py",
+        "readme.md",
+        "tests/test_action_launcher.py",
+        "tests/test_all_critical.py",
+        "tests/test_tool_call_recovery.py",
+        "tests/test_tts_elevenlabs.py"
+      ],
+      "next_steps": "Run the desktop UI on a Windows machine with the supported TTS providers to confirm interaction and ElevenLabs playback against real credentials."
     }
   ]
 }

@@ -578,7 +578,6 @@ class ConversationCoreMixin:
                                 _turn_cancelled = True
                                 break
                             _streamed.append(event["text"])
-                            self.speak(event["text"])
                         elif event["type"] == "done":
                             final_content    = event["content"]
                             final_tool_calls = event["tool_calls"]
@@ -751,6 +750,8 @@ class ConversationCoreMixin:
 
             if not final_tool_calls:
                 if _streamed:
+                    for sentence in _streamed:
+                        self.speak(sentence)
                     assistant_msg = {"role": "assistant", "content": final_content}
                     messages.append(assistant_msg)
                     self._conversation.append(assistant_msg)

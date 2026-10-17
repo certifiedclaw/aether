@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-16 22:05 UTC
+Generated: 2026-10-17 03:09 UTC
+
+## #87 — 2026-10-17 03:09 UTC — GitHub Copilot (Copilot CLI)
+
+Published the searchable UI action browser and quick-action flows with Research routing, improved voice/tool-loop handling including ElevenLabs coverage, and rewrote the README as a user guide. Added focused regression tests for launcher, tool recovery, and ElevenLabs behavior.
+
+**Touched:** `ui.py`, `main.py`, `core/conversation_core.py`, `core/tts.py`, `readme.md`, `tests/test_action_launcher.py`, `tests/test_all_critical.py`, `tests/test_tool_call_recovery.py`, `tests/test_tts_elevenlabs.py`
+
+**Next steps:** Run the desktop UI on a Windows machine with the supported TTS providers to confirm interaction and ElevenLabs playback against real credentials.
+
+---
 
 ## #86 — 2026-10-16 22:05 UTC — Claude Code
 

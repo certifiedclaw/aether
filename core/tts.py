@@ -347,18 +347,30 @@ class KokoroTTSEngine:
             raise synth_error[0]
 
 
+DEFAULT_ELEVENLABS_VOICE_ID = "pNInz6obpgDQGcFmaJgB"
+
+
 class ElevenLabsTTSEngine:
     """ElevenLabs cloud TTS – API key required."""
 
-    def __init__(self, api_key: str, voice_id: str = "pNInz6obpgDQGcFmaJgB"):
+    DEFAULT_VOICE_ID = DEFAULT_ELEVENLABS_VOICE_ID
+
+    def __init__(self, api_key: str, voice_id: str = DEFAULT_VOICE_ID):
         self.api_key  = api_key
-        self.voice_id = voice_id
+        self.voice_id = str(voice_id or "").strip()
+        if not self.voice_id or self.voice_id.endswith("Neural") or self.voice_id.startswith(
+            ("af_", "am_", "bf_", "bm_", "jf_", "jm_")
+        ):
+            self.voice_id = self.DEFAULT_VOICE_ID
 
     def speak(self, text: str) -> None:
+        if not self.api_key:
+            raise RuntimeError("ElevenLabs API key is missing; add it in Configure.")
         import requests
         headers = {
             "xi-api-key":   self.api_key,
             "Content-Type": "application/json",
+            "Accept":       "audio/mpeg",
         }
         payload = {
             "text":     text,
@@ -405,8 +417,6 @@ class TTSPlayer:
             if on_start:
                 on_start()
             self._engine.speak(text)
-        except Exception as e:
-            print(f"[TTS] Error: {e}")
         finally:
             with self._lock:
                 self._playing = False
@@ -433,7 +443,7 @@ def create_tts_player(config: dict) -> TTSPlayer:
     elif engine_name == "elevenlabs":
         from core.credentials import get_secret
         api_key  = get_secret("elevenlabs_api_key", config)   # env > OS keyring > config file
-        voice_id = config.get("tts_voice", "pNInz6obpgDQGcFmaJgB")
+        voice_id = config.get("tts_voice") or DEFAULT_ELEVENLABS_VOICE_ID
         engine   = ElevenLabsTTSEngine(api_key=api_key, voice_id=voice_id)
     else:   # edgetts (default)
         voice  = config.get("tts_voice", "en-US-GuyNeural")
