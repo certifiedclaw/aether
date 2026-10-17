@@ -222,9 +222,9 @@
       "title": "Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option",
       "priority": "high",
       "status": "backlog",
-      "notes": "Live Gemini key is inside full-folder zips. Verify git history never contained it; rotate if it did.",
+      "notes": "Repository protections already implemented: config/api_keys.json is ignored, example templates are present, and credentials resolve environment -> OS keyring -> local file with a migration CLI. Confirmed the config file is not tracked in this Git history. Previously shared full-folder archives are outside this checkout; the owner still needs to check/remove any such archives and rotate keys if one contained them.",
       "created": "2026-10-07",
-      "updated": "2026-10-07"
+      "updated": "2026-10-17"
     },
     {
       "id": 26,
@@ -347,10 +347,10 @@
       "id": 39,
       "title": "[F0] Evaluation harness: 100+ fixed prompts, scored after every change",
       "priority": "high",
-      "status": "in-progress",
-      "notes": "Foundation. Also the benchmark for choosing the iansserver model.",
+      "status": "done",
+      "notes": "Completed and calibrated through Aether main.py: 107 prompts (83 core + 24 smoke); qwen2.5:1.5b scored 98/107 (92%), p50 1.48s, p95 4.39s, with all 107 inputs delivered and no driver timeouts. The remaining failures and one exhausted tool loop are model/product findings, not evaluation-harness failures. The machine-specific result is saved locally in logs/eval/roadmap-all-qwen15b.json.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-17"
     },
     {
       "id": 40,
@@ -456,9 +456,9 @@
       "title": "[F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones",
       "priority": "high",
       "status": "backlog",
-      "notes": "~800 lines. Depends on F0 eval harness.",
+      "notes": "Partial implementation already exists: core/tier_router.py classifies QUICK/EVERYDAY/HARD, and conversation_core.py uses QUICK to skip tools/context and can escalate HARD turns to Gemini. It does not currently pass local tier model choices into call_llm_stream; `_route.model` is not applied, so local turns still use the configured model. Complete this item by adding safe, configurable local/remote per-tier selection with fallback when a configured model is unavailable, guided by #39 baselines.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-17"
     },
     {
       "id": 52,

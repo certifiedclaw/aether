@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-17 02:47 UTC
+Generated: 2026-10-17 03:03 UTC
+
+## #97 — 2026-10-17 03:03 UTC — GitHub Copilot (Copilot CLI)
+
+Completed roadmap #39 through the actual Aether main.py replay path: full 107-case suite (83 core + 24 smoke) against qwen2.5:1.5b, 98/107 (92%), p50 1.48s/p95 4.39s, all inputs delivered without timeouts. Fixed grader false positives for shared prefixes and expected generic honesty/memory/safety responses; captured main.py prompt counts/timeouts in result JSON and terminal output. Marked #39 done. Inspected roadmap #25 and confirmed repo-side ignore/example/env/keyring support plus no tracked config/api_keys.json in current Git history; prior shared ZIP cleanup/key rotation remains owner-side. Inspected #51 in conversation_core.py: tier classification and Gemini HARD escalation exist, but local _route.model choices are not applied. Updated roadmap notes to prevent redoing completed work and identify the remaining gap.
+
+**Touched:** `tools/live_grader.py`, `tools/eval_harness.py`, `tests/test_live_grader.py`, `tests/test_eval_harness.py`, `tools/maintenance/data/roadmap.json`, `ROADMAP.md`, `HEALTH_REPORT.md`, `PROJECT_STATE.md`, `MAINTENANCE.md`
+
+**Next steps:** Implement roadmap #51's missing local per-tier model selection, using #39 benchmark baselines and preserving fallback to the configured model when an optional tier model is unavailable.
+
+---
 
 ## #96 — 2026-10-17 02:47 UTC — GitHub Copilot (Copilot CLI)
 
