@@ -1024,9 +1024,11 @@ class ConversationCoreMixin:
                 elif elapsed > 0:
                     tokens_per_sec = output_tokens / elapsed
 
+            perf_route = "local"
             try:
                 from core import perf_stats
-                perf_stats.record(model, perf_stats.route_for(stream_kwargs), prompt_tokens,
+                perf_route = perf_stats.route_for(stream_kwargs)
+                perf_stats.record(model, perf_route, prompt_tokens,
                                   output_tokens, eval_duration, elapsed,
                                   ttft_s=stats.get("ttft_s"))
             except Exception:
@@ -1044,6 +1046,7 @@ class ConversationCoreMixin:
                 "elapsed":        elapsed,
                 "tokens_per_sec": tokens_per_sec,
                 "ttft_s":         stats.get("ttft_s"),
+                "route":          perf_route,
                 "context_window": context_window,
             })
         except Exception:

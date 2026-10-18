@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-18 00:00 UTC
+Generated: 2026-10-18 00:24 UTC
+
+## #113 — 2026-10-18 00:24 UTC — GitHub Copilot CLI
+
+Completed the chat-first UI redesign with a calmer status rail, clearer Chat/Actions navigation, responsive compact-window layout, and route-aware response status. Added route and compact-layout regression coverage; full pytest passed (894 passed, 2 skipped, 1 deselected).
+
+**Touched:** `ui.py`, `core/conversation_core.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Review the UI follow-up on the open PR #18; leave it unmerged unless requested.
+
+---
 
 ## #112 — 2026-10-18 00:00 UTC — GitHub Copilot (Copilot CLI)
 
