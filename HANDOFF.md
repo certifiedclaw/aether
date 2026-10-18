@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-18 18:36 UTC
+Generated: 2026-10-18 23:30 UTC
+
+## #115 — 2026-10-18 23:30 UTC — Claude Code
+
+Real-hardware log review (qwen3:8b on RTX 3050: ~30 tok/s, TTFT 1.4-3.2s, 2.6-4.5k prompt tokens/turn). Fixed: voice clipped first letters (VAD pre-roll), background-media transcripts (Whisper confidence filter), wider Whisper beam/VAD padding, barge-in interrupt moved off the PortAudio callback thread (crash risk), browser opening new window + 2 blank tabs (adopt_page reuses blank tab), footer hotkey label now follows config (log showed ctrl+alt+j), HF models load from cache first (no per-launch huggingface.co calls). New roadmap items added for the unfixed findings.
+
+**Touched:** `core/stt.py`, `core/listen_loops.py`, `actions/browser_control.py`, `ui.py`, `memory/hybrid_memory.py`, `tests/test_voice_browser_fixes.py`
+
+**Next steps:** Need the actual crash JSON from logs/crashes for the barge-in crash; test voice on real hardware with stt_language set to en
+
+---
 
 ## #114 — 2026-10-18 18:36 UTC — Claude Code
 

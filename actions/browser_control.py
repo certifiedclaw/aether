@@ -356,6 +356,34 @@ def _detect_default_browser() -> str:
     return "chrome"
 
 
+_BLANK_URLS = ("", "about:blank", "about:newtab", "about:home", "chrome://newtab/", "chrome://new-tab-page/",
+               "edge://newtab/", "chrome-search://local-ntp/local-ntp.html")
+
+
+def _is_blank_url(url) -> bool:
+    return (url or "").strip().lower() in _BLANK_URLS
+
+
+async def adopt_page(context):
+    """Return a page to work in, WITHOUT piling up empty tabs.
+
+    Launching a browser with a real profile already opens a blank/new-tab page, and the old
+    code then always added another one (and a third on the "still blank" retry), so every
+    "open a tab" request left a new window plus two blank tabs. Reuse a blank page if one
+    exists, close the surplus blanks, and only create a page when there is none."""
+    pages = [p for p in list(context.pages) if not p.is_closed()]
+    blanks = [p for p in pages if _is_blank_url(p.url)]
+    if blanks:
+        keep = blanks[0]
+        for extra in blanks[1:]:
+            try:
+                await extra.close()
+            except Exception:
+                pass
+        return keep
+    return await context.new_page()
+
+
 class _BrowserSession:
     """
     Bir tarayıcı örneği için tam oturum.
@@ -457,7 +485,7 @@ class _BrowserSession:
                 self._context = await engine_obj.launch_persistent_context(aether, **kwargs)
 
             await asyncio.sleep(0.5)  
-            self._page = await self._context.new_page()
+            self._page = await adopt_page(self._context)
             print(f"[Browser] ✅ Firefox launched")
             return
 
@@ -472,7 +500,7 @@ class _BrowserSession:
             }
             self._context = await engine_obj.launch_persistent_context(safari_profile, **kwargs)
             await asyncio.sleep(0.5)
-            self._page = await self._context.new_page()
+            self._page = await adopt_page(self._context)
             print(f"[Browser] ✅ Safari launched")
             return
 
@@ -506,7 +534,7 @@ class _BrowserSession:
         try:
             self._context = await engine_obj.launch_persistent_context(profile, **kwargs)
             await asyncio.sleep(0.5) 
-            self._page = await self._context.new_page()
+            self._page = await adopt_page(self._context)
             print(f"[Browser] ✅ Launched [{label}] profile={profile}")
             return
         except Exception as e:
@@ -519,7 +547,7 @@ class _BrowserSession:
         try:
             self._context = await engine_obj.launch_persistent_context(aether_profile, **kwargs)
             await asyncio.sleep(0.5)
-            self._page = await self._context.new_page()
+            self._page = await adopt_page(self._context)
             print(f"[Browser] ✅ Launched [{label}] with Aether profile")
         except Exception as e2:
             raise RuntimeError(f"Could not launch {self.browser_name}: {e2}") from e2
@@ -529,7 +557,7 @@ class _BrowserSession:
         await self._launch()
         # If somehow page got closed, open a fresh one
         if self._page is None or self._page.is_closed():
-            self._page = await self._context.new_page()
+            self._page = await adopt_page(self._context)
             await asyncio.sleep(0.2)
         return self._page
 
@@ -555,7 +583,7 @@ class _BrowserSession:
         if result_url in ("about:blank", "", None, prev_url) and prev_url in ("about:blank", "", None):
             print(f"[Browser] Still blank after goto — retrying on new tab: {url}")
             try:
-                new_page   = await self._context.new_page()
+                new_page   = await adopt_page(self._context)
                 self._page = new_page
                 result_url = await _do_goto(new_page)
             except Exception as e:
@@ -693,7 +721,8 @@ class _BrowserSession:
     async def new_tab(self, url: str = "") -> str:
         page = await self._get_page()
         ctx  = page.context
-        new  = await ctx.new_page()
+        # A blank current tab IS the new tab; otherwise open exactly one.
+        new  = page if _is_blank_url(page.url) else await ctx.new_page()
         self._page = new
         if url:
             return await self.go_to(url)

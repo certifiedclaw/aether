@@ -1,5 +1,5 @@
 {
-  "next_id": 92,
+  "next_id": 96,
   "items": [
     {
       "id": 1,
@@ -819,6 +819,42 @@
       "notes": "Added per-user data storage with one-time non-destructive migration for app data, long-term memory, and chat history; routed data consumers and Docker/doctor/security/test coverage.",
       "created": "2026-10-17",
       "updated": "2026-10-17"
+    },
+    {
+      "id": 92,
+      "title": "Small-model replies that promise but never act ('I will research...') - retry once forcing the tool call",
+      "priority": "high",
+      "status": "backlog",
+      "notes": "Seen live: Artemis research turn ended after 2 rounds with only a promise; qwen3:8b",
+      "created": "2026-10-18",
+      "updated": "2026-10-18"
+    },
+    {
+      "id": 93,
+      "title": "Trim per-turn prompt (2.6-4.5k tokens even for 'whats 2+2'): fewer tool schemas, shorter system prompt - TTFT is 1.4-3.2s",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "From perf.jsonl on RTX 3050: ~30 tok/s, TTFT dominated by prompt processing",
+      "created": "2026-10-18",
+      "updated": "2026-10-18"
+    },
+    {
+      "id": 94,
+      "title": "Investigate: duplicated user text in turns ('x\\nx'), langchain research tool returning in 5ms, web_search paging 5 Bing pages (8.7s)",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "From live_turns.jsonl / events.jsonl / aether.log of 2026-10-17",
+      "created": "2026-10-18",
+      "updated": "2026-10-18"
+    },
+    {
+      "id": 95,
+      "title": "Push-to-talk / wake-word default so background media is never transcribed",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Energy VAD treats any loud audio (TikTok) as speech; confidence filter helps but only a gate fixes it. Set stt_language to en meanwhile.",
+      "created": "2026-10-18",
+      "updated": "2026-10-18"
     }
   ]
 }

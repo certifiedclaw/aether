@@ -34,6 +34,19 @@ logger = logging.getLogger(__name__)
 
 # ── BM25 (no dependencies) ────────────────────────────────────────────────
 
+def _load_cached_first(factory, name):
+    """Load a Hugging Face model from the local cache without touching the network.
+
+    Every launch used to send ~25 requests to huggingface.co (cache revalidation) even
+    though the models were already downloaded, which is slow and breaks the "runs fully
+    offline" promise. Try the cache only first; go online only if the model is genuinely
+    missing (first run) or the installed library is too old to accept the flag."""
+    try:
+        return factory(name, local_files_only=True)
+    except Exception:
+        return factory(name)
+
+
 class BM25Index:
     def __init__(self, k1: float = 1.5, b: float = 0.75) -> None:
         self.k1, self.b = k1, b
@@ -197,7 +210,7 @@ class HybridMemory:
             self._enc_tried = True
             try:
                 from sentence_transformers import SentenceTransformer
-                self._encoder = SentenceTransformer(self._embed_model)
+                self._encoder = _load_cached_first(SentenceTransformer, self._embed_model)
                 logger.info("HybridMemory: dense encoder ready (%s)", self._embed_model)
             except ImportError:
                 logger.info("HybridMemory: sentence-transformers not installed — BM25 only")
@@ -218,7 +231,7 @@ class HybridMemory:
             self._re_tried = True
             try:
                 from sentence_transformers import CrossEncoder
-                self._reranker = CrossEncoder(self._rerank_model)
+                self._reranker = _load_cached_first(CrossEncoder, self._rerank_model)
                 logger.info("HybridMemory: cross-encoder reranker ready")
             except ImportError:
                 logger.debug("HybridMemory: CrossEncoder not available — skipping rerank")
