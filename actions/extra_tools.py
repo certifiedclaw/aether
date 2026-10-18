@@ -30,6 +30,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Callable
 
+from core.data_home import data_path
 from core.risk import APPROVAL_CODE_LIMIT, RUN_PYTHON_DISABLED
 
 logger = logging.getLogger(__name__)
@@ -157,7 +158,7 @@ def get_battery() -> str:
 # PRODUCTIVITY
 # ─────────────────────────────────────────────────────────────────────────────
 
-_NOTES_DIR = Path("./data/notes")
+_NOTES_DIR = data_path("notes")
 
 def save_note(title: str, content: str) -> str:
     """Save a quick note to data/notes/."""
@@ -845,7 +846,7 @@ def generate_qr(text: str, save_path: str = "") -> str:
         import qrcode
         img = qrcode.make(text)
         if not save_path:
-            save_path = str(Path("./data") / f"qr_{int(time.time())}.png")
+            save_path = str(data_path(f"qr_{int(time.time())}.png"))
         Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         img.save(save_path)
         return f"QR code saved: {save_path}"
@@ -877,8 +878,8 @@ def screenshot_region(x: int, y: int, width: int, height: int,
     try:
         import mss, mss.tools
         if not save_path:
-            save_path = str(Path("./data/screenshots") /
-                           f"region_{int(time.time())}.png")
+            save_path = str(data_path(Path("screenshots") /
+                                      f"region_{int(time.time())}.png"))
         Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         with mss.mss() as sct:
             monitor = {"top": int(y), "left": int(x),

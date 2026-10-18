@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-17 22:55 UTC
+Generated: 2026-10-18 00:02 UTC
 
 ## In progress
 
@@ -160,3 +160,7 @@ Generated: 2026-10-17 22:55 UTC
   - Implemented source-backed web search across Aether direct search, comparison, LangChain search, and multi-step LangChain research. Search summaries are instructed to cite supplied numbered results and now always include a deterministic Sources list with verified HTTP(S) URLs; results without valid links are excluded, and an empty usable set returns an explicit no-results message. Comparison sources are collected per item, and research carries deduplicated pages from its web-search observations into the final answer. Updated the tool description and README. Mocked regression coverage passed (163 related tests); Python compilation and diff checks pass. No live DuckDuckGo request was made during verification.
 - [x] **#60** [F2] Document Q&A over PDFs, notes, Obsidian, with citations
   - Completed source-cited document Q&A for PDFs, Markdown, and Obsidian folders. Basic RAG keeps PDF page boundaries, cites filenames/pages in prompts and replies, and PDF search returns page-numbered excerpts with blank/no-match handling. LlamaIndex vector/sub-query modes use CitationQueryEngine for inline references with a matching source list; summary results list source metadata. Added usage documentation and mocked regression tests; 31 focused tests passed (1 skipped), changed Python files compile, and git diff --check passes. The broader critical suite also exposed a repeatable unrelated TaskScheduler timing failure; scheduler code was not changed.
+- [x] **#90** Config survives version upgrades (user-dir config, last-good fallback)
+  - Config migration remains in core/config_home.py; the persistent user-data migration follow-up shipped as #91.
+- [x] **#91** Persistent user data survives version upgrades
+  - Added per-user data storage with one-time non-destructive migration for app data, long-term memory, and chat history; routed data consumers and Docker/doctor/security/test coverage.

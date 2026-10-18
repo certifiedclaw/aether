@@ -67,6 +67,7 @@
 
   "_comment_memory": "── Memory settings ──────────────────────────────────────",
   "memory.db_path":             "data/memory.db",
+  "goals.path":                 "data/goals.json",
   "memory.chat_history_limit":  100,
   "memory.relevance_threshold": 0.35,
 

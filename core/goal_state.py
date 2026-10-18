@@ -104,16 +104,18 @@ class Goal:
 class GoalState:
     """
     Manages persistent goals across sessions.
-    Goals are stored to data/goals.json and reloaded on startup.
+    Goals are stored in the per-user data directory and reloaded on startup.
     """
 
     def __init__(self, config=None) -> None:
         try:
             from memory.config_manager import get_mark_config
+            from core.data_home import resolve_data_path
             cfg = config or get_mark_config()
-            self._path = Path(cfg.get("goals.path", "./data/goals.json"))
+            self._path = resolve_data_path(cfg.get("goals.path"), "goals.json")
         except Exception:
-            self._path = Path("./data/goals.json")
+            from core.data_home import data_path
+            self._path = data_path("goals.json")
 
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._goals: dict[str, Goal] = {}

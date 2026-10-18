@@ -166,15 +166,33 @@ def check_git_secrets(root: Path) -> list[Finding]:
 
 
 def check_dirs(root: Path) -> Finding:
-    missing = [d for d in ("logs", "data", "memory") if not (root / d).is_dir()]
-    unwritable = [d for d in ("logs", "data", "memory") if (root / d).is_dir() and not os.access(root / d, os.W_OK)]
+    from core.data_home import data_dir
+    directories = {"logs": root / "logs", "user data": data_dir()}
+    missing = [name for name, path in directories.items() if not path.is_dir()]
+    unwritable = [
+        name for name, path in directories.items()
+        if path.is_dir() and not os.access(path, os.W_OK)
+    ]
     if unwritable:
         return Finding("Folders", FAIL, "not writable: " + ", ".join(unwritable),
                        "Fix the folder permissions or run Aether as the user that owns them.")
     if missing:
         return Finding("Folders", WARN, "missing: " + ", ".join(missing), "Created automatically on first use.",
                        auto="make_dirs")
-    return Finding("Folders", OK, "logs, data and memory exist and are writable.")
+    return Finding("Folders", OK, "logs and the per-user data directory exist and are writable.")
+
+
+def check_data_home(root: Path) -> list[Finding]:
+    from core.data_home import data_dir, stale_legacy_copies
+    findings = [Finding("User data location", OK, str(data_dir()))]
+    stale = stale_legacy_copies(root)
+    if stale:
+        findings.append(Finding(
+            "Legacy data copy", WARN,
+            f"{len(stale)} older file(s) in the app folder differ from the active user-data copy.",
+            "Aether uses the per-user copy. Compare the old and new files, then manually copy anything you want to keep.",
+        ))
+    return findings
 
 
 def check_disk(root: Path) -> list[Finding]:
@@ -196,7 +214,8 @@ def check_disk(root: Path) -> list[Finding]:
 
 def check_memory_files(root: Path) -> list[Finding]:
     out: list[Finding] = []
-    db = root / "data" / "memory.db"
+    from core.data_home import data_dir, long_term_path
+    db = data_dir() / "memory.db"
     if db.exists():
         try:
             con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=3)
@@ -209,15 +228,15 @@ def check_memory_files(root: Path) -> list[Finding]:
                                "integrity check passed." if ok else f"integrity check failed: {res}",
                                "" if ok else "Restore from a backup (/backup makes one) and keep the damaged file."))
         except Exception as e:  # noqa: BLE001
-            out.append(Finding("Memory database", FAIL, f"cannot open data/memory.db ({type(e).__name__}).",
+            out.append(Finding("Memory database", FAIL, f"cannot open {db} ({type(e).__name__}).",
                                "Close other Aether processes; if it persists restore from backup."))
-    lt = root / "memory" / "long_term.json"
+    lt = long_term_path()
     if lt.exists():
         try:
             json.loads(lt.read_text(encoding="utf-8") or "{}")
             out.append(Finding("Long-term memory file", OK, "valid JSON."))
         except Exception as e:  # noqa: BLE001
-            out.append(Finding("Long-term memory file", FAIL, f"memory/long_term.json is not valid JSON ({type(e).__name__}).",
+            out.append(Finding("Long-term memory file", FAIL, f"{lt} is not valid JSON ({type(e).__name__}).",
                                "Restore it from a backup; do not delete it unless you want to forget everything."))
     return out
 
@@ -335,11 +354,12 @@ def check_resources() -> Finding | None:
 
 # ── auto-fixes (safe + reversible only) ─────────────────────────────────────────
 def _fix_make_dirs(root: Path) -> str:
+    from core.data_home import data_dir
     made = []
-    for d in ("logs", "data", "memory"):
-        if not (root / d).is_dir():
-            (root / d).mkdir(parents=True, exist_ok=True)
-            made.append(d)
+    for name, path in (("logs", root / "logs"), ("user data", data_dir())):
+        if not path.is_dir():
+            path.mkdir(parents=True, exist_ok=True)
+            made.append(name)
     return "created folder(s): " + ", ".join(made) if made else "nothing to create"
 
 
@@ -372,6 +392,7 @@ def run_checks(root: Path = ROOT) -> list[Finding]:
             found.append(item)
     found += check_git_secrets(root)
     found.append(check_dirs(root))
+    found += check_data_home(root)
     found += check_disk(root)
     found += check_memory_files(root)
     found += check_llm(cfg)

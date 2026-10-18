@@ -16,6 +16,7 @@ from pathlib import Path, PurePosixPath
 from core.archive_safety import archive_size_error
 from core.chat_history import _valid_store, history_path
 from core.credentials import SECRET_NAMES
+from core.data_home import data_dir, long_term_path, resolve_data_path
 from memory.config_manager import BASE_DIR, CONFIG_FILE
 
 _FORMAT_VERSION = 1
@@ -35,7 +36,8 @@ _PORTABLE_PATHS = {
 
 
 def _resolve_configured_path(value: str, default: str) -> Path:
-    path = Path(os.path.expanduser(str(value or default)))
+    default_name = Path(default).name
+    path = resolve_data_path(value, default_name)
     return path if path.is_absolute() else (BASE_DIR / path).resolve()
 
 
@@ -69,7 +71,7 @@ def _write_bundle(destination: Path) -> list[str]:
     )
     goals_path = _resolve_configured_path(config.get("goals.path"), "./data/goals.json")
     chat_path = history_path()
-    long_term_path = BASE_DIR / "memory" / "long_term.json"
+    long_term = long_term_path()
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="aether_bundle_") as temp_dir:
@@ -96,7 +98,7 @@ def _write_bundle(destination: Path) -> list[str]:
         )
         long_term_member = temp / "long_term.json"
         long_term_member.write_text(
-            json.dumps(_read_object(long_term_path), ensure_ascii=False, indent=2),
+            json.dumps(_read_object(long_term), ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
 
@@ -169,7 +171,7 @@ def export_bundle(output_path: str = "") -> str:
     destination = (
         Path(os.path.expanduser(output_path))
         if output_path
-        else BASE_DIR / "data" / f"aether_bundle_{datetime.now():%Y%m%d_%H%M%S_%f}.zip"
+        else data_dir() / f"aether_bundle_{datetime.now():%Y%m%d_%H%M%S_%f}.zip"
     )
     if not destination.is_absolute():
         destination = BASE_DIR / destination
@@ -187,7 +189,7 @@ def export_bundle(output_path: str = "") -> str:
         protected_files = {
             CONFIG_FILE.resolve(),
             history_path().resolve(),
-            (BASE_DIR / "memory" / "long_term.json").resolve(),
+            long_term_path().resolve(),
             database.resolve(),
             goals.resolve(),
         }
@@ -365,7 +367,7 @@ def import_bundle(input_path: str) -> str:
     if not source.is_file():
         return f"Bundle not found: {input_path}"
 
-    backup_path = BASE_DIR / "data" / "backups" / (
+    backup_path = data_dir() / "backups" / (
         f"before_import_{datetime.now():%Y%m%d_%H%M%S_%f}.zip"
     )
     try:
@@ -373,16 +375,13 @@ def import_bundle(input_path: str) -> str:
             stage = Path(temp_dir)
             _manifest, settings = _stage_bundle(source, stage)
             backup_members = _write_bundle(backup_path)
-            (BASE_DIR / "memory").mkdir(parents=True, exist_ok=True)
-            data_dir = BASE_DIR / "data"
-            data_dir.mkdir(parents=True, exist_ok=True)
-
-            _replace_file(stage / "memory.db", data_dir / "memory.db")
-            _replace_file(stage / "long_term.json", BASE_DIR / "memory" / "long_term.json")
-            _replace_file(stage / "goals.json", data_dir / "goals.json")
+            user_data = data_dir()
+            _replace_file(stage / "memory.db", user_data / "memory.db")
+            _replace_file(stage / "long_term.json", long_term_path())
+            _replace_file(stage / "goals.json", user_data / "goals.json")
             _replace_file(stage / "chat_history.json", history_path())
-            _replace_directory(stage / "rag_index", data_dir / "rag_index")
-            _replace_directory(stage / "chroma_db", data_dir / "chroma_db")
+            _replace_directory(stage / "rag_index", user_data / "rag_index")
+            _replace_directory(stage / "chroma_db", user_data / "chroma_db")
 
             from core.config_io import save_config
             save_config(CONFIG_FILE, settings, replace=True)
@@ -399,7 +398,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Export or restore an Aether portable bundle.")
     commands = parser.add_subparsers(dest="action", required=True)
     export = commands.add_parser("export", help="Create a portable bundle")
-    export.add_argument("path", nargs="?", default="", help="Output ZIP path (default: data/)")
+    export.add_argument("path", nargs="?", default="", help="Output ZIP path (default: per-user data folder)")
     restore = commands.add_parser("import", help="Restore a portable bundle")
     restore.add_argument("path", help="Input ZIP path")
     args = parser.parse_args()

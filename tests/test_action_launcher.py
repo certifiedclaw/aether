@@ -41,11 +41,11 @@ def test_action_launcher_builds_form_and_dispatches_values(monkeypatch):
 
     assert dispatched == [("weather_report", {"city": "Montreal"})]
     assert any(
-        button.text() == "BROWSE ALL ACTIONS"
+        button.text() == "Browse all actions"
         for button in window.findChildren(ui.QPushButton)
     )
     assert [window._right_tabs.tabText(index) for index in range(2)] == [
-        "Activity", "Actions",
+        "Chat", "Actions",
     ]
     assert all(
         button.text() == button.text().encode("ascii", "replace").decode()
@@ -53,9 +53,14 @@ def test_action_launcher_builds_form_and_dispatches_values(monkeypatch):
     )
     window.show()
     app.processEvents()
-    assert window._right_tabs.tabText(0).endswith("Activity")
-    assert window._right_tabs.tabText(1).endswith("Actions")
-    assert window._log.height() >= 180
+    assert window._right_tabs.tabText(0) == "Chat"
+    assert window._right_tabs.tabText(1) == "Actions"
+    assert window._log.height() >= 200
+    assert window.width() >= 1100
+    assert window._left_panel.maximumWidth() <= 220
+    window._stats_bar.update_stats({"model": "qwen2.5:7b", "route": "remote"})
+    assert window.orb.route == "remote"
+    assert "GPU PC" in window.orb.accessibleDescription()
     research_form = Mock()
     research_tool = {
         "function": {
@@ -88,6 +93,21 @@ def test_action_launcher_builds_form_and_dispatches_values(monkeypatch):
     assert fallback["name"] == "web_search"
     assert "single web search" in fallback["description"]
     assert fallback["parameters"]["required"] == ["query"]
+
+    window.resize(900, 620)
+    app.processEvents()
+
+    def top_y(widget):
+        return widget.mapTo(window, widget.rect().topLeft()).y()
+
+    assert top_y(window._stats_bar) >= top_y(window._log) + window._log.height()
+    assert top_y(window._input) >= top_y(window._stats_bar) + window._stats_bar.height()
+    assert window._prompt_suggestions.isHidden()
+
+    window.resize(1180, 780)
+    app.processEvents()
+    assert window._log.height() >= 200
+    assert not window._prompt_suggestions.isHidden()
 
     quick_commands = []
     window.on_action_catalog = lambda: [
@@ -152,6 +172,26 @@ def test_direct_action_uses_worker_queue_without_an_llm_turn():
     ]
 
 
+def test_published_message_stats_include_model_route(monkeypatch):
+    from core import conversation_core, perf_stats
+
+    published = []
+    monkeypatch.setattr(perf_stats, "route_for", lambda _kwargs: "cloud")
+    monkeypatch.setattr(perf_stats, "record", lambda *args, **kwargs: None)
+    monkeypatch.setattr(conversation_core, "get_context_window", lambda _model: 8192)
+    core = object.__new__(conversation_core.ConversationCoreMixin)
+    core.ui = SimpleNamespace(update_message_stats=published.append)
+
+    core._publish_message_stats(
+        {"model": "qwen2.5:7b", "prompt_tokens": 12, "output_tokens": 4},
+        elapsed=0.25,
+        stream_kwargs={"mode": "cloud"},
+    )
+
+    assert published[0]["route"] == "cloud"
+    assert published[0]["model"] == "qwen2.5:7b"
+
+
 def test_chat_input_is_discoverable_and_does_not_drop_unsent_text(monkeypatch):
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     try:
@@ -174,7 +214,7 @@ def test_chat_input_is_discoverable_and_does_not_drop_unsent_text(monkeypatch):
     window._apply_state("PROCESSING")
     assert window._chat_status_lbl.text() == "Working on it…"
     window._apply_state("ERROR")
-    assert "check Activity" in window._chat_status_lbl.text()
+    assert "conversation log" in window._chat_status_lbl.text()
     window._apply_state("LISTENING")
 
     assert "Ctrl+L" in window._input.toolTip() or any(

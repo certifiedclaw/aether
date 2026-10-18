@@ -47,8 +47,9 @@ class _BM25:
 class RAGEngine:
     def __init__(self, config=None) -> None:
         from memory.config_manager import get_mark_config
+        from core.data_home import resolve_data_path
         cfg = config or get_mark_config()
-        self._index_path = Path(cfg.get("rag.index_path", "./data/rag_index"))
+        self._index_path = resolve_data_path(cfg.get("rag.index_path"), "rag_index")
         self._chunk_size = int(cfg.get("rag.chunk_size", 500))
         self._overlap    = int(cfg.get("rag.chunk_overlap", 50))
         self._top_k      = int(cfg.get("rag.top_k", 5))

@@ -240,20 +240,19 @@ class _MemoryIsolation:
     runs instead of the current code. Snapshots live in logs/.verify_snapshot/
     and are restored in __exit__ even if the replay times out or crashes.
     """
-    FILES = ["data/memory.db", "memory/long_term.json"]
-
     def __enter__(self):
         import shutil
+        from core.data_home import data_dir, long_term_path
         self.snap = ROOT / "logs" / ".verify_snapshot"
         self.snap.mkdir(parents=True, exist_ok=True)
         self.saved = []
-        for rel in self.FILES:
-            src = ROOT / rel
+        self.files = [data_dir() / "memory.db", long_term_path()]
+        for src in self.files:
             if src.exists():
-                dst = self.snap / rel.replace("/", "__")
+                dst = self.snap / src.name
                 shutil.copy2(src, dst)
                 self.saved.append((src, dst))
-        db = ROOT / "data" / "memory.db"
+        db = data_dir() / "memory.db"
         if db.exists():
             import sqlite3
             con = sqlite3.connect(db)
@@ -264,7 +263,7 @@ class _MemoryIsolation:
                 pass
             finally:
                 con.close()
-        lt = ROOT / "memory" / "long_term.json"
+        lt = long_term_path()
         if lt.exists():
             lt.write_text("{}", encoding="utf-8")
         line("memory isolated for the replay (your real memory is restored afterwards)")

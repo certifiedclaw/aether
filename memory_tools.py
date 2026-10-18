@@ -24,9 +24,13 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_BACKUP_DIR    = Path("data/backups")
-_LONG_TERM_JSON = Path("memory/long_term.json")
-_MEMORY_DB     = Path("data/memory.db")
+from core.data_home import data_path, long_term_path, resolve_data_path
+
+_BACKUP_DIR = data_path("backups")
+_LONG_TERM_JSON = long_term_path()
+_MEMORY_DB = resolve_data_path(None, "memory.db")
+_GOALS_JSON = data_path("goals.json")
+_RAG_INDEX = data_path("rag_index")
 
 
 # ── Backup ────────────────────────────────────────────────────────────────
@@ -34,12 +38,12 @@ _MEMORY_DB     = Path("data/memory.db")
 def backup_memory(tag: str = "") -> str:
     """
     Create a timestamped zip backup of:
-      - memory/long_term.json   (identity/preferences/notes)
-      - data/memory.db          (episodic/hybrid memory SQLite)
-      - data/goals.json         (active goals)
-      - data/rag_index/         (RAG document index)
+      - long_term.json          (identity/preferences/notes)
+      - memory.db               (episodic/hybrid memory SQLite)
+      - goals.json              (active goals)
+      - rag_index/              (RAG document index)
 
-    Returns path to the backup zip.
+    The backup is written under the per-user data directory.
     """
     try:
         _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
@@ -52,8 +56,7 @@ def backup_memory(tag: str = "") -> str:
         stage.mkdir(parents=True, exist_ok=True)
 
         copied = []
-        for src in [_LONG_TERM_JSON, _MEMORY_DB,
-                    Path("data/goals.json"), Path("data/rag_index")]:
+        for src in [_LONG_TERM_JSON, _MEMORY_DB, _GOALS_JSON, _RAG_INDEX]:
             src_exp = Path(os.path.expanduser(str(src)))
             if src_exp.exists():
                 dest = stage / src_exp.name
@@ -85,7 +88,7 @@ def export_memory(output_path: str = "") -> str:
     try:
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         out = Path(output_path) if output_path else \
-              Path(f"data/memory_export_{stamp}.json")
+              data_path(f"memory_export_{stamp}.json")
         out.parent.mkdir(parents=True, exist_ok=True)
 
         export: dict[str, Any] = {
@@ -329,7 +332,7 @@ def memory_stats() -> str:
 MEMORY_TOOL_DECLARATIONS = [
     {
         "name": "backup_memory",
-        "description": "Backup all memories (long-term JSON, episodic SQLite DB, goals, RAG index) to a dated zip file in data/backups/.",
+        "description": "Backup all memories (long-term JSON, episodic SQLite DB, goals, RAG index) to the per-user data folder.",
         "parameters": {
             "type": "OBJECT",
             "properties": {

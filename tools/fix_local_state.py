@@ -56,7 +56,11 @@ def main():
                     help="with --apply: also delete memories rows that mention Fatih/Istanbul or record failed turns (filler/tool-call text); backup: memory.db.bak")
     args = ap.parse_args()
 
-    lt = ROOT / "memory" / "long_term.json"
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from core.data_home import data_dir, long_term_path
+
+    lt = long_term_path()
     if lt.exists():
         data = json.loads(lt.read_text(encoding="utf-8"))
         hits = [(p, v) for p, v in _walk(data) if isinstance(v, str) and any(b in v.lower() for b in BAD)]
@@ -75,7 +79,7 @@ def main():
     else:
         print("long_term.json not found")
 
-    db = ROOT / "data" / "memory.db"
+    db = data_dir() / "memory.db"
     if db.exists():
         con = sqlite3.connect(db)
         try:

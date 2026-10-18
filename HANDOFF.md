@@ -2,7 +2,27 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-17 23:33 UTC
+Generated: 2026-10-18 00:24 UTC
+
+## #113 — 2026-10-18 00:24 UTC — GitHub Copilot CLI
+
+Completed the chat-first UI redesign with a calmer status rail, clearer Chat/Actions navigation, responsive compact-window layout, and route-aware response status. Added route and compact-layout regression coverage; full pytest passed (894 passed, 2 skipped, 1 deselected).
+
+**Touched:** `ui.py`, `core/conversation_core.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Review the UI follow-up on the open PR #18; leave it unmerged unless requested.
+
+---
+
+## #112 — 2026-10-18 00:00 UTC — GitHub Copilot (Copilot CLI)
+
+Implemented upgrade-safe per-user persistent storage with one-time non-overwriting migration, routed data consumers, added Docker/doctor/protection changes and migration tests. Validation: py_compile on all 27 changed Python files; full pytest 893 passed, 2 skipped, 1 requested deselection.
+
+**Touched:** `core/`, `memory/`, `actions/`, `integrations/`, `security/`, `tools/`, `tests/`, `main.py`, `memory_tools.py`, `Dockerfile`, `config/config.example.json`, `ROADMAP.md`, `tools/maintenance/data/roadmap.json`, `HANDOFF.md`, `tools/maintenance/data/handoff.json`
+
+**Next steps:** Review the pull request; do not merge it.
+
+---
 
 ## #111 — 2026-10-17 23:33 UTC — Claude Code
 
