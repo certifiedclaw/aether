@@ -44,7 +44,8 @@ API_FILE   = _config_home.config_path()
 CONFIG_DIR = API_FILE.parent
 
 _DEFAULT_W, _DEFAULT_H = 1180, 780
-_MIN_W,     _MIN_H     = 900, 620
+_MIN_W,     _MIN_H     = 760, 620
+_SIDEBAR_BREAKPOINT = 1000
 _LEFT_W  = 180
 
 _OS = platform.system()  # "Windows" | "Darwin" | "Linux"
@@ -138,9 +139,12 @@ def load_bundled_fonts() -> None:
 
 class _SysMetrics:
     def __init__(self):
-        self.cpu  = 0.0
-        self.mem  = 0.0
-        self.net  = 0.0   
+        memory = psutil.virtual_memory()
+        self.cpu  = -1.0
+        self.mem  = memory.percent
+        self.mem_used = memory.used
+        self.mem_total = memory.total
+        self.net  = -1.0
         self.gpu  = -1.0  
         self.tmp  = -1.0  
         self._lock = threading.Lock()
@@ -159,29 +163,33 @@ class _SysMetrics:
             time.sleep(1.5)
 
     def _update(self):
-        cpu = psutil.cpu_percent(interval=None)
-        mem = psutil.virtual_memory().percent
+        cpu = psutil.cpu_percent(interval=0.1)
+        memory = psutil.virtual_memory()
+        mem = memory.percent
 
         nc  = psutil.net_io_counters()
         now = time.time()
         dt  = now - self._last_net_t
-        if dt > 0:
+        if dt >= 0.5:
             sent = (nc.bytes_sent - self._last_net.bytes_sent) / dt
             recv = (nc.bytes_recv - self._last_net.bytes_recv) / dt
             net  = (sent + recv) / (1024 * 1024)
+            self._last_net   = nc
+            self._last_net_t = now
         else:
-            net = 0.0
-        self._last_net   = nc
-        self._last_net_t = now
-
-        gpu = self._get_gpu()
-
-        tmp = self._get_temp()
+            net = -1.0
 
         with self._lock:
             self.cpu = cpu
             self.mem = mem
+            self.mem_used = memory.used
+            self.mem_total = memory.total
             self.net = net
+
+        gpu = self._get_gpu()
+        tmp = self._get_temp()
+
+        with self._lock:
             self.gpu = gpu
             self.tmp = tmp
 
@@ -298,6 +306,8 @@ class _SysMetrics:
             return {
                 "cpu": self.cpu,
                 "mem": self.mem,
+                "mem_used": self.mem_used,
+                "mem_total": self.mem_total,
                 "net": self.net,
                 "gpu": self.gpu,
                 "tmp": self.tmp,
@@ -634,7 +644,8 @@ class PresenceLine(QWidget):
             route_text,
         )
 
-        line_rect = QRectF(16, 34, max(1, bounds.width() - 32), 13)
+        line_top = 34 if self.height() >= 52 else max(23, self.height() - 16)
+        line_rect = QRectF(16, line_top, max(1, bounds.width() - 32), 12)
         base_y = line_rect.center().y()
         painter.setPen(QPen(qcol(C.BORDER_B), 1))
         painter.drawLine(QPointF(line_rect.left(), base_y), QPointF(line_rect.right(), base_y))
@@ -665,6 +676,7 @@ class MetricBar(QWidget):
     def __init__(self, label: str, color: str = C.PRI, parent=None):
         super().__init__(parent)
         self._label = label
+        self.setAccessibleName(f"{label} system metric")
         self._color = color
         self._value = 0.0       # 0–100
         self._text  = "--"
@@ -846,9 +858,9 @@ class StatsBar(QWidget):
 
         fields = [
             ("model",  "Model"),
-            ("input",  "Input"),
-            ("output", "Output"),
-            ("total",  "Total"),
+            ("input",  "Input tokens"),
+            ("output", "Output tokens"),
+            ("total",  "Total tokens"),
             ("speed",  "Speed"),
             ("time",   "Time"),
         ]
@@ -864,11 +876,12 @@ class StatsBar(QWidget):
             val = QLabel("—")
             val.setFont(QFont(FONT_BODY, 9, QFont.Weight.DemiBold))
             val.setStyleSheet(f"color: {C.TEXT}; background: transparent;")
+            val.setAccessibleName(f"{caption} value")
             val.setMinimumWidth(48)
             cell.addWidget(val)
 
             self._value_labels[key] = val
-            grid.addLayout(cell, 0, i)
+            grid.addLayout(cell, i // 3, i % 3)
 
         # ── Context-window usage bar ───────────────────────────────────
         ctx_row = QHBoxLayout()
@@ -881,6 +894,7 @@ class StatsBar(QWidget):
         self._ctx_bar = QProgressBar()
         self._ctx_bar.setRange(0, 100)
         self._ctx_bar.setValue(0)
+        self._ctx_bar.setVisible(False)
         self._ctx_bar.setTextVisible(False)
         self._ctx_bar.setFixedHeight(7)
         self._ctx_bar.setStyleSheet(f"""
@@ -896,12 +910,13 @@ class StatsBar(QWidget):
         """)
         ctx_row.addWidget(self._ctx_bar, stretch=1)
 
-        self._ctx_label = QLabel("0%")
+        self._ctx_label = QLabel("Unavailable")
+        self._ctx_label.setAccessibleName("Context window usage")
         self._ctx_label.setFont(QFont(FONT_BODY, 7, QFont.Weight.Bold))
         self._ctx_label.setStyleSheet(f"color: {C.TEXT}; background: transparent;")
-        self._ctx_label.setFixedWidth(80)
+        self._ctx_label.setFixedWidth(140)
         ctx_row.addWidget(self._ctx_label)
-        grid.addLayout(ctx_row, 1, 0, 1, 6)
+        grid.addLayout(ctx_row, 2, 0, 1, 3)
 
     # ------------------------------------------------------------------
     def update_stats(self, data: dict) -> None:
@@ -928,13 +943,13 @@ class StatsBar(QWidget):
         context_window = data.get("context_window")
 
         self._value_labels["input"].setText(
-            str(prompt_tokens) if prompt_tokens is not None else "—")
+            f"{prompt_tokens:,} tokens" if prompt_tokens is not None else "—")
         self._value_labels["output"].setText(
-            str(output_tokens) if output_tokens is not None else "—")
+            f"{output_tokens:,} tokens" if output_tokens is not None else "—")
 
         if prompt_tokens is not None and output_tokens is not None:
             total = prompt_tokens + output_tokens
-            self._value_labels["total"].setText(str(total))
+            self._value_labels["total"].setText(f"{total:,} tokens")
         else:
             total = None
             self._value_labels["total"].setText("—")
@@ -944,10 +959,11 @@ class StatsBar(QWidget):
         self._value_labels["time"].setText(
             f"{elapsed:.2f}s" if elapsed is not None else "—")
 
-        if total is not None and context_window:
+        if total is not None and context_window and context_window > 0:
             pct = max(0, min(100, round(total / context_window * 100)))
             self._ctx_bar.setValue(pct)
-            self._ctx_label.setText(f"{pct}% of {context_window}")
+            self._ctx_bar.setVisible(True)
+            self._ctx_label.setText(f"{pct}% of {context_window:,} tokens")
             if pct >= 90:
                 chunk_color = C.RED
             elif pct >= 70:
@@ -967,7 +983,8 @@ class StatsBar(QWidget):
             """)
         else:
             self._ctx_bar.setValue(0)
-            self._ctx_label.setText("—")
+            self._ctx_bar.setVisible(False)
+            self._ctx_label.setText("Unavailable")
 
 
 _FILE_ICONS = {
@@ -2052,13 +2069,14 @@ class MainWindow(QMainWindow):
     def __init__(self, face_path: str):
         super().__init__()
         self.setWindowTitle(f"{APP_NAME} — Local-first assistant · v{__version__}")
-        self.setMinimumSize(_MIN_W, _MIN_H)
-        self.resize(_DEFAULT_W, _DEFAULT_H)
-
         screen = QApplication.primaryScreen().availableGeometry()
+        initial_width = min(_DEFAULT_W, screen.width())
+        initial_height = min(_DEFAULT_H, screen.height())
+        self.setMinimumSize(min(_MIN_W, screen.width()), min(_MIN_H, screen.height()))
+        self.resize(initial_width, initial_height)
         self.move(
-            (screen.width()  - _DEFAULT_W) // 2,
-            (screen.height() - _DEFAULT_H) // 2,
+            screen.x() + (screen.width() - initial_width) // 2,
+            screen.y() + (screen.height() - initial_height) // 2,
         )
 
         self.on_text_command  = None
@@ -2132,7 +2150,12 @@ class MainWindow(QMainWindow):
         sc_focus_input.activated.connect(self._focus_input)
 
         self._collapsed = False
-        self._saved_size = None
+        self._compact_layout = self.width() < _SIDEBAR_BREAKPOINT
+        if self._compact_layout:
+            self._left_panel.hide()
+        self._system_panel_btn.setVisible(
+            self._compact_layout or self._collapsed
+        )
 
     def _toggle_fullscreen(self):
         if self.isFullScreen():
@@ -2149,47 +2172,73 @@ class MainWindow(QMainWindow):
             self.activateWindow()
 
     def _toggle_collapse(self):
-        """Esc: hide the system rail for a more focused chat view."""
+        """Esc toggles the system-monitoring panel without resizing the window."""
         if self.isFullScreen():
             self.showNormal()
             return
-        if not self._collapsed:
-            self._saved_size = self.size()
-            self._left_panel.hide()
-            self.resize(980, 700)
-            self._collapsed = True
-        else:
-            self._left_panel.show()
-            if self._saved_size:
-                self.resize(self._saved_size)
-            self._collapsed = False
+        self._toggle_system_panel()
+
+    def _toggle_system_panel(self):
+        show_panel = not self._left_panel.isVisible()
+        self._collapsed = not show_panel
+        self._left_panel.setVisible(show_panel)
+        self._system_panel_btn.setText(
+            "Hide system panel" if show_panel else "Show system panel"
+        )
+        self._system_panel_btn.setAccessibleDescription(
+            "System panel visible" if show_panel else "System panel hidden"
+        )
+        self._system_panel_btn.setVisible(
+            self._compact_layout or self._collapsed
+        )
+
+    def _toggle_response_details(self, expanded: bool) -> None:
+        self._stats_bar.setVisible(expanded)
+        self._stats_toggle.setText(
+            "▾  Response details" if expanded else "›  Response details"
+        )
+        self._stats_toggle.setAccessibleDescription(
+            "Expanded" if expanded else "Collapsed"
+        )
+
+    def _position_overlay(self, overlay: QWidget, width: int, height: int) -> None:
+        central = self.centralWidget()
+        width = min(width, max(1, central.width() - 24))
+        height = min(height, max(1, central.height() - 24))
+        overlay.setGeometry(
+            max(0, (central.width() - width) // 2),
+            max(0, (central.height() - height) // 2),
+            width,
+            height,
+        )
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         compact = self.height() < 700
         if hasattr(self, "_chat_layout"):
-            self._chat_layout.setSpacing(6 if compact else 10)
-            self._log.setMinimumHeight(100 if compact else 200)
-            self.orb.setFixedHeight(44 if compact else 58)
+            self._chat_layout.setSpacing(4 if compact else 10)
+            self._log.setMinimumHeight(80 if compact else 200)
+            self.orb.setFixedHeight(40 if compact else 58)
             self._chat_subtitle.setVisible(not compact)
-            self._stats_heading.setVisible(not compact)
             self._input_hint.setVisible(not compact)
             self._update_prompt_suggestions()
-        cw = self.centralWidget()
+        sidebar_compact = self.width() < _SIDEBAR_BREAKPOINT
+        if sidebar_compact != getattr(
+            self, "_compact_layout", sidebar_compact
+        ):
+            self._compact_layout = sidebar_compact
+            if sidebar_compact:
+                self._left_panel.hide()
+            elif not self._collapsed:
+                self._left_panel.show()
+        if hasattr(self, "_system_panel_btn"):
+            self._system_panel_btn.setVisible(
+                self._compact_layout or self._collapsed
+            )
         if self._overlay and self._overlay.isVisible():
-            ow, oh = 560, 660
-            self._overlay.setGeometry(
-                (cw.width()  - ow) // 2,
-                (cw.height() - oh) // 2,
-                ow, oh,
-            )
+            self._position_overlay(self._overlay, 560, 680)
         if self._startup_panel and self._startup_panel.isVisible():
-            pw, ph = 400, 310
-            self._startup_panel.setGeometry(
-                (cw.width()  - pw) // 2,
-                (cw.height() - ph) // 2,
-                pw, ph,
-            )
+            self._position_overlay(self._startup_panel, 400, 310)
 
     # ── Startup panel (thread-safe via _startup_sig) ────────────────────
     def _on_confirm_requested(self, message: str, result_holder: dict) -> None:
@@ -2247,26 +2296,55 @@ class MainWindow(QMainWindow):
 
         # CPU
         cpu = snap["cpu"]
-        self._bar_cpu.set_value(cpu, f"{cpu:.0f}%")
+        self._bar_cpu.set_value(max(0, cpu), f"{cpu:.0f}%" if cpu >= 0 else "--")
+        self._bar_cpu.setAccessibleDescription(
+            f"CPU utilization: {cpu:.0f} percent" if cpu >= 0
+            else "CPU utilization is not available yet"
+        )
 
         # MEM
         mem = snap["mem"]
-        self._bar_mem.set_value(mem, f"{mem:.0f}%")
+        mem_total = snap["mem_total"]
+        mem_used = snap["mem_used"]
+        if mem_total > 0:
+            total_gb = mem_total / (1024 ** 3)
+            used_gb = mem_used / (1024 ** 3)
+            self._bar_mem.set_value(mem, f"{mem:.0f}% / {total_gb:.0f}GB")
+            self._bar_mem.setAccessibleDescription(
+                f"Memory usage: {used_gb:.1f} gigabytes used of "
+                f"{total_gb:.1f} gigabytes total ({mem:.0f} percent)"
+            )
+        else:
+            self._bar_mem.set_value(mem, f"{mem:.0f}%")
+            self._bar_mem.setAccessibleDescription(
+                f"Memory utilization: {mem:.0f} percent; capacity unavailable"
+            )
 
         # NET
         net = snap["net"]
-        if net < 1.0:
-            net_str = f"{net*1024:.0f}KB/s"
+        if net < 0:
+            net_str = "--"
+            net_pct = 0
+        elif net < 1.0:
+            net_str = f"{net * 1024:.0f} KiB/s"
+            net_pct = min(100, net * 10)
         else:
-            net_str = f"{net:.1f}MB/s"
-        net_pct = min(100, net * 10)  # 10 MB/s = %100
+            net_str = f"{net:.1f} MiB/s"
+            net_pct = min(100, net * 10)
         self._bar_net.set_value(net_pct, net_str)
+        self._bar_net.setAccessibleDescription(
+            f"Combined network receive and transmit throughput: {net_str}"
+            if net >= 0 else "Network throughput is not available yet"
+        )
 
         # GPU
         gpu = snap["gpu"]
         self._bar_gpu.setVisible(gpu >= 0)
         if gpu >= 0:
             self._bar_gpu.set_value(gpu, f"{gpu:.0f}%")
+            self._bar_gpu.setAccessibleDescription(
+                f"GPU utilization: {gpu:.0f} percent"
+            )
 
         # TMP
         tmp = snap["tmp"]
@@ -2274,6 +2352,9 @@ class MainWindow(QMainWindow):
         if tmp >= 0:
             tmp_pct = min(100, (tmp / 100) * 100)
             self._bar_tmp.set_value(tmp_pct, f"{tmp:.0f}°C")
+            self._bar_tmp.setAccessibleDescription(
+                f"Hardware temperature reading: {tmp:.0f} degrees Celsius"
+            )
 
         try:
             boot_t  = psutil.boot_time()
@@ -2316,6 +2397,25 @@ class MainWindow(QMainWindow):
         version.setStyleSheet(f"color: {C.TEXT_DIM}; background: transparent;")
         lay.addWidget(version)
         lay.addSpacing(24)
+
+        self._system_panel_btn = QPushButton("Show system panel")
+        self._system_panel_btn.setAccessibleName("Toggle system monitoring panel")
+        self._system_panel_btn.setAccessibleDescription("System panel hidden")
+        self._system_panel_btn.setToolTip(
+            "Show or hide CPU, memory, network, and device status"
+        )
+        self._system_panel_btn.setFixedHeight(32)
+        self._system_panel_btn.setStyleSheet(f"""
+            QPushButton {{
+                color: {C.TEXT_MED}; background: transparent;
+                border: 1px solid {C.BORDER}; border-radius: 7px; padding: 4px 9px;
+            }}
+            QPushButton:hover {{ color: {C.PRI}; border-color: {C.PRI_DIM}; }}
+            QPushButton:focus {{ border: 2px solid {C.PRI}; }}
+        """)
+        self._system_panel_btn.clicked.connect(self._toggle_system_panel)
+        self._system_panel_btn.hide()
+        lay.addWidget(self._system_panel_btn)
 
         right_col = QVBoxLayout(); right_col.setSpacing(2)
         self._clock_lbl = QLabel("00:00:00")
@@ -2360,6 +2460,14 @@ class MainWindow(QMainWindow):
         for bar in [self._bar_cpu, self._bar_mem, self._bar_net,
                     self._bar_gpu, self._bar_tmp]:
             lay.addWidget(bar)
+        self._bar_cpu.setToolTip("Current CPU utilization")
+        self._bar_mem.setToolTip("Current physical memory utilization")
+        self._bar_net.setToolTip(
+            "Combined network receive and transmit rate. The activity bar "
+            "is scaled to 10 MiB/s."
+        )
+        self._bar_gpu.setToolTip("GPU utilization when supported by this device")
+        self._bar_tmp.setToolTip("Hardware temperature reading when available")
 
         lay.addSpacing(4)
 
@@ -2402,7 +2510,7 @@ class MainWindow(QMainWindow):
         return w
     def _build_right_panel(self) -> QWidget:
         w = QWidget()
-        w.setMinimumWidth(580)
+        w.setMinimumWidth(440)
         w.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         w.setStyleSheet(f"background: {C.BG};")
         lay = QVBoxLayout(w)
@@ -2463,6 +2571,7 @@ class MainWindow(QMainWindow):
         chat_row = QHBoxLayout()
         self._chat_combo = QComboBox()
         self._chat_combo.setToolTip("Select a saved conversation")
+        self._chat_combo.setAccessibleName("Saved conversations")
         self._chat_combo.currentTextChanged.connect(self._on_chat_selected)
         self._chat_combo.setMinimumHeight(36)
         self._chat_combo.setStyleSheet(f"""
@@ -2478,6 +2587,7 @@ class MainWindow(QMainWindow):
         chat_row.addWidget(self._chat_combo, stretch=1)
         new_chat_btn = QPushButton("New chat")
         new_chat_btn.setToolTip("Start a new conversation (Ctrl+Shift+N)")
+        new_chat_btn.setAccessibleName("Start a new conversation")
         new_chat_btn.setMinimumHeight(36)
         new_chat_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         new_chat_btn.setStyleSheet(f"""
@@ -2512,12 +2622,28 @@ class MainWindow(QMainWindow):
         chat_lay.addWidget(self._log, stretch=1)
 
         stats_heading = QHBoxLayout()
+        self._stats_toggle = QPushButton("›  Response details")
+        self._stats_toggle.setCheckable(True)
+        self._stats_toggle.setAccessibleName("Toggle response diagnostics")
+        self._stats_toggle.setToolTip(
+            "Show or hide model, token, speed, timing, and context details"
+        )
+        self._stats_toggle.setAccessibleDescription("Collapsed")
+        self._stats_toggle.setStyleSheet(f"""
+            QPushButton {{
+                color: {C.TEXT_DIM}; background: transparent; border: none;
+                padding: 2px 0; text-align: left;
+            }}
+            QPushButton:hover {{ color: {C.TEXT}; }}
+            QPushButton:focus {{ border-bottom: 1px solid {C.PRI}; }}
+        """)
+        stats_heading.addWidget(self._stats_toggle)
         stats_heading.addStretch()
         self._stats_bar = StatsBar()
         self._stats_bar.on_route = self.orb.set_route
-        self._stats_bar.setMaximumHeight(90)
-        self._stats_heading = _section_label("Response details")
-        stats_heading.addWidget(self._stats_heading)
+        self._stats_bar.setMaximumHeight(110)
+        self._stats_bar.setVisible(False)
+        self._stats_toggle.toggled.connect(self._toggle_response_details)
         chat_lay.addLayout(stats_heading)
         chat_lay.addWidget(self._stats_bar)
 
@@ -3145,7 +3271,7 @@ class MainWindow(QMainWindow):
                 background: {C.PANEL}; color: {C.WHITE};
                 border: 1px solid {C.BORDER}; border-radius: 10px; padding: 10px 12px;
             }}
-            QPlainTextEdit:focus {{ border: 1px solid {C.PRI_DIM}; }}
+            QPlainTextEdit:focus {{ border: 2px solid {C.PRI}; }}
         """)
         self._input.sendRequested.connect(self._send)
         self._input.textChanged.connect(self._update_prompt_suggestions)
@@ -3261,7 +3387,7 @@ class MainWindow(QMainWindow):
         lay.addStretch()
         lay.addWidget(_fl("Ctrl+Enter  Send"))
         lay.addStretch()
-        lay.addWidget(_fl("Ctrl+Alt+A  Show app  ·  Esc  Hide system panel", C.TEXT_DIM))
+        lay.addWidget(_fl("Ctrl+Alt+A  Show app  ·  Esc  Toggle system panel", C.TEXT_DIM))
         return w
 
     def _on_file_selected(self, path: str):
@@ -3356,13 +3482,7 @@ class MainWindow(QMainWindow):
 
     def _show_setup(self):
         ov = SetupOverlay(self.centralWidget())
-        cw = self.centralWidget()
-        ow, oh = 560, 660
-        ov.setGeometry(
-            (cw.width()  - ow) // 2,
-            (cw.height() - oh) // 2,
-            ow, oh,
-        )
+        self._position_overlay(ov, 560, 660)
         ov.done.connect(self._on_setup_done)
         ov.show()
         self._overlay = ov
@@ -3396,13 +3516,7 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
         ov = SetupOverlay(self.centralWidget(), initial=current, mode="config")
-        cw = self.centralWidget()
-        ow, oh = 560, 680
-        ov.setGeometry(
-            (cw.width()  - ow) // 2,
-            (cw.height() - oh) // 2,
-            ow, oh,
-        )
+        self._position_overlay(ov, 560, 680)
         ov.done.connect(self._on_config_done)
         ov.show()
         self._overlay = ov

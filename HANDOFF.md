@@ -2,7 +2,27 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-18 00:24 UTC
+Generated: 2026-10-18 00:48 UTC
+
+## #115 — 2026-10-18 00:48 UTC — GitHub Copilot CLI
+
+Implemented the attached UI/UX follow-up: compact 760px layout with a system-panel toggle, collapsible token/context diagnostics with explicit units and unavailable states, memory capacity details, responsive overlays, and accessible system metrics. Full suite passed (894 passed, 2 skipped, 1 deselected); changed Python files compile. GitHub now reports PR #18 merged externally, so these follow-up edits remain in the worktree rather than being pushed to the merged branch.
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`, `HEALTH_REPORT.md`, `PROJECT_STATE.md`, `HANDOFF.md`, `tools/maintenance/data/handoff.json`, `tools/maintenance/data/health_report.json`
+
+**Next steps:** If these follow-up refinements should be published, create a new branch and PR; do not push them onto the already-merged PR branch.
+
+---
+
+## #114 — 2026-10-18 00:44 UTC — GitHub Copilot CLI
+
+Completed the attached UI/UX audit with a responsive 760 px minimum window, compact system-monitoring drawer, collapsed-by-default response diagnostics with explicit units and unavailable states, live memory capacity/accessibility details, and safely sized setup overlays. Verified compact and diagnostics layouts visually. Full test suite: 894 passed, 2 skipped, 1 requested deselection; changed Python files compile.
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Review the updated UI on open PR #18; keep it unmerged unless requested.
+
+---
 
 ## #113 — 2026-10-18 00:24 UTC — GitHub Copilot CLI
 

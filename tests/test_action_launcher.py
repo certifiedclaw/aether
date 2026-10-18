@@ -56,8 +56,55 @@ def test_action_launcher_builds_form_and_dispatches_values(monkeypatch):
     assert window._right_tabs.tabText(0) == "Chat"
     assert window._right_tabs.tabText(1) == "Actions"
     assert window._log.height() >= 200
-    assert window.width() >= 1100
+    assert window.width() >= min(
+        ui._MIN_W, app.primaryScreen().availableGeometry().width()
+    )
     assert window._left_panel.maximumWidth() <= 220
+    monkeypatch.setattr(
+        ui._metrics,
+        "snapshot",
+        lambda: {
+            "cpu": 42.0,
+            "mem": 66.0,
+            "mem_used": 8 * 1024**3,
+            "mem_total": 16 * 1024**3,
+            "net": 0.5,
+            "gpu": -1.0,
+            "tmp": -1.0,
+        },
+    )
+    window._update_metrics()
+    assert window._bar_cpu._text == "42%"
+    assert window._bar_mem._text == "66% / 16GB"
+    assert "8.0 gigabytes used of 16.0 gigabytes total" in (
+        window._bar_mem.accessibleDescription()
+    )
+    assert window._bar_net._text == "512 KiB/s"
+    if window.width() < ui._SIDEBAR_BREAKPOINT:
+        assert window._left_panel.isHidden()
+        assert window._system_panel_btn.isVisible()
+        window._system_panel_btn.click()
+        assert not window._left_panel.isHidden()
+        window._system_panel_btn.click()
+        assert window._left_panel.isHidden()
+    assert window._stats_bar.isHidden()
+    assert window._stats_bar._ctx_label.text() == "Unavailable"
+    window._stats_toggle.click()
+    assert window._stats_bar.isVisible()
+    window._stats_bar.update_stats({
+        "model": "qwen2.5:7b",
+        "prompt_tokens": 1200,
+        "output_tokens": 300,
+        "elapsed": 2.5,
+        "tokens_per_sec": 120,
+        "context_window": 8192,
+        "route": "remote",
+    })
+    assert window._stats_bar._value_labels["input"].text() == "1,200 tokens"
+    assert window._stats_bar._value_labels["speed"].text() == "120.0 tok/s"
+    assert window._stats_bar._ctx_label.text() == "18% of 8,192 tokens"
+    window._stats_toggle.click()
+    assert window._stats_bar.isHidden()
     window._stats_bar.update_stats({"model": "qwen2.5:7b", "route": "remote"})
     assert window.orb.route == "remote"
     assert "GPU PC" in window.orb.accessibleDescription()
@@ -94,17 +141,24 @@ def test_action_launcher_builds_form_and_dispatches_values(monkeypatch):
     assert "single web search" in fallback["description"]
     assert fallback["parameters"]["required"] == ["query"]
 
-    window.resize(900, 620)
+    window.resize(760, 620)
     app.processEvents()
 
     def top_y(widget):
         return widget.mapTo(window, widget.rect().topLeft()).y()
 
     assert top_y(window._stats_bar) >= top_y(window._log) + window._log.height()
-    assert top_y(window._input) >= top_y(window._stats_bar) + window._stats_bar.height()
+    assert window._stats_bar.isHidden()
+    assert top_y(window._input) >= top_y(window._log) + window._log.height()
     assert window._prompt_suggestions.isHidden()
+    window._stats_toggle.click()
+    app.processEvents()
+    assert top_y(window._input) >= (
+        top_y(window._stats_bar) + window._stats_bar.height()
+    )
+    window._stats_toggle.click()
 
-    window.resize(1180, 780)
+    window.resize(800, 780)
     app.processEvents()
     assert window._log.height() >= 200
     assert not window._prompt_suggestions.isHidden()
@@ -205,6 +259,11 @@ def test_chat_input_is_discoverable_and_does_not_drop_unsent_text(monkeypatch):
     import ui
 
     window = ui.MainWindow("")
+    screen = app.primaryScreen().availableGeometry()
+    window.resize(
+        min(ui._DEFAULT_W, screen.width()),
+        min(ui._DEFAULT_H, screen.height()),
+    )
     window.show()
     app.processEvents()
 
