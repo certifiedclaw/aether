@@ -1,5 +1,5 @@
 {
-  "next_id": 114,
+  "next_id": 115,
   "entries": [
     {
       "id": 1,
@@ -1592,6 +1592,18 @@
         "tests/test_action_launcher.py"
       ],
       "next_steps": "Review the UI follow-up on the open PR #18; leave it unmerged unless requested."
+    },
+    {
+      "id": 114,
+      "timestamp": "2026-10-18 18:36 UTC",
+      "by": "Claude Code",
+      "summary": "UI polish on top of Copilot's chat-first redesign: chat is a centered 880px column; messages styled by role (yours tinted and indented, Aether plain, system dim; prefixes stripped); one-line reply summary (model, tok/s, time to first word, context) replaces the six stat boxes; livelier presence line; fixed header/rail/footer stylesheet bleed (stray underlines) and the tab-bar base line; session picker hidden until a saved chat exists.",
+      "files": [
+        "ui.py",
+        "tests/test_action_launcher.py",
+        "tests/test_all_critical.py"
+      ],
+      "next_steps": "Move saved conversations to a left-sidebar list; consider route colour on the user-message tint; verify on real Windows at 1080p."
     }
   ]
 }
