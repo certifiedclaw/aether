@@ -23,7 +23,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import (
     QBrush, QColor, QDragEnterEvent, QDropEvent, QFont, QFontDatabase,
     QKeySequence, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap,
-    QTextCharFormat, QTextCursor, QTextDocument, QTextDocumentFragment,
+    QTextBlockFormat, QTextCharFormat, QTextCursor, QTextDocument, QTextDocumentFragment,
     QRadialGradient, QShortcut,
 )
 from PyQt6.QtWidgets import (
@@ -46,6 +46,7 @@ CONFIG_DIR = API_FILE.parent
 _DEFAULT_W, _DEFAULT_H = 1180, 780
 _MIN_W,     _MIN_H     = 900, 620
 _LEFT_W  = 180
+_CHAT_MAX_W = 880   # readable line length: chat is a centered column, not edge to edge
 
 _OS = platform.system()  # "Windows" | "Darwin" | "Linux"
 
@@ -565,7 +566,7 @@ class PresenceLine(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedHeight(58)
+        self.setFixedHeight(64)
         self.setMinimumWidth(220)
         self.setAccessibleName("Aether response status")
         self.muted = False
@@ -634,14 +635,14 @@ class PresenceLine(QWidget):
             route_text,
         )
 
-        line_rect = QRectF(16, 34, max(1, bounds.width() - 32), 13)
+        line_rect = QRectF(16, 30, max(1, bounds.width() - 32), 22)
         base_y = line_rect.center().y()
         painter.setPen(QPen(qcol(C.BORDER_B), 1))
         painter.drawLine(QPointF(line_rect.left(), base_y), QPointF(line_rect.right(), base_y))
         amplitude = (
-            4.2 if self.state == "SPEAKING"
-            else 3.2 if self.state in {"THINKING", "PROCESSING"}
-            else 1.8 if not self.muted and self.state != "MUTED"
+            8.0 if self.state == "SPEAKING"
+            else 6.0 if self.state in {"THINKING", "PROCESSING"}
+            else 3.0 if not self.muted and self.state != "MUTED"
             else 0.4
         )
         path = QPainterPath()
@@ -721,7 +722,7 @@ class LogWidget(QTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setReadOnly(True)
-        self.setFont(QFont(FONT_BODY, 9))
+        self.setFont(QFont(FONT_BODY, 11))
         self.setStyleSheet(f"""
             QTextEdit {{
                 background: {C.PANEL};
@@ -756,11 +757,13 @@ class LogWidget(QTextEdit):
         else:                           tag = "sys"
         color = {
             "you":  qcol(C.WHITE),
-            "ai":   qcol(C.PRI),
+            "ai":   qcol(C.TEXT),
             "err":  qcol(C.RED),
             "file": qcol(C.GREEN),
-            "sys":  qcol(C.ACC2),
+            "sys":  qcol(C.TEXT_DIM),
         }.get(tag, qcol(C.TEXT))
+        # The role prefixes are plumbing; the styling below carries who said it.
+        text = re.sub(r"^(you|aether|sys|file):\s*", "", text, flags=re.I)
         safe_text = re.sub(r"!\[([^\]]*)\]\([^)]+\)", r"\1", text)
         document = QTextDocument()
         document.setDefaultFont(self.font())
@@ -778,7 +781,22 @@ class LogWidget(QTextEdit):
         cursor.movePosition(cursor.MoveOperation.End)
         if not self.document().isEmpty():
             cursor.insertBlock()
+        start = cursor.position()
         cursor.insertFragment(QTextDocumentFragment(document))
+        block = QTextBlockFormat()
+        block.setTopMargin(14 if tag in ("you", "ai") else 6)
+        block.setBottomMargin(2)
+        if tag == "you":              # your messages: tinted, pushed to the right
+            block.setLeftMargin(120)
+            block.setBackground(QBrush(qcol(C.PANEL2)))
+        span = QTextCursor(self.document())
+        span.setPosition(start)
+        span.setPosition(cursor.position(), QTextCursor.MoveMode.KeepAnchor)
+        span.setBlockFormat(block)      # replace, not merge: new blocks inherit the previous block's tint
+        if tag == "sys":
+            small = QTextCharFormat()
+            small.setFontPointSize(self.font().pointSizeF() * 0.85)
+            span.mergeCharFormat(small)
         self.setTextCursor(cursor)
         self.ensureCursorVisible()
 
@@ -827,6 +845,7 @@ class StatsBar(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.on_route = None
+        self.on_summary = None   # gets a one-line description of the last reply
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
@@ -943,6 +962,18 @@ class StatsBar(QWidget):
             f"{tps:.1f} tok/s" if tps is not None else "—")
         self._value_labels["time"].setText(
             f"{elapsed:.2f}s" if elapsed is not None else "—")
+
+        if self.on_summary:
+            bits = [str(model)] if model else []
+            if tps is not None:
+                bits.append(f"{tps:.0f} tok/s")
+            if data.get("ttft_s") is not None:
+                bits.append(f"{data['ttft_s']:.1f}s to first word")
+            if elapsed is not None:
+                bits.append(f"{elapsed:.1f}s total")
+            if total is not None and context_window:
+                bits.append(f"{max(0, min(100, round(total / context_window * 100)))}% of context")
+            self.on_summary("  ·  ".join(bits))
 
         if total is not None and context_window:
             pct = max(0, min(100, round(total / context_window * 100)))
@@ -2085,7 +2116,10 @@ class MainWindow(QMainWindow):
         body.addWidget(self._left_panel, stretch=0)
 
         self._right_panel = self._build_right_panel()
-        body.addWidget(self._right_panel, stretch=1)
+        self._right_panel.setMaximumWidth(_CHAT_MAX_W)
+        body.addStretch(1)
+        body.addWidget(self._right_panel, stretch=100)
+        body.addStretch(1)
 
         root.addLayout(body, stretch=1)
         root.addWidget(self._build_footer())
@@ -2294,7 +2328,8 @@ class MainWindow(QMainWindow):
     def _build_header(self) -> QWidget:
         w = QWidget()
         w.setFixedHeight(66)
-        w.setStyleSheet(f"background: {C.PANEL}; border-bottom: 1px solid {C.BORDER};")
+        w.setObjectName("appHeader")
+        w.setStyleSheet(f"QWidget#appHeader {{ background: {C.PANEL}; border-bottom: 1px solid {C.BORDER}; }}")
         lay = QHBoxLayout(w)
         lay.setContentsMargins(24, 0, 24, 0)
 
@@ -2340,7 +2375,8 @@ class MainWindow(QMainWindow):
         w.setMinimumWidth(_LEFT_W)
         w.setMaximumWidth(220)
         w.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        w.setStyleSheet(f"background: {C.DARK}; border-right: 1px solid {C.BORDER};")
+        w.setObjectName("leftRail")
+        w.setStyleSheet(f"QWidget#leftRail {{ background: {C.DARK}; border-right: 1px solid {C.BORDER}; }}")
         lay = QVBoxLayout(w)
         lay.setContentsMargins(12, 16, 12, 16)
         lay.setSpacing(8)
@@ -2402,7 +2438,7 @@ class MainWindow(QMainWindow):
         return w
     def _build_right_panel(self) -> QWidget:
         w = QWidget()
-        w.setMinimumWidth(580)
+        w.setMinimumWidth(520)
         w.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         w.setStyleSheet(f"background: {C.BG};")
         lay = QVBoxLayout(w)
@@ -2417,10 +2453,14 @@ class MainWindow(QMainWindow):
 
         self._right_tabs = QTabWidget()
         self._right_tabs.setDocumentMode(True)
+        self._right_tabs.tabBar().setDrawBase(False)
+        self._right_tabs.tabBar().setExpanding(False)
         self._right_tabs.setStyleSheet(f"""
             QTabWidget::pane {{
                 background: transparent; border: none; top: 1px;
             }}
+            QTabWidget::tab-bar {{ left: 0px; }}
+            QTabBar {{ background: transparent; border: none; }}
             QTabBar::tab {{
                 background: transparent; color: {C.TEXT_DIM};
                 border: none; border-bottom: 2px solid transparent;
@@ -2475,7 +2515,10 @@ class MainWindow(QMainWindow):
                 color: {C.TEXT}; background: {C.PANEL}; selection-background-color: {C.PANEL2};
             }}
         """)
-        chat_row.addWidget(self._chat_combo, stretch=1)
+        self._chat_combo.setMinimumWidth(200)
+        self._chat_combo.setMaximumWidth(320)
+        self._chat_combo.setVisible(False)   # shown once there is a saved conversation
+        chat_row.addWidget(self._chat_combo)
         new_chat_btn = QPushButton("New chat")
         new_chat_btn.setToolTip("Start a new conversation (Ctrl+Shift+N)")
         new_chat_btn.setMinimumHeight(36)
@@ -2489,6 +2532,7 @@ class MainWindow(QMainWindow):
         """)
         new_chat_btn.clicked.connect(self._request_new_chat)
         chat_row.addWidget(new_chat_btn)
+        chat_row.addStretch()
         chat_lay.addLayout(chat_row)
 
         self.orb = PresenceLine()
@@ -2517,9 +2561,15 @@ class MainWindow(QMainWindow):
         self._stats_bar.on_route = self.orb.set_route
         self._stats_bar.setMaximumHeight(90)
         self._stats_heading = _section_label("Response details")
-        stats_heading.addWidget(self._stats_heading)
-        chat_lay.addLayout(stats_heading)
-        chat_lay.addWidget(self._stats_bar)
+        self._stats_bar.hide()           # still updated (tests, /perf); the summary line replaces it
+        self._stats_heading.hide()
+        self._reply_summary = QLabel("")
+        self._reply_summary.setFont(QFont(FONT_BODY, 9))
+        self._reply_summary.setStyleSheet(f"color: {C.TEXT_DIM}; background: transparent;")
+        self._reply_summary.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self._reply_summary.setToolTip("Model, speed and time for the last reply")
+        self._stats_bar.on_summary = self._reply_summary.setText
+        chat_lay.addWidget(self._reply_summary)
 
         input_heading = QHBoxLayout()
         input_heading.addWidget(_section_label("Message"))
@@ -3119,6 +3169,7 @@ class MainWindow(QMainWindow):
         self._chat_combo.blockSignals(True)
         self._chat_combo.clear()
         self._chat_combo.addItems(titles)
+        self._chat_combo.setVisible(bool(titles))
         index = self._chat_combo.findText(active_title)
         if index >= 0:
             self._chat_combo.setCurrentIndex(index)
@@ -3249,7 +3300,8 @@ class MainWindow(QMainWindow):
     def _build_footer(self) -> QWidget:
         w = QWidget()
         w.setFixedHeight(30)
-        w.setStyleSheet(f"background: {C.PANEL}; border-top: 1px solid {C.BORDER};")
+        w.setObjectName("appFooter")
+        w.setStyleSheet(f"QWidget#appFooter {{ background: {C.PANEL}; border-top: 1px solid {C.BORDER}; }}")
         lay = QHBoxLayout(w); lay.setContentsMargins(20, 0, 20, 0)
 
         def _fl(txt, color=C.TEXT_MED):
@@ -3258,8 +3310,6 @@ class MainWindow(QMainWindow):
             return l
 
         lay.addWidget(_fl("F4  Microphone"))
-        lay.addStretch()
-        lay.addWidget(_fl("Ctrl+Enter  Send"))
         lay.addStretch()
         lay.addWidget(_fl("Ctrl+Alt+A  Show app  ·  Esc  Hide system panel", C.TEXT_DIM))
         return w

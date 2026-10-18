@@ -830,13 +830,13 @@ def test_setup_overlay_refactor_preserves_behavior():
     log = ui.LogWidget()
     entry = "Aether: " + ("response text " * 40)
     log.append_log(entry)
-    assert log.toPlainText() == entry.rstrip()
+    assert log.toPlainText() == entry[len("Aether: "):].rstrip()   # role prefix is shown by styling, not text
 
     markdown_log = ui.LogWidget()
     markdown_log.append_log(
         "Aether: **bold** and `inline`\n\n```python\nprint(1)\n```"
     )
-    assert "Aether: bold and inline" in markdown_log.toPlainText()
+    assert "bold and inline" in markdown_log.toPlainText()
     assert "print(1)" in markdown_log.toPlainText()
     cursor = markdown_log.textCursor()
     cursor.setPosition(markdown_log.toPlainText().index("bold"))

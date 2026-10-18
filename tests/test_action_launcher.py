@@ -100,8 +100,9 @@ def test_action_launcher_builds_form_and_dispatches_values(monkeypatch):
     def top_y(widget):
         return widget.mapTo(window, widget.rect().topLeft()).y()
 
-    assert top_y(window._stats_bar) >= top_y(window._log) + window._log.height()
-    assert top_y(window._input) >= top_y(window._stats_bar) + window._stats_bar.height()
+    assert top_y(window._reply_summary) >= top_y(window._log) + window._log.height()
+    assert top_y(window._input) >= top_y(window._reply_summary) + window._reply_summary.height()
+    assert "qwen2.5:7b" in window._reply_summary.text()
     assert window._prompt_suggestions.isHidden()
 
     window.resize(1180, 780)
@@ -276,3 +277,27 @@ def test_chat_input_is_discoverable_and_does_not_drop_unsent_text(monkeypatch):
     window._focus_input()
     assert window.focusWidget() is window._input
     window.close()
+
+
+def test_chat_log_styles_roles_and_strips_prefixes():
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    try:
+        from PyQt6.QtWidgets import QApplication
+        app = QApplication.instance() or QApplication([])   # keep a reference alive
+    except Exception:
+        pytest.skip("no usable Qt platform plugin in this environment")
+    import ui
+
+    log = ui.LogWidget()
+    log.append_log("YOU: hello")
+    log.append_log("AETHER: hi there")
+    log.append_log("SYS: tool ok")
+    assert log.toPlainText() == "hello\nhi there\ntool ok"
+    blocks = []
+    block = log.document().begin()
+    while block.isValid():
+        blocks.append(block.blockFormat())
+        block = block.next()
+    assert blocks[0].leftMargin() > 0 and blocks[0].background().style() != ui.Qt.BrushStyle.NoBrush   # yours: tinted, indented
+    assert blocks[1].leftMargin() == 0 and blocks[1].background().style() == ui.Qt.BrushStyle.NoBrush  # Aether: plain, full width
+    assert blocks[2].background().style() == ui.Qt.BrushStyle.NoBrush                                  # system: no tint leaks over
