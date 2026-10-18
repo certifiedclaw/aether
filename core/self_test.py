@@ -37,6 +37,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as _FutureTimeout
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
@@ -166,18 +167,10 @@ def _test_llm(cfg) -> TestResult:
 
 
 def _resolve_memory_db_path(cfg):
-    """Resolve the memory DB path exactly the way hybrid_memory /
-    semantic_memory do, so this test can't drift out of sync with a
-    relative-cwd assumption that only holds when launched from the
-    project root."""
-    from pathlib import Path
-    try:
-        from memory.config_manager import BASE_DIR
-    except Exception:
-        BASE_DIR = Path(".").resolve()
+    """Resolve the memory DB path exactly like hybrid_memory / semantic_memory."""
+    from core.data_home import resolve_data_path
     raw = cfg.get("memory.db_path", "./data/memory.db")
-    p = Path(raw)
-    return p if p.is_absolute() else (BASE_DIR / p)
+    return resolve_data_path(raw, "memory.db")
 
 
 def _test_memory_db(cfg) -> TestResult:

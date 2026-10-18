@@ -27,11 +27,12 @@ import socket
 import time
 from pathlib import Path
 
-from .tokens import get_manager, _REPO_ROOT
+from core.data_home import data_path
+from .tokens import get_manager
 from . import audit
 
 
-_QR_DIR = _REPO_ROOT / "data" / "security"
+_QR_DIR = data_path("security")
 _QR_PNG = _QR_DIR / "setup_qr.png"
 _ADMIN_PASSWORD_LEN = 16
 

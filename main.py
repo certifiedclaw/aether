@@ -1066,8 +1066,9 @@ def main() -> None:
     threading.Thread(target=_refresh_maintenance_snapshot, daemon=True).start()
 
     # Ensure runtime directories exist
-    for d in ["data", "data/screenshots", "data/rag_index", "logs", "plugins"]:
-        Path(d).mkdir(parents=True, exist_ok=True)
+    from core.data_home import data_dir
+    for d in [data_dir(), data_dir() / "screenshots", data_dir() / "rag_index", Path("logs"), Path("plugins")]:
+        d.mkdir(parents=True, exist_ok=True)
 
     ui = AetherUI("face.png")
 

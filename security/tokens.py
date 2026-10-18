@@ -31,13 +31,14 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Optional
 
+from core.data_home import data_path
 from .capabilities import Capability
 from . import audit
 
 
 # ── Paths ────────────────────────────────────────────────────────────────
 _REPO_ROOT  = Path(__file__).resolve().parent.parent
-_DATA_DIR   = _REPO_ROOT / "data" / "security"
+_DATA_DIR   = data_path("security")
 _INSTALL    = _DATA_DIR / "install.json"
 _DEVICES    = _DATA_DIR / "devices.json"
 _SESSIONS   = _DATA_DIR / "sessions.json"

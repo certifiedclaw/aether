@@ -2,6 +2,7 @@ import json
 import sys
 from pathlib import Path
 
+from core.data_home import data_path, resolve_data_path
 
 def get_base_dir() -> Path:
     if getattr(sys, "frozen", False):
@@ -46,12 +47,12 @@ class _MarkConfigAdapter:
     against Aether's JSON config without needing Aether's config.py.
     """
     _DEFAULTS = {
-        "memory.db_path":              "./data/memory.db",
+        "memory.db_path":              str(data_path("memory.db")),
         "memory.relevance_threshold":  0.35,
         "memory.chat_history_limit":   100,
         "memory.embedding_model":      "all-MiniLM-L6-v2",
         "memory.window":               12,
-        "rag.index_path":              "./data/rag_index",
+        "rag.index_path":              str(data_path("rag_index")),
         "rag.chunk_size":              500,
         "rag.chunk_overlap":           50,
         "rag.top_k":                   5,
@@ -79,7 +80,8 @@ class _MarkConfigAdapter:
         "oi.auto_run":                 False,
         "llm.embed_model":             "nomic-embed-text",
         "llama_index.default_collection": "aether",
-        "llama_index.chroma_dir":      "./data/chroma_db",
+        "llama_index.chroma_dir":      str(data_path("chroma_db")),
+        "goals.path":                   str(data_path("goals.json")),
         "langchain.max_research_steps": 4,
     }
 
@@ -89,10 +91,18 @@ class _MarkConfigAdapter:
     def get(self, key: str, default=None):
         # Check raw JSON first (full dotted key, since _raw is flat, not nested)
         if key in self._raw:
-            return self._raw.get(key, default)
-        # Fall back to defaults table
-        val = self._DEFAULTS.get(key, default)
-        return val
+            value = self._raw.get(key, default)
+        else:
+            value = self._DEFAULTS.get(key, default)
+        path_names = {
+            "memory.db_path": "memory.db",
+            "rag.index_path": "rag_index",
+            "llama_index.chroma_dir": "chroma_db",
+            "goals.path": "goals.json",
+        }
+        if key in path_names:
+            return str(resolve_data_path(value, path_names[key]))
+        return value
 
     # ── Properties expected by router.py / diagnostics.py ────────────────
     @property

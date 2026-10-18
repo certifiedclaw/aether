@@ -2,10 +2,13 @@ import json
 import sqlite3
 import zipfile
 
-from core import portable_bundle as bundle
+from core import data_home, portable_bundle as bundle
 
 
 def _seed_install(root, monkeypatch, model, secret, chat_title):
+    monkeypatch.setattr(data_home, "APP_ROOT", root)
+    monkeypatch.setenv("AETHER_DATA_DIR", str(root / "user-data"))
+    data_home.reset_for_tests()
     config = root / "config" / "api_keys.json"
     config.parent.mkdir(parents=True)
     config.write_text(json.dumps({
@@ -84,11 +87,12 @@ def test_bundle_round_trip_restores_data_and_excludes_credentials(tmp_path, monk
     assert "Current data was replaced." in imported
     assert "API credentials were not imported." in imported
     assert json.loads(history.read_text(encoding="utf-8"))["sessions"][0]["title"] == "Source chat"
-    assert json.loads((target_root / "memory" / "long_term.json").read_text())["identity"]["model"] == "source-model"
-    assert json.loads((target_root / "data" / "goals.json").read_text())["goal"] == "source-model"
-    assert json.loads((target_root / "data" / "rag_index" / "chunks.json").read_text()) == ["source-model"]
-    assert (target_root / "data" / "chroma_db" / "index.bin").read_text(encoding="utf-8") == "source-model"
-    db = sqlite3.connect(target_root / "data" / "memory.db")
+    target_data = target_root / "user-data"
+    assert json.loads((target_data / "long_term.json").read_text())["identity"]["model"] == "source-model"
+    assert json.loads((target_data / "goals.json").read_text())["goal"] == "source-model"
+    assert json.loads((target_data / "rag_index" / "chunks.json").read_text()) == ["source-model"]
+    assert (target_data / "chroma_db" / "index.bin").read_text(encoding="utf-8") == "source-model"
+    db = sqlite3.connect(target_data / "memory.db")
     try:
         assert db.execute("SELECT content FROM memories").fetchone()[0] == "source-model"
     finally:
@@ -99,7 +103,7 @@ def test_bundle_round_trip_restores_data_and_excludes_credentials(tmp_path, monk
     assert "target_only_setting" not in saved_config
     assert saved_config["gemini_api_key"] == "TARGET_SECRET"
     assert saved_config["memory.db_path"] == "./data/memory.db"
-    assert list((target_root / "data" / "backups").glob("before_import_*.zip"))
+    assert list((target_data / "backups").glob("before_import_*.zip"))
 
 
 def test_bundle_import_rejects_unsafe_archive_paths(tmp_path, monkeypatch):

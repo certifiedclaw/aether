@@ -31,12 +31,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_DATA_DIR  = Path("data/llama_index")
-
-
 def _chroma_dir() -> Path:
     """Get chroma directory from config."""
-    return Path(_li_config().get("chroma_dir", "./data/chroma_db"))
+    from core.data_home import resolve_data_path
+    return resolve_data_path(_li_config().get("chroma_dir"), "chroma_db")
 
 
 # ── Config ────────────────────────────────────────────────────────────────
@@ -44,21 +42,23 @@ def _chroma_dir() -> Path:
 def _li_config() -> dict:
     try:
         from memory.config_manager import get_mark_config
+        from core.data_home import data_path
         cfg = get_mark_config()
         return {
             "model":               cfg.get("llm.model",       cfg.get("llm_model", "qwen3:8b")),
             "embed_model":         cfg.get("llm.embed_model",  "nomic-embed-text"),
             "base_url":            cfg.ollama_url,
             "default_collection":  cfg.get("llama_index.default_collection", "aether"),
-            "chroma_dir":          cfg.get("llama_index.chroma_dir", "./data/chroma_db"),
+            "chroma_dir":          cfg.get("llama_index.chroma_dir", str(data_path("chroma_db"))),
         }
     except Exception:
+        from core.data_home import data_path
         return {
             "model": "qwen3:8b",
             "embed_model": "nomic-embed-text",
             "base_url": "http://localhost:11434",
             "default_collection": "aether",
-            "chroma_dir": "./data/chroma_db",
+            "chroma_dir": str(data_path("chroma_db")),
         }
 
 

@@ -1,4 +1,4 @@
-"""Find and remove junk rows from Aether's exchange memory (data/memory.db).
+"""Find and remove junk rows from Aether's exchange memory database.
 
 Dry run by default: lists suspect rows and changes nothing.
     python tools/clean_memory.py                 # list suspects
@@ -17,7 +17,12 @@ import sys
 import time
 from pathlib import Path
 
-DB = Path(__file__).resolve().parent.parent / "data" / "memory.db"
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from core.data_home import resolve_data_path
+
+DB = resolve_data_path(None, "memory.db")
 
 SUSPECT = [
     (re.compile(r"selftest_(input|response)"), "test fixture"),

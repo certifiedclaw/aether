@@ -1,5 +1,5 @@
 {
-  "next_id": 91,
+  "next_id": 92,
   "items": [
     {
       "id": 1,
@@ -807,7 +807,16 @@
       "title": "Config survives version upgrades (user-dir config, last-good fallback)",
       "priority": "high",
       "status": "done",
-      "notes": "core/config_home.py; extend same treatment to data/ and memory/long_term.json",
+      "notes": "Config migration remains in core/config_home.py; the persistent user-data migration follow-up shipped as #91.",
+      "created": "2026-10-17",
+      "updated": "2026-10-17"
+    },
+    {
+      "id": 91,
+      "title": "Persistent user data survives version upgrades",
+      "priority": "high",
+      "status": "done",
+      "notes": "Added per-user data storage with one-time non-destructive migration for app data, long-term memory, and chat history; routed data consumers and Docker/doctor/security/test coverage.",
       "created": "2026-10-17",
       "updated": "2026-10-17"
     }

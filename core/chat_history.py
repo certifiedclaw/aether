@@ -19,7 +19,8 @@ def history_path() -> Path:
     override = os.environ.get("AETHER_CHAT_HISTORY_PATH")
     if override:
         return Path(override).expanduser()
-    return Path.home() / ".aether" / "chat_history.json"
+    from core.data_home import chat_history_path
+    return chat_history_path()
 
 
 def _valid_history(messages) -> list[dict]:

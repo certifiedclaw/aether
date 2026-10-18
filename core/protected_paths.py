@@ -33,12 +33,15 @@ def is_protected(path) -> bool:
         try:
             from core import config_home
             home = config_home.config_dir().resolve()
-            if p == home or home in p.parents:
+            certs = (home / "certs").resolve()
+            if p == certs or certs in p.parents:
                 return True
         except Exception:  # noqa: BLE001
             return True
-        for rel in _PROTECTED_DIRS:
-            d = (_ROOT / rel).resolve()
+        protected_dirs = [(_ROOT / rel).resolve() for rel in _PROTECTED_DIRS]
+        from core.data_home import data_dir
+        protected_dirs.append((data_dir() / "security").resolve())
+        for d in protected_dirs:
             if p == d or d in p.parents:
                 return True
         return False

@@ -31,8 +31,9 @@ def _base_dir() -> Path:
 
 _BASE         = _base_dir()
 from core import config_home as _config_home
+from core.data_home import long_term_path as _long_term_path
 _CONFIG_PATH  = _config_home.config_path()
-_MEMORY_PATH  = _BASE / "memory" / "long_term.json"
+_MEMORY_PATH  = _long_term_path()
 
 def _load_config() -> dict:
     return _config_home.load_config(_CONFIG_PATH)

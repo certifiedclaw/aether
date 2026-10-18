@@ -6,17 +6,21 @@ import stat
 
 import pytest
 
-from core import doctor as d
+from core import data_home, doctor as d
 
 
 @pytest.fixture
 def root(tmp_path, monkeypatch):
     for sub in ("config", "logs", "data", "memory", "plugins"):
         (tmp_path / sub).mkdir()
+    monkeypatch.setattr(data_home, "APP_ROOT", tmp_path)
+    monkeypatch.setenv("AETHER_DATA_DIR", str(tmp_path / "user-data"))
+    data_home.reset_for_tests()
     monkeypatch.setattr(d, "_http_json", lambda url, timeout=4.0: None)
     monkeypatch.setattr(d, "_ram", lambda: (16.0, 32.0))
     monkeypatch.setattr(d, "_git", lambda *a: None)
-    return tmp_path
+    yield tmp_path
+    data_home.reset_for_tests()
 
 
 def _cfg(root, obj):
@@ -117,7 +121,7 @@ def test_disk_thresholds(root, monkeypatch):
 
 def test_memory_db_ok_and_corrupt(root):
     import sqlite3
-    db = root / "data" / "memory.db"
+    db = data_home.data_dir() / "memory.db"
     con = sqlite3.connect(db)
     con.execute("create table t(x)")
     con.commit()
@@ -128,11 +132,24 @@ def test_memory_db_ok_and_corrupt(root):
 
 
 def test_long_term_json_validated(root):
-    lt = root / "memory" / "long_term.json"
+    lt = data_home.long_term_path()
     lt.write_text("{}")
     assert by_name(d.check_memory_files(root), "Long-term memory file")[0].status == d.OK
     lt.write_text("{broken")
     assert by_name(d.check_memory_files(root), "Long-term memory file")[0].status == d.FAIL
+
+
+def test_data_location_and_stale_legacy_warning(root):
+    legacy = root / "data" / "memory.db"
+    legacy.write_bytes(b"old")
+    findings = d.check_data_home(root)
+    location = by_name(findings, "User data location")[0]
+    assert location.status == d.OK
+    assert location.detail == str(root / "user-data")
+
+    legacy.write_bytes(b"changed")
+    warning = by_name(d.check_data_home(root), "Legacy data copy")[0]
+    assert warning.status == d.WARN
 
 
 # ── LLM ──────────────────────────────────────────────────────────────────────

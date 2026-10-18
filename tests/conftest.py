@@ -18,7 +18,12 @@ collect_ignore = ["stress_test.py"]
 # Hermetic config: never read or write the developer's real per-user Aether config.
 import os as _os
 import tempfile as _tempfile
-_os.environ.setdefault("AETHER_CONFIG_DIR", _tempfile.mkdtemp(prefix="aether_test_cfg_"))
+_test_state_dir = _tempfile.mkdtemp(prefix="aether_test_state_")
+_os.environ["AETHER_CONFIG_DIR"] = _os.path.join(_test_state_dir, "config")
+_os.environ["AETHER_DATA_DIR"] = _os.path.join(_test_state_dir, "data")
+_os.environ["AETHER_CHAT_HISTORY_PATH"] = _os.path.join(
+    _test_state_dir, "data", "chat_history.json"
+)
 
 
 import pytest  # noqa: E402

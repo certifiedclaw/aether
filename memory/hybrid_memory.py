@@ -116,9 +116,10 @@ class HybridMemory:
 
     def __init__(self, config=None) -> None:
         from memory.config_manager import get_mark_config
+        from core.data_home import resolve_data_path
         cfg = config or get_mark_config()
 
-        self._db_path = Path(cfg.get("memory.db_path", "./data/memory.db"))
+        self._db_path = resolve_data_path(cfg.get("memory.db_path"), "memory.db")
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._threshold     = float(cfg.get("memory.relevance_threshold", 0.3))
         self._history_limit = int(cfg.get("memory.chat_history_limit", 100))
