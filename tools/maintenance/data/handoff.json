@@ -1,5 +1,5 @@
 {
-  "next_id": 122,
+  "next_id": 123,
   "entries": [
     {
       "id": 1,
@@ -1694,6 +1694,17 @@
         "actions/deep_research.py"
       ],
       "next_steps": "Assess report completeness and prompt latency on representative live research topics."
+    },
+    {
+      "id": 122,
+      "timestamp": "2026-10-19 22:45 UTC",
+      "by": "Codex",
+      "summary": "Deep research now labels source credibility signals (institutional or known reference-domain hints, readable page text versus snippet-only) beside citations and instructs synthesis to treat unverified claims as tentative unless corroborated by readable evidence from a separate domain. Reports include a credibility section; domain labels are explicitly not verification.",
+      "files": [
+        "actions/deep_research.py",
+        "actions/web_search.py"
+      ],
+      "next_steps": "Review credibility notes and corroboration behavior on a varied set of live topics; tune allowlisted reference domains or signals if evidence supports it."
     }
   ]
 }

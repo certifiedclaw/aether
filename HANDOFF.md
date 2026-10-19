@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-19 22:43 UTC
+Generated: 2026-10-19 22:45 UTC
+
+## #122 — 2026-10-19 22:45 UTC — Codex
+
+Deep research now labels source credibility signals (institutional or known reference-domain hints, readable page text versus snippet-only) beside citations and instructs synthesis to treat unverified claims as tentative unless corroborated by readable evidence from a separate domain. Reports include a credibility section; domain labels are explicitly not verification.
+
+**Touched:** `actions/deep_research.py`, `actions/web_search.py`
+
+**Next steps:** Review credibility notes and corroboration behavior on a varied set of live topics; tune allowlisted reference domains or signals if evidence supports it.
+
+---
 
 ## #121 — 2026-10-19 22:43 UTC — Codex
 
