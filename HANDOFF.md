@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-19 23:13 UTC
+Generated: 2026-10-19 23:16 UTC
+
+## #126 — 2026-10-19 23:16 UTC — Codex
+
+Expanded everyday tool routing to match declared diagnostics and memory-management trigger phrases; regression tests confirm expected tools survive per-turn filtering.
+
+**Touched:** `core/tool_router.py`, `tests/test_routing_and_paths.py`
+
+**Next steps:** Continue checking tool declarations against everyday routing for unmet triggers, prioritizing high-frequency user phrasings.
+
+---
 
 ## #125 — 2026-10-19 23:13 UTC — Codex
 

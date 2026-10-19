@@ -167,6 +167,24 @@ def test_tool_router_includes_screen_analysis_for_visual_requests(prompt):
     assert "screen_process" in names
 
 
+@pytest.mark.parametrize(("prompt", "expected"), [
+    ("Run a system health check.", "diagnostics"),
+    ("Show me recent errors.", "crash_report"),
+    ("What went wrong?", "crash_report"),
+    ("Export my memories.", "memory_tool"),
+    ("Back up memory.", "memory_tool"),
+    ("Show memory statistics.", "memory_tool"),
+])
+def test_router_exposes_tools_for_declared_trigger_phrases(prompt, expected):
+    from core.tool_declarations import TOOL_DECLARATIONS, _to_ollama_tools
+
+    tools = _to_ollama_tools(TOOL_DECLARATIONS)
+    filtered = tool_router.filter_tools(tools, prompt)
+    names = {item["function"]["name"] for item in filtered}
+    assert expected in tool_router.select_tool_names(prompt)
+    assert expected in names
+
+
 def test_explicit_output_only_requests_do_not_get_action_tools():
     prompt = "Write a JSON object with keys name and age. Output only JSON."
     assert tool_router.select_tool_names(prompt) == set()
