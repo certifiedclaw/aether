@@ -1,5 +1,5 @@
 {
-  "next_id": 128,
+  "next_id": 129,
   "entries": [
     {
       "id": 1,
@@ -1761,6 +1761,19 @@
         "tests/test_installer.py"
       ],
       "next_steps": "Measure first-run setup time on a clean desktop environment; consider trimming optional heavy dependencies from the default profile only with compatibility evidence."
+    },
+    {
+      "id": 128,
+      "timestamp": "2026-10-19 23:21 UTC",
+      "by": "Codex",
+      "summary": "Made desktop and runtime pip installs prefer prebuilt wheels to reduce slow source builds; added a regression assertion that runtime installs include --prefer-binary.",
+      "files": [
+        "core/installer.py",
+        "install.bat",
+        "install.sh",
+        "tests/test_installer.py"
+      ],
+      "next_steps": "Benchmark a fresh Windows install before making further dependency-profile changes."
     }
   ]
 }

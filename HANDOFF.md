@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-19 23:19 UTC
+Generated: 2026-10-19 23:21 UTC
+
+## #128 — 2026-10-19 23:21 UTC — Codex
+
+Made desktop and runtime pip installs prefer prebuilt wheels to reduce slow source builds; added a regression assertion that runtime installs include --prefer-binary.
+
+**Touched:** `core/installer.py`, `install.bat`, `install.sh`, `tests/test_installer.py`
+
+**Next steps:** Benchmark a fresh Windows install before making further dependency-profile changes.
+
+---
 
 ## #127 — 2026-10-19 23:19 UTC — Codex
 
