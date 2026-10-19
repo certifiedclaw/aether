@@ -71,7 +71,8 @@ def _format_sources(results: list[dict]) -> str:
         return ""
     lines = ["Sources:"]
     for i, result in enumerate(results, 1):
-        lines.append(f"[{i}] {result['title']} — {result['url']}")
+        note = f" ({result['credibility_note']})" if result.get("credibility_note") else ""
+        lines.append(f"[{i}] {result['title']} — {result['url']}{note}")
     return "\n".join(lines)
 
 
