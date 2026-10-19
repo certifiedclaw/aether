@@ -238,7 +238,8 @@ class ConversationCoreMixin:
 
     def _prepare_conversation_messages(self, user_text: str, light: bool = False, tools: list | None = None,
                                        history_budget: int | None = None,
-                                       model_name: str = ""):
+                                       model_name: str = "", provider_name: str = "",
+                                       tier_name: str = ""):
         """Log the incoming message, store it to memory, trim history, and
         build the compressed message list to send to the LLM.
 
@@ -285,12 +286,29 @@ class ConversationCoreMixin:
                 trimmed = trimmed[1:]
             self._conversation = trimmed
 
+        tool_names = []
+        for tool in tools or []:
+            name = ((tool.get("function") or {}).get("name")
+                    if isinstance(tool, dict) else None)
+            name = name or (tool.get("name") if isinstance(tool, dict) else None)
+            if name and name not in tool_names:
+                tool_names.append(str(name))
+        runtime_facts = [
+            f"Provider for this turn: {provider_name or 'unknown'}.",
+            f"Model for this turn: {model_name or 'unknown'}.",
+            f"Routing tier: {tier_name or 'unknown'}.",
+            "Tools available for this turn: " + (", ".join(tool_names) if tool_names else "none"),
+            "These are configuration/routing facts, not a live connectivity check. "
+            "You are software, not conscious; do not claim feelings, perception, "
+            "or unobserved actions. Claim an action succeeded only after its tool result confirms it.",
+        ]
+        runtime_context = "[CURRENT RUNTIME FACTS — use for accurate self-reporting]\n" + "\n".join(runtime_facts)
         messages = [
             {
                 "role": "system",
-                "content": self._build_system_prompt(
+                "content": (self._build_system_prompt(
                     user_text, light=light, model_name=model_name
-                ),
+                ) + "\n\n" + runtime_context),
             }
         ] + list(self._conversation)
 
@@ -576,6 +594,14 @@ class ConversationCoreMixin:
         elif _stream_kwargs.get("provider_override") == "ollama":
             _prompt_model = _stream_kwargs.get("model_override", "")
 
+        _runtime_provider = _stream_kwargs.get("provider_override") or _primary_provider
+        _runtime_model = _stream_kwargs.get("model_override") or _prompt_model
+        if not _runtime_model:
+            if _runtime_provider == "gemini":
+                _runtime_model = get_gemini_settings()[1]
+            else:
+                _runtime_model = get_llm_settings()[1]
+
         # Tool exposure scales with tier: QUICK gets none (see above),
         # EVERYDAY gets only the category-relevant subset (core/tool_router)
         # instead of the full ~28-tool catalog on every ordinary turn, and
@@ -589,7 +615,8 @@ class ConversationCoreMixin:
             _turn_tools = _filter_tools_for_turn(self._tools_for_current_turn(), user_text)
         messages, _active_mem = self._prepare_conversation_messages(
             user_text, light=_is_quick, tools=_turn_tools,
-            model_name=_prompt_model,
+            model_name=_runtime_model, provider_name=_runtime_provider,
+            tier_name=_route.tier.value,
             history_budget=(
                 _CLOUD_HISTORY_BUDGET
                 if (_stream_kwargs.get("provider_override") in {"gemini", "openai_api"}

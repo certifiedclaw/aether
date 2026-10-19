@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-19 22:51 UTC
+Generated: 2026-10-19 23:10 UTC
+
+## #124 — 2026-10-19 23:10 UTC — Codex
+
+Added a per-turn runtime snapshot to Aether's system context with the configured provider, model, routing tier, and tools actually available on that turn. Added instructions to distinguish configuration from tested connectivity, avoid claims of consciousness or unobserved actions, and route brief self-capability questions through the runtime-aware tier.
+
+**Touched:** `core/conversation_core.py`, `core/tier_router.py`
+
+**Next steps:** Check responses to model/provider, tool-availability, connectivity, and consciousness questions across local and Gemini routes; confirm the reported model matches the backend on device.
+
+---
 
 ## #123 — 2026-10-19 22:51 UTC — Codex
 

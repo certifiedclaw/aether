@@ -1,5 +1,5 @@
 {
-  "next_id": 124,
+  "next_id": 125,
   "entries": [
     {
       "id": 1,
@@ -1717,6 +1717,17 @@
         "core/tier_router.py"
       ],
       "next_steps": "Measure TTFT and prompt token counts on greetings, short general questions, personal-memory asks, and local tier-model overrides; verify routing quality on device."
+    },
+    {
+      "id": 124,
+      "timestamp": "2026-10-19 23:10 UTC",
+      "by": "Codex",
+      "summary": "Added a per-turn runtime snapshot to Aether's system context with the configured provider, model, routing tier, and tools actually available on that turn. Added instructions to distinguish configuration from tested connectivity, avoid claims of consciousness or unobserved actions, and route brief self-capability questions through the runtime-aware tier.",
+      "files": [
+        "core/conversation_core.py",
+        "core/tier_router.py"
+      ],
+      "next_steps": "Check responses to model/provider, tool-availability, connectivity, and consciousness questions across local and Gemini routes; confirm the reported model matches the backend on device."
     }
   ]
 }
