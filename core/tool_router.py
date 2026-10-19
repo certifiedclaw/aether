@@ -65,9 +65,15 @@ _CATEGORIES: list[tuple[re.Pattern, list[str]]] = [
      ["pdf_tool", "rag_query"]),
     (re.compile(r"\b(whois|\bdns\b|subdomain|breach|port scan|osint)\b", re.I),
      ["osint_lookup"]),
-    (re.compile(r"\b(diagnostic|crash|health check|logs)\b", re.I),
+    (re.compile(r"\b(diagnostic|system check|health check|system health|status|logs|"
+                r"show crashes|recent errors|crash report|what went wrong)\b", re.I),
      ["diagnostics", "crash_report"]),
-    (re.compile(r"\b(remember|recall|forget|what did i tell you|my preferences)\b", re.I),
+    (re.compile(r"\b(remember|recall|forget|what did i tell you|my preferences|"
+                r"back ?up (?:my )?memor(?:y|ies)|backup (?:my )?memor(?:y|ies)|"
+                r"export (?:my )?memor(?:y|ies)|clean up (?:my )?memor(?:y|ies)|"
+                r"memor(?:y|ies) stats|memor(?:y|ies) statistics|"
+                r"prune (?:my )?memor(?:y|ies)|import (?:my )?memor(?:y|ies)|"
+                r"restore (?:my )?memor(?:y|ies))\b", re.I),
      ["memory_tool", "save_memory"]),
     (re.compile(r"\b(multi-?step|several steps|plan out|agent)\b", re.I),
      ["agent_task"]),
