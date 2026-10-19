@@ -151,6 +151,22 @@ def test_tool_router_selects_right_tools():
     assert {"computer_settings", "weather_report"} <= both
 
 
+@pytest.mark.parametrize("prompt", [
+    "What's on my screen?",
+    "What do you see?",
+    "Look at my screen and tell me what the error says.",
+    "Can you look at the camera?",
+])
+def test_tool_router_includes_screen_analysis_for_visual_requests(prompt):
+    from core.tool_declarations import TOOL_DECLARATIONS, _to_ollama_tools
+
+    assert "screen_process" in tool_router.select_tool_names(prompt)
+    tools = _to_ollama_tools(TOOL_DECLARATIONS)
+    filtered = tool_router.filter_tools(tools, prompt)
+    names = {item["function"]["name"] for item in filtered}
+    assert "screen_process" in names
+
+
 def test_explicit_output_only_requests_do_not_get_action_tools():
     prompt = "Write a JSON object with keys name and age. Output only JSON."
     assert tool_router.select_tool_names(prompt) == set()

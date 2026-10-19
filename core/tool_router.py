@@ -34,6 +34,15 @@ _CATEGORIES: list[tuple[re.Pattern, list[str]]] = [
     (re.compile(r"\b(open|launch|start|close|quit|volume|louder|quieter|mute|unmute|brightness|wifi|bluetooth|"
                 r"screenshot|click|type|turn (up|down|on|off))\b", re.I),
      ["open_app", "computer_settings", "computer_control", "desktop_control", "screen_process"]),
+    # The screen tool declaration explicitly requires visual inspection for
+    # these asks, but most natural phrasings don't contain "screenshot" or
+    # another computer-control keyword. Keep this separate so ordinary uses
+    # of words like "see" don't expose the vision tool unnecessarily.
+    (re.compile(r"\b(?:what(?:'s| is) on (?:my|the) screen|what do you see|"
+                r"look at (?:my|the) screen|analy[sz]e (?:my|the) screen|"
+                r"read (?:my|the) screen|check (?:my|the) screen|"
+                r"look at (?:the )?camera|webcam)\b", re.I),
+     ["screen_process"]),
     (re.compile(r"\b(search|google|look ?up|news|weather)\b", re.I),
      ["web_search", "weather_report"]),
     (re.compile(r"\b(research|investigate|browse|find sources|fact[- ]check)\b", re.I),
