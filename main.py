@@ -837,7 +837,14 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
                 wake_callback=lambda: self.ui.set_state("LISTENING"),
             )
             if self._dashboard:
-                self.ui.write_log("SYS: Web dashboard — http://<this-pc-ip>:8000")
+                from dashboard.server import attach_ui_mirror
+                attach_ui_mirror(self._dashboard, self.ui)
+                self.ui.write_log(
+                    f"SYS: Web dashboard — {self._dashboard.get_url()}  "
+                    "(type /remote to get the pairing code)")
+                if _os.environ.get("AETHER_HEADLESS"):
+                    # No window and no button on a server: print the code where `docker logs` shows it.
+                    self.ui.write_log(self._format_remote_info(self._dashboard.pairing_info()))
             else:
                 self.ui.write_log(
                     "SYS: Dashboard not started — pip install fastapi "
