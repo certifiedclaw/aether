@@ -1224,6 +1224,7 @@ def attach_ui_mirror(dashboard, ui, push=None):
     shows what you typed). Returns the original callables so a test or caller can restore."""
     push = push or push_log_threadsafe
     original_log, original_state = ui.write_log, ui.set_state
+    original_stream = getattr(ui, "write_stream", None)
 
     def _classify(text: str):
         head, sep, rest = text.partition(":")
@@ -1255,7 +1256,17 @@ def attach_ui_mirror(dashboard, ui, push=None):
         except Exception:      # noqa: BLE001
             pass
 
+    def write_stream(text, done=False, *a, **k):
+        if original_stream:
+            original_stream(text, done=done, *a, **k)
+        try:
+            push(dashboard, {"type": "stream", "text": str(text), "done": bool(done)})
+        except Exception:      # noqa: BLE001 - mirroring must never break the desktop log
+            pass
+
     ui.write_log, ui.set_state = write_log, set_state
+    if original_stream:
+        ui.write_stream = write_stream
     return original_log, original_state
 
 

@@ -154,6 +154,10 @@ def web_search(
     if items and mode != "compare":
         mode = "compare"
 
+    if mode in {"deep", "research", "deep research", "deep_research"}:
+        from actions.deep_research import deep_research
+        return deep_research(query, player=player)
+
     if player:
         player.write_log(f"[Search] {query or ', '.join(items)}")
 

@@ -732,6 +732,7 @@ class MetricBar(QWidget):
 
 class LogWidget(QTextEdit):
     _sig = pyqtSignal(str)
+    _stream_sig = pyqtSignal(str, bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -758,9 +759,34 @@ class LogWidget(QTextEdit):
             }}
         """)
         self._sig.connect(self._append_entry)
+        self._stream_sig.connect(self._append_stream)
+        self._stream_active = False
 
     def append_log(self, text: str):
+        if self._stream_active and text.lower().startswith("aether:"):
+            self._stream_sig.emit("", True)
+            return
         self._sig.emit(text)
+
+    def append_stream(self, text: str, done: bool = False):
+        self._stream_sig.emit(text, done)
+
+    def _append_stream(self, text: str, done: bool):
+        if text and not self._stream_active:
+            cursor = self.textCursor()
+            cursor.movePosition(cursor.MoveOperation.End)
+            if not self.document().isEmpty():
+                cursor.insertBlock()
+            cursor.insertText("Aether: ")
+            self._stream_active = True
+        if text:
+            cursor = self.textCursor()
+            cursor.movePosition(cursor.MoveOperation.End)
+            cursor.insertText(text)
+            self.setTextCursor(cursor)
+            self.ensureCursorVisible()
+        if done:
+            self._stream_active = False
 
     def _append_entry(self, text: str):
         tl = text.lower()
@@ -3599,6 +3625,12 @@ class AetherUI:
     def write_log(self, text: str):
         try:
             self._win._log_sig.emit(text)
+        except RuntimeError:
+            pass
+
+    def write_stream(self, text: str, done: bool = False):
+        try:
+            self._win._log.append_stream(text, done)
         except RuntimeError:
             pass
 

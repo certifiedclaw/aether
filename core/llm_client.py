@@ -970,6 +970,8 @@ def _stream_openai_once(
 
                         full_content += text
                         buf          += text
+                        if text and not _is_tool_tag_prefix(full_content):
+                            yield {"type": "token", "text": text}
 
                         # Accumulate sentence boundaries for streaming TTS
                         while True:
@@ -1344,6 +1346,8 @@ def call_llm_stream(
 
                 full_content += delta
                 buf          += delta
+                if delta and not _is_tool_tag_prefix(full_content):
+                    yield {"type": "token", "text": delta}
 
                 # Yield complete sentences as they accumulate -- but never speak a
                 # reply that is (so far) a raw <tool_call> tag; the caller recovers

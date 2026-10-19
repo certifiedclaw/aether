@@ -57,7 +57,7 @@ GREETING_PATTERNS = re.compile(
 )
 TOOL_INTENT_PATTERNS = re.compile(
     r"\b(search|find|open|launch|start|close|quit|run|execute|delete|remove|create|"
-    r"schedule|remind|reminder|check|scan|look ?up|calculate|read|write|fetch|send|install|"
+    r"schedule|remind|reminder|check|scan|look ?up|research|investigate|browse|calculate|read|write|fetch|send|install|"
     r"list|show|play|pause|stop|mute|unmute|turn|set|change|increase|decrease|raise|lower|"
     r"volume|brightness|wifi|bluetooth|screenshot|click|type|weather|news|"
     r"files?|folders?|directory|desktop|downloads|documents|"

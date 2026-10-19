@@ -42,14 +42,17 @@ TOOL_DECLARATIONS = [
     {
         "name": "web_search",
         "description": (
-            "Searches the web and returns a concise answer with numbered source links. "
-            "Use those supplied sources for citations; never invent citations."
+            "Searches the web and returns numbered source links. Use mode='search' for a quick lookup, "
+            "mode='compare' to compare items, or mode='deep_research' when the user asks for "
+            "deep research, a thorough report, or a multi-angle investigation. Deep research "
+            "plans subquestions, searches multiple angles, reads a bounded set of public pages, "
+            "and returns a cited report. Never invent citations."
         ),
         "parameters": {
             "type": "OBJECT",
             "properties": {
                 "query":  {"type": "STRING", "description": "Search query"},
-                "mode":   {"type": "STRING", "description": "search (default) or compare"},
+                "mode":   {"type": "STRING", "description": "search (default), compare, or deep_research"},
                 "items":  {"type": "ARRAY", "items": {"type": "STRING"}, "description": "Items to compare"},
                 "aspect": {"type": "STRING", "description": "price | specs | reviews"}
             },

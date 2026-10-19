@@ -2,7 +2,37 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-19 22:08 UTC
+Generated: 2026-10-19 22:36 UTC
+
+## #119 — 2026-10-19 22:36 UTC — Codex
+
+Added a bounded native deep-research mode: LLM-planned queries, diverse DuckDuckGo results, safe bounded public-page reads, evidence synthesis with claim citations, progress, and direct report delivery from the research tool.
+
+**Touched:** `actions/deep_research.py`, `actions/web_search.py`, `core/tool_declarations.py`, `core/tool_dispatch.py`, `core/conversation_core.py`, `integrations/langchain_tools.py`, `readme.md`
+
+**Next steps:** Verify live deep-research quality and tune source diversity/coverage based on real topics; automated tests were not run in this session.
+
+---
+
+## #118 — 2026-10-19 22:26 UTC — Codex
+
+Added research intent routing and a one-time forced web_search recovery when the model promises research but returns no tool call; tool execution now logs elapsed milliseconds and output size.
+
+**Touched:** `core/conversation_core.py`, `core/tool_router.py`, `core/tier_router.py`
+
+**Next steps:** Inspect the new per-tool timing/output-size line on a live run to identify the source of any unusually fast tool response; prompt trimming and voice activation improvements remain.
+
+---
+
+## #117 — 2026-10-19 22:21 UTC — Codex
+
+Added incremental assistant reply display in the desktop chat and dashboard, forwarding model stream chunks while retaining sentence-based TTS.
+
+**Touched:** `core/llm_client.py`, `core/conversation_core.py`, `ui.py`, `dashboard/server.py`, `dashboard/static/app.html`
+
+**Next steps:** Review desktop and dashboard streaming behavior with the owner; prompt trimming, action-only response recovery, push-to-talk, and auto-update rollback remain separate work.
+
+---
 
 ## #116 — 2026-10-19 22:08 UTC — Claude Code
 

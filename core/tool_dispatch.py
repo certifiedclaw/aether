@@ -369,6 +369,9 @@ class ToolDispatchMixin:
     # ── NEW v3: LangChain integration ──────────────────────────
 
     def _tool_langchain(self, args: dict) -> str:
+        if str(args.get("action", "")).strip().lower() == "research":
+            from actions.deep_research import deep_research
+            return deep_research(args.get("task") or args.get("query") or "", player=self.ui)
         from main import _LANGCHAIN_OK, langchain_tool  # lazy: avoids circular import at module load time
         if _LANGCHAIN_OK:
             return langchain_tool(

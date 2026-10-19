@@ -8,7 +8,7 @@ Local is the default, not a requirement: optional hosted model providers, web re
 
 - **Talk or type:** Use the microphone for speech input, or send text in the desktop chat.
 - **Browse actions:** Use the **Actions** tab for quick tasks, or choose **Browse All Actions** to search enabled capabilities, fill in action details, and launch them directly. Sensitive actions continue to use Aether's approval checks.
-- **Research:** Start a multi-step research task from the Research quick action when that integration is enabled. If it is unavailable, Aether offers a single-search fallback.
+- **Research:** Quick web search returns linked results. Ask for **deep research** to create a multi-angle search plan, read up to eight public web pages, compare evidence, and produce a cited report. Deep research works with Aether's configured model and does not require LangChain.
 - **Choose voice and model providers:** Configure Whisper or Vosk; Edge TTS, Kokoro, or ElevenLabs; and a local Ollama/LM Studio server or supported hosted providers.
 - **Use local memory:** Aether can retain facts and chat history locally between turns. It also includes memory backup, export/import, and maintenance commands.
 - **Connect optional integrations:** Use document retrieval, LangChain research, LlamaIndex, MCP servers, plugins, and the web dashboard when configured.
