@@ -77,12 +77,16 @@ def _available(module: str) -> bool:
     return importlib.util.find_spec(module) is not None
 
 
-def _pip(package: str, log: Callable | None = None) -> bool:
+def _pip(package: str | list[str], log: Callable | None = None) -> bool:
+    packages = [package] if isinstance(package, str) else list(package)
+    if not packages:
+        return True
+    package_label = ", ".join(packages)
     if log:
-        log(f"SYS: pip install {package} …")
+        log(f"SYS: pip install {package_label} …")
     result = subprocess.run(
         [
-            sys.executable, "-m", "pip", "install", package,
+            sys.executable, "-m", "pip", "install", *packages,
             "--quiet", "--disable-pip-version-check",
         ],
         capture_output=True,
@@ -90,7 +94,7 @@ def _pip(package: str, log: Callable | None = None) -> bool:
     ok = result.returncode == 0
     if not ok and log:
         stderr = result.stderr.decode(errors="replace").strip()
-        log(f"ERR: {package} install failed — {stderr[:140]}")
+        log(f"ERR: {package_label} install failed — {stderr[:140]}")
     return ok
 
 
@@ -165,8 +169,17 @@ def install_for_config(config: dict, log: Callable | None = None) -> None:
     if log:
         log(f"SYS: Installing {len(missing)} package(s): {pkg_names}")
 
-    for _mod, pkg in missing:
-        _pip(pkg, log)
+    # One pip resolver/download session is substantially faster than starting
+    # pip once per missing package. Keep the old per-package behavior as a
+    # recovery path so one incompatible package does not block the others.
+    missing_packages = [pkg for _mod, pkg in missing]
+    if len(missing_packages) == 1:
+        _pip(missing_packages[0], log)
+    elif not _pip(missing_packages, log):
+        if log:
+            log("WRN: Batch install failed — retrying packages individually to isolate failures.")
+        for pkg in missing_packages:
+            _pip(pkg, log)
 
     # Playwright: install the package + download Chromium browser
     if not _available("playwright"):
