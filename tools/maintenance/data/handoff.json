@@ -1,5 +1,5 @@
 {
-  "next_id": 125,
+  "next_id": 126,
   "entries": [
     {
       "id": 1,
@@ -1728,6 +1728,17 @@
         "core/tier_router.py"
       ],
       "next_steps": "Check responses to model/provider, tool-availability, connectivity, and consciousness questions across local and Gemini routes; confirm the reported model matches the backend on device."
+    },
+    {
+      "id": 125,
+      "timestamp": "2026-10-19 23:13 UTC",
+      "by": "Codex",
+      "summary": "Aligned everyday tool routing with the screen_process contract so common asks about screen contents, visual inspection, and webcam view include the vision tool; added routing regression coverage.",
+      "files": [
+        "core/tool_router.py",
+        "tests/test_routing_and_paths.py"
+      ],
+      "next_steps": "Review other mismatches between declared tool requirements and per-turn routing, especially across casual natural-language variants."
     }
   ]
 }

@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-19 23:10 UTC
+Generated: 2026-10-19 23:13 UTC
+
+## #125 — 2026-10-19 23:13 UTC — Codex
+
+Aligned everyday tool routing with the screen_process contract so common asks about screen contents, visual inspection, and webcam view include the vision tool; added routing regression coverage.
+
+**Touched:** `core/tool_router.py`, `tests/test_routing_and_paths.py`
+
+**Next steps:** Review other mismatches between declared tool requirements and per-turn routing, especially across casual natural-language variants.
+
+---
 
 ## #124 — 2026-10-19 23:10 UTC — Codex
 
