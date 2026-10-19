@@ -82,6 +82,20 @@ class C:
 ROUTE_COLORS = {"local": C.PRI, "remote": C.SEC, "cloud": C.ACC}
 
 
+def toggle_hotkey_label() -> str:
+    """The show/hide hotkey as configured ("hotkey.toggle"), e.g. "Ctrl+Alt+J". The footer
+    used to hard-code Ctrl+Alt+A even when the app had registered a different one."""
+    try:
+        cfg = _config_home.load_config()
+        raw = cfg.get("hotkey.toggle")
+        if not raw and isinstance(cfg.get("hotkey"), dict):
+            raw = cfg["hotkey"].get("toggle")
+        raw = str(raw or "ctrl+alt+a")
+    except Exception:
+        raw = "ctrl+alt+a"
+    return "+".join(part.strip().capitalize() for part in raw.split("+") if part.strip()) or "Ctrl+Alt+A"
+
+
 def detect_system_theme() -> str:
     """Best-effort detection of the OS light/dark preference.
     Returns 'dark' or 'light'. Aether's HUD is dark-themed by design
@@ -2156,7 +2170,7 @@ class MainWindow(QMainWindow):
         sc_mute.activated.connect(self._toggle_mute)
         sc_full = QShortcut(QKeySequence("F11"), self)
         sc_full.activated.connect(self._toggle_fullscreen)
-        sc_show = QShortcut(QKeySequence("Ctrl+Alt+A"), self)
+        sc_show = QShortcut(QKeySequence(toggle_hotkey_label()), self)
         sc_show.activated.connect(self._toggle_visibility)
         sc_collapse = QShortcut(QKeySequence("Escape"), self)
         sc_collapse.activated.connect(self._toggle_collapse)
@@ -3325,7 +3339,7 @@ class MainWindow(QMainWindow):
 
         lay.addWidget(_fl("F4  Microphone"))
         lay.addStretch()
-        lay.addWidget(_fl("Ctrl+Alt+A  Show app  ·  Esc  Hide system panel", C.TEXT_DIM))
+        lay.addWidget(_fl(f"{toggle_hotkey_label()}  Show app  ·  Esc  Hide system panel", C.TEXT_DIM))
         return w
 
     def _on_file_selected(self, path: str):

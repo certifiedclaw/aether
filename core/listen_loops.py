@@ -23,7 +23,9 @@ this kind of main.py-owned, headless-sensitive state.
 """
 from __future__ import annotations
 
+import collections
 import queue
+import threading
 import time
 import traceback
 
@@ -43,6 +45,7 @@ class _VADBuffer:
         silence_thresh: float = 0.004,
         min_speech_sec: float = 0.3,
         max_speech_sec: float = 30.0,
+        preroll_sec:    float = 0.40,
     ):
         self._sr            = sample_rate
         self._sil_n         = int(silence_sec * sample_rate)
@@ -51,6 +54,12 @@ class _VADBuffer:
         self._min_n         = int(min_speech_sec * sample_rate)
         self._max_n         = int(max_speech_sec * sample_rate)
         self._buf:          list[np.ndarray] = []
+        # Audio from just BEFORE the level crossed the threshold. Without it the first
+        # soft consonants of every sentence are lost ("hat time is it").
+        self._pre:          collections.deque = collections.deque()
+        self._pre_n         = 0
+        self._pre_max       = int(preroll_sec * sample_rate)
+        self._lead_n        = 0
         self._in_spch       = False
         self._sil_cnt       = 0
 
@@ -58,24 +67,60 @@ class _VADBuffer:
         rms     = float(np.sqrt(np.mean(chunk ** 2)))
         total_n = sum(len(c) for c in self._buf)
         if rms > self._speech_thresh:
+            if not self._in_spch:
+                self._buf = list(self._pre)
+                self._lead_n = self._pre_n
+                self._pre.clear()
+                self._pre_n = 0
+                total_n = self._lead_n
             self._in_spch = True
             self._sil_cnt = 0
             self._buf.append(chunk.copy())
+        elif not self._in_spch:
+            self._pre.append(chunk.copy())
+            self._pre_n += len(chunk)
+            while self._pre_n > self._pre_max and self._pre:
+                self._pre_n -= len(self._pre.popleft())
         elif self._in_spch:
             self._buf.append(chunk.copy())
             if rms < self._sil_thresh:
                 self._sil_cnt += len(chunk)
             if self._sil_cnt >= self._sil_n or total_n >= self._max_n:
                 audio         = np.concatenate(self._buf)
+                lead          = self._lead_n
                 self._buf     = []
+                self._lead_n  = 0
                 self._in_spch = False
                 self._sil_cnt = 0
-                if len(audio) >= self._min_n:
+                if len(audio) - lead >= self._min_n:   # the minimum is about real speech, not pre-roll
                     return audio
         return None
 
 
 class ListenLoopsMixin:
+    _barge_in_busy = False
+
+    def _request_barge_in(self) -> None:
+        """Interrupt TTS from the microphone callback WITHOUT doing the work there.
+
+        Stopping playback (sd.stop, draining queues, touching the UI) inside a PortAudio
+        callback can deadlock or crash the audio driver, and blocks the capture stream.
+        The callback only hands the request to a short-lived thread; repeat triggers while
+        one is already running are ignored."""
+        if self._barge_in_busy:
+            return
+        self._barge_in_busy = True
+
+        def _run():
+            try:
+                self._interrupt_speaking()
+            except Exception as e:      # noqa: BLE001 - an interrupt must never take the app down
+                print(f"[Barge-in] interrupt failed: {e}")
+            finally:
+                self._barge_in_busy = False
+
+        threading.Thread(target=_run, name="aether-barge-in", daemon=True).start()
+
     """Mixed into AetherLocal (see main.py). Methods assume the usual
     AetherLocal instance attributes: self.ui, self._stt, self._speaking(_lock),
     self._barge_in_*, self._dashboard, and self._process_message (provided
@@ -140,7 +185,7 @@ class ListenLoopsMixin:
                     need = self._BARGE_IN_FRAMES
                 if self._barge_in_count >= need:
                     self._barge_in_count = 0
-                    self._interrupt_speaking()
+                    self._request_barge_in()
                 return
 
             self._barge_in_count = 0
