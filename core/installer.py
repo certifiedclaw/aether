@@ -87,7 +87,7 @@ def _pip(package: str | list[str], log: Callable | None = None) -> bool:
     result = subprocess.run(
         [
             sys.executable, "-m", "pip", "install", *packages,
-            "--quiet", "--disable-pip-version-check",
+            "--prefer-binary", "--quiet", "--disable-pip-version-check",
         ],
         capture_output=True,
     )

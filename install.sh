@@ -47,7 +47,7 @@ fi
 # invoked directly. Non-fatal: an older pip can still install everything
 # below fine.
 echo "[INFO] Upgrading pip, setuptools, and wheel..."
-python3 -m pip install --upgrade pip setuptools wheel
+python3 -m pip install --prefer-binary --upgrade pip setuptools wheel
 if [ $? -ne 0 ]; then
     echo "[WARN] Could not upgrade pip/setuptools/wheel -- continuing with the existing version."
 fi
@@ -59,10 +59,10 @@ if [ ! -f requirements.txt ]; then
 fi
 
 echo "[INFO] Installing dependencies from requirements.txt..."
-python3 -m pip install -r requirements.txt
+python3 -m pip install --prefer-binary -r requirements.txt
 if [ $? -ne 0 ]; then
     echo "[WARN] First attempt failed -- retrying once..."
-    python3 -m pip install -r requirements.txt
+    python3 -m pip install --prefer-binary -r requirements.txt
     if [ $? -ne 0 ]; then
         echo "[ERROR] Failed to install dependencies."
         echo "        Scroll up past the retry to find the FIRST error pip printed --"

@@ -28,6 +28,7 @@ def test_missing_packages_install_in_one_pip_invocation(monkeypatch):
 
     assert len(calls) == 1
     assert calls[0][4:6] == ["alpha-pkg", "beta-pkg"]
+    assert "--prefer-binary" in calls[0]
 
 
 def test_failed_batch_falls_back_to_individual_packages(monkeypatch):
