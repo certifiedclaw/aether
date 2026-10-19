@@ -1,5 +1,5 @@
 {
-  "next_id": 120,
+  "next_id": 121,
   "entries": [
     {
       "id": 1,
@@ -1674,6 +1674,16 @@
         "readme.md"
       ],
       "next_steps": "Verify live deep-research quality and tune source diversity/coverage based on real topics; automated tests were not run in this session."
+    },
+    {
+      "id": 120,
+      "timestamp": "2026-10-19 22:42 UTC",
+      "by": "Codex",
+      "summary": "Deep research now performs one evidence-guided follow-up round: after reading initial sources, it searches up to two concrete gaps and adds new pages within the existing eight-source cap; source URL deduplication now ignores fragments.",
+      "files": [
+        "actions/deep_research.py"
+      ],
+      "next_steps": "Run live research on a few current and contested topics to assess follow-up query quality and source coverage; automated tests were not run in this session."
     }
   ]
 }

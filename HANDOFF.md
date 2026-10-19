@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-19 22:36 UTC
+Generated: 2026-10-19 22:42 UTC
+
+## #120 — 2026-10-19 22:42 UTC — Codex
+
+Deep research now performs one evidence-guided follow-up round: after reading initial sources, it searches up to two concrete gaps and adds new pages within the existing eight-source cap; source URL deduplication now ignores fragments.
+
+**Touched:** `actions/deep_research.py`
+
+**Next steps:** Run live research on a few current and contested topics to assess follow-up query quality and source coverage; automated tests were not run in this session.
+
+---
 
 ## #119 — 2026-10-19 22:36 UTC — Codex
 
