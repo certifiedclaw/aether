@@ -2621,6 +2621,20 @@ class MainWindow(QMainWindow):
         fullscreen_btn.clicked.connect(self._toggle_fullscreen)
         chat_controls.addWidget(fullscreen_btn)
 
+        remote_btn = QPushButton("Phone / web")
+        remote_btn.setFixedHeight(34)
+        remote_btn.setToolTip("Show the web dashboard address and a one-time pairing code (same as /remote)")
+        remote_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        remote_btn.setStyleSheet(f"""
+            QPushButton {{
+                color: {C.TEXT_MED}; background: transparent;
+                border: 1px solid {C.BORDER}; border-radius: 8px; padding: 5px 12px;
+            }}
+            QPushButton:hover {{ color: {C.TEXT}; border-color: {C.BORDER_B}; }}
+        """)
+        remote_btn.clicked.connect(self._show_remote_info)
+        chat_controls.addWidget(remote_btn)
+
         cfg_btn = QPushButton("Settings")
         cfg_btn.setFixedHeight(34)
         cfg_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -3344,6 +3358,11 @@ class MainWindow(QMainWindow):
                 f"({size}) has been uploaded and ask what they'd like to do with it."
             )
             threading.Thread(target=self.on_text_command, args=(msg,), daemon=True).start()
+
+    def _show_remote_info(self) -> None:
+        """Same as typing /remote: prints the dashboard address and a fresh pairing code."""
+        if self.on_text_command:
+            threading.Thread(target=self.on_text_command, args=("/remote",), daemon=True).start()
 
     def _toggle_mute(self):
         self._muted = not self._muted

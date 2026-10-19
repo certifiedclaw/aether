@@ -1,5 +1,5 @@
 {
-  "next_id": 116,
+  "next_id": 117,
   "entries": [
     {
       "id": 1,
@@ -1619,6 +1619,19 @@
         "tests/test_voice_browser_fixes.py"
       ],
       "next_steps": "Need the actual crash JSON from logs/crashes for the barge-in crash; test voice on real hardware with stt_language set to en"
+    },
+    {
+      "id": 116,
+      "timestamp": "2026-10-19 22:08 UTC",
+      "by": "Claude Code",
+      "summary": "Web dashboard: loopback now serves plain HTTP even when a leftover cert exists (https-only on localhost made http://localhost:8000 return an empty response); status pill goes Active on connect; typing indicator while the model works (status 'thinking' mirrored); leftover JARVIS branding replaced with AETHER. Verified in headless Aether with a mock Ollama driven by real Chromium: page load 0.15s, reply 0.35s end to end. Real slowness is model latency, not the page.",
+      "files": [
+        "dashboard/server.py",
+        "dashboard/static/app.html",
+        "dashboard/static/login.html",
+        "tests/test_dashboard_wiring.py"
+      ],
+      "next_steps": "Stream tokens to the dashboard; auto-generate a self-signed cert when AETHER_DASHBOARD_HOST is non-loopback and none exists"
     }
   ]
 }

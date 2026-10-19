@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-18 23:30 UTC
+Generated: 2026-10-19 22:08 UTC
+
+## #116 — 2026-10-19 22:08 UTC — Claude Code
+
+Web dashboard: loopback now serves plain HTTP even when a leftover cert exists (https-only on localhost made http://localhost:8000 return an empty response); status pill goes Active on connect; typing indicator while the model works (status 'thinking' mirrored); leftover JARVIS branding replaced with AETHER. Verified in headless Aether with a mock Ollama driven by real Chromium: page load 0.15s, reply 0.35s end to end. Real slowness is model latency, not the page.
+
+**Touched:** `dashboard/server.py`, `dashboard/static/app.html`, `dashboard/static/login.html`, `tests/test_dashboard_wiring.py`
+
+**Next steps:** Stream tokens to the dashboard; auto-generate a self-signed cert when AETHER_DASHBOARD_HOST is non-loopback and none exists
+
+---
 
 ## #115 — 2026-10-18 23:30 UTC — Claude Code
 

@@ -78,6 +78,12 @@
     @keyframes pop { from { opacity:0; transform:translateY(4px); } }
     .msg-j   { align-self:flex-start; background:var(--adim);   border:1px solid rgba(99,102,241,0.18); border-bottom-left-radius:4px; }
     .msg-u   { align-self:flex-end;   background:var(--surface); border:1px solid var(--border);        border-bottom-right-radius:4px; }
+    .typing span { display:inline-block; width:6px; height:6px; margin:0 2px; border-radius:50%;
+                   background:var(--accent); opacity:0.35; animation: typedot 1.2s infinite; }
+    .typing span:nth-child(3) { animation-delay: 0.2s; }
+    .typing span:nth-child(4) { animation-delay: 0.4s; }
+    @keyframes typedot { 40% { opacity:1; transform:translateY(-3px); } }
+    @media (prefers-reduced-motion: reduce) { .typing span { animation: none; opacity:0.7; } }
     .msg-sys { align-self:center; font-size:11px; color:var(--muted); padding:2px 0; background:transparent; border:none; letter-spacing:0.3px; }
     .lbl { font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; opacity:0.45; margin-bottom:4px; }
     .msg-j .lbl { color:var(--accent); }
@@ -155,7 +161,7 @@
 <body>
   <div id="toast"></div>
   <header>
-    <div class="logo"><em>J</em>ARVIS</div>
+    <div class="logo"><em>A</em>ETHER</div>
     <div class="pill" id="pill"><span class="dot"></span><span id="st">Connecting</span></div>
     <div class="enc-badge" id="enc">AES-256</div>
     <div class="spacer"></div>
@@ -243,7 +249,7 @@
     const _wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
     _getWsTicket('main').then(ticket => {
       const ws = new WebSocket(`${_wsProto}://${location.host}/ws?ticket=${encodeURIComponent(ticket)}`);
-      ws.onopen    = () => { sys('Remote session active.'); toast('Connected to AETHER'); };
+      ws.onopen    = () => { sys('Remote session active.'); toast('Connected to AETHER'); setStatus('active'); };
       ws.onclose   = () => sys('Connection lost — refresh to reconnect.');
       ws.onerror   = () => sys('Connection error.');
       ws.onmessage = (e) => {
@@ -256,7 +262,27 @@
       };
     }).catch(() => sys('Could not authorize dashboard connection. Refresh to retry.'));
 
+    // "Thinking" is shown the moment a message is sent and until the reply lands, so a slow
+    // local model never looks like a dead page.
+    function showTyping() {
+      if (document.getElementById('typing')) return;
+      const d = document.createElement('div');
+      d.id = 'typing'; d.className = 'msg msg-j typing';
+      d.innerHTML = '<div class="lbl">Aether</div><span></span><span></span><span></span>';
+      feed.appendChild(d); feed.scrollTop = feed.scrollHeight;
+    }
+    function hideTyping() {
+      const t = document.getElementById('typing');
+      if (t) t.remove();
+    }
+
     function setStatus(s) {
+      if (s === 'thinking') {
+        pill.className = 'pill on'; stTxt.textContent = 'Thinking…'; wake.classList.remove('show');
+        showTyping();
+        return;
+      }
+      hideTyping();
       if (s === 'active') {
         pill.className = 'pill on'; stTxt.textContent = 'Active'; wake.classList.remove('show');
       } else {
@@ -267,6 +293,7 @@
     function append(speaker, text) {
       const d = document.createElement('div');
       if (speaker === 'aether') {
+        hideTyping();
         d.className = 'msg msg-j';
         d.innerHTML = `<div class="lbl">Aether</div>${esc(text)}`;
       } else {
@@ -439,6 +466,7 @@
       if (!txt) return;
       inp.value = '';
       append('user', txt);
+      showTyping();
       const enc  = _encrypt(txt);
       const body = enc ? { enc } : { text: txt };
       _authFetch('/api/command', {

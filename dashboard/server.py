@@ -504,13 +504,35 @@ class DashboardServer:
         certs = _ch.certs_dir()
         return (certs / "aether.key").exists() and (certs / "aether.crt").exists()
 
+    def pairing_info(self, expiry_secs: int = 600) -> dict:
+        """Everything the user needs to connect a browser or phone: the address, a one-time
+        6-character code, and a QR/auto-login link. Nothing else in the app creates a code,
+        so without this the login page ("press Remote Control...") could never be passed."""
+        code = self.new_key(expiry_secs)
+        base = self.get_url()
+        return {
+            "url": base,
+            "manual_url": self.get_manual_url(),
+            "code": code,
+            "auto_login_url": f"{base}/auto-login?key={code}",
+            "https": self._tls_active(),
+            "loopback": self._is_loopback_host(self._host),
+            "expires_min": max(1, expiry_secs // 60),
+        }
+
+    def _tls_active(self) -> bool:
+        """TLS is used when a certificate exists AND the dashboard is reachable from other
+        machines. On loopback it only adds a certificate warning (and makes a plain
+        http://localhost:8000 fail with an empty response), so loopback stays plain HTTP."""
+        return self._ssl_enabled() and not self._is_loopback_host(self._host)
+
     def get_url(self) -> str:
-        proto = "https" if self._ssl_enabled() else "http"
+        proto = "https" if self._tls_active() else "http"
         return f"{proto}://{self._ip}:{PORT}"
 
     def get_manual_url(self) -> str:
         """URL for manual browser entry. When HTTPS active, points to alias port (also HTTPS)."""
-        if self._ssl_enabled():
+        if self._tls_active():
             return f"{self._ip}:{PORT + 1}"
         return f"{self._ip}:{PORT}"
 
@@ -836,7 +858,9 @@ class DashboardServer:
             if not self._auth(req):
                 return JSONResponse({"error": "Unauthorized"}, status_code=401)
             from core.llm_client import get_llm_backend_status
-            return JSONResponse(get_llm_backend_status())
+            # In dual mode this can probe the remote PC with a timeout: never on the event loop.
+            return JSONResponse(await asyncio.get_running_loop().run_in_executor(
+                None, get_llm_backend_status))
 
     # ── audit log viewer (core/audit_log.py) ─────────────────────────────
 
@@ -862,12 +886,15 @@ class DashboardServer:
                     since = time.time() - float(qp["hours"]) * 3600
             except ValueError:
                 since = None
-            entries = audit_log.read(
-                since=since, tool=qp.get("tool", "")[:60], decision=qp.get("decision", "")[:20],
-                tier=qp.get("tier", "")[:20], text=qp.get("text", "")[:100], limit=limit)
-            ok, msg = audit_log.verify()
-            return JSONResponse({"entries": entries, "summary": audit_log.summarize(entries),
-                                 "chain": {"ok": ok, "message": msg}})
+            def _load():
+                # Reading and hash-verifying the whole log is disk + CPU work: keep it off the loop.
+                entries = audit_log.read(
+                    since=since, tool=qp.get("tool", "")[:60], decision=qp.get("decision", "")[:20],
+                    tier=qp.get("tier", "")[:20], text=qp.get("text", "")[:100], limit=limit)
+                ok, msg = audit_log.verify()
+                return {"entries": entries, "summary": audit_log.summarize(entries),
+                        "chain": {"ok": ok, "message": msg}}
+            return JSONResponse(await asyncio.get_running_loop().run_in_executor(None, _load))
 
     # ── speed / memory / cloud-usage (core/perf_stats.py) ────────────────
 
@@ -1117,11 +1144,12 @@ class DashboardServer:
             print("[Dashboard] Run:  pip install fastapi 'uvicorn[standard]' cryptography")
             return
 
-        use_ssl  = self._ssl_enabled()
+        cert_ok  = self._ssl_enabled()
+        use_ssl  = self._tls_active()
         from core import config_home as _ch
         ssl_key  = _ch.certs_dir() / "aether.key"
         ssl_cert = _ch.certs_dir() / "aether.crt"
-        if not self._remote_access_allowed(self._host, use_ssl):
+        if not self._remote_access_allowed(self._host, cert_ok):
             print("[Dashboard] Remote access disabled: set up TLS certificates in config/certs first.")
             return
 
@@ -1184,6 +1212,51 @@ def start_dashboard_server(wake_callback=None, connect_callback=None) -> "Dashbo
     threading.Thread(target=_run, daemon=True, name="AetherDashboard").start()
     _dashboard_instance = dashboard
     return dashboard
+
+
+def attach_ui_mirror(dashboard, ui, push=None):
+    """Send what the desktop log shows to every connected browser.
+
+    The dashboard page renders {"type": "log", "speaker": ..., "text": ...} and
+    {"type": "status", "state": ...} messages, but nothing ever produced them, so commands
+    went in and no reply ever came back. This wraps the UI's write_log/set_state so each
+    assistant reply and system line is mirrored. Your own lines are skipped (the page already
+    shows what you typed). Returns the original callables so a test or caller can restore."""
+    push = push or push_log_threadsafe
+    original_log, original_state = ui.write_log, ui.set_state
+
+    def _classify(text: str):
+        head, sep, rest = text.partition(":")
+        tag = head.strip().lower()
+        if sep and tag == "aether":
+            return {"type": "log", "speaker": "aether", "text": rest.strip()}
+        if sep and tag in ("sys", "wrn", "err", "file"):
+            return {"type": "sys", "text": (rest.strip() if tag == "sys" else f"{tag.upper()}: {rest.strip()}")}
+        if sep and tag == "you":
+            return None
+        return {"type": "sys", "text": text}
+
+    def write_log(text, *a, **k):
+        original_log(text, *a, **k)
+        try:
+            msg = _classify(str(text))
+            if msg and msg["text"]:
+                push(dashboard, msg)
+        except Exception:      # noqa: BLE001 - mirroring must never break the desktop log
+            pass
+
+    def set_state(state, *a, **k):
+        original_state(state, *a, **k)
+        try:
+            st = str(state).upper()
+            push(dashboard, {"type": "status",
+                             "state": "sleeping" if st == "MUTED"
+                             else "thinking" if st in ("THINKING", "PROCESSING") else "active"})
+        except Exception:      # noqa: BLE001
+            pass
+
+    ui.write_log, ui.set_state = write_log, set_state
+    return original_log, original_state
 
 
 def push_log_threadsafe(dashboard: "DashboardServer", msg: dict) -> None:

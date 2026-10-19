@@ -36,6 +36,29 @@ class ChatCommandsMixin:
     Mixed into AetherLocal — see module docstring above.
     """
 
+    @staticmethod
+    def _format_remote_info(info: dict) -> str:
+        """Human-readable connection steps for /remote (also printed at headless start)."""
+        lines = ["SYS: Web dashboard", f"  Open:   {info['url']}   (or type {info['manual_url']} in the address bar)"]
+        lines.append(f"  Code:   {info['code']}   (one use, valid {info['expires_min']} min; type /remote for a new one)")
+        lines.append(f"  Phone:  open {info['auto_login_url']} to sign in without typing the code")
+        if info.get("https"):
+            lines.append("  The browser will warn about the certificate (it is self-signed): choose Advanced, then continue.")
+        if info.get("loopback"):
+            lines.append("  Reachable from this PC only. To use it from a phone, set AETHER_DASHBOARD_HOST=0.0.0.0 "
+                         "(this needs a TLS certificate in the config folder).")
+        return "\n".join(lines)
+
+    def _cmd_remote(self) -> bool:
+        dash = getattr(self, "_dashboard", None)
+        if dash is None:
+            self.ui.write_log(
+                "SYS: The web dashboard is not running. Install it with: "
+                "pip install fastapi \"uvicorn[standard]\" cryptography python-multipart")
+        else:
+            self.ui.write_log(self._format_remote_info(dash.pairing_info()))
+        return True
+
     def _clear_chat_memory(self) -> None:
         memory = getattr(self, "_hybrid_mem", None) or self._semantic_mem
         if memory:
@@ -51,6 +74,8 @@ class ChatCommandsMixin:
         been fully handled (caller should return immediately), False if it
         wasn't a command and normal LLM processing should continue.
         """
+        if user_text.strip().lower() in ("/remote", "/pair", "/dashboard"):
+            return self._cmd_remote()
         from main import (get_recent_crashes, backup_memory, memory_stats,
                            prune_memory, export_memory, import_memory,
                            run_self_test_async)  # lazy: avoids circular import at module load time
@@ -271,6 +296,7 @@ class ChatCommandsMixin:
                 "/status            Full system diagnostic\n"
                 "/audit [N] [tool=x] [decision=denied] [hours=24] [words]  Show recent tool calls and approvals; /audit verify checks the log hasn't been tampered with\n"
                 "/perf [hours]      Speed per model (median/p95 time, tokens/s), memory use, cloud tokens today\n"
+                "/remote            Show the web dashboard address and a one-time pairing code (phone or browser)\n"
                 "/resources         Show whether background jobs are paused because the machine is busy\n"
                 "/doctor            Find install problems and how to fix them (/doctor fix applies safe fixes)\n"
                 "/backup            Snapshot memory to zip\n"
