@@ -124,6 +124,14 @@ _FAKE_TOOL_CALL_RE = re.compile(r'^([a-zA-Z_][a-zA-Z0-9_]*)\((.*)\)\s*$', re.DOT
 _FAKE_TOOL_KWARG_RE = re.compile(
     r'(\w+)\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^,")\']+))'
 )
+_ACTION_PROMISE_RE = re.compile(
+    r"\b(?:i(?:'ll| will)|let me|i'm going to|i am going to)\s+"
+    r"(?:quickly\s+)?(?:research|search|look\s+up|find\s+out|investigate|browse)\b",
+    re.I,
+)
+_DEEP_RESEARCH_REQUEST_RE = re.compile(
+    r"\b(?:deep(?:ly)?\s+research|thorough research|research in depth)\b", re.I
+)
 
 
 # --- Promise-without-action recovery (roadmap #92) ---------------------------
@@ -451,6 +459,7 @@ class ConversationCoreMixin:
                 _first_v = str(targs[_first_k])[:40]
                 _arg_hint = f" ({_first_k}={_first_v})"
             self.ui.write_log(f"SYS: ▶ {tname}{_arg_hint}")
+            _tool_started = time.monotonic()
 
             # ── Loop guard — block if tool called too many times ──
             if self._loop_guard:
@@ -475,6 +484,11 @@ class ConversationCoreMixin:
             if result != "__SILENT__":
                 all_silent = False
                 _tool_results.append((tname, result))
+            self.ui.write_log(
+                f"SYS: ✓ {tname} completed in "
+                f"{(time.monotonic() - _tool_started) * 1000:.1f} ms "
+                f"({len(str(result))} output chars)"
+            )
 
             tool_msg: dict = {
                 "role":    "tool",
@@ -762,6 +776,10 @@ class ConversationCoreMixin:
                                 _turn_cancelled = True
                                 break
                             _streamed.append(event["text"])
+                        elif event["type"] == "token":
+                            _stream_writer = getattr(self.ui, "write_stream", None)
+                            if _stream_writer:
+                                _stream_writer(event["text"])
                         elif event["type"] == "done":
                             final_content    = event["content"]
                             final_tool_calls = event["tool_calls"]
@@ -991,7 +1009,11 @@ class ConversationCoreMixin:
                     assistant_msg = {"role": "assistant", "content": final_content}
                     messages.append(assistant_msg)
                     self._conversation.append(assistant_msg)
-                    self.ui.write_log(f"Aether: {final_content}")
+                    _stream_writer = getattr(self.ui, "write_stream", None)
+                    if _stream_writer:
+                        _stream_writer("", done=True)
+                    else:
+                        self.ui.write_log(f"Aether: {final_content}")
                     if _was_truncated:
                         self.speak(" …")
                     final_assistant_reply = final_content
@@ -1003,6 +1025,9 @@ class ConversationCoreMixin:
                     messages.append(assistant_msg)
                     self._conversation.append(assistant_msg)
                     self.ui.write_log(f"Aether: {final_content}")
+                    _stream_writer = getattr(self.ui, "write_stream", None)
+                    if _stream_writer:
+                        _stream_writer("", done=True)
                     self.speak(final_content)
                     final_assistant_reply = final_content
                     _llm_synthesized = True
@@ -1056,9 +1081,40 @@ class ConversationCoreMixin:
                 final_assistant_reply = final_content
                 break
 
+            if _DEEP_RESEARCH_REQUEST_RE.search(user_text):
+                for _tc in final_tool_calls:
+                    _fn = _tc.get("function", {})
+                    if _fn.get("name") != "web_search":
+                        continue
+                    _args = _fn.get("arguments", {})
+                    if isinstance(_args, str):
+                        try:
+                            _args = json.loads(_args)
+                        except Exception:
+                            _args = {}
+                    if isinstance(_args, dict):
+                        _args["mode"] = "deep_research"
+                        _fn["arguments"] = _args
+
             _tool_results, all_silent = self._execute_tool_calls(final_tool_calls, messages)
             _trace.event("tool_round_done", round=_round, all_silent=all_silent,
                          results=[{"tool": n, "result": r} for n, r in _tool_results])
+
+            _deep_research_call = False
+            if len(final_tool_calls) == 1:
+                _deep_args = final_tool_calls[0].get("function", {}).get("arguments", {})
+                if isinstance(_deep_args, str):
+                    try:
+                        _deep_args = json.loads(_deep_args)
+                    except Exception:
+                        _deep_args = {}
+                _deep_research_call = (
+                    (final_tool_calls[0].get("function", {}).get("name") == "web_search"
+                     and str((_deep_args or {}).get("mode", "")).lower()
+                     in {"deep", "research", "deep research", "deep_research"})
+                    or (final_tool_calls[0].get("function", {}).get("name") == "langchain"
+                        and str((_deep_args or {}).get("action", "")).lower() == "research")
+                )
 
             if self._cancel_current_turn.is_set():
                 _turn_cancelled = True
@@ -1106,6 +1162,19 @@ class ConversationCoreMixin:
                 break
             else:
                 _consecutive_silent_rounds = 0
+
+            if _deep_research_call and _tool_results:
+                _report = _tool_results[-1][1]
+                _report_msg = {"role": "assistant", "content": _report}
+                messages.append(_report_msg)
+                self._conversation.append(_report_msg)
+                self.ui.write_log(f"Aether: {_report}")
+                if _report.startswith("Deep research could not find"):
+                    self.speak("I couldn't find usable sources. The details are in chat.")
+                else:
+                    self.speak("The deep research report is ready in chat, with its source links.")
+                final_assistant_reply = _report
+                break
 
             from main import _NEEDS_LLM_ROUND  # lazy: avoids circular import at module load time
             if _tool_results and not any(n in _NEEDS_LLM_ROUND for n, _ in _tool_results):

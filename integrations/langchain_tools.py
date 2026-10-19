@@ -473,9 +473,8 @@ LANGCHAIN_TOOL_DECLARATION = {
     "name": "langchain",
     "description": (
         "Advanced AI tools powered by LangChain: web search, Wikipedia lookup, "
-        "long document summarisation (map-reduce), multi-hop research agent "
-        "(ReAct), and document loading. Use 'research' for complex multi-step "
-        "information gathering tasks that need several search iterations."
+        "long document summarisation (map-reduce), and document loading. Use 'research' "
+        "for complex multi-step information gathering and a detailed cited report."
     ),
     "parameters": {
         "type": "OBJECT",
