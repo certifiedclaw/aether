@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-19 23:16 UTC
+Generated: 2026-10-19 23:19 UTC
+
+## #127 — 2026-10-19 23:19 UTC — Codex
+
+Reduced runtime dependency setup overhead by installing all missing packages in one pip invocation, with per-package fallback when the batch fails; added coverage for both paths.
+
+**Touched:** `core/installer.py`, `tests/test_installer.py`
+
+**Next steps:** Measure first-run setup time on a clean desktop environment; consider trimming optional heavy dependencies from the default profile only with compatibility evidence.
+
+---
 
 ## #126 — 2026-10-19 23:16 UTC — Codex
 

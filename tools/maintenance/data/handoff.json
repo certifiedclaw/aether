@@ -1,5 +1,5 @@
 {
-  "next_id": 127,
+  "next_id": 128,
   "entries": [
     {
       "id": 1,
@@ -1750,6 +1750,17 @@
         "tests/test_routing_and_paths.py"
       ],
       "next_steps": "Continue checking tool declarations against everyday routing for unmet triggers, prioritizing high-frequency user phrasings."
+    },
+    {
+      "id": 127,
+      "timestamp": "2026-10-19 23:19 UTC",
+      "by": "Codex",
+      "summary": "Reduced runtime dependency setup overhead by installing all missing packages in one pip invocation, with per-package fallback when the batch fails; added coverage for both paths.",
+      "files": [
+        "core/installer.py",
+        "tests/test_installer.py"
+      ],
+      "next_steps": "Measure first-run setup time on a clean desktop environment; consider trimming optional heavy dependencies from the default profile only with compatibility evidence."
     }
   ]
 }
