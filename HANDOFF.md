@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-19 22:42 UTC
+Generated: 2026-10-19 22:43 UTC
+
+## #121 — 2026-10-19 22:43 UTC — Codex
+
+Raised the bounded deep-research source limit from eight to twelve while retaining two reserved slots for evidence-guided follow-up sources.
+
+**Touched:** `actions/deep_research.py`
+
+**Next steps:** Assess report completeness and prompt latency on representative live research topics.
+
+---
 
 ## #120 — 2026-10-19 22:42 UTC — Codex
 
