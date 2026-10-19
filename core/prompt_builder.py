@@ -31,6 +31,16 @@ import os
 from memory.memory_manager import format_memory_for_prompt
 
 
+_QUICK_SYSTEM_PROMPT = (
+    "You are Aether, a concise, professional assistant. Answer directly in the "
+    "user's language and follow requested format and length. Be truthful; use "
+    "the conversation and supplied memory for personal facts, and say you do "
+    "not know when they are absent. Answer ordinary questions directly. Give "
+    "enough detail when the user asks for an explanation. Do not claim to have "
+    "searched or taken an action."
+)
+
+
 def model_prompt_guidance(model_name: str) -> str:
     """Small benchmark-driven prompt addition for the calibrated Qwen 1.5B."""
     if (
@@ -78,7 +88,10 @@ class PromptBuilderMixin:
         and gives the model unrelated context to get distracted by.
         """
         from main import _load_system_prompt, load_memory, _LANGCHAIN_OK, _OI_OK, _LLAMA_OK  # lazy: avoids circular import at module load time
-        sys_p   = _load_system_prompt()
+        # Quick turns have no tools and do not need the full action-routing
+        # protocol. Keeping the short identity/accuracy rules still honors the
+        # request while substantially reducing local prompt prefill.
+        sys_p   = _QUICK_SYSTEM_PROMPT if light else _load_system_prompt()
         memory  = load_memory()
         mem_str = format_memory_for_prompt(memory)
         now     = datetime.now()

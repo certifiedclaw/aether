@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-19 22:45 UTC
+Generated: 2026-10-19 22:51 UTC
+
+## #123 — 2026-10-19 22:51 UTC — Codex
+
+Reduced quick-turn prompt prefill with a compact system prompt and an 1,800-token local history cap; routed brief personal-context statements and questions to the normal memory-aware tier. Corrected cloud-history-budget selection so local Ollama tier overrides use the local budget.
+
+**Touched:** `core/conversation_core.py`, `core/prompt_builder.py`, `core/tier_router.py`
+
+**Next steps:** Measure TTFT and prompt token counts on greetings, short general questions, personal-memory asks, and local tier-model overrides; verify routing quality on device.
+
+---
 
 ## #122 — 2026-10-19 22:45 UTC — Codex
 

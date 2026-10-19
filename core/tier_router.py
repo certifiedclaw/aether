@@ -65,6 +65,13 @@ TOOL_INTENT_PATTERNS = re.compile(
     r"times|plus|minus|divided|multiplied)\b",
     re.IGNORECASE,
 )
+PERSONAL_CONTEXT_PATTERNS = re.compile(
+    r"\b(?:my name is|call me|i(?:'m| am| live| work| prefer| like| love| hate| was born| have)\b)"
+    r"|\b(?:my|our)\b"
+    r"|\b(?:what|where|who|when|which|how)\b.{0,40}\b(?:my|our)\b"
+    r"|\bwhere do i live\b|\bwhat do i (?:like|prefer|live)\b",
+    re.IGNORECASE,
+)
 COMPLEX_HINTS = re.compile(
     r"\b(explain why|analyze|compare|design|architecture|debug|refactor|"
     r"plan|strategy|multi-step|step by step|reason through)\b",
@@ -92,7 +99,9 @@ def classify(message: str, *, has_active_task: bool = False) -> RouteDecision:
     if not has_active_task:
         if GREETING_PATTERNS.match(stripped):
             return RouteDecision(Tier.QUICK, TIER_MODELS[Tier.QUICK], "greeting pattern")
-        if word_count <= QUICK_MAX_WORDS and not TOOL_INTENT_PATTERNS.search(stripped):
+        if (word_count <= QUICK_MAX_WORDS
+                and not TOOL_INTENT_PATTERNS.search(stripped)
+                and not PERSONAL_CONTEXT_PATTERNS.search(stripped)):
             return RouteDecision(Tier.QUICK, TIER_MODELS[Tier.QUICK], "short, no tool intent")
 
     if COMPLEX_HINTS.search(stripped):

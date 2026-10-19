@@ -48,6 +48,7 @@ from core.tool_router import filter_tools as _filter_tools_for_turn
 from core.tool_router import filter_tools_hard as _filter_tools_hard
 
 _CLOUD_HISTORY_BUDGET = 8000   # message tokens for Gemini-routed turns (schema is extra)
+_QUICK_HISTORY_BUDGET = 1800   # keep recent context, but avoid replaying long chats for short turns
 
 
 def _local_total_budget() -> int:
@@ -589,9 +590,12 @@ class ConversationCoreMixin:
         messages, _active_mem = self._prepare_conversation_messages(
             user_text, light=_is_quick, tools=_turn_tools,
             model_name=_prompt_model,
-            history_budget=(_CLOUD_HISTORY_BUDGET
-                            if _stream_kwargs or _primary_provider in ("gemini", "openai_api")
-                            else None),
+            history_budget=(
+                _CLOUD_HISTORY_BUDGET
+                if (_stream_kwargs.get("provider_override") in {"gemini", "openai_api"}
+                    or _primary_provider in {"gemini", "openai_api"})
+                else _QUICK_HISTORY_BUDGET if _is_quick else None
+            ),
         )
         # For live_report: did memory injection actually surface anything?
         # None means "not attempted" (QUICK-tier turns skip retrieval

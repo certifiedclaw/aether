@@ -1,5 +1,5 @@
 {
-  "next_id": 123,
+  "next_id": 124,
   "entries": [
     {
       "id": 1,
@@ -1705,6 +1705,18 @@
         "actions/web_search.py"
       ],
       "next_steps": "Review credibility notes and corroboration behavior on a varied set of live topics; tune allowlisted reference domains or signals if evidence supports it."
+    },
+    {
+      "id": 123,
+      "timestamp": "2026-10-19 22:51 UTC",
+      "by": "Codex",
+      "summary": "Reduced quick-turn prompt prefill with a compact system prompt and an 1,800-token local history cap; routed brief personal-context statements and questions to the normal memory-aware tier. Corrected cloud-history-budget selection so local Ollama tier overrides use the local budget.",
+      "files": [
+        "core/conversation_core.py",
+        "core/prompt_builder.py",
+        "core/tier_router.py"
+      ],
+      "next_steps": "Measure TTFT and prompt token counts on greetings, short general questions, personal-memory asks, and local tier-model overrides; verify routing quality on device."
     }
   ]
 }
