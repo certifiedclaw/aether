@@ -38,19 +38,52 @@ class WhisperSTT:
         self._language = None if (not language or language.strip().lower() == "auto") else language.strip().lower()
         print(f"[STT] Whisper '{model_name}' ready ({device})")
 
+    # Whisper's own "this is not speech / not confident" signals. Background video audio,
+    # music and room noise come back as low-confidence segments; real speech does not.
+    NO_SPEECH_MAX     = 0.6
+    AVG_LOGPROB_MIN   = -1.0
+    COMPRESSION_MAX   = 2.4      # highly repetitive output = hallucination loop
+
+    @classmethod
+    def keep_segment(cls, seg) -> bool:
+        """False for a segment Whisper itself doubts is real speech."""
+        no_speech = getattr(seg, "no_speech_prob", 0.0) or 0.0
+        logprob   = getattr(seg, "avg_logprob", 0.0) or 0.0
+        compress  = getattr(seg, "compression_ratio", 0.0) or 0.0
+        if no_speech > cls.NO_SPEECH_MAX and logprob < cls.AVG_LOGPROB_MIN:
+            return False
+        if compress > cls.COMPRESSION_MAX:
+            return False
+        return logprob >= -1.6        # very low confidence even when it thinks it is speech
+
     def transcribe(self, audio: np.ndarray) -> str:
-        """Transcribe a float32 mono 16 kHz numpy array. Returns transcript string."""
+        """Transcribe a float32 mono 16 kHz numpy array. Returns transcript string.
+        Segments Whisper is not confident are speech are dropped, so a video playing in
+        the background does not turn into prompts."""
         try:
-            segments, _ = self._model.transcribe(
-                audio,
+            from core import config_home
+            cfg = config_home.load_config()
+            # Short clips are cheap, so use a wider beam: it is what stops dropped letters.
+            seconds = len(audio) / 16_000.0
+            beam = int(cfg.get("stt_beam_size", 5 if seconds <= 12 else 2))
+            kwargs = dict(
                 language=self._language,
-                beam_size=1,                       # greedy — 2-3x faster
-                best_of=1,
+                beam_size=max(1, beam),
                 condition_on_previous_text=False,  # no hallucinations, faster
                 vad_filter=True,
-                vad_parameters={"min_silence_duration_ms": 300},
+                vad_parameters={
+                    # lower threshold + padding: the default clipped soft word starts/ends
+                    "threshold": float(cfg.get("stt_vad_threshold", 0.35)),
+                    "min_silence_duration_ms": 500,
+                    "speech_pad_ms": 400,
+                },
             )
-            return " ".join(s.text for s in segments).strip()
+            try:
+                segments, _ = self._model.transcribe(audio, hotwords="Aether", **kwargs)
+            except TypeError:        # older faster-whisper without hotwords
+                segments, _ = self._model.transcribe(audio, **kwargs)
+            kept = [s.text for s in segments if self.keep_segment(s)]
+            return " ".join(kept).strip()
         except Exception as e:
             print(f"[STT] Transcription error: {e}")
             raise
