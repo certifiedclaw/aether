@@ -3446,7 +3446,10 @@ class MainWindow(QMainWindow):
             f"color: {status[1]}; background: transparent;"
         )
         show_stop = state in ("THINKING", "PROCESSING", "SPEAKING") and bool(self.on_stop_command)
-        self._send_btn.setVisible(not show_stop)
+        # Keep Send available while Aether works or speaks. Users may queue a
+        # written follow-up at any time; Stop remains alongside it for an
+        # explicit cancel.
+        self._send_btn.setVisible(True)
         self._stop_btn.setVisible(show_stop)
         if state == "ERROR":
             self.orb.flash_error()
