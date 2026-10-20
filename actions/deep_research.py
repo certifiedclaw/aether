@@ -21,6 +21,14 @@ KNOWN_REFERENCE_DOMAINS = {
     "ourworldindata.org", "reuters.com", "science.org", "thelancet.com",
     "who.int", "wikipedia.org",
 }
+_RESEARCH_STOP_WORDS = {
+    "a", "about", "an", "and", "are", "as", "at", "be", "by", "can", "could",
+    "do", "does", "for", "from", "how", "in", "into", "is", "it", "of", "on",
+    "or", "please", "should", "that", "the", "their", "this", "to", "what",
+    "when", "where", "which", "who", "why", "with", "would", "you", "your",
+    "deep", "research", "focus", "cover", "include", "provide", "explain", "discuss",
+    "report", "sources", "source", "links", "latest", "current",
+}
 
 
 def _notify(player, text: str) -> None:
@@ -29,6 +37,59 @@ def _notify(player, text: str) -> None:
             player.write_log(f"SYS: {text}")
     except Exception:
         pass
+
+
+def _topic_anchor_terms(topic: str) -> list[str]:
+    """Extract a few subject terms from the request before its task instructions."""
+    subject = re.split(
+        r"\b(?:cover|focus on|include|provide|explain|discuss|with a focus on)\b",
+        str(topic or ""), maxsplit=1, flags=re.I,
+    )[0]
+    terms = []
+    for raw in re.findall(r"[a-z0-9]+", subject.casefold()):
+        if raw in _RESEARCH_STOP_WORDS or (len(raw) < 3 and raw not in {"ai", "uk", "us"}):
+            continue
+        term = raw[:-1] if raw.endswith("s") and len(raw) > 4 else raw
+        if term not in terms:
+            terms.append(term)
+    return terms[:3]
+
+
+def _query_matches_topic(query: str, topic: str) -> bool:
+    anchors = _topic_anchor_terms(topic)
+    query_terms = {
+        raw[:-1] if raw.endswith("s") and len(raw) > 4 else raw
+        for raw in re.findall(r"[a-z0-9]+", str(query or "").casefold())
+    }
+    return not anchors or bool(query_terms.intersection(anchors))
+
+
+def _ground_queries(topic: str, queries: list[str], limit: int) -> list[str]:
+    """Reject unanchored planner output and ensure every query names the subject."""
+    anchors = _topic_anchor_terms(topic)
+    anchor = " ".join(anchors)
+    grounded = []
+    for query in queries:
+        query = re.sub(r"\s+", " ", str(query or "")).strip()[:240]
+        if not query:
+            continue
+        if anchors and not _query_matches_topic(query, topic):
+            query = f"{query} {anchor}"[:240]
+        grounded.append(query)
+    return _unique(grounded)[:limit]
+
+
+def _topic_relevant(source: dict, topic: str) -> bool:
+    """Do not synthesize a report from search results unrelated to its subject."""
+    anchors = _topic_anchor_terms(topic)
+    if not anchors:
+        return True
+    text = " ".join(str(source.get(key) or "") for key in ("title", "snippet", "page"))
+    source_terms = {
+        raw[:-1] if raw.endswith("s") and len(raw) > 4 else raw
+        for raw in re.findall(r"[a-z0-9]+", text.casefold())
+    }
+    return bool(source_terms.intersection(anchors))
 
 
 def _plan(topic: str) -> tuple[list[str], list[str]]:
@@ -52,17 +113,29 @@ def _plan(topic: str) -> tuple[list[str], list[str]]:
         plan = [str(x).strip()[:220] for x in data.get("plan", []) if str(x).strip()]
         queries = [str(x).strip()[:240] for x in data.get("queries", []) if str(x).strip()]
         if queries:
-            return (plan[:5] or queries[:5], _unique([topic, *queries])[:MAX_QUERIES])
+            anchored = [query for query in queries if _query_matches_topic(query, topic)]
+            if len(anchored) >= 2:
+                anchor = " ".join(_topic_anchor_terms(topic)) or topic
+                return (plan[:5] or queries[:5],
+                        _ground_queries(topic, [f"{anchor} overview", *anchored], MAX_QUERIES))
     except Exception:
         pass
 
+    anchor = " ".join(_topic_anchor_terms(topic)) or topic
     plan = [
         f"What is the background and current state of {topic}?",
         f"What evidence, data, or primary sources are available about {topic}?",
         f"What are the main limitations, risks, and competing views on {topic}?",
         f"What are the likely implications or open questions for {topic}?",
     ]
-    return plan, _unique([topic, f"{topic} evidence data", f"{topic} risks limitations", f"{topic} recent developments"])[:MAX_QUERIES]
+    queries = [
+        f"{anchor} overview and current evidence",
+        f"{anchor} population trends and scale",
+        f"{anchor} causes and threats",
+        f"{anchor} responses and recovery",
+        f"{anchor} limitations and outlook",
+    ]
+    return plan, _ground_queries(topic, queries, MAX_QUERIES)
 
 
 def _unique(values: list[str]) -> list[str]:
@@ -114,9 +187,10 @@ def _follow_up_queries(topic: str, plan: list[str], sources: list[dict],
             for value in raw_queries
             if isinstance(value, str) and value.strip()
         ]
-        return _unique([q for q in candidates if q.casefold() not in {
+        candidates = [q for q in candidates if q.casefold() not in {
             existing.casefold() for existing in searched_queries
-        }])[:MAX_FOLLOW_UP_QUERIES]
+        }]
+        return _ground_queries(topic, candidates, MAX_FOLLOW_UP_QUERIES)
     except Exception:
         return []
 
@@ -270,9 +344,10 @@ def deep_research(topic: str, *, player=None) -> str:
         except Exception:
             continue
 
+    found = [item for item in found if _topic_relevant(item, topic)]
     chosen = _diverse_sources(found, INITIAL_SOURCE_BUDGET)
     if not chosen:
-        return f"Deep research could not find usable web sources for: {topic}"
+        return f"Deep research could not find relevant web sources for: {topic}"
 
     _notify(player, f"Deep research: reading {len(chosen)} initial sources…")
     fetched = []
@@ -292,6 +367,7 @@ def deep_research(topic: str, *, player=None) -> str:
             follow_up_results.extend(_usable_results(_ddg_search(query, max_results=5)))
         except Exception:
             continue
+    follow_up_results = [item for item in follow_up_results if _topic_relevant(item, topic)]
     existing_urls = {
         urlunsplit((*urlsplit(row["url"])[:4], "")) for row in fetched
     }
@@ -302,6 +378,9 @@ def deep_research(topic: str, *, player=None) -> str:
     if additions:
         with ThreadPoolExecutor(max_workers=4) as pool:
             fetched.extend(pool.map(_fetch_page, additions))
+    fetched = [item for item in fetched if _topic_relevant(item, topic)]
+    if not fetched:
+        return f"Deep research could not find relevant web sources for: {topic}"
 
     sources = []
     evidence = []
