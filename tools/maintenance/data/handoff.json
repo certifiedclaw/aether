@@ -1,5 +1,5 @@
 {
-  "next_id": 129,
+  "next_id": 130,
   "entries": [
     {
       "id": 1,
@@ -1774,6 +1774,17 @@
         "tests/test_installer.py"
       ],
       "next_steps": "Benchmark a fresh Windows install before making further dependency-profile changes."
+    },
+    {
+      "id": 129,
+      "timestamp": "2026-10-20 00:18 UTC",
+      "by": "Codex",
+      "summary": "Fixed a voice barge-in drop: after the mic guard confirms the user is speaking over TTS, the listener now queues the validated onset and continues capturing until playback stops, allowing Whisper to process the interrupting prompt. Added focused buffer coverage.",
+      "files": [
+        "core/listen_loops.py",
+        "tests/test_voice_browser_fixes.py"
+      ],
+      "next_steps": "Verify barge-in and echo-loop behavior on the owner's real microphone/speaker setup; tune the guard only from observed audio evidence."
     }
   ]
 }
