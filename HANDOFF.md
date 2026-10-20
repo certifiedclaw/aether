@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-20 01:34 UTC
+Generated: 2026-10-20 01:45 UTC
+
+## #136 — 2026-10-20 01:45 UTC — Codex
+
+Manually verified project instruction loading, relevant skill selection, unrelated-skill exclusion, no-match behavior, and path privacy. Added a containment guard for symlinked skill roots; Windows denied symlink creation with WinError 1314, so that case remains unverified.
+
+**Touched:** `core/project_instructions.py`
+
+**Next steps:** Verify symlink containment on a Windows environment with symlink privilege or a Unix host, then check task-matched skills in the running desktop app.
+
+---
 
 ## #135 — 2026-10-20 01:34 UTC — Codex
 

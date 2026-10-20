@@ -1,5 +1,5 @@
 {
-  "next_id": 136,
+  "next_id": 137,
   "entries": [
     {
       "id": 1,
@@ -1853,6 +1853,16 @@
         "actions/code_helper.py"
       ],
       "next_steps": "Verify skill matching with a temporary project containing unrelated and relevant skills, including a symlink that points outside the project."
+    },
+    {
+      "id": 136,
+      "timestamp": "2026-10-20 01:45 UTC",
+      "by": "Codex",
+      "summary": "Manually verified project instruction loading, relevant skill selection, unrelated-skill exclusion, no-match behavior, and path privacy. Added a containment guard for symlinked skill roots; Windows denied symlink creation with WinError 1314, so that case remains unverified.",
+      "files": [
+        "core/project_instructions.py"
+      ],
+      "next_steps": "Verify symlink containment on a Windows environment with symlink privilege or a Unix host, then check task-matched skills in the running desktop app."
     }
   ]
 }

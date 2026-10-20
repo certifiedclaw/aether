@@ -137,6 +137,8 @@ def load_relevant_project_skills(target_path: str | Path, task_text: str) -> str
                 if not root.is_dir():
                     continue
                 resolved_root = root.resolve()
+                if project_root is not None:
+                    resolved_root.relative_to(project_root.resolve())
                 for skill_dir in sorted(root.iterdir(), key=lambda item: item.name.casefold()):
                     skill_file = skill_dir / "SKILL.md"
                     resolved_file = skill_file.resolve()
