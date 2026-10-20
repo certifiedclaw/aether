@@ -30,6 +30,7 @@ main.py while main.py is still mid-import) and could grab the wrong
 method that uses each one instead, same pattern as conversation_core.py.
 """
 
+import logging
 import os
 from core.risk import gated  # noqa: E402
 import threading
@@ -55,7 +56,6 @@ from actions.computer_control  import computer_control
 from actions.game_updater      import game_updater
 
 from core import undo as undo_stack
-import logging
 
 from core import trace_log as _trace
 
@@ -78,7 +78,7 @@ class ToolDispatchMixin:
             return result
 
     def _execute_tool_impl(self, name: str, args: dict) -> str:
-        logger.info(f"[Aether] 🔧 {name}  {args}")
+        logger.debug("Executing tool %s", name)
         self.ui.set_state("THINKING")
 
         if name == "save_memory":
