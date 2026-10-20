@@ -1,7 +1,10 @@
 """Keep a new research topic from inheriting an older tool-call topic."""
 from contextlib import contextmanager
 
-from core.conversation_core import ConversationCoreMixin
+from core.conversation_core import (
+    ConversationCoreMixin,
+    _has_explicit_research_subject,
+)
 
 
 class _UI:
@@ -73,3 +76,28 @@ def test_non_research_tools_keep_their_arguments_unchanged():
     conversation._execute_tool_calls(tool_calls, messages)
 
     assert conversation.executed == [("open_app", {"app": "Calculator"})]
+
+
+def test_deep_research_search_uses_new_explicit_subject():
+    conversation = _Conversation()
+    messages = [
+        {"role": "user", "content": "Research the riots in France."},
+        {"role": "assistant", "content": "Here is the report on France."},
+        {"role": "user", "content": "Do deep research on turtles."},
+    ]
+    tool_calls = [{
+        "id": "call-3",
+        "function": {
+            "name": "web_search",
+            "arguments": {"mode": "deep_research", "query": "French riots"},
+        },
+    }]
+
+    conversation._execute_tool_calls(tool_calls, messages)
+
+    assert conversation.executed[0][1]["query"] == "Do deep research on turtles."
+
+
+def test_referential_deep_research_keeps_model_expanded_subject():
+    assert not _has_explicit_research_subject("Can you do deep research on that?")
+    assert _has_explicit_research_subject("Can you do deep research on turtles?")

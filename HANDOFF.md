@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-20 00:59 UTC
+Generated: 2026-10-20 01:01 UTC
+
+## #131 — 2026-10-20 01:01 UTC — Codex
+
+Extend research topic isolation to Aether's primary deep_research web_search route, overriding stale query arguments whenever the current request names a subject while preserving model-expanded queries for referential follow-ups. Add regression coverage for both behaviors.
+
+**Touched:** `core/conversation_core.py`, `tests/test_research_topic_isolation.py`
+
+**Next steps:** Verify explicit new-topic and referential deep-research follow-ups in the desktop UI.
+
+---
 
 ## #130 — 2026-10-20 00:59 UTC — Codex
 

@@ -1,5 +1,5 @@
 {
-  "next_id": 131,
+  "next_id": 132,
   "entries": [
     {
       "id": 1,
@@ -1798,6 +1798,17 @@
         "tests/test_research_topic_isolation.py"
       ],
       "next_steps": "Verify the research-topic fix in the desktop UI with a new-topic deep-research follow-up, including both explicit topic changes and pronoun-only follow-ups."
+    },
+    {
+      "id": 131,
+      "timestamp": "2026-10-20 01:01 UTC",
+      "by": "Codex",
+      "summary": "Extend research topic isolation to Aether's primary deep_research web_search route, overriding stale query arguments whenever the current request names a subject while preserving model-expanded queries for referential follow-ups. Add regression coverage for both behaviors.",
+      "files": [
+        "core/conversation_core.py",
+        "tests/test_research_topic_isolation.py"
+      ],
+      "next_steps": "Verify explicit new-topic and referential deep-research follow-ups in the desktop UI."
     }
   ]
 }

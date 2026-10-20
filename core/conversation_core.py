@@ -218,6 +218,19 @@ def _research_context_from_messages(messages: list[dict], max_chars: int = 2400)
     return current_request, context
 
 
+def _has_explicit_research_subject(request: str) -> bool:
+    """Whether a research request names a subject instead of only referring back."""
+    generic = {
+        "a", "about", "again", "as", "can", "comprehensive", "could", "deep",
+        "deeply", "do", "find", "for", "full", "go", "in", "investigate",
+        "it", "look", "me", "more", "on", "please", "previous", "research",
+        "same", "search", "that", "the", "this", "thorough", "thoroughly",
+        "topic", "up", "want", "you",
+    }
+    words = re.findall(r"[a-z0-9]+", str(request or "").casefold())
+    return any(word not in generic for word in words)
+
+
 def _parse_tagged_tool_calls(text: str) -> list[tuple[str, dict]] | None:
     """Recover tool calls a model wrote as text instead of calling them.
 
@@ -414,6 +427,16 @@ class ConversationCoreMixin:
                     targs = dict(targs)
                     targs["task"] = current_request
                     targs["context"] = prior_context
+            elif (tname == "web_search" and isinstance(targs, dict)
+                    and str(targs.get("mode", "")).lower()
+                    in {"deep", "research", "deep research", "deep_research"}):
+                current_request, _prior_context = _research_context_from_messages(messages)
+                # For a request that names a subject, the current wording wins
+                # over stale query arguments. For referential follow-ups such
+                # as "go deeper on that", retain the model-expanded query.
+                if current_request and _has_explicit_research_subject(current_request):
+                    targs = dict(targs)
+                    targs["query"] = current_request
 
             tc_id = tc.get("id", "")
             _arg_hint = ""
