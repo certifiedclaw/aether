@@ -588,6 +588,13 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
     # ------------------------------------------------------------------
 
     def _on_text_command(self, text: str) -> None:
+        # A typed follow-up is an implicit request to stop the current spoken
+        # reply. Do not cancel the turn itself: the queued prompt will run as
+        # soon as the current conversation lock is released.
+        with self._speaking_lock:
+            is_speaking = self._speaking
+        if is_speaking:
+            self._interrupt_speaking(reason="new text prompt")
         self._text_queue.put(text)
 
     def _on_action_command(self, name: str, args: dict) -> None:

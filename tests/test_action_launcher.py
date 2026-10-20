@@ -173,6 +173,21 @@ def test_direct_action_uses_worker_queue_without_an_llm_turn():
     ]
 
 
+def test_new_written_prompt_stops_tts_and_enters_the_message_queue():
+    from main import AetherLocal
+
+    aether = object.__new__(AetherLocal)
+    aether._speaking_lock = threading.Lock()
+    aether._speaking = True
+    aether._text_queue = queue.Queue()
+    aether._interrupt_speaking = Mock()
+
+    aether._on_text_command("What is the weather in Montreal?")
+
+    aether._interrupt_speaking.assert_called_once_with(reason="new text prompt")
+    assert aether._text_queue.get_nowait() == "What is the weather in Montreal?"
+
+
 def test_published_message_stats_include_model_route(monkeypatch):
     from core import conversation_core, perf_stats
 
@@ -267,12 +282,21 @@ def test_chat_input_is_discoverable_and_does_not_drop_unsent_text(monkeypatch):
 
     monkeypatch.setattr(ui.threading, "Thread", ImmediateThread)
     window.on_text_command = sent.append
+    window.on_stop_command = lambda: None
     QTest.keyClick(
         window._input, Qt.Key.Key_Return, Qt.KeyboardModifier.ControlModifier
     )
     assert sent == ["hello\nAether"]
     assert window._input.toPlainText() == ""
     assert not window._send_btn.isEnabled()
+
+    window._apply_state("SPEAKING")
+    assert not window._send_btn.isHidden()
+    assert not window._stop_btn.isHidden()
+    window._input.setPlainText("Next written prompt")
+    window._send_btn.click()
+    assert sent[-1] == "Next written prompt"
+    assert window._input.toPlainText() == ""
 
     window._focus_input()
     assert window.focusWidget() is window._input

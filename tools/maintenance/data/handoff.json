@@ -1,5 +1,5 @@
 {
-  "next_id": 129,
+  "next_id": 130,
   "entries": [
     {
       "id": 1,
@@ -1774,6 +1774,18 @@
         "tests/test_installer.py"
       ],
       "next_steps": "Benchmark a fresh Windows install before making further dependency-profile changes."
+    },
+    {
+      "id": 129,
+      "timestamp": "2026-10-20 00:21 UTC",
+      "by": "Codex",
+      "summary": "Fixed written prompts being blocked during active responses: the desktop Send button remains visible beside Stop, and submitting a text command interrupts current TTS without canceling/losing the queued prompt. Reverted the prior voice-only change after the user clarified the prompt was typed.",
+      "files": [
+        "ui.py",
+        "main.py",
+        "tests/test_action_launcher.py"
+      ],
+      "next_steps": "Verify on the user's desktop that Send is visible during long responses and typed follow-ups start after playback is interrupted."
     }
   ]
 }

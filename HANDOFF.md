@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-19 23:21 UTC
+Generated: 2026-10-20 00:21 UTC
+
+## #129 — 2026-10-20 00:21 UTC — Codex
+
+Fixed written prompts being blocked during active responses: the desktop Send button remains visible beside Stop, and submitting a text command interrupts current TTS without canceling/losing the queued prompt. Reverted the prior voice-only change after the user clarified the prompt was typed.
+
+**Touched:** `ui.py`, `main.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Verify on the user's desktop that Send is visible during long responses and typed follow-ups start after playback is interrupted.
+
+---
 
 ## #128 — 2026-10-19 23:21 UTC — Codex
 
