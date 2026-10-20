@@ -18,6 +18,7 @@ MAX_BUILD_ATTEMPTS = 3
 
 from core.llm_client import call_llm_text as _llm
 from core.protected_paths import DENIED, is_protected
+from core.project_instructions import with_project_instructions
 
 
 def _clean_code(text: str) -> str:
@@ -148,19 +149,25 @@ def _detect_intent(description: str, file_path: str, code: str) -> str:
 
 def _write(description: str, language: str, output_path: str, player=None) -> tuple[str, Path]:
     lang   = language or "python"
-    system = f"You are an expert {lang} developer. Output ONLY raw code, no markdown, no backticks, no explanations."
+    path = _resolve_save_path(output_path, lang)
+    system = with_project_instructions(
+        f"You are an expert {lang} developer. Output ONLY raw code, no markdown, no backticks, no explanations.",
+        path,
+    )
     prompt = (
         f"Write clean, working, well-commented {lang} code.\n"
         f"Handle errors and edge cases. Use modern best practices.\n\n"
         f"Description: {description}\n\nCode:"
     )
     code = _clean_code(_llm(prompt, system=system))
-    path = _resolve_save_path(output_path, lang)
     return code, path
 
 
-def _fix_code(code: str, error_output: str, description: str) -> str:
-    system = "You are an expert debugger. Return ONLY the corrected code — no explanation, no markdown, no backticks."
+def _fix_code(code: str, error_output: str, description: str, file_path: str | Path = "") -> str:
+    system = with_project_instructions(
+        "You are an expert debugger. Return ONLY the corrected code — no explanation, no markdown, no backticks.",
+        file_path or DESKTOP,
+    )
     prompt = (
         f"Fix the code below. It failed with this error.\n\n"
         f"Original goal: {description}\n\n"
@@ -262,7 +269,7 @@ def _build(description, language, output_path, args, timeout, speak=None, player
             player.write_log(f"[Code] Fixing (attempt {attempt})...")
 
         try:
-            code = _fix_code(code, last_output, description)
+            code = _fix_code(code, last_output, description, path)
             _save_file(path, code)
         except Exception as e:
             msg = f"Could not fix code on attempt {attempt}: {e}"
@@ -307,7 +314,10 @@ def _edit_action(file_path, instruction, player) -> str:
     if player:
         player.write_log("[Code] Editing file...")
 
-    system = "You are an expert code editor. Return ONLY the complete updated code — no explanation, no markdown, no backticks."
+    system = with_project_instructions(
+        "You are an expert code editor. Return ONLY the complete updated code — no explanation, no markdown, no backticks.",
+        file_path,
+    )
     prompt = (
         f"Apply the following change to the code below.\n\n"
         f"Change: {instruction}\n\n"
@@ -374,7 +384,11 @@ def _optimize_action(file_path, code, language, output_path, player) -> str:
         player.write_log("[Code] Optimizing code...")
 
     lang   = language or "python"
-    system = f"You are an expert {lang} developer. Return ONLY the optimized code — no explanation, no markdown, no backticks."
+    instruction_path = file_path or _resolve_save_path(output_path, lang)
+    system = with_project_instructions(
+        f"You are an expert {lang} developer. Return ONLY the optimized code — no explanation, no markdown, no backticks.",
+        instruction_path,
+    )
     prompt = (
         f"Optimize this {lang} code for performance, readability, and best practices. "
         f"Remove dead code and unnecessary complexity.\n\n"

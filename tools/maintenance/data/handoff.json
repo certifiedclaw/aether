@@ -1,5 +1,5 @@
 {
-  "next_id": 134,
+  "next_id": 135,
   "entries": [
     {
       "id": 1,
@@ -1831,6 +1831,17 @@
         "tests/test_deep_research_topic_relevance.py"
       ],
       "next_steps": "After the user's Downloads copy is updated and restarted, repeat a live deep-research request and verify the report cites turtle-relevant sources."
+    },
+    {
+      "id": 134,
+      "timestamp": "2026-10-20 01:28 UTC",
+      "by": "Codex",
+      "summary": "Teach the code helper to follow bounded project guidance from AGENTS.md, CLAUDE.md, and .github/copilot-instructions.md during code generation, editing, repair, and optimization.",
+      "files": [
+        "core/project_instructions.py",
+        "actions/code_helper.py"
+      ],
+      "next_steps": "Test the coding helper in a sample project with nested AGENTS.md and Copilot instructions, and confirm ordinary chat prompts remain unchanged."
     }
   ]
 }
