@@ -1,5 +1,5 @@
 {
-  "next_id": 132,
+  "next_id": 133,
   "entries": [
     {
       "id": 1,
@@ -1809,6 +1809,17 @@
         "tests/test_research_topic_isolation.py"
       ],
       "next_steps": "Verify explicit new-topic and referential deep-research follow-ups in the desktop UI."
+    },
+    {
+      "id": 132,
+      "timestamp": "2026-10-20 01:07 UTC",
+      "by": "Codex",
+      "summary": "Prevent Windows console encoding failures from aborting tool calls: replace direct Unicode-and-argument printing in tool dispatch with a safe debug log that omits sensitive arguments. Add regression coverage that simulates an unsupported console encoding.",
+      "files": [
+        "core/tool_dispatch.py",
+        "tests/test_tool_dispatch_console_safety.py"
+      ],
+      "next_steps": "Run the live headless deep-research smoke test again with a configured installed model and UTF-8 output, while keeping maintenance publishing disabled."
     }
   ]
 }

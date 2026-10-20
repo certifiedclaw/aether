@@ -30,6 +30,7 @@ main.py while main.py is still mid-import) and could grab the wrong
 method that uses each one instead, same pattern as conversation_core.py.
 """
 
+import logging
 import os
 from core.risk import gated  # noqa: E402
 import threading
@@ -56,6 +57,8 @@ from actions.game_updater      import game_updater
 
 from core import undo as undo_stack
 
+logger = logging.getLogger("aether")
+
 
 class ToolDispatchMixin:
     """Owns tool execution: the dispatch table and every `_tool_*` handler.
@@ -64,7 +67,12 @@ class ToolDispatchMixin:
     """
 
     def _execute_tool(self, name: str, args: dict) -> str:
-        print(f"[Aether] 🔧 {name}  {args}")
+        # Do not print directly to the Windows console here: the emoji (or
+        # Unicode in tool arguments) can raise UnicodeEncodeError under the
+        # active code page and abort the requested action before dispatch.
+        # Keep diagnostics in logging and avoid dumping potentially sensitive
+        # argument values.
+        logger.debug("Executing tool %s", name)
         self.ui.set_state("THINKING")
 
         if name == "save_memory":

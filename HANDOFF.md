@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-20 01:01 UTC
+Generated: 2026-10-20 01:07 UTC
+
+## #132 — 2026-10-20 01:07 UTC — Codex
+
+Prevent Windows console encoding failures from aborting tool calls: replace direct Unicode-and-argument printing in tool dispatch with a safe debug log that omits sensitive arguments. Add regression coverage that simulates an unsupported console encoding.
+
+**Touched:** `core/tool_dispatch.py`, `tests/test_tool_dispatch_console_safety.py`
+
+**Next steps:** Run the live headless deep-research smoke test again with a configured installed model and UTF-8 output, while keeping maintenance publishing disabled.
+
+---
 
 ## #131 — 2026-10-20 01:01 UTC — Codex
 
