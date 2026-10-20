@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-20 01:28 UTC
+Generated: 2026-10-20 01:34 UTC
+
+## #135 — 2026-10-20 01:34 UTC — Codex
+
+Extend code-helper context with up to two task-matching project SKILL.md files from .agents/skills, .codex/skills, .claude/skills, .github/skills, or skills; scripts are never executed and prompt size is bounded.
+
+**Touched:** `core/project_instructions.py`, `actions/code_helper.py`
+
+**Next steps:** Verify skill matching with a temporary project containing unrelated and relevant skills, including a symlink that points outside the project.
+
+---
 
 ## #134 — 2026-10-20 01:28 UTC — Codex
 

@@ -1,5 +1,5 @@
 {
-  "next_id": 135,
+  "next_id": 136,
   "entries": [
     {
       "id": 1,
@@ -1842,6 +1842,17 @@
         "actions/code_helper.py"
       ],
       "next_steps": "Test the coding helper in a sample project with nested AGENTS.md and Copilot instructions, and confirm ordinary chat prompts remain unchanged."
+    },
+    {
+      "id": 135,
+      "timestamp": "2026-10-20 01:34 UTC",
+      "by": "Codex",
+      "summary": "Extend code-helper context with up to two task-matching project SKILL.md files from .agents/skills, .codex/skills, .claude/skills, .github/skills, or skills; scripts are never executed and prompt size is bounded.",
+      "files": [
+        "core/project_instructions.py",
+        "actions/code_helper.py"
+      ],
+      "next_steps": "Verify skill matching with a temporary project containing unrelated and relevant skills, including a symlink that points outside the project."
     }
   ]
 }
