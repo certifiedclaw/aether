@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-20 01:07 UTC
+Generated: 2026-10-20 01:21 UTC
+
+## #133 — 2026-10-20 01:21 UTC — Codex
+
+Grounded deep-research query expansion in the active topic and filtered unrelated results before synthesis after a live turtle run exposed planner drift.
+
+**Touched:** `actions/deep_research.py`, `tests/test_deep_research_topic_relevance.py`
+
+**Next steps:** After the user's Downloads copy is updated and restarted, repeat a live deep-research request and verify the report cites turtle-relevant sources.
+
+---
 
 ## #132 — 2026-10-20 01:07 UTC — Codex
 

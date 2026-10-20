@@ -1,5 +1,5 @@
 {
-  "next_id": 133,
+  "next_id": 134,
   "entries": [
     {
       "id": 1,
@@ -1820,6 +1820,17 @@
         "tests/test_tool_dispatch_console_safety.py"
       ],
       "next_steps": "Run the live headless deep-research smoke test again with a configured installed model and UTF-8 output, while keeping maintenance publishing disabled."
+    },
+    {
+      "id": 133,
+      "timestamp": "2026-10-20 01:21 UTC",
+      "by": "Codex",
+      "summary": "Grounded deep-research query expansion in the active topic and filtered unrelated results before synthesis after a live turtle run exposed planner drift.",
+      "files": [
+        "actions/deep_research.py",
+        "tests/test_deep_research_topic_relevance.py"
+      ],
+      "next_steps": "After the user's Downloads copy is updated and restarted, repeat a live deep-research request and verify the report cites turtle-relevant sources."
     }
   ]
 }
