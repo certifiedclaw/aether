@@ -1,5 +1,5 @@
 {
-  "next_id": 130,
+  "next_id": 131,
   "entries": [
     {
       "id": 1,
@@ -1786,6 +1786,18 @@
         "tests/test_action_launcher.py"
       ],
       "next_steps": "Verify on the user's desktop that Send is visible during long responses and typed follow-ups start after playback is interrupted."
+    },
+    {
+      "id": 130,
+      "timestamp": "2026-10-20 00:59 UTC",
+      "by": "Codex",
+      "summary": "Prevent LangChain deep research from reusing an older topic: bind each research call to the current user request, retain bounded prior turns only to resolve follow-up references, and instruct the research agent to prefer the current request.",
+      "files": [
+        "core/conversation_core.py",
+        "integrations/langchain_tools.py",
+        "tests/test_research_topic_isolation.py"
+      ],
+      "next_steps": "Verify the research-topic fix in the desktop UI with a new-topic deep-research follow-up, including both explicit topic changes and pronoun-only follow-ups."
     }
   ]
 }

@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-20 00:21 UTC
+Generated: 2026-10-20 00:59 UTC
+
+## #130 — 2026-10-20 00:59 UTC — Codex
+
+Prevent LangChain deep research from reusing an older topic: bind each research call to the current user request, retain bounded prior turns only to resolve follow-up references, and instruct the research agent to prefer the current request.
+
+**Touched:** `core/conversation_core.py`, `integrations/langchain_tools.py`, `tests/test_research_topic_isolation.py`
+
+**Next steps:** Verify the research-topic fix in the desktop UI with a new-topic deep-research follow-up, including both explicit topic changes and pronoun-only follow-ups.
+
+---
 
 ## #129 — 2026-10-20 00:21 UTC — Codex
 
