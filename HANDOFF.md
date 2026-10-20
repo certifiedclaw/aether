@@ -2,17 +2,7 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-20 00:18 UTC
-
-## #129 — 2026-10-20 00:18 UTC — Codex
-
-Fixed a voice barge-in drop: after the mic guard confirms the user is speaking over TTS, the listener now queues the validated onset and continues capturing until playback stops, allowing Whisper to process the interrupting prompt. Added focused buffer coverage.
-
-**Touched:** `core/listen_loops.py`, `tests/test_voice_browser_fixes.py`
-
-**Next steps:** Verify barge-in and echo-loop behavior on the owner's real microphone/speaker setup; tune the guard only from observed audio evidence.
-
----
+Generated: 2026-10-19 23:21 UTC
 
 ## #128 — 2026-10-19 23:21 UTC — Codex
 

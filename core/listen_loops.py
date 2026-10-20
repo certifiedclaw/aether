@@ -97,42 +97,6 @@ class _VADBuffer:
         return None
 
 
-class _BargeInAudioBuffer:
-    """Keep the validated start of a user's speech while TTS is playing.
-
-    The microphone loop normally discards audio during playback to prevent
-    Aether hearing its own voice. Once the echo guard confirms a user is
-    speaking, retain those blocks so the utterance that interrupts playback
-    is not itself lost.
-    """
-
-    def __init__(self, max_blocks: int = 24):
-        self._candidate: collections.deque = collections.deque(maxlen=max_blocks)
-        self._capturing = False
-
-    @property
-    def capturing(self) -> bool:
-        return self._capturing
-
-    def observe(self, chunk: np.ndarray, is_user_speech: bool) -> None:
-        if self._capturing:
-            return
-        if is_user_speech:
-            self._candidate.append(chunk.copy())
-        else:
-            self._candidate.clear()
-
-    def confirm(self) -> list[np.ndarray]:
-        self._capturing = True
-        chunks = list(self._candidate)
-        self._candidate.clear()
-        return chunks
-
-    def reset(self) -> None:
-        self._candidate.clear()
-        self._capturing = False
-
-
 class ListenLoopsMixin:
     _barge_in_busy = False
 
@@ -179,13 +143,6 @@ class ListenLoopsMixin:
         guard = get_guard()
         state = {"was_speaking": False, "tail_until": 0.0}
         TAIL_S = 0.45  # device output latency + room margin
-        barge_audio = _BargeInAudioBuffer()
-
-        def _queue_audio(frame) -> None:
-            try:
-                q.put_nowait(frame.copy())
-            except queue.Full:
-                pass
 
         # ── Wake word (config wake_word_enabled, default off) ──
         gate = WakeGate(enabled=get_config_flag("wake_word_enabled", False))
@@ -214,34 +171,23 @@ class ListenLoopsMixin:
 
             if is_speaking:
                 state["was_speaking"] = True
-                if barge_audio.capturing:
-                    _queue_audio(indata)
-                    return
                 if use_echo:
                     from core.echo import pcm_level
-                    user_speech = guard.is_user_speech(
-                        mono * 32768.0, SAMPLE_RATE_IN, pcm_level(mono))
-                    barge_audio.observe(indata, user_speech)
-                    if user_speech:
+                    if guard.is_user_speech(mono * 32768.0, SAMPLE_RATE_IN, pcm_level(mono)):
                         self._barge_in_count += 1
                     else:
                         self._barge_in_count = max(0, self._barge_in_count - 1)
                     need = guard.required_blocks
                 else:
                     rms = float(np.sqrt(np.mean(mono ** 2)))
-                    user_speech = rms > self._BARGE_IN_THRESHOLD
-                    barge_audio.observe(indata, user_speech)
-                    self._barge_in_count = (self._barge_in_count + 1) if user_speech \
+                    self._barge_in_count = (self._barge_in_count + 1) if rms > self._BARGE_IN_THRESHOLD \
                         else max(0, self._barge_in_count - 1)
                     need = self._BARGE_IN_FRAMES
                 if self._barge_in_count >= need:
                     self._barge_in_count = 0
-                    for frame in barge_audio.confirm():
-                        _queue_audio(frame)
                     self._request_barge_in()
                 return
 
-            barge_audio.reset()
             self._barge_in_count = 0
             if state["was_speaking"]:
                 state["was_speaking"] = False
@@ -260,7 +206,10 @@ class ListenLoopsMixin:
                     detector.feed((mono * 32768.0).astype(np.int16))
                 return
 
-            _queue_audio(indata)
+            try:
+                q.put_nowait(indata.copy())
+            except queue.Full:
+                pass
 
         try:
             with sd.InputStream(
