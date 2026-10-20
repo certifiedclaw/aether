@@ -153,6 +153,7 @@ def _write(description: str, language: str, output_path: str, player=None) -> tu
     system = with_project_instructions(
         f"You are an expert {lang} developer. Output ONLY raw code, no markdown, no backticks, no explanations.",
         path,
+        description,
     )
     prompt = (
         f"Write clean, working, well-commented {lang} code.\n"
@@ -167,6 +168,7 @@ def _fix_code(code: str, error_output: str, description: str, file_path: str | P
     system = with_project_instructions(
         "You are an expert debugger. Return ONLY the corrected code — no explanation, no markdown, no backticks.",
         file_path or DESKTOP,
+        description,
     )
     prompt = (
         f"Fix the code below. It failed with this error.\n\n"
@@ -317,6 +319,7 @@ def _edit_action(file_path, instruction, player) -> str:
     system = with_project_instructions(
         "You are an expert code editor. Return ONLY the complete updated code — no explanation, no markdown, no backticks.",
         file_path,
+        instruction,
     )
     prompt = (
         f"Apply the following change to the code below.\n\n"
@@ -388,6 +391,7 @@ def _optimize_action(file_path, code, language, output_path, player) -> str:
     system = with_project_instructions(
         f"You are an expert {lang} developer. Return ONLY the optimized code — no explanation, no markdown, no backticks.",
         instruction_path,
+        "optimize existing code for performance, readability, and best practices",
     )
     prompt = (
         f"Optimize this {lang} code for performance, readability, and best practices. "
