@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from core.listen_loops import ListenLoopsMixin, _VADBuffer
+from core.listen_loops import ListenLoopsMixin, _BargeInAudioBuffer, _VADBuffer
 from core.stt import WhisperSTT
 
 
@@ -45,6 +45,27 @@ def test_vad_min_length_ignores_preroll_so_clicks_are_still_dropped():
         if got is not None:
             out = got
     assert out is None
+
+
+def test_confirmed_barge_in_preserves_prompt_onset_and_resets_after_playback():
+    audio = _BargeInAudioBuffer(max_blocks=4)
+    echo = _block(0.01)
+    onset = _block(0.03)
+    follow_up = _block(0.04)
+
+    audio.observe(echo, False)
+    audio.observe(onset, True)
+    audio.observe(follow_up, True)
+    captured = audio.confirm()
+
+    assert len(captured) == 2
+    assert np.array_equal(captured[0], onset)
+    assert np.array_equal(captured[1], follow_up)
+    assert audio.capturing is True
+
+    audio.reset()
+    assert audio.capturing is False
+    assert audio.confirm() == []
 
 
 # ── STT: Whisper's own doubts discard background-media segments ─────────────────
