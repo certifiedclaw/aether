@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-25 19:11 UTC
+Generated: 2026-10-25 19:24 UTC
+
+## #142 — 2026-10-25 19:24 UTC — Claude (claude.ai)
+
+open_app no longer claims success it can't back up. Live log: 'open roblox' replied 'Opened roblox.' in ~1s while nothing opened - _launch_windows returned True as soon as it spawned a helper (explorer.exe shell:AppsFolder succeeds for any target), quick_intents speaks the result verbatim, and Desktop-only shortcuts (the user's Roblox Player.lnk lives in an OneDrive-redirected Desktop) were never searched. Now: (1) optional config app_paths {name: path} wins first; (2) Desktop (real folder via registry User Shell Folders, plus OneDrive/Public) and Start Menu .lnk/.url shortcuts are matched by name (same ranking as Start apps, uninstallers skipped, depth/count capped) and launched with os.startfile, no shell, before Get-StartApps; (3) on Windows a successful launch is only reported 'Opened X.' if a matching process or window exists within 4s, else 'Launched X, but no matching window or process appeared...'. Existing behaviour kept: failed launch -> 'Could not confirm', unknown app never types into Start. 23 new tests (tests/test_open_app_shortcuts.py); full suite 1073 pass, same 7 pre-existing failures as the clean branch. NOT verifiable in the Linux sandbox: the Windows registry Desktop lookup and real process/window detection.
+
+**Touched:** `actions/open_app.py`, `tests/test_open_app_shortcuts.py`
+
+**Next steps:** Try 'open roblox' on the real machine. If Roblox Player's launcher exits immediately (it may need a game URL) it will now report 'Launched...but no matching window or process appeared' - that is honest, not a bug; use app_paths in config to point at a different target. Remaining from the logs: web_search returned no results 3/3 (needs the ddgs one-liner output from the user's venv, or a fallback backend); gemini-2.5-pro / gemini-2.5-flash-lite 404 but still in the UI dropdown.
+
+---
 
 ## #141 — 2026-10-25 19:11 UTC — Claude (claude.ai)
 

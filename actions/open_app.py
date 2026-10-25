@@ -151,7 +151,164 @@ def _start_apps() -> list[dict] | None:
         return None
 
 
+# ---------------------------------------------------------------------------
+# Shortcuts (Desktop / Start Menu) and an explicit user mapping
+# ---------------------------------------------------------------------------
+
+_SHORTCUT_EXTS = (".lnk", ".url")
+_SHORTCUT_SKIP = re.compile(r"uninstall|readme|release notes|license", re.IGNORECASE)
+_SHORTCUT_MAX_DEPTH = 3
+_SHORTCUT_MAX_FILES = 4000
+
+
+def _configured_path(app_name: str) -> str | None:
+    """Explicit mapping from config: {"app_paths": {"roblox": "C:\\...\\Roblox Player.lnk"}}.
+    Only existing paths count; names compare case/space-insensitively."""
+    try:
+        from core import config_home
+        paths = (config_home.load_config() or {}).get("app_paths") or {}
+    except Exception:
+        return None
+    if not isinstance(paths, dict):
+        return None
+    key = " ".join(app_name.lower().split())
+    for name, target in paths.items():
+        if " ".join(str(name).lower().split()) == key and isinstance(target, str):
+            target = os.path.expandvars(target)
+            if os.path.exists(target):
+                return target
+    return None
+
+
+def _shortcut_dirs() -> list[str]:
+    """Folders whose .lnk/.url files the user can launch, most personal first:
+    the real Desktop (it may be redirected into OneDrive), the public Desktop,
+    then the Start Menu program folders."""
+    dirs: list[str] = []
+    try:
+        import winreg  # Windows only
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                            r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders") as k:
+            dirs.append(os.path.expandvars(winreg.QueryValueEx(k, "Desktop")[0]))
+    except Exception:
+        pass
+    home = os.environ.get("USERPROFILE") or os.path.expanduser("~")
+    dirs.append(os.path.join(home, "Desktop"))
+    for var in ("OneDrive", "OneDriveConsumer", "OneDriveCommercial"):
+        base = os.environ.get(var)
+        if base:
+            dirs.append(os.path.join(base, "Desktop"))
+    dirs.append(os.path.join(os.environ.get("PUBLIC", r"C:\Users\Public"), "Desktop"))
+    for var in ("APPDATA", "ProgramData"):
+        base = os.environ.get(var)
+        if base:
+            dirs.append(os.path.join(base, "Microsoft", "Windows", "Start Menu", "Programs"))
+    seen, out = set(), []
+    for d in dirs:
+        key = os.path.normcase(os.path.normpath(d))
+        if key not in seen and os.path.isdir(d):
+            seen.add(key)
+            out.append(d)
+    return out
+
+
+def _scan_shortcuts(dirs: list[str]) -> list[tuple[str, str]]:
+    """[(display name, path)] for launchable shortcuts under `dirs`, in directory
+    order then name order. Shallow and capped so a huge folder can't stall a turn."""
+    found: list[tuple[str, str]] = []
+    for base in dirs:
+        for root, subdirs, files in os.walk(base):
+            depth = os.path.relpath(root, base).count(os.sep) + (0 if root == base else 1)
+            if depth >= _SHORTCUT_MAX_DEPTH:
+                subdirs[:] = []
+            subdirs.sort()
+            for f in sorted(files):
+                stem, ext = os.path.splitext(f)
+                if ext.lower() in _SHORTCUT_EXTS and not _SHORTCUT_SKIP.search(stem):
+                    found.append((stem, os.path.join(root, f)))
+                    if len(found) >= _SHORTCUT_MAX_FILES:
+                        return found
+    return found
+
+
+def _find_shortcut(app_name: str, dirs: list[str] | None = None) -> str | None:
+    """Path of the shortcut that best matches app_name (same ranking as the
+    Start-menu match: exact name, then prefix, then all words), or None."""
+    cands = _scan_shortcuts(_shortcut_dirs() if dirs is None else dirs)
+    hit = _match_start_app(app_name, [{"Name": n, "AppID": path} for n, path in cands])
+    return hit["AppID"] if hit else None
+
+
+def _startfile(path: str) -> bool:
+    """Open a file/shortcut the way a double-click does. Never invokes a shell."""
+    try:
+        os.startfile(path)  # type: ignore[attr-defined]  # Windows only
+        time.sleep(1.0)
+        return True
+    except Exception as e:
+        print(f"[open_app] startfile failed for {path!r}: {e}")
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Did it really open?
+# ---------------------------------------------------------------------------
+
+_GENERIC_WORDS = {"windows", "microsoft", "app", "the", "for", "and"}
+
+
+def _app_words(app_name: str) -> list[str]:
+    words = [w for w in re.split(r"\W+", app_name.lower())
+             if len(w) > 2 and w not in _GENERIC_WORDS]
+    return words or [app_name.lower().strip()]
+
+
+def _process_names() -> set[str] | None:
+    """Lower-cased names of running processes; None if they can't be listed."""
+    if not _PSUTIL:
+        return None
+    try:
+        return {str(p.info.get("name") or "").lower()
+                for p in psutil.process_iter(["name"])} - {""}
+    except Exception:
+        return None
+
+
+def _window_titles() -> list[str] | None:
+    try:
+        import pygetwindow as gw
+        return [t or "" for t in gw.getAllTitles()]
+    except Exception:
+        return None
+
+
+def _confirm_launched(app_name: str, timeout: float = 4.0, *,
+                      procs=_process_names, titles=_window_titles,
+                      sleep=time.sleep, clock=time.monotonic) -> bool | None:
+    """True once a running process or window title matches app_name, False if
+    none shows up within `timeout`, None if neither can be inspected at all.
+    Spawning a launcher proves nothing (explorer.exe "succeeds" for any target)."""
+    words = _app_words(app_name)
+    deadline = clock() + timeout
+    while True:
+        names, wins = procs(), titles()
+        if names is None and wins is None:
+            return None
+        if names and any(w in n for n in names for w in words):
+            return True
+        if wins and any(w in t.lower() for t in wins for w in words):
+            return True
+        if clock() >= deadline:
+            return False
+        sleep(0.5)
+
+
 def _launch_windows(app_name: str) -> bool:
+
+    # An explicit user mapping ("app_paths" in config) beats any guessing.
+    _mapped = _configured_path(app_name)
+    if _mapped and _startfile(_mapped):
+        return True
 
     # Launch the RESOLVED executable path, never the raw string through a shell:
     # "calc.exe & other" used to match via the split(".")[0] lookup and the whole
@@ -179,6 +336,12 @@ def _launch_windows(app_name: str) -> bool:
             return True
         except Exception:
             pass
+
+    # Desktop / Start Menu shortcuts: cheap file lookups, and they cover apps that
+    # Get-StartApps doesn't list (a Desktop-only .lnk, a Steam .url, ...).
+    _lnk = _find_shortcut(app_name)
+    if _lnk and _startfile(_lnk):
+        return True
 
     # Ask Windows what is actually installed BEFORE typing into Start. An unknown
     # name used to cost ~8s of keystrokes and then open a web search; now it
@@ -320,6 +483,19 @@ _OS_LAUNCHERS = {
     "Linux":   _launch_linux,
 }
 
+def _opened_message(app_name: str) -> str:
+    """"Opened X." only when something matching X is actually running or showing
+    a window; otherwise say what is known. Checked on Windows, where the launchers
+    spawn helpers (explorer.exe, shortcuts) that succeed for any target."""
+    if _SYSTEM == "Windows" and _confirm_launched(app_name) is False:
+        return (
+            f"Launched {app_name}, but no matching window or process appeared. "
+            f"It may still be loading, or it may need to be started another way - "
+            f"check whether it opened."
+        )
+    return f"Opened {app_name}."
+
+
 from core.risk import gated  # noqa: E402
 @gated("open_app")
 def open_app(
@@ -344,11 +520,9 @@ def open_app(
         player.write_log(f"[open_app] {app_name}")
 
     try:
-        if launcher(normalized):
-            return f"Opened {app_name}."
-        if normalized.lower() != app_name.lower():
-            if launcher(app_name):
-                return f"Opened {app_name}."
+        if launcher(normalized) or (
+                normalized.lower() != app_name.lower() and launcher(app_name)):
+            return _opened_message(app_name)
         return (
             f"Could not confirm that {app_name} launched. "
             f"It may still be loading, or it might not be installed."
