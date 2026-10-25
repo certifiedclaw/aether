@@ -20,12 +20,17 @@ vector hooded cat, so partial or missing art is fine.
 Config keys read by MainWindow (config file, both optional):
     desktop_mate          bool, default true  - create the mate at startup
     desktop_mate_bubbles  bool, default true  - show reply text in the bubble
+    desktop_mate_personality  bool, default true - the mate's own voice (see
+                          mate_personality.py): greeting, pet/wake/nap lines,
+                          idle muttering, quips while Aether works, error
+                          line. false = plain mate that only relays replies.
 """
 from __future__ import annotations
 
 import math
 import random
 import re
+import time
 from pathlib import Path
 
 from PyQt6.QtCore import QPointF, QRect, QRectF, Qt, QTimer, pyqtSignal
@@ -35,6 +40,8 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import QApplication, QMenu, QWidget
 
+from mate_personality import Personality
+
 STATES = (
     "idle", "happy", "excited", "thinking", "speaking", "listening", "working",
     "sleeping", "sad", "angry", "confused", "hiding", "error",
@@ -42,6 +49,11 @@ STATES = (
 W, H = 240, 290  # the bubble lives in the top 90px, the character below it
 SLEEP_AFTER_MS = 5 * 60 * 1000
 BUBBLE_MAX_CHARS = 140
+PERSONA_BUBBLE_MS = 4500
+GREET_DELAY_MS = 900
+CHATTER_MIN_S, CHATTER_MAX_S = 180, 420  # idle muttering, random gap in this range
+QUIP_COOLDOWN_S = 120                    # at most one "working" quip per this long
+QUIP_CHANCE = 0.3
 
 # Bubble geometry. The text is trimmed to fit this box with real font metrics
 # (see DesktopMate._fit_bubble) so a wider fallback font can't overflow it.
@@ -128,6 +140,12 @@ class DesktopMate(QWidget):
         self.setFixedSize(W, H)
 
         self.show_bubbles = True
+        self.chatty = True              # the mate's own voice (desktop_mate_personality)
+        self.quip_chance = QUIP_CHANCE
+        self._persona = Personality()
+        self._greeted = False
+        self._last_quip = float("-inf")
+        self._woke_on_press = False
         self._bubble_font = QFont("Segoe UI", 9)
         self._state = "idle"
         self._tick = 0
@@ -141,6 +159,8 @@ class DesktopMate(QWidget):
         self._timer = QTimer(self, interval=40, timeout=self._on_tick)
         self._bubble_timer = QTimer(self, singleShot=True, timeout=self._clear_bubble)
         self._sleep_timer = QTimer(self, singleShot=True, timeout=self._maybe_sleep)
+        self._greet_timer = QTimer(self, singleShot=True, timeout=self._greet)
+        self._chatter_timer = QTimer(self, singleShot=True, timeout=self._chatter)
         self._sleep_timer.start(SLEEP_AFTER_MS)
 
         scr = QApplication.primaryScreen().availableGeometry()
@@ -172,7 +192,12 @@ class DesktopMate(QWidget):
             return
         self.set_state(mate_state)
         if key == "ERROR" and self.show_bubbles:
-            self.say("Something went wrong - check the log.")
+            self.say(self._persona.pick("error") if self.chatty
+                     else "Something went wrong - check the log.")
+        elif key == "THINKING":
+            self._maybe_quip("thinking")
+        elif key == "PROCESSING":
+            self._maybe_quip("working")
 
     def on_log_line(self, text: str):
         """Feed every log line; only assistant replies ("Aether: ...") are shown."""
@@ -187,6 +212,52 @@ class DesktopMate(QWidget):
         # Only doze off from a calm state; a long task must never put it to sleep.
         if self._state in ("idle", "happy"):
             self._set("sleeping")
+            if not self._bubble:
+                self._speak("sleep")
+
+    # ---------- personality (the mate's own lines) ----------
+    def _speak(self, event: str, ms: int = PERSONA_BUBBLE_MS) -> bool:
+        """Say one of the mate's own lines. Silent when the personality or the
+        bubbles are off. Returns True if a bubble was shown."""
+        if not (self.chatty and self.show_bubbles):
+            return False
+        line = self._persona.pick(event)
+        if not line:
+            return False
+        self.say(line, ms)
+        return True
+
+    def _maybe_quip(self, event: str):
+        """An occasional remark when Aether starts working - rate-limited so it
+        stays a bit of flavour rather than noise."""
+        now = time.monotonic()
+        if now - self._last_quip < QUIP_COOLDOWN_S or random.random() >= self.quip_chance:
+            return
+        if self._speak(event):
+            self._last_quip = now
+
+    def _greet(self):
+        if self.isVisible() and self._state == "idle" and not self._bubble:
+            self._speak("greet", 5500)
+
+    def _schedule_chatter(self):
+        self._chatter_timer.start(int(random.uniform(CHATTER_MIN_S, CHATTER_MAX_S) * 1000))
+
+    def _chatter(self):
+        # Only mutter when calm and nothing else is on screen; always re-arm.
+        if self._state == "idle" and not self._bubble and self._drag is None:
+            self._speak("chatter", 5000)
+        self._schedule_chatter()
+
+    def _on_pet(self, was_asleep: bool):
+        """A click (not a drag). Too many in a short time and the cat snaps."""
+        if self.chatty and self._persona.petted():
+            self.set_state("angry")
+            self._speak("pet_many")
+        else:
+            self.set_state("happy")
+            self._speak("wake" if was_asleep else "pet")
+        QTimer.singleShot(1600, self._end_pet)
 
     def _clear_bubble(self):
         self._bubble = ""
@@ -230,10 +301,16 @@ class DesktopMate(QWidget):
     # No animation work while hidden (Aether is meant to stay light on resources).
     def showEvent(self, e):
         self._timer.start()
+        self._schedule_chatter()
+        if not self._greeted:
+            self._greeted = True
+            self._greet_timer.start(GREET_DELAY_MS)
         super().showEvent(e)
 
     def hideEvent(self, e):
         self._timer.stop()
+        self._greet_timer.stop()
+        self._chatter_timer.stop()
         super().hideEvent(e)
 
     def _on_tick(self):
@@ -718,7 +795,8 @@ class DesktopMate(QWidget):
         if e.button() == Qt.MouseButton.LeftButton:
             self._drag = e.globalPosition().toPoint() - self.frameGeometry().topLeft()
             self._press_pos = e.globalPosition().toPoint()
-            if self._state == "sleeping":
+            self._woke_on_press = self._state == "sleeping"
+            if self._woke_on_press:
                 self._set("idle")
             self._sleep_timer.start(SLEEP_AFTER_MS)
 
@@ -730,13 +808,12 @@ class DesktopMate(QWidget):
         # A click (not a drag) pets it: a short happy reaction, only from calm states.
         moved = (e.globalPosition().toPoint() - self._press_pos).manhattanLength() if self._press_pos else 99
         if moved < 5 and self._state in ("idle", "sleeping", "happy"):
-            self.set_state("happy")
-            QTimer.singleShot(1600, self._end_pet)
+            self._on_pet(self._woke_on_press)
         self._drag = None
         self._press_pos = None
 
     def _end_pet(self):
-        if self._state == "happy":
+        if self._state in ("happy", "angry"):
             self._set("idle")
 
     def mouseDoubleClickEvent(self, e):

@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-25 13:39 UTC
+Generated: 2026-10-25 14:10 UTC
+
+## #138 — 2026-10-25 14:10 UTC — Claude (claude.ai)
+
+Gave the desktop mate a personality: new mate_personality.py (dry, sleepy night-cat voice; pure Python). The mate now greets by time of day, answers pets (and snaps after 5 quick ones), says a wake line when clicked awake and a nap line when dozing off, mutters occasionally while idle, and sometimes quips (30%, 2-min cooldown) when Aether starts thinking/working. Error bubble keeps 'went wrong - check the log'. Real Aether replies are untouched. Config: desktop_mate_personality (default true; false = plain mate). 81 mate tests pass offscreen incl. MainWindow wiring; py_compile clean.
+
+**Touched:** `mate_personality.py`, `desktop_mate.py`, `ui.py`, `tests/test_desktop_mate.py`
+
+**Next steps:** Try it on a real desktop and tune the lines/frequency (QUIP_CHANCE, CHATTER_MIN_S/MAX_S in desktop_mate.py). Optional: carry the same voice into the LLM system prompt (prompt_builder.py) behind a config flag - deliberately not done, prompts are benchmark-tuned.
+
+---
 
 ## #137 — 2026-10-25 13:39 UTC — Claude Code
 

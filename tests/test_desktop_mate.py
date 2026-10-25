@@ -7,11 +7,13 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import pytest
 
 pytest.importorskip("PyQt6")
-from PyQt6.QtCore import QRect, Qt, QTimer
+from PyQt6.QtCore import QPoint, QRect, Qt, QTimer
 from PyQt6.QtGui import QFontMetrics, QPixmap
+from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
 
 import desktop_mate as dm
+import mate_personality as mp
 
 
 @pytest.fixture(scope="module")
@@ -204,6 +206,219 @@ def test_custom_png_frames_are_picked_up(qapp, tmp_path):
         m.close()
 
 
+# ── personality (mate_personality.py + its hooks) ───────────────────────────
+
+def _all_lines():
+    for event, lines in mp.LINES.items():
+        for line in lines:
+            yield event, line
+    for event, parts in mp.TIMED_LINES.items():
+        for lines in parts.values():
+            for line in lines:
+                yield event, line
+
+
+def test_every_persona_line_survives_bubble_text_unchanged(qapp):
+    # bubble_text strips markdown / truncates; a persona line must pass through as written.
+    for event, line in _all_lines():
+        assert dm.bubble_text(line) == line, (event, line)
+
+
+def test_every_persona_line_fits_the_bubble(mate):
+    for event, line in _all_lines():
+        mate.say(line)
+        assert mate._bubble == line, (event, line)  # _fit_bubble did not have to trim it
+
+
+def test_every_error_line_still_points_at_the_log():
+    for line in mp.LINES["error"]:
+        assert "went wrong" in line and "check the log" in line
+
+
+def test_persona_covers_every_event_the_mate_uses():
+    v = mp.Personality()
+    for event in ("greet", "pet", "pet_many", "wake", "sleep", "thinking", "working", "error", "chatter"):
+        assert v.pick(event), event
+    assert v.pick("no_such_event") == ""
+
+
+def test_pick_never_repeats_the_previous_line_for_an_event():
+    import random
+    v = mp.Personality(rng=random.Random(1234))
+    seq = [v.pick("pet") for _ in range(300)]
+    assert all(a != b for a, b in zip(seq, seq[1:]))
+
+
+@pytest.mark.parametrize("hour,part", [
+    (0, "late"), (4, "late"), (5, "morning"), (10, "morning"), (11, "day"),
+    (16, "day"), (17, "evening"), (22, "evening"), (23, "late"),
+])
+def test_day_part_boundaries(hour, part):
+    assert mp.day_part(hour) == part
+
+
+def test_greeting_follows_time_of_day():
+    for hour, part in ((8, "morning"), (13, "day"), (19, "evening"), (2, "late")):
+        v = mp.Personality()
+        assert v.pick("greet", hour=hour) in mp.TIMED_LINES["greet"][part]
+
+
+def test_late_night_chatter_mixes_in_late_lines_and_keeps_generic_ones():
+    seen = {mp.Personality().pick("chatter", hour=2) for _ in range(200)}
+    assert seen & set(mp.TIMED_LINES["chatter"]["late"])
+    assert seen & set(mp.LINES["chatter"])
+    day = {mp.Personality().pick("chatter", hour=13) for _ in range(200)}
+    assert not day & set(mp.TIMED_LINES["chatter"]["late"])
+
+
+def test_petting_five_times_quickly_is_too_much_then_resets():
+    v = mp.Personality()
+    assert [v.petted(now=t) for t in (0, 1, 2, 3)] == [False] * 4
+    assert v.petted(now=4) is True
+    assert v.petted(now=5) is False  # counter restarted
+
+
+def test_slow_petting_never_loses_patience():
+    v = mp.Personality()
+    assert not any(v.petted(now=t * 30.0) for t in range(20))
+
+
+def test_click_pets_the_mate_and_it_answers(mate):
+    mate.show()
+    mate.set_state("idle")
+    QTest.mouseClick(mate, Qt.MouseButton.LeftButton)
+    assert mate._state == "happy"
+    assert mate._bubble in mp.LINES["pet"]
+
+
+def test_click_on_sleeping_mate_says_wake_line_not_pet_line(mate):
+    mate.show()
+    mate.set_state("sleeping")
+    QTest.mouseClick(mate, Qt.MouseButton.LeftButton)
+    assert mate._state == "happy"
+    assert mate._bubble in mp.LINES["wake"]
+
+
+def test_dragging_does_not_count_as_a_pet(mate):
+    mate.show()
+    mate.set_state("idle")
+    start = mate.rect().center()
+    QTest.mousePress(mate, Qt.MouseButton.LeftButton, pos=start)
+    QTest.mouseRelease(mate, Qt.MouseButton.LeftButton, pos=start + QPoint(40, 0))
+    assert mate._bubble == ""
+
+
+def test_too_many_pets_makes_it_snap_then_calm_down(mate):
+    mate.set_state("idle")
+    for _ in range(mp.Personality.PET_LIMIT - 1):
+        mate._on_pet(False)
+    mate._on_pet(False)
+    assert mate._state == "angry"
+    assert mate._bubble in mp.LINES["pet_many"]
+    mate._end_pet()
+    assert mate._state == "idle"
+
+
+def test_falling_asleep_says_a_nap_line_unless_a_reply_is_showing(mate):
+    mate.set_state("idle")
+    mate._maybe_sleep()
+    assert mate._state == "sleeping" and mate._bubble in mp.LINES["sleep"]
+    mate.set_state("idle")
+    mate.say("Aether: Here is your answer.")
+    mate._maybe_sleep()
+    assert mate._state == "sleeping" and mate._bubble == "Here is your answer."
+
+
+def test_error_bubble_uses_persona_line(mate):
+    mate.on_app_state("ERROR")
+    assert mate._bubble in mp.LINES["error"]
+
+
+def test_working_quips_are_rate_limited(mate):
+    mate.quip_chance = 1.0
+    mate.on_app_state("THINKING")
+    assert mate._bubble in mp.LINES["thinking"]
+    mate._clear_bubble()
+    mate.on_app_state("PROCESSING")      # inside the cooldown window
+    assert mate._bubble == ""
+    mate._last_quip = float("-inf")
+    mate.on_app_state("PROCESSING")
+    assert mate._bubble in mp.LINES["working"]
+
+
+def test_quips_are_occasional_not_constant(mate):
+    mate.quip_chance = 0.0
+    mate.on_app_state("THINKING")
+    assert mate._bubble == ""
+
+
+def test_greeting_shows_once_when_idle_and_visible(mate):
+    mate._greet()                         # not shown yet -> silent
+    assert mate._bubble == ""
+    mate.show()
+    assert mate._greeted is True and mate._greet_timer.isActive()
+    mate._greet()
+    assert mate._bubble in set().union(*mp.TIMED_LINES["greet"].values())
+    mate.hide()
+    mate.show()                           # a re-show must not schedule another greeting
+    assert not mate._greet_timer.isActive()
+
+
+def test_greeting_waits_for_a_calm_mate(mate):
+    mate.show()
+    mate.set_state("thinking")
+    mate._greet()
+    assert mate._bubble == ""
+
+
+def test_idle_chatter_only_when_calm_and_quiet_and_always_rearms(mate):
+    mate.show()
+    mate.set_state("thinking")
+    mate._chatter()
+    assert mate._bubble == "" and mate._chatter_timer.isActive()
+    mate.set_state("idle")
+    mate.say("Aether: Reply on screen.")
+    mate._chatter()
+    assert mate._bubble == "Reply on screen."   # never talks over a reply
+    mate._clear_bubble()
+    mate._chatter()
+    assert mate._bubble in set(mp.LINES["chatter"]) | set(mp.TIMED_LINES["chatter"]["late"])
+    assert mate._chatter_timer.isActive()
+
+
+def test_hiding_stops_the_greeting_and_chatter_timers(mate):
+    mate.show()
+    assert mate._chatter_timer.isActive()
+    mate.hide()
+    assert not mate._chatter_timer.isActive() and not mate._greet_timer.isActive()
+
+
+def test_personality_off_keeps_the_mate_quiet_but_reactive(mate):
+    mate.chatty = False
+    mate.show()
+    mate.set_state("idle")
+    mate._on_pet(False)
+    assert mate._state == "happy" and mate._bubble == ""
+    mate._maybe_sleep()
+    mate._chatter()
+    mate._greet()
+    assert mate._bubble == ""
+    mate.quip_chance = 1.0
+    mate.on_app_state("THINKING")
+    assert mate._bubble == ""
+    mate.on_app_state("ERROR")           # errors always get the plain, useful message
+    assert mate._bubble == "Something went wrong - check the log."
+
+
+def test_bubbles_off_silences_persona_too(mate):
+    mate.show_bubbles = False
+    mate.set_state("idle")
+    mate._on_pet(False)
+    mate._maybe_sleep()
+    mate._chatter()
+    assert mate._bubble == ""
+
+
 # ── wiring into the real MainWindow ─────────────────────────────────────────
 
 @pytest.fixture
@@ -278,3 +493,11 @@ def test_closing_the_main_window_closes_the_mate_and_lets_the_app_quit(qapp, mak
     qapp.exec()
     assert not timed_out, "the floating mate kept the app running after the main window closed"
     assert not w._mate.isVisible()
+
+
+def test_config_can_turn_the_personality_off(make_window):
+    assert make_window()._mate.chatty is True
+    w = make_window({"desktop_mate_personality": False})
+    assert w._mate.chatty is False
+    w._apply_state("ERROR")
+    assert w._mate._bubble == "Something went wrong - check the log."
