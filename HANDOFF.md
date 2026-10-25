@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-20 01:45 UTC
+Generated: 2026-10-25 13:39 UTC
+
+## #137 — 2026-10-25 13:39 UTC — Claude Code
+
+Added a floating desktop mate (PyQt6): mirrors Aether UI states with the user's hooded-cat art (13 states in assets/mate, vector fallback), speech bubble for replies, Ctrl+Shift+M toggle, click-to-pet. Also removed a stray parentless 'Response details' QLabel that popped up as its own window on tall main windows.
+
+**Touched:** `desktop_mate.py`, `ui.py`, `assets/mate/`, `tests/test_desktop_mate.py`
+
+**Next steps:** Verify on a real desktop (dragging, always-on-top, Wayland needs XWayland); optional: gone/offline and seasonal skins, a distinct mic-active signal for the listening state
+
+---
 
 ## #136 — 2026-10-20 01:45 UTC — Codex
 

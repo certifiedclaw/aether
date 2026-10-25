@@ -2176,6 +2176,7 @@ class MainWindow(QMainWindow):
         self._update_metrics()
 
         self._log_sig.connect(self._log.append_log)
+        self._log_sig.connect(self._on_log_for_mate)
         self._clear_log_sig.connect(self._log.clear)
         self._chat_sessions_sig.connect(self._set_chat_sessions)
         self._state_sig.connect(self._apply_state)
@@ -2204,9 +2205,14 @@ class MainWindow(QMainWindow):
         sc_newchat.activated.connect(self._request_new_chat)
         sc_focus_input = QShortcut(QKeySequence("Ctrl+L"), self)
         sc_focus_input.activated.connect(self._focus_input)
+        sc_mate = QShortcut(QKeySequence("Ctrl+Shift+M"), self)
+        sc_mate.activated.connect(self._toggle_mate)
 
         self._collapsed = False
         self._saved_size = None
+
+        self._mate = None
+        self._init_desktop_mate()
 
     def _toggle_fullscreen(self):
         if self.isFullScreen():
@@ -2246,7 +2252,8 @@ class MainWindow(QMainWindow):
             self._log.setMinimumHeight(100 if compact else 200)
             self.orb.setFixedHeight(44 if compact else 58)
             self._chat_subtitle.setVisible(not compact)
-            self._stats_heading.setVisible(not compact)
+            # _stats_heading is parentless and intentionally hidden (the reply summary
+            # line replaced it); showing it here popped up a stray top-level window.
             self._input_hint.setVisible(not compact)
             self._update_prompt_suggestions()
         cw = self.centralWidget()
@@ -3453,6 +3460,56 @@ class MainWindow(QMainWindow):
         self._stop_btn.setVisible(show_stop)
         if state == "ERROR":
             self.orb.flash_error()
+        mate = getattr(self, "_mate", None)
+        if mate is not None:
+            mate.on_app_state(state)
+
+    # ── Desktop mate (floating companion, see desktop_mate.py) ───────────
+    def _init_desktop_mate(self, force: bool = False):
+        """Create the floating companion. Config keys (both default true):
+        desktop_mate, desktop_mate_bubbles. It is purely cosmetic, so any
+        failure here is logged and swallowed -- it must never stop Aether
+        from starting."""
+        try:
+            cfg = _config_home.load_config()
+        except Exception:
+            cfg = {}
+        if not force and not cfg.get("desktop_mate", True):
+            return
+        try:
+            from desktop_mate import DesktopMate
+            mate = DesktopMate(assets_dir=str(BASE_DIR / "assets" / "mate"))
+            mate.show_bubbles = bool(cfg.get("desktop_mate_bubbles", True))
+            mate.activated.connect(self._show_main_from_mate)
+            mate.show()
+            self._mate = mate
+        except Exception as exc:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).warning("Desktop mate unavailable: %s", exc)
+            self._mate = None
+
+    def _toggle_mate(self):
+        mate = getattr(self, "_mate", None)
+        if mate is None:
+            self._init_desktop_mate(force=True)
+        else:
+            mate.setVisible(not mate.isVisible())
+
+    def _show_main_from_mate(self):
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+
+    def _on_log_for_mate(self, text: str):
+        mate = getattr(self, "_mate", None)
+        if mate is not None:
+            mate.on_log_line(text)
+
+    def closeEvent(self, event):
+        mate = getattr(self, "_mate", None)
+        if mate is not None:
+            mate.close()
+        super().closeEvent(event)
 
     def _check_config(self) -> bool:
         if not API_FILE.exists(): return False
