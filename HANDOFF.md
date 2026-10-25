@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-25 14:12 UTC
+Generated: 2026-10-25 14:58 UTC
+
+## #140 — 2026-10-25 14:58 UTC — Claude (claude.ai)
+
+Chat composer keys flipped to the usual convention: Enter sends, Shift+Enter inserts a newline; Ctrl+Enter still sends and keypad Enter sends too. Updated tooltip and footer hint. Supersedes the Enter=newline / Ctrl+Enter=send choice in #100. Composer test rewritten to cover Enter, Shift+Enter, Ctrl+Enter, keypad Enter; 89 UI/mate tests pass (2 pre-existing sandbox-only PortAudio failures).
+
+**Touched:** `ui.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Try it on the real desktop; if Enter-to-send misfires with an IME (CJK input), make the behaviour a config option.
+
+---
 
 ## #139 — 2026-10-25 14:12 UTC — Claude (claude.ai)
 

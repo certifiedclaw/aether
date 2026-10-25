@@ -237,7 +237,7 @@ def test_chat_input_is_discoverable_and_does_not_drop_unsent_text(monkeypatch):
         "Ctrl+L" in label.text() for label in window.findChildren(ui.QLabel)
     )
     assert "(/help for commands)" in window._input.placeholderText()
-    assert "Ctrl+Enter" in window._input.toolTip()
+    assert "Shift+Enter" in window._input.toolTip()
     assert not window._send_btn.isEnabled()
     assert window._prompt_suggestions.isVisible()
 
@@ -263,11 +263,11 @@ def test_chat_input_is_discoverable_and_does_not_drop_unsent_text(monkeypatch):
     cursor = window._input.textCursor()
     cursor.movePosition(cursor.MoveOperation.End)
     window._input.setTextCursor(cursor)
-    QTest.keyClick(window._input, Qt.Key.Key_Return)
-    assert window._input.toPlainText() == "hello\nAether\n"
     QTest.keyClick(
-        window._input, Qt.Key.Key_Return, Qt.KeyboardModifier.ControlModifier
+        window._input, Qt.Key.Key_Return, Qt.KeyboardModifier.ShiftModifier
     )
+    assert window._input.toPlainText() == "hello\nAether\n"
+    QTest.keyClick(window._input, Qt.Key.Key_Return)  # no handler wired yet: draft is kept
     assert window._input.toPlainText() == "hello\nAether\n"
 
     sent = []
@@ -283,12 +283,20 @@ def test_chat_input_is_discoverable_and_does_not_drop_unsent_text(monkeypatch):
     monkeypatch.setattr(ui.threading, "Thread", ImmediateThread)
     window.on_text_command = sent.append
     window.on_stop_command = lambda: None
-    QTest.keyClick(
-        window._input, Qt.Key.Key_Return, Qt.KeyboardModifier.ControlModifier
-    )
+    QTest.keyClick(window._input, Qt.Key.Key_Return)
     assert sent == ["hello\nAether"]
     assert window._input.toPlainText() == ""
     assert not window._send_btn.isEnabled()
+
+    window._input.setPlainText("old shortcut still works")
+    QTest.keyClick(
+        window._input, Qt.Key.Key_Return, Qt.KeyboardModifier.ControlModifier
+    )
+    assert sent[-1] == "old shortcut still works"
+    assert window._input.toPlainText() == ""
+    window._input.setPlainText("keypad enter sends too")
+    QTest.keyClick(window._input, Qt.Key.Key_Enter)
+    assert sent[-1] == "keypad enter sends too"
 
     window._apply_state("SPEAKING")
     assert not window._send_btn.isHidden()

@@ -848,7 +848,7 @@ class MessageInput(QPlainTextEdit):
         super().__init__(parent)
         self.setPlaceholderText("Ask Aether anything…  (/help for commands)")
         self.setToolTip(
-            "Enter adds a new line. Press Ctrl+Enter or use Send to send."
+            "Enter sends. Press Shift+Enter for a new line."
         )
         self.setAccessibleName("Message Aether")
         self.setTabChangesFocus(True)
@@ -857,9 +857,11 @@ class MessageInput(QPlainTextEdit):
         self._fit_height()
 
     def keyPressEvent(self, event):
+        # Enter (or Ctrl+Enter) sends; Shift+Enter falls through to the default
+        # handler, which inserts a line break.
         if (
             event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter)
-            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+            and not event.modifiers() & Qt.KeyboardModifier.ShiftModifier
         ):
             self.sendRequested.emit()
             return
@@ -2621,7 +2623,7 @@ class MainWindow(QMainWindow):
         input_heading = QHBoxLayout()
         input_heading.addWidget(_section_label("Message"))
         input_heading.addStretch()
-        input_hint = QLabel("Enter for a new line  ·  Ctrl+Enter to send  ·  Ctrl+L to focus")
+        input_hint = QLabel("Enter to send  ·  Shift+Enter for a new line  ·  Ctrl+L to focus")
         self._input_hint = input_hint
         input_hint.setFont(QFont(FONT_BODY, 8))
         input_hint.setStyleSheet(f"color: {C.TEXT_DIM}; background: transparent;")

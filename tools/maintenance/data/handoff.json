@@ -1,5 +1,5 @@
 {
-  "next_id": 140,
+  "next_id": 141,
   "entries": [
     {
       "id": 1,
@@ -1900,6 +1900,17 @@
         "tests/test_persona_prompt.py"
       ],
       "next_steps": "Run the eval harness with the persona on vs off on the real model to confirm no accuracy/latency regression (quick prompt grew ~70 tokens); tune wording if replies get too quippy."
+    },
+    {
+      "id": 140,
+      "timestamp": "2026-10-25 14:58 UTC",
+      "by": "Claude (claude.ai)",
+      "summary": "Chat composer keys flipped to the usual convention: Enter sends, Shift+Enter inserts a newline; Ctrl+Enter still sends and keypad Enter sends too. Updated tooltip and footer hint. Supersedes the Enter=newline / Ctrl+Enter=send choice in #100. Composer test rewritten to cover Enter, Shift+Enter, Ctrl+Enter, keypad Enter; 89 UI/mate tests pass (2 pre-existing sandbox-only PortAudio failures).",
+      "files": [
+        "ui.py",
+        "tests/test_action_launcher.py"
+      ],
+      "next_steps": "Try it on the real desktop; if Enter-to-send misfires with an IME (CJK input), make the behaviour a config option."
     }
   ]
 }
