@@ -3466,8 +3466,8 @@ class MainWindow(QMainWindow):
 
     # ── Desktop mate (floating companion, see desktop_mate.py) ───────────
     def _init_desktop_mate(self, force: bool = False):
-        """Create the floating companion. Config keys (both default true):
-        desktop_mate, desktop_mate_bubbles. It is purely cosmetic, so any
+        """Create the floating companion. Config keys (all default true):
+        desktop_mate, desktop_mate_bubbles, desktop_mate_personality. It is purely cosmetic, so any
         failure here is logged and swallowed -- it must never stop Aether
         from starting."""
         try:
@@ -3480,6 +3480,7 @@ class MainWindow(QMainWindow):
             from desktop_mate import DesktopMate
             mate = DesktopMate(assets_dir=str(BASE_DIR / "assets" / "mate"))
             mate.show_bubbles = bool(cfg.get("desktop_mate_bubbles", True))
+            mate.chatty = bool(cfg.get("desktop_mate_personality", True))
             mate.activated.connect(self._show_main_from_mate)
             mate.show()
             self._mate = mate
