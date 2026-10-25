@@ -45,7 +45,7 @@ _CATEGORIES: list[tuple[re.Pattern, list[str]]] = [
      ["screen_process"]),
     (re.compile(r"\b(search|google|look ?up|news|weather)\b", re.I),
      ["web_search", "weather_report"]),
-    (re.compile(r"\b(research|investigate|browse|find sources|fact[- ]check)\b", re.I),
+    (re.compile(r"\b(res[eua]{1,2}r?ch\w*|investigate|browse|find sources|fact[- ]check)\b", re.I),
      ["web_search", "langchain"]),
     (re.compile(r"\b(message|text|email|whatsapp|telegram|send .* to)\b", re.I),
      ["send_message"]),

@@ -57,12 +57,26 @@ GREETING_PATTERNS = re.compile(
 )
 TOOL_INTENT_PATTERNS = re.compile(
     r"\b(search|find|open|launch|start|close|quit|run|execute|delete|remove|create|"
-    r"schedule|remind|reminder|check|scan|look ?up|research|investigate|browse|calculate|read|write|fetch|send|install|"
+    r"schedule|remind|reminder|check|scan|look ?up|res[eua]{1,2}r?ch\w*|investigate|browse|view|calculate|read|write|fetch|send|install|"
     r"list|show|play|pause|stop|mute|unmute|turn|set|change|increase|decrease|raise|lower|"
     r"volume|brightness|wifi|bluetooth|screenshot|click|type|weather|news|"
     r"files?|folders?|directory|desktop|downloads|documents|"
     r"remember|recall|forget|"
     r"times|plus|minus|divided|multiplied)\b",
+    re.IGNORECASE,
+)
+# Short replies that only make sense as a continuation of the previous turn
+# ("yes", "retry", "it failed", "view", "do it"). Routed to QUICK they get no
+# tools, so the model answers "I can't open that" for things it can do.
+# Only honoured when a prior reply exists (`follows_turn`) and the message is
+# short; bare acknowledgements ("ok", "thanks") stay QUICK via GREETING_PATTERNS.
+FOLLOWUP_MAX_WORDS = 6
+FOLLOWUP_PATTERNS = re.compile(
+    r"^\s*(?:yes|yeah|yep|yup|sure|please|go ahead|do it|do that|go for it|"
+    r"retry|try again|again|once more|continue|keep going|proceed|more|"
+    r"view|show|open|read|play|run|that one|the (?:first|second|third|last) one|"
+    r"it failed|failed|fail|that failed|didn'?t work|did not work|doesn'?t work|not working|"
+    r"nope|no that|wrong|still (?:not|no)|same (?:error|thing))\b",
     re.IGNORECASE,
 )
 PERSONAL_CONTEXT_PATTERNS = re.compile(
@@ -92,11 +106,15 @@ class RouteDecision:
     reason: str
 
 
-def classify(message: str, *, has_active_task: bool = False) -> RouteDecision:
+def classify(message: str, *, has_active_task: bool = False,
+             follows_turn: bool = False) -> RouteDecision:
     """
     Pick an initial tier before any model call happens.
     `has_active_task` should be True if this message is a follow-up inside
     an in-progress tool/goal thread — those never get downgraded to QUICK.
+    `follows_turn` should be True when the conversation already has an
+    assistant reply: a short continuation like "yes" / "retry" / "view" then
+    keeps its tools (EVERYDAY) instead of being fast-pathed to QUICK.
     """
     stripped = message.strip()
     word_count = len(stripped.split())
@@ -105,6 +123,9 @@ def classify(message: str, *, has_active_task: bool = False) -> RouteDecision:
     if not has_active_task:
         if GREETING_PATTERNS.match(stripped):
             return RouteDecision(Tier.QUICK, TIER_MODELS[Tier.QUICK], "greeting pattern")
+        if (follows_turn and word_count <= FOLLOWUP_MAX_WORDS
+                and FOLLOWUP_PATTERNS.match(stripped)):
+            return RouteDecision(Tier.EVERYDAY, TIER_MODELS[Tier.EVERYDAY], "follow-up")
         if (word_count <= QUICK_MAX_WORDS
                 and not TOOL_INTENT_PATTERNS.search(stripped)
                 and not PERSONAL_CONTEXT_PATTERNS.search(stripped)
