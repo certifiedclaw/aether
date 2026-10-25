@@ -593,7 +593,16 @@ class ConversationCoreMixin:
         # get downgraded, so an in-progress task isn't interrupted.
         _turn_start = time.monotonic()  # for live_report — whole-turn wall time
         _has_active_task = bool(self._goals and self._goals.list_active())
-        _route = _classify_tier(user_text, has_active_task=_has_active_task)
+        # A prior assistant reply means short messages like "yes"/"retry"/"view"
+        # are continuations and must keep their tools (see tier_router).
+        with self._conversation_lock:
+            _follows_turn = any(
+                m.get("role") == "assistant" and m.get("content")
+                for m in self._conversation
+            )
+        _route = _classify_tier(
+            user_text, has_active_task=_has_active_task, follows_turn=_follows_turn
+        )
         _is_quick = _route.tier == _Tier.QUICK
 
         # ── HARD tier: escalate this turn to Gemini ─────────────────────

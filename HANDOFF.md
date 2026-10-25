@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-25 14:58 UTC
+Generated: 2026-10-25 19:11 UTC
+
+## #141 — 2026-10-25 19:11 UTC — Claude (claude.ai)
+
+From the live logs of 2026-10-25: (1) short follow-ups (yes/retry/failed/view/try again/do it...) after any assistant reply now route EVERYDAY with tools instead of the no-tools QUICK tier (tier_router.classify follows_turn, FOLLOWUP_PATTERNS; typo'd 'resurche/reserch' and 'view' count as tool intent in tier_router and tool_router). (2) New core/reconfigure_plan.py: settings applies only rebuild TTS/Whisper when TTS/STT-relevant keys changed (tts_engine/voice/speed, elevenlabs key; stt_engine/model/language, vosk path) - switching Gemini models no longer reloads Whisper each time. NOTE: the edits to tier_router/conversation_core/tool_router/main.py and the new reconfigure_plan.py + test_followup_routing.py were found uncommitted in the working tree (author unknown); I reviewed them, confirmed the RLock makes the new conversation_lock use safe and that plan covers every key create_tts_player reads, added tests/test_reconfigure_plan.py (incl. a guard that fails if create_tts_player reads an unwatched key), and verified. Full suite: 1050 pass; the 7 failures (2 PortAudio, 4 fastapi/undo sandbox-only, 1 stale test_invariants source-string assertion) are identical on the clean branch.
+
+**Touched:** `core/tier_router.py`, `core/conversation_core.py`, `core/tool_router.py`, `main.py`, `core/reconfigure_plan.py`, `tests/test_followup_routing.py`, `tests/test_reconfigure_plan.py`
+
+**Next steps:** Still open from the logs: web_search returned 'No web results' for 3/3 queries (ddgs/bing backend likely broken or blocked - need output of python -c "from ddgs import DDGS; print(list(DDGS().text('bridge construction', max_results=3)))" in the user's venv, or add a fallback backend); open_app reports 'Opened roblox.' without verifying and ignores Desktop .lnk shortcuts/saved paths; gemini-2.5-pro and gemini-2.5-flash-lite 404 but still in the UI dropdown; tests/test_invariants.py::test_cloud_turns_get_bigger_history_budget... asserts a stale source string (predates #123).
+
+---
 
 ## #140 — 2026-10-25 14:58 UTC — Claude (claude.ai)
 

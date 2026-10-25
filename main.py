@@ -535,9 +535,18 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             return False
 
     def _do_reconfigure(self, new_config: dict) -> None:
+        from core.reconfigure_plan import plan_reconfigure
+        old_config     = dict(self._config)
         old_stt_engine = self._config.get("stt_engine", "whisper").lower()
         old_llm_model  = self._config.get("llm_model", "")
         new_stt_engine = new_config.get("stt_engine", "whisper").lower()
+        # Only rebuild what the changed settings actually affect: Whisper in
+        # particular is a CPU model load plus a Hugging Face request.
+        plan = plan_reconfigure(
+            old_config, new_config,
+            have_tts=getattr(self, "_tts", None) is not None,
+            have_stt=getattr(self, "_stt", None) is not None,
+        )
         self._config = new_config
         # Invalidate the config_manager singleton so subsystems get fresh values
         try:
@@ -550,15 +559,18 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             install_for_config(new_config, log=self.ui.write_log)
         except Exception as e:
             self.ui.write_log(f"ERR: Dependency install — {e}")
-        try:
-            from core.tts import create_tts_player
-            self._tts = create_tts_player(new_config)
-            self._tts_ready.set()
-            self.ui.write_log("SYS: TTS reconfigured.")
-        except Exception as e:
-            self.ui.write_log(f"ERR: TTS reconfigure — {e}")
-            self._tts_fallback_to_edge(new_config.get("tts_engine", "edgetts").lower(), new_config)
-        if old_stt_engine == new_stt_engine:
+        if plan.rebuild_tts:
+            try:
+                from core.tts import create_tts_player
+                self._tts = create_tts_player(new_config)
+                self._tts_ready.set()
+                self.ui.write_log("SYS: TTS reconfigured.")
+            except Exception as e:
+                self.ui.write_log(f"ERR: TTS reconfigure — {e}")
+                self._tts_fallback_to_edge(new_config.get("tts_engine", "edgetts").lower(), new_config)
+        if old_stt_engine != new_stt_engine:
+            self.ui.write_log("SYS: STT engine changed — restart required.")
+        elif plan.rebuild_stt:
             try:
                 stt_language = new_config.get("stt_language", "auto")
                 if new_stt_engine == "vosk":
@@ -570,8 +582,6 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
                 self.ui.write_log("SYS: STT reconfigured.")
             except Exception as e:
                 self.ui.write_log(f"ERR: STT reconfigure — {e}")
-        else:
-            self.ui.write_log("SYS: STT engine changed — restart required.")
         if new_config.get("llm_model", "") != old_llm_model:
             self.ui.write_log("SYS: Warming up new LLM model…")
             from core.llm_client import warmup_model
