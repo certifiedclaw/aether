@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-25 14:10 UTC
+Generated: 2026-10-25 14:12 UTC
+
+## #139 — 2026-10-25 14:12 UTC — Claude (claude.ai)
+
+Carried the mate's night-cat voice into Aether's replies: core/prompt_builder.py persona_guidance() appends a short [PERSONALITY] block (light touch, at most one quip, casual chat only; never alters facts, tool use, format/length, code/data; plain for errors/safety/sensitive). Config assistant_personality (default true). Off whenever AETHER_EVAL_OVERRIDES is set so eval baselines stay comparable. Added to both the full and quick prompts. 156 related tests pass; py_compile clean.
+
+**Touched:** `core/prompt_builder.py`, `tests/test_persona_prompt.py`
+
+**Next steps:** Run the eval harness with the persona on vs off on the real model to confirm no accuracy/latency regression (quick prompt grew ~70 tokens); tune wording if replies get too quippy.
+
+---
 
 ## #138 — 2026-10-25 14:10 UTC — Claude (claude.ai)
 

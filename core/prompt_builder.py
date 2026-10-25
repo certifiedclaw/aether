@@ -41,6 +41,27 @@ _QUICK_SYSTEM_PROMPT = (
 )
 
 
+_PERSONA_GUIDANCE = (
+    "[PERSONALITY]\n"
+    "Your voice is a dry, sleepy night-cat: deadpan, a touch smug, quietly fond "
+    "of the user. Keep it light: at most one short quip, and only in casual "
+    "chat. Never let it change facts, tool use, requested format or length, "
+    "or code and data output. Be plain and serious for errors, safety, and "
+    "anything sensitive."
+)
+
+
+def persona_guidance(cfg: dict | None) -> str:
+    """The cat's voice for replies. Config `assistant_personality` (default
+    true; false = neutral assistant). Off during benchmark runs so eval
+    results stay comparable with the saved baselines."""
+    if os.environ.get("AETHER_EVAL_OVERRIDES"):
+        return ""
+    if not (cfg or {}).get("assistant_personality", True):
+        return ""
+    return _PERSONA_GUIDANCE
+
+
 def model_prompt_guidance(model_name: str) -> str:
     """Small benchmark-driven prompt addition for the calibrated Qwen 1.5B."""
     if (
@@ -101,6 +122,13 @@ class PromptBuilderMixin:
             f"Use this to calculate exact times for reminders."
         )
         parts = [sys_p]
+        try:
+            from main import _load_config  # lazy, same circular-import reason as above
+            persona = persona_guidance(_load_config())
+        except Exception:
+            persona = persona_guidance(None)
+        if persona:
+            parts.append(persona)
         model_guidance = model_prompt_guidance(model_name)
         if model_guidance:
             parts.append(model_guidance)

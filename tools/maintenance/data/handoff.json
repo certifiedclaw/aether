@@ -1,5 +1,5 @@
 {
-  "next_id": 139,
+  "next_id": 140,
   "entries": [
     {
       "id": 1,
@@ -1889,6 +1889,17 @@
         "tests/test_desktop_mate.py"
       ],
       "next_steps": "Try it on a real desktop and tune the lines/frequency (QUIP_CHANCE, CHATTER_MIN_S/MAX_S in desktop_mate.py). Optional: carry the same voice into the LLM system prompt (prompt_builder.py) behind a config flag - deliberately not done, prompts are benchmark-tuned."
+    },
+    {
+      "id": 139,
+      "timestamp": "2026-10-25 14:12 UTC",
+      "by": "Claude (claude.ai)",
+      "summary": "Carried the mate's night-cat voice into Aether's replies: core/prompt_builder.py persona_guidance() appends a short [PERSONALITY] block (light touch, at most one quip, casual chat only; never alters facts, tool use, format/length, code/data; plain for errors/safety/sensitive). Config assistant_personality (default true). Off whenever AETHER_EVAL_OVERRIDES is set so eval baselines stay comparable. Added to both the full and quick prompts. 156 related tests pass; py_compile clean.",
+      "files": [
+        "core/prompt_builder.py",
+        "tests/test_persona_prompt.py"
+      ],
+      "next_steps": "Run the eval harness with the persona on vs off on the real model to confirm no accuracy/latency regression (quick prompt grew ~70 tokens); tune wording if replies get too quippy."
     }
   ]
 }
