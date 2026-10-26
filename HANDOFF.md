@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-26 00:52 UTC
+Generated: 2026-10-26 01:07 UTC
+
+## #144 — 2026-10-26 01:06 UTC — Claude (claude.ai)
+
+Gemini model dropdown no longer offers models the key can't use. Live log: gemini-2.5-pro and gemini-2.5-flash-lite answered 404 for the user's key but stayed in the hardcoded dropdown, each pick then resting for an hour. New core/gemini_models.py (pure, no Qt): fetch_available(key) calls GET <gemini base>/models with the key as a bearer token (the same host and call the chat client already uses; only the key is sent), parse_model_list keeps chat-capable gemini-* ids (drops embedding/image/tts/live/gemma...), merge_choices builds the rows: friendly static labels and order for known models, newly added models newest-first without dated snapshots/previews, and a saved model the key can't use stays selected but flagged '— not available for your key' (never silently swapped). SetupOverlay (ui.py): refresh button next to the model combo, plus one automatic lookup on open when Gemini is the chosen provider and a key is saved; runs in a worker thread, result via a pyqtSignal; the built-in list is the fallback offline/bad-key, and the tooltip says so. The literal _GEMINI_MODELS list stays in ui.py (an existing test reads it from source). 39 new tests; full suite 1112 pass, same 7 pre-existing failures. Not verifiable in the sandbox: a real call to Google (all tests inject the HTTP layer) - so the exact ids Google returns for this key are unconfirmed.
+
+**Touched:** `core/gemini_models.py`, `ui.py`, `tests/test_gemini_models.py`
+
+**Next steps:** Open Settings with the Gemini key saved and check the dropdown shrinks to what the key can use; if the list looks wrong, run: python -c "from core.gemini_models import fetch_available; import json; print(fetch_available('<key>'))". Not done: gemini_escalation_model in config is a free-text value with no validation (a dead name there still 404s on HARD turns and rests an hour); the primary-provider path doesn't warn if llm_model is dead. Remaining from the logs: web_search returned no results 3/3 (needs the ddgs one-liner output from the user's venv, or a fallback backend).
+
+---
 
 ## #143 — 2026-10-26 00:52 UTC — Claude (claude.ai chat)
 
