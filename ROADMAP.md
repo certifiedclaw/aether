@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-18 00:02 UTC
+Generated: 2026-10-26 18:28 UTC
 
 ## In progress
 
@@ -13,8 +13,8 @@ Generated: 2026-10-18 00:02 UTC
 
 ## Backlog
 
-- [ ] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option `high`
-  - Repository protections already implemented: config/api_keys.json is ignored, example templates are present, and credentials resolve environment -> OS keyring -> local file with a migration CLI. Confirmed the config file is not tracked in this Git history. Previously shared full-folder archives are outside this checkout; the owner still needs to check/remove any such archives and rotate keys if one contained them.
+- [ ] **#92** Small-model replies that promise but never act ('I will research...') - retry once forcing the tool call `high`
+  - Seen live: Artemis research turn ended after 2 rounds with only a promise; qwen3:8b
 - [ ] **#48** [F0] Auto-update with rollback: pull, run tests, roll back on failure `medium`
 - [ ] **#53** [F1] Self-check pass: model re-reads its answer for obvious mistakes `medium`
   - ~300 lines.
@@ -43,6 +43,12 @@ Generated: 2026-10-18 00:02 UTC
 - [ ] **#81** [F4] Coding agent: sandbox first (container), then edit-test-retry loop with git checkpoints `medium`
   - Sandbox also brings run_python back.
 - [ ] **#82** [F4] Skills system: drop-in folders of instructions and scripts `medium`
+- [ ] **#93** Trim per-turn prompt (2.6-4.5k tokens even for 'whats 2+2'): fewer tool schemas, shorter system prompt - TTFT is 1.4-3.2s `medium`
+  - From perf.jsonl on RTX 3050: ~30 tok/s, TTFT dominated by prompt processing
+- [ ] **#94** Investigate: duplicated user text in turns ('x\nx'), langchain research tool returning in 5ms, web_search paging 5 Bing pages (8.7s) `medium`
+  - From live_turns.jsonl / events.jsonl / aether.log of 2026-10-17
+- [ ] **#95** Push-to-talk / wake-word default so background media is never transcribed `medium`
+  - Energy VAD treats any loud audio (TikTok) as speech; confidence filter helps but only a gate fixes it. Set stt_language to en meanwhile.
 - [ ] **#14** Route the 174 stray print() calls through core/observability.py `low`
   - Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules — actions/ is intentionally exempt (CLI-facing tool output).
 - [ ] **#16** Decide fate of the vestigial session_memory param across actions/ `low`
@@ -53,14 +59,10 @@ Generated: 2026-10-18 00:02 UTC
   - core/notify.send_ntfy() is fire-and-forget -- if the push fails (network blip, ntfy down), the approval still shows up in the dashboard's Pending Approvals list, but the operator isn't proactively re-notified and may not know to check. Consider a retry with backoff, or re-pushing once if unresolved after N seconds.
 - [ ] **#21** dashboard/server.py has no standalone entrypoint `low`
   - Noted since the original headless-mode work: start_dashboard_server() only ever gets called from AetherLocal._init_dashboard_and_integrations(), itself only reachable after the full AetherLocal boot sequence runs. Fine for the current headless design (still boots AetherLocal, just skips the GUI), but if a lighter API-only deployment (dashboard + approvals + LLM status, nothing else) is ever wanted, this coupling needs breaking.
-- [ ] **#24** Delete stray root copies: loop_guard.py, memory_tools.py, self_test.py (stale vs core/), dump.py (vs dev_tools/) `low`
-  - Nothing imports them; self_test.py and dump.py have drifted from their real copies. Confirm no external script uses them, then delete.
 - [ ] **#29** Review shell=True call sites (dev_agent._open_vscode, computer_settings, dashboard/server) `low`
   - dev_agent passes a project-derived path with shell=True on Windows: metacharacters in a project name could inject. computer_settings strings are constant.
 - [ ] **#30** Make test_create_file_new_file_undo_removes_it pass on Linux `low`
   - Only failing test in a Linux sandbox run; passes on Windows.
-- [ ] **#31** Fix dep_watcher lookups for Ollama, faster-whisper and Kokoro `low`
-  - DEPENDENCY_REPORT.md shows lookup failed for all three upstream checks.
 - [ ] **#32** Investigate long_term.json identity entries missing value `low`
   - Handoff guesses user redaction; unconfirmed.
 - [ ] **#49** [F0] Crash reporter: sanitized report saved locally `low`
@@ -121,12 +123,18 @@ Generated: 2026-10-18 00:02 UTC
   - 4 of 7 failed prompts showed raw <tool_call>{...}</tool_call> instead of acting. Touches streaming path and makes model text executable, so get explicit go-ahead; check ollama --version first. See handoff #37.
 - [x] **#23** actions/desktop.py exec() sandbox is escapable and runs model-written code without a confirmation
   - safe_builtins exposes getattr and the sandbox passes Path/time objects, so getattr(Path.__init__,'__globals__') reaches os/sys; Windows also exposes ctypes. Needs a design decision: confirmation via core/safety, or a real allowlist DSL instead of exec. See handoff #39.
+- [x] **#24** Delete stray root copies: loop_guard.py, memory_tools.py, self_test.py (stale vs core/), dump.py (vs dev_tools/)
+  - Nothing imports them; self_test.py and dump.py have drifted from their real copies. Confirm no external script uses them, then delete.
+- [x] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option
+  - Repository protections already implemented: config/api_keys.json is ignored, example templates are present, and credentials resolve environment -> OS keyring -> local file with a migration CLI. Confirmed the config file is not tracked in this Git history. Previously shared full-folder archives are outside this checkout; the owner still needs to check/remove any such archives and rotate keys if one contained them.
 - [x] **#26** Retry once (about 1s backoff) on Gemini 503/429 before falling back to local
   - Seen in two consecutive verify runs; local HARD fallback costs 2-4s more.
 - [x] **#27** Execution timeout for AI-generated desktop code
   - exec() cannot be killed in-process; approved code with an infinite loop hangs its thread. Run in a worker with a deadline.
 - [x] **#28** verify_local.py: flag packages declared in requirements.txt but not installed
   - watchdog and keyboard were missing for several runs, disabling plugin hot-reload and the ctrl+alt+j hotkey without any verify warning.
+- [x] **#31** Fix dep_watcher lookups for Ollama, faster-whisper and Kokoro
+  - DEPENDENCY_REPORT.md shows lookup failed for all three upstream checks.
 - [x] **#33** Dashboard: replace AES-CBC (no MAC, key = SHA-256 of the 6-char session code) with AES-GCM and a random per-session key
   - dashboard/server.py _aes_key/decrypt: anyone who captures one ciphertext can brute-force the ~30-bit code offline in seconds, and CBC without a MAC is malleable. Needs a matching change in the CryptoJS client in dashboard/static, so it must be tested with a real phone/browser. Over plain HTTP (no config/certs) the traffic is also sniffable.
 - [x] **#34** Dashboard: rate-limit the one-time connect key and bind to the LAN interface only

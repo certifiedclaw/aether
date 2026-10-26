@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-19 22:08 UTC
+Generated: 2026-10-26 18:28 UTC
+
+## #117 — 2026-10-26 18:28 UTC — Claude Code
+
+Roadmap #25 closed (repo-side secrets handling was already done; owner confirmed). #24: deleted stray root loop_guard.py/memory_tools.py/self_test.py/dump.py (verified nothing imports them; core/ and dev_tools/ copies are the newer ones). #31: rewrote dep_watcher infra lookups (token support, web-redirect fallback, PyPI fallback, Kokoro repo fix, failure reasons in report) with 7 mocked tests. Full suite: 881 passed, 5 failed -- the same 5 fail on untouched HEAD (missing sandbox deps + known #30).
+
+**Touched:** `tools/maintenance/dep_watcher.py`, `tests/test_dep_watcher.py`, `loop_guard.py`, `memory_tools.py`, `self_test.py`, `dump.py`
+
+**Next steps:** Run python -m tools.maintenance.dep_watcher on the owner's machine to confirm the Ollama lookup resolves; then pick up #88 (needs free -h / ollama list from the server).
+
+---
 
 ## #116 — 2026-10-19 22:08 UTC — Claude Code
 

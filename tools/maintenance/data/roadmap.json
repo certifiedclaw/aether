@@ -212,19 +212,19 @@
       "id": 24,
       "title": "Delete stray root copies: loop_guard.py, memory_tools.py, self_test.py (stale vs core/), dump.py (vs dev_tools/)",
       "priority": "low",
-      "status": "backlog",
+      "status": "done",
       "notes": "Nothing imports them; self_test.py and dump.py have drifted from their real copies. Confirm no external script uses them, then delete.",
       "created": "2026-10-05",
-      "updated": "2026-10-05"
+      "updated": "2026-10-26"
     },
     {
       "id": 25,
       "title": "Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option",
       "priority": "high",
-      "status": "backlog",
+      "status": "done",
       "notes": "Repository protections already implemented: config/api_keys.json is ignored, example templates are present, and credentials resolve environment -> OS keyring -> local file with a migration CLI. Confirmed the config file is not tracked in this Git history. Previously shared full-folder archives are outside this checkout; the owner still needs to check/remove any such archives and rotate keys if one contained them.",
       "created": "2026-10-07",
-      "updated": "2026-10-17"
+      "updated": "2026-10-26"
     },
     {
       "id": 26,
@@ -275,10 +275,10 @@
       "id": 31,
       "title": "Fix dep_watcher lookups for Ollama, faster-whisper and Kokoro",
       "priority": "low",
-      "status": "backlog",
-      "notes": "DEPENDENCY_REPORT.md shows lookup failed for all three upstream checks.",
+      "status": "done",
+      "notes": "Fixed in tools/maintenance/dep_watcher.py: lookups now try GitHub API (uses GITHUB_TOKEN/GH_TOKEN if set), then the public releases/latest web redirect (no API rate limit), then API tags, then PyPI; Kokoro now watches hexgrad/kokoro (Kokoro-82M is a Hugging Face model repo with no releases); failures print their reason in DEPENDENCY_REPORT.md. 7 mocked tests added (tests/test_dep_watcher.py). Verified live only for the PyPI fallbacks (faster-whisper, kokoro) -- the cloud sandbox blocks GitHub, so the Ollama lookup still needs one real run on the owner's machine.",
       "created": "2026-10-07",
-      "updated": "2026-10-07"
+      "updated": "2026-10-26"
     },
     {
       "id": 32,
