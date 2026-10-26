@@ -1261,6 +1261,7 @@ class _DropCanvas(QWidget):
 class SetupOverlay(QWidget):
     # Emits a JSON string containing the full config dict
     done = pyqtSignal(str)
+    _gemini_models_sig = pyqtSignal(object)   # live model ids (list) or None, from a worker thread
 
     # ------------------------------------------------------------------ #
     _INPUT_STYLE = ""  # filled in __init__ after C is available
@@ -1481,6 +1482,58 @@ class SetupOverlay(QWidget):
     ]
     GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
 
+    def _populate_gemini_models(self, live, selected: str | None = None) -> None:
+        """(Re)fill the Gemini model dropdown. `live` is the list of model ids the
+        key can use, or None to show the built-in list. Keeps the current choice."""
+        from core.gemini_models import merge_choices
+        combo = self._gemini_model_combo
+        keep = selected if selected is not None else (combo.currentData() or "")
+        combo.blockSignals(True)
+        try:
+            combo.clear()
+            for val, disp in merge_choices(self._GEMINI_MODELS, live, current=keep):
+                combo.addItem(disp, userData=val)
+            for i in range(combo.count()):
+                if combo.itemData(i) == keep:
+                    combo.setCurrentIndex(i)
+                    break
+        finally:
+            combo.blockSignals(False)
+
+    def _refresh_gemini_models(self) -> None:
+        """Ask Google (in a worker thread) which models the typed key can use."""
+        key = self._gemini_key_input.text().strip()
+        if not key:
+            from core.credentials import get_secret
+            key = get_secret("gemini_api_key", self._initial_config)
+        if not key:
+            self._gemini_refresh_btn.setToolTip("Enter a Gemini API key first.")
+            return
+        self._gemini_refresh_btn.setEnabled(False)
+        self._gemini_refresh_btn.setText("…")
+
+        def _work(k=key):
+            from core.gemini_models import fetch_available
+            try:
+                live = fetch_available(k)
+            except Exception:  # noqa: BLE001
+                live = None
+            try:
+                self._gemini_models_sig.emit(live)
+            except RuntimeError:        # the dialog was closed meanwhile
+                pass
+
+        threading.Thread(target=_work, daemon=True).start()
+
+    def _on_gemini_models(self, live) -> None:
+        self._gemini_refresh_btn.setEnabled(True)
+        self._gemini_refresh_btn.setText("↻")
+        self._populate_gemini_models(live if isinstance(live, list) else None)
+        self._gemini_refresh_btn.setToolTip(
+            "Ask Google which models your API key can use (sends only the key, to Google)"
+            if isinstance(live, list) else
+            "Couldn't reach Google or the key was rejected - showing the built-in list. Click to retry.")
+
     def _build_llm_section(self, layout, _init) -> None:
         layout.addWidget(self._lbl("AI ENGINE", 7, col=C.TEXT_DIM,
                                align=Qt.AlignmentFlag.AlignLeft))
@@ -1603,15 +1656,28 @@ class SetupOverlay(QWidget):
         self._gemini_model_combo = QComboBox()
         self._gemini_model_combo.setFixedHeight(28)
         self._gemini_model_combo.setStyleSheet(self._COMBO_STYLE)
-        for val, disp in self._GEMINI_MODELS:
-            self._gemini_model_combo.addItem(disp, userData=val)
         _cur_gem_model = _init.get("llm_model", "gemini-3.8-flash") if self._sel_llm_provider == "gemini" else "gemini-3.8-flash"
-        for i in range(self._gemini_model_combo.count()):
-            if self._gemini_model_combo.itemData(i) == _cur_gem_model:
-                self._gemini_model_combo.setCurrentIndex(i)
-                break
-        gem_model_row.addWidget(self._gemini_model_combo)
+        self._populate_gemini_models(None, selected=_cur_gem_model)
+        gem_model_row.addWidget(self._gemini_model_combo, 1)
+        self._gemini_refresh_btn = QPushButton("↻")
+        self._gemini_refresh_btn.setFixedSize(28, 28)
+        self._gemini_refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._gemini_refresh_btn.setToolTip(
+            "Ask Google which models your API key can use (sends only the key, to Google)")
+        self._gemini_refresh_btn.setStyleSheet(f"""
+            QPushButton {{ background: transparent; color: {C.TEXT_DIM};
+                           border: 1px solid {C.BORDER}; border-radius: 3px; }}
+            QPushButton:hover {{ color: {C.TEXT}; border: 1px solid {C.BORDER_B}; }}
+            QPushButton:disabled {{ color: {C.TEXT_DIM}; }}
+        """)
+        self._gemini_refresh_btn.clicked.connect(self._refresh_gemini_models)
+        self._gemini_models_sig.connect(self._on_gemini_models)
+        gem_model_row.addWidget(self._gemini_refresh_btn)
         gem_lay.addLayout(gem_model_row)
+        # A key is already saved and Gemini is the chosen provider: look up the live
+        # list once now, so retired models disappear without the user doing anything.
+        if self._sel_llm_provider == "gemini" and self._gemini_key_input.text().strip():
+            QTimer.singleShot(0, self._refresh_gemini_models)
 
         layout.addWidget(self._llm_gemini_widget)
 
