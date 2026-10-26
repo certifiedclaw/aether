@@ -1,5 +1,5 @@
 {
-  "next_id": 96,
+  "next_id": 100,
   "items": [
     {
       "id": 1,
@@ -855,6 +855,42 @@
       "notes": "Energy VAD treats any loud audio (TikTok) as speech; confidence filter helps but only a gate fixes it. Set stt_language to en meanwhile.",
       "created": "2026-10-18",
       "updated": "2026-10-18"
+    },
+    {
+      "id": 96,
+      "title": "[F1] Learn from corrections: turn 'no, not that' / 'stop doing X' into small editable rules applied to future prompts",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Separate rules store (not the personal-facts memory). LLM drafts a one-line rule, Aether asks yes/no before saving, user can list/edit/delete (pairs with #57). Inject only the top few relevant rules per request, capped for small models. Never save personal/sensitive facts as rules. Verify with the eval harness (#39) that rules change behavior without regressing the 107-prompt baseline.",
+      "created": "2026-10-26",
+      "updated": "2026-10-26"
+    },
+    {
+      "id": 97,
+      "title": "[F3] Screen memory (opt-in): periodic local OCR index of the screen, searchable by voice",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "Local-only, off by default. Needs: pause/resume hotkey, per-app and window-title exclusions, skip password fields/private windows, retention limit with auto-expiry, one-command wipe, and protected_paths/leak-guard coverage so nothing is sent to any cloud model. Builds on screen_process and memory/RAG. Real privacy implications -- design the controls before the capture loop.",
+      "created": "2026-10-26",
+      "updated": "2026-10-26"
+    },
+    {
+      "id": 98,
+      "title": "[F1] Model arena: run one prompt through two Ollama models, compare or pick a winner, log results",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "Feeds the model router (#51) and prompt/schema tuning (#52) with real evidence. Reuse tools/eval_harness.py scoring where possible; store results under logs/eval/. Keep both runs on the selected Ollama host (remote/local fallback aware) and respect the resource governor (#46).",
+      "created": "2026-10-26",
+      "updated": "2026-10-26"
+    },
+    {
+      "id": 99,
+      "title": "[F0] Self-healing supervisor: watchdog that restarts hung Ollama/Aether, checks disk/RAM, alerts via ntfy only when it can't fix it",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "For the always-on deploy (#88). Health probes: Ollama /api/tags, Aether process, dashboard /api/llm-status, disk and memory thresholds. Bounded restarts with backoff (no restart loops), state written to the audit log, ntfy alert via core/notify.py after N failed recoveries. Should run headless inside the Docker setup.",
+      "created": "2026-10-26",
+      "updated": "2026-10-26"
     }
   ]
 }

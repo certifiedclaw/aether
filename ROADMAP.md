@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-26 18:28 UTC
+Generated: 2026-10-26 19:21 UTC
 
 ## In progress
 
@@ -49,6 +49,10 @@ Generated: 2026-10-26 18:28 UTC
   - From live_turns.jsonl / events.jsonl / aether.log of 2026-10-17
 - [ ] **#95** Push-to-talk / wake-word default so background media is never transcribed `medium`
   - Energy VAD treats any loud audio (TikTok) as speech; confidence filter helps but only a gate fixes it. Set stt_language to en meanwhile.
+- [ ] **#96** [F1] Learn from corrections: turn 'no, not that' / 'stop doing X' into small editable rules applied to future prompts `medium`
+  - Separate rules store (not the personal-facts memory). LLM drafts a one-line rule, Aether asks yes/no before saving, user can list/edit/delete (pairs with #57). Inject only the top few relevant rules per request, capped for small models. Never save personal/sensitive facts as rules. Verify with the eval harness (#39) that rules change behavior without regressing the 107-prompt baseline.
+- [ ] **#99** [F0] Self-healing supervisor: watchdog that restarts hung Ollama/Aether, checks disk/RAM, alerts via ntfy only when it can't fix it `medium`
+  - For the always-on deploy (#88). Health probes: Ollama /api/tags, Aether process, dashboard /api/llm-status, disk and memory thresholds. Bounded restarts with backoff (no restart loops), state written to the audit log, ntfy alert via core/notify.py after N failed recoveries. Should run headless inside the Docker setup.
 - [ ] **#14** Route the 174 stray print() calls through core/observability.py `low`
   - Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules — actions/ is intentionally exempt (CLI-facing tool output).
 - [ ] **#16** Decide fate of the vestigial session_memory param across actions/ `low`
@@ -86,6 +90,10 @@ Generated: 2026-10-26 18:28 UTC
 - [ ] **#87** [F4] Learning tutor: quizzes from your own notes `low`
 - [ ] **#89** [F2] API server: optional memory-aware mode (read-only recall) and per-client tokens with usage logging `low`
   - #41 shipped model-only access. Memory/tools deliberately not exposed; add only with per-client scopes.
+- [ ] **#97** [F3] Screen memory (opt-in): periodic local OCR index of the screen, searchable by voice `low`
+  - Local-only, off by default. Needs: pause/resume hotkey, per-app and window-title exclusions, skip password fields/private windows, retention limit with auto-expiry, one-command wipe, and protected_paths/leak-guard coverage so nothing is sent to any cloud model. Builds on screen_process and memory/RAG. Real privacy implications -- design the controls before the capture loop.
+- [ ] **#98** [F1] Model arena: run one prompt through two Ollama models, compare or pick a winner, log results `low`
+  - Feeds the model router (#51) and prompt/schema tuning (#52) with real evidence. Reuse tools/eval_harness.py scoring where possible; store results under logs/eval/. Keep both runs on the selected Ollama host (remote/local fallback aware) and respect the resource governor (#46).
 
 ## Done
 
@@ -134,7 +142,7 @@ Generated: 2026-10-26 18:28 UTC
 - [x] **#28** verify_local.py: flag packages declared in requirements.txt but not installed
   - watchdog and keyboard were missing for several runs, disabling plugin hot-reload and the ctrl+alt+j hotkey without any verify warning.
 - [x] **#31** Fix dep_watcher lookups for Ollama, faster-whisper and Kokoro
-  - DEPENDENCY_REPORT.md shows lookup failed for all three upstream checks.
+  - Fixed in tools/maintenance/dep_watcher.py: lookups now try GitHub API (uses GITHUB_TOKEN/GH_TOKEN if set), then the public releases/latest web redirect (no API rate limit), then API tags, then PyPI; Kokoro now watches hexgrad/kokoro (Kokoro-82M is a Hugging Face model repo with no releases); failures print their reason in DEPENDENCY_REPORT.md. 7 mocked tests added (tests/test_dep_watcher.py). Verified live only for the PyPI fallbacks (faster-whisper, kokoro) -- the cloud sandbox blocks GitHub, so the Ollama lookup still needs one real run on the owner's machine.
 - [x] **#33** Dashboard: replace AES-CBC (no MAC, key = SHA-256 of the 6-char session code) with AES-GCM and a random per-session key
   - dashboard/server.py _aes_key/decrypt: anyone who captures one ciphertext can brute-force the ~30-bit code offline in seconds, and CBC without a MAC is malleable. Needs a matching change in the CryptoJS client in dashboard/static, so it must be tested with a real phone/browser. Over plain HTTP (no config/certs) the traffic is also sniffable.
 - [x] **#34** Dashboard: rate-limit the one-time connect key and bind to the LAN interface only
