@@ -1,5 +1,5 @@
 {
-  "next_id": 143,
+  "next_id": 144,
   "entries": [
     {
       "id": 1,
@@ -1938,6 +1938,18 @@
         "tests/test_open_app_shortcuts.py"
       ],
       "next_steps": "Try 'open roblox' on the real machine. If Roblox Player's launcher exits immediately (it may need a game URL) it will now report 'Launched...but no matching window or process appeared' - that is honest, not a bug; use app_paths in config to point at a different target. Remaining from the logs: web_search returned no results 3/3 (needs the ddgs one-liner output from the user's venv, or a fallback backend); gemini-2.5-pro / gemini-2.5-flash-lite 404 but still in the UI dropdown."
+    },
+    {
+      "id": 143,
+      "timestamp": "2026-10-26 00:52 UTC",
+      "by": "Claude (claude.ai chat)",
+      "summary": "Reworked the night-cat persona: rewrote _PERSONA_GUIDANCE as compact rules, added hourly-rotating style examples (2 plain/restraint + 2 quip) via persona_examples(), changed the identity lines in core/prompt.txt and _QUICK_SYSTEM_PROMPT so they no longer say 'professional'. Persona stays off under AETHER_EVAL_OVERRIDES and assistant_personality=false. Updated tests/test_persona_prompt.py (13 pass; 98 related pass, py_compile clean).",
+      "files": [
+        "core/prompt_builder.py",
+        "core/prompt.txt",
+        "tests/test_persona_prompt.py"
+      ],
+      "next_steps": "Try it live on the real model (Qwen 1.5B) and tune the example pool; consider a thumbs up/down log for bad replies. Align mate_personality.LINES with the quip examples."
     }
   ]
 }

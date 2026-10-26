@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-25 19:24 UTC
+Generated: 2026-10-26 00:52 UTC
+
+## #143 — 2026-10-26 00:52 UTC — Claude (claude.ai chat)
+
+Reworked the night-cat persona: rewrote _PERSONA_GUIDANCE as compact rules, added hourly-rotating style examples (2 plain/restraint + 2 quip) via persona_examples(), changed the identity lines in core/prompt.txt and _QUICK_SYSTEM_PROMPT so they no longer say 'professional'. Persona stays off under AETHER_EVAL_OVERRIDES and assistant_personality=false. Updated tests/test_persona_prompt.py (13 pass; 98 related pass, py_compile clean).
+
+**Touched:** `core/prompt_builder.py`, `core/prompt.txt`, `tests/test_persona_prompt.py`
+
+**Next steps:** Try it live on the real model (Qwen 1.5B) and tune the example pool; consider a thumbs up/down log for bad replies. Align mate_personality.LINES with the quip examples.
+
+---
 
 ## #142 — 2026-10-25 19:24 UTC — Claude (claude.ai)
 
