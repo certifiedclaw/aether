@@ -39,7 +39,7 @@ PACKAGES = [
     "pycaw", "comtypes", "pygetwindow", "psutil", "send2trash", "edge-tts",
     "kokoro", "openwakeword", "ddgs", "duckduckgo-search", "pytest", "fastapi",
 ]
-SAFE_CONFIG_KEYS = ["llm_provider", "echo_guard", "wake_word_enabled", "gemini_for_tools"]
+SAFE_CONFIG_KEYS = ["llm_provider", "echo_guard", "listen_mode", "wake_word_enabled", "gemini_for_tools"]
 MAX_TAIL = 6000
 
 out: list[str] = []

@@ -180,6 +180,11 @@ def _make_listener(monkeypatch, scripted, cfg):
     import types
     from core import llm_client, listen_loops
 
+    # The default listen mode is "auto" (#95), which would pick push-to-talk on any
+    # machine that has the `keyboard` package. These tests are about the always-open
+    # mic, so pin it unless the test chooses a mode itself.
+    if "listen_mode" not in cfg and "wake_word_enabled" not in cfg:
+        cfg = {"listen_mode": "always", **cfg}
     monkeypatch.setattr(llm_client, "_load_config", lambda: cfg)
     seen = {"texts": [], "interrupts": 0}
 

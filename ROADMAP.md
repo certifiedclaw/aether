@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-27 12:01 UTC
+Generated: 2026-10-27 20:57 UTC
 
 ## In progress
 
@@ -45,8 +45,6 @@ Generated: 2026-10-27 12:01 UTC
   - From perf.jsonl on RTX 3050: ~30 tok/s, TTFT dominated by prompt processing
 - [ ] **#94** Investigate: duplicated user text in turns ('x\nx'), langchain research tool returning in 5ms, web_search paging 5 Bing pages (8.7s) `medium`
   - From live_turns.jsonl / events.jsonl / aether.log of 2026-10-17
-- [ ] **#95** Push-to-talk / wake-word default so background media is never transcribed `medium`
-  - Energy VAD treats any loud audio (TikTok) as speech; confidence filter helps but only a gate fixes it. Set stt_language to en meanwhile.
 - [ ] **#96** [F1] Learn from corrections: turn 'no, not that' / 'stop doing X' into small editable rules applied to future prompts `medium`
   - Separate rules store (not the personal-facts memory). LLM drafts a one-line rule, Aether asks yes/no before saving, user can list/edit/delete (pairs with #57). Inject only the top few relevant rules per request, capped for small models. Never save personal/sensitive facts as rules. Verify with the eval harness (#39) that rules change behavior without regressing the 107-prompt baseline.
 - [ ] **#99** [F0] Self-healing supervisor: watchdog that restarts hung Ollama/Aether, checks disk/RAM, alerts via ntfy only when it can't fix it `medium`
@@ -180,3 +178,5 @@ Generated: 2026-10-27 12:01 UTC
   - Added per-user data storage with one-time non-destructive migration for app data, long-term memory, and chat history; routed data consumers and Docker/doctor/security/test coverage.
 - [x] **#92** Small-model replies that promise but never act ('I will research...') - retry once forcing the tool call
   - Done: core/conversation_core.py now detects a short first-person promise reply ('I'll research that now') with no tool call and retries the round ONCE with a nudge (llm.promise_without_action_retry metric). Conservative detector: <=400 chars, no '?' or code fence, first/last sentence must open with a promise + action verb. Only when tools were offered and the reply wasn't truncated. Promise + nudge stay in the turn's working messages, never in saved chat history. 33 tests in tests/test_promise_without_action.py incl. 4 that drive the real loop with a scripted LLM. Not yet verified against a live qwen3:8b -- worth one real research prompt and watching logs for the 'promised an action' WRN line.
+- [x] **#95** Push-to-talk / wake-word default so background media is never transcribed
+  - Done: new core/listen_mode.py + wiring in core/listen_loops.py. listen_mode = auto (default) | always | wake | ptt. auto = wake word if ready, else push-to-talk (global hotkey ctrl+alt+space, config ptt_hotkey), else always-listening with a WRN. PTT opens the mic for one utterance, closes after ptt_idle_secs (6) without speech, never closes mid-sentence (VAD.in_speech). Any fallback (no keyboard pkg, hotkey registration fails) lands on always-listening with a warning, never deaf. Explicit legacy wake_word_enabled is honoured when listen_mode is unset, so existing setups are unchanged. 24 tests in tests/test_listen_mode.py incl. end-to-end runs of the real mic loop (background audio never transcribed in ptt; control proves it is transcribed in always). Made tests/test_mark_lv_ports.py hermetic (it silently depended on keyboard not being installed). BEHAVIOR CHANGE: a config with neither listen_mode nor wake_word_enabled now resolves to auto, i.e. push-to-talk on machines with the keyboard package -- set listen_mode=always to restore the old always-open mic. Not tried with a real mic/hotkey on Windows yet.

@@ -63,6 +63,12 @@ class _VADBuffer:
         self._in_spch       = False
         self._sil_cnt       = 0
 
+    @property
+    def in_speech(self) -> bool:
+        """True while an utterance is being captured (used to keep a push-to-talk
+        window open so it can't close on someone mid-sentence)."""
+        return self._in_spch
+
     def process(self, chunk: np.ndarray) -> np.ndarray | None:
         rms     = float(np.sqrt(np.mean(chunk ** 2)))
         total_n = sum(len(c) for c in self._buf)
@@ -131,6 +137,8 @@ class ListenLoopsMixin:
         from core.llm_client import get_config_flag
         from core.echo import get_guard
         from core.wake_word import WakeGate, WakeWordDetector, is_ready as _wake_ready
+        from core.llm_client import _load_config
+        from core import listen_mode as _lm
 
         vad = _VADBuffer()
         q: queue.Queue = queue.Queue(maxsize=200)
@@ -144,21 +152,49 @@ class ListenLoopsMixin:
         state = {"was_speaking": False, "tail_until": 0.0}
         TAIL_S = 0.45  # device output latency + room margin
 
-        # ── Wake word (config wake_word_enabled, default off) ──
-        gate = WakeGate(enabled=get_config_flag("wake_word_enabled", False))
+        # ── Listen mode (roadmap #95): which gate sits in front of the VAD ──
+        # config listen_mode = auto (default) | always | wake | ptt. Without a gate,
+        # loud background audio (TikTok, TV) is treated as speech and transcribed.
+        # See core/listen_mode.py; every fallback ends in "always", never in silence.
+        cfg = _load_config()
+        mode, mode_note = _lm.resolve_listen_mode(
+            cfg, wake_ready=_wake_ready(), ptt_available=_lm.keyboard_available())
+        if mode_note:
+            self.ui.write_log(f"WRN: {mode_note}")
+
+        gate = WakeGate(enabled=False)
         detector = None
-        if gate.enabled:
-            if _wake_ready():
-                detector = WakeWordDetector(
-                    on_detect=lambda: gate.wake() and self.ui.write_log("SYS: Awake - wake word."),
-                    logger=lambda m: print(f"[Wake] {m}"))
-                if not detector.start():
-                    detector = None
-            if detector is None:
-                gate.set_enabled(False)
-                self.ui.write_log("WRN: wake word enabled but openwakeword is not ready - staying always-awake")
+        unregister_ptt = None
+        if mode == "wake":
+            gate = WakeGate(enabled=True)
+            detector = WakeWordDetector(
+                on_detect=lambda: gate.wake() and self.ui.write_log("SYS: Awake - wake word."),
+                logger=lambda m: print(f"[Wake] {m}"))
+            if not detector.start():
+                detector = None
+                gate = WakeGate(enabled=False)
+                mode = "always"
+                self.ui.write_log(f"WRN: {_lm._WAKE_NOT_READY}")
             else:
                 self.ui.write_log("SYS: Wake word on - say 'Hey Jarvis'. Sleeping.")
+        elif mode == "ptt":
+            hotkey = str(cfg.get("ptt_hotkey") or _lm.DEFAULT_PTT_HOTKEY)
+            try:
+                idle_s = float(cfg.get("ptt_idle_secs", _lm.DEFAULT_PTT_IDLE_S))
+            except (TypeError, ValueError):
+                idle_s = _lm.DEFAULT_PTT_IDLE_S
+            ptt_gate = _lm.PushToTalkGate(idle_s=idle_s)
+            ok, unregister_ptt, why = _lm.register_push_to_talk(
+                hotkey,
+                lambda: ptt_gate.wake() and self.ui.write_log("SYS: Listening - speak now."))
+            if ok:
+                gate = ptt_gate
+                self.ui.write_log(f"SYS: Push-to-talk on - press {hotkey} and speak. "
+                                  f"Background audio is ignored.")
+            else:
+                mode = "always"
+                self.ui.write_log(f"WRN: {why} - staying always-listening, so loud "
+                                  f"background audio WILL be transcribed")
 
         def callback(indata, frames, time_info, status):
             if self.ui.muted:
@@ -223,11 +259,17 @@ class ListenLoopsMixin:
                 while True:
                     try:
                         if gate.check_sleep(speaking=self._speaking):
-                            self.ui.write_log("SYS: Sleeping - no speech for 2 minutes. Say 'Hey Jarvis'.")
+                            if mode == "ptt":
+                                self.ui.write_log("SYS: Push-to-talk window closed - press the hotkey to talk.")
+                            else:
+                                self.ui.write_log("SYS: Sleeping - no speech for 2 minutes. Say 'Hey Jarvis'.")
                         chunk = q.get(timeout=0.1)
                         audio = vad.process(chunk.flatten())
+                        if vad.in_speech:
+                            gate.touch()    # PTT: never close the window on someone mid-sentence
                         if audio is not None:
                             gate.touch()
+                            gate.utterance_done()   # PTT: close now, so audio during STT/LLM isn't queued
                             self.ui.set_state("THINKING")
                             text = self._stt.transcribe(audio)
                             if text.strip():
@@ -238,6 +280,9 @@ class ListenLoopsMixin:
             log_crash(e, context="STT-Whisper")
             print(f"[STT-Whisper] Mic error: {e}")
             traceback.print_exc()
+        finally:
+            if unregister_ptt is not None:
+                unregister_ptt()    # don't leave a global hotkey hook behind
 
     def _listen_vosk(self) -> None:
         from main import sd, log_crash  # lazy: avoids circular import at module load time

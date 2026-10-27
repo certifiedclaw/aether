@@ -254,6 +254,10 @@ class WakeGate:
         """User spoke; restart the silence window."""
         self._last = self._clock()
 
+    def utterance_done(self) -> None:
+        """No-op: wake-word mode stays awake until the silence timeout (the
+        push-to-talk gate in core/listen_mode.py closes here instead)."""
+
     def check_sleep(self, speaking: bool = False) -> bool:
         """True if the gate just went to sleep because of silence."""
         if not self.enabled or not self._awake or speaking:

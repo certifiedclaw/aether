@@ -105,8 +105,22 @@ The right side of the main window separates **Activity** from **Actions**. Quick
 | `F4` | Mute or unmute the microphone |
 | `F11` | Toggle fullscreen |
 | `Ctrl+Alt+A` | Show or hide the window |
+| `Ctrl+Alt+Space` | Push-to-talk: open the mic for one utterance (see Listening modes) |
 | `Esc` | Collapse the window to the orb or restore it |
 | `Ctrl+Shift+N` | Start a new chat |
+
+## Listening modes
+
+An always-open mic treats any loud audio (a video playing in the background, a TV) as speech and transcribes it. Aether can gate the mic instead. Set `listen_mode` in `config/api_keys.json`:
+
+| `listen_mode` | Behavior |
+| --- | --- |
+| `auto` (default) | Wake word if it is installed and ready, otherwise push-to-talk, otherwise always-listening (with a warning in the log). |
+| `ptt` | Push-to-talk: the mic is closed until you press the hotkey (`ptt_hotkey`, default `ctrl+alt+space`), then it captures one utterance and closes again. The window also closes after `ptt_idle_secs` (default 6) if you do not start speaking, and never closes while you are mid-sentence. |
+| `wake` | Say "Hey Jarvis" (needs `openwakeword`). Falls back to always-listening if the model is not ready. |
+| `always` | The old behavior: the mic is always open, so background audio is transcribed. |
+
+Push-to-talk needs the `keyboard` package (in `requirements.txt`; on Linux it may need root, on macOS Accessibility permission). If the hotkey cannot be registered, Aether stays always-listening and says so in the activity log rather than going deaf. An explicit `wake_word_enabled` setting is still honored when `listen_mode` is not set, so existing setups are unchanged. Set `"listen_mode": "always"` to restore the old always-open mic.
 
 ## Chat commands
 

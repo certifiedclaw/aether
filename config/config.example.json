@@ -31,6 +31,11 @@
   "stt_model":    "small",
   "stt_language": "auto",
 
+  "_comment_listen": "── Listening mode: what gates the mic so background audio (TV, videos) isn't transcribed. 'auto' = wake word if ready, else push-to-talk, else always-listening. Options: auto | ptt | wake | always. Push-to-talk needs the 'keyboard' package; the hotkey opens the mic for one utterance.",
+  "listen_mode":   "auto",
+  "ptt_hotkey":    "ctrl+alt+space",
+  "ptt_idle_secs": 6,
+
   "_comment_tts": "── Text-to-speech ───────────────────────────────────────",
   "tts_engine":   "edgetts",
   "tts_voice":    "en-US-GuyNeural",
