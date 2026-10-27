@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-26 18:28 UTC
+Generated: 2026-10-27 12:01 UTC
+
+## #118 — 2026-10-27 12:01 UTC — Claude Code
+
+Roadmap #92 done: promise-without-action retry in core/conversation_core.py (_looks_like_unfulfilled_promise + one nudged retry in the tool loop), 33 new tests incl. end-to-end loop tests with a mock host and scripted LLM. Full suite 914 passed, same 5 pre-existing sandbox failures. Also added roadmap #96-#99 and set a funny/uncensored IDENTITY in core/prompt.txt earlier this session. Branch maintenance/roadmap-24-31 (PR not opened yet).
+
+**Touched:** `core/conversation_core.py`, `tests/test_promise_without_action.py`, `core/prompt.txt`
+
+**Next steps:** Try a live research prompt on qwen3:8b and watch for the promise-retry WRN log; then #95 (push-to-talk default) and #93 (trim per-turn prompt). #88 still needs free -h / ollama list from the server.
+
+---
 
 ## #117 — 2026-10-26 18:28 UTC — Claude Code
 

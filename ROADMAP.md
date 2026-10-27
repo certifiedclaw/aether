@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-26 19:21 UTC
+Generated: 2026-10-27 12:01 UTC
 
 ## In progress
 
@@ -13,8 +13,6 @@ Generated: 2026-10-26 19:21 UTC
 
 ## Backlog
 
-- [ ] **#92** Small-model replies that promise but never act ('I will research...') - retry once forcing the tool call `high`
-  - Seen live: Artemis research turn ended after 2 rounds with only a promise; qwen3:8b
 - [ ] **#48** [F0] Auto-update with rollback: pull, run tests, roll back on failure `medium`
 - [ ] **#53** [F1] Self-check pass: model re-reads its answer for obvious mistakes `medium`
   - ~300 lines.
@@ -180,3 +178,5 @@ Generated: 2026-10-26 19:21 UTC
   - Config migration remains in core/config_home.py; the persistent user-data migration follow-up shipped as #91.
 - [x] **#91** Persistent user data survives version upgrades
   - Added per-user data storage with one-time non-destructive migration for app data, long-term memory, and chat history; routed data consumers and Docker/doctor/security/test coverage.
+- [x] **#92** Small-model replies that promise but never act ('I will research...') - retry once forcing the tool call
+  - Done: core/conversation_core.py now detects a short first-person promise reply ('I'll research that now') with no tool call and retries the round ONCE with a nudge (llm.promise_without_action_retry metric). Conservative detector: <=400 chars, no '?' or code fence, first/last sentence must open with a promise + action verb. Only when tools were offered and the reply wasn't truncated. Promise + nudge stay in the turn's working messages, never in saved chat history. 33 tests in tests/test_promise_without_action.py incl. 4 that drive the real loop with a scripted LLM. Not yet verified against a live qwen3:8b -- worth one real research prompt and watching logs for the 'promised an action' WRN line.

@@ -105,6 +105,57 @@ _FAKE_TOOL_KWARG_RE = re.compile(
 )
 
 
+# --- Promise-without-action recovery (roadmap #92) ---------------------------
+# Small local models (seen live with qwen3:8b on a research turn) sometimes end
+# a round with a pure promise -- "I'll research that now." -- and no tool call,
+# so the turn finishes having done nothing. We detect that narrow shape and
+# retry the round ONCE with a nudge. Deliberately conservative: a false
+# positive costs one extra LLM round, but a too-broad match would make normal
+# answers ("I'll keep that in mind") trigger pointless retries.
+_PROMISE_FILLER = r"(?:(?:sure|okay|ok|alright|all right|got it|right|yep|yeah|absolutely|certainly)\s*[,!.:-]*\s*)*"
+_PROMISE_LEAD = (
+    r"(?:i\s*(?:'ll|’ll|will|am going to|'m going to|’m going to|'m gonna|’m gonna|gonna)"
+    r"|let\s+me|(?:i\s+)?going\s+to)"
+)
+_PROMISE_ADVERB = r"(?:\s+(?:now|first|then|go ahead and|start by|begin by|just|quickly|also))*"
+_PROMISE_VERBS = (
+    r"(?:research|search|look(?:\s+(?:up|into|for|at))?|find(?:\s+out)?|check|open|fetch|"
+    r"pull(?:\s+up)?|run|create|write|build|analy[sz]e|investigate|launch|gather|"
+    r"dig(?:\s+into)?|browse|read|summari[sz]e|compile|set\s+up|get|grab|dive\s+into|"
+    r"start|begin|put\s+together|scan|query|download|look)"
+)
+_PROMISE_RE = re.compile(
+    r"^\s*" + _PROMISE_FILLER + _PROMISE_LEAD + _PROMISE_ADVERB + r"\s+" + _PROMISE_VERBS + r"\b",
+    re.IGNORECASE,
+)
+_PROMISE_MAX_CHARS = 400
+
+_PROMISE_NUDGE = (
+    "You said you would do something but did not call a tool, so nothing happened. "
+    "Do it now: call the appropriate tool. Do not reply with text that only says what you will do."
+)
+
+
+def _looks_like_unfulfilled_promise(text: str) -> bool:
+    """True when `text` is a short reply that only *announces* an action
+    ("Sure, I'll research that now.") instead of doing it.
+
+    Only meant to be consulted when the model made no tool call this round.
+    Conservative on purpose: must be short, must not be a question to the
+    user, must not contain a code block, and the first or last sentence must
+    open with a first-person promise followed directly by an action verb.
+    """
+    t = (text or "").strip()
+    if not t or len(t) > _PROMISE_MAX_CHARS:
+        return False
+    if "?" in t or "```" in t:
+        return False
+    sentences = [s for s in re.split(r"(?<=[.!])\s+|\n+", t) if s.strip()]
+    if not sentences:
+        return False
+    return bool(_PROMISE_RE.match(sentences[0]) or _PROMISE_RE.match(sentences[-1]))
+
+
 def _parse_fake_tool_call(text: str) -> tuple[str, dict] | None:
     """Best-effort recovery for a common small/weak-local-model failure
     mode: instead of using structured tool calling, the model writes the
@@ -605,6 +656,7 @@ class ConversationCoreMixin:
 
         tools = _turn_tools
         _empty_retried = False   # one no-tools retry after an empty model response
+        _promise_retried = False  # one nudged retry after a promise-without-action reply (#92)
 
         for _round in range(MAX_TOOL_ROUNDS):
             if self._cancel_current_turn.is_set():
@@ -799,6 +851,24 @@ class ConversationCoreMixin:
                         )
                         self._obs.count("llm.fake_tool_call_unrecoverable")
                         final_content = ""
+
+            # Promise without action (#92): the model announced what it would do
+            # ("I'll research that now") but made no tool call, which would end
+            # the turn having done nothing. Retry this round ONCE with a nudge.
+            # The promise + nudge live only in this turn's working `messages`
+            # (never in self._conversation), and nothing has been spoken yet.
+            if (not final_tool_calls and final_content and tools
+                    and not _promise_retried and not _was_truncated
+                    and _looks_like_unfulfilled_promise(final_content)):
+                _promise_retried = True
+                self.ui.write_log(
+                    "WRN: model promised an action without calling a tool - retrying once: "
+                    + final_content[:120].replace("\n", " ")
+                )
+                self._obs.count("llm.promise_without_action_retry")
+                messages.append({"role": "assistant", "content": final_content})
+                messages.append({"role": "user", "content": _PROMISE_NUDGE})
+                continue
 
             if not final_tool_calls:
                 if _streamed:
