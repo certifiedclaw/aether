@@ -9,7 +9,7 @@ directly), never ROADMAP.md itself.
 
 Usage:
     python -m tools.maintenance.roadmap list
-    python -m tools.maintenance.roadmap add "Audit agent/executor.py" --priority high --notes "Never audited per PERFORMANCE_NOTES.md"
+    python -m tools.maintenance.roadmap add "Audit agent/executor.py" --priority high --notes "Never audited per docs/PERFORMANCE_NOTES.md"
     python -m tools.maintenance.roadmap start <id>
     python -m tools.maintenance.roadmap note <id> --notes "Current evidence and next step"
     python -m tools.maintenance.roadmap done <id>
@@ -31,12 +31,12 @@ SEED_ITEMS = [
     {
         "title": "Audit agent/executor.py",
         "priority": "medium",
-        "notes": "Flagged 'not yet audited' in PERFORMANCE_NOTES.md.",
+        "notes": "Flagged 'not yet audited' in docs/PERFORMANCE_NOTES.md.",
     },
     {
         "title": "Audit agent/planner.py",
         "priority": "medium",
-        "notes": "Flagged 'not yet audited' in PERFORMANCE_NOTES.md.",
+        "notes": "Flagged 'not yet audited' in docs/PERFORMANCE_NOTES.md.",
     },
     {
         "title": "Second pass on agent/task_queue.py",
@@ -46,7 +46,7 @@ SEED_ITEMS = [
     {
         "title": "Audit core/observability.py and core/task_scheduler.py",
         "priority": "low",
-        "notes": "Flagged 'not yet audited' in PERFORMANCE_NOTES.md.",
+        "notes": "Flagged 'not yet audited' in docs/PERFORMANCE_NOTES.md.",
     },
     {
         "title": "Check plugin_watcher.py poll interval and rescan scope",

@@ -35,9 +35,7 @@ from core.risk import APPROVAL_CODE_LIMIT, RUN_PYTHON_DISABLED
 
 logger = logging.getLogger(__name__)
 
-# ─────────────────────────────────────────────────────────────────────────────
 # INFO
-# ─────────────────────────────────────────────────────────────────────────────
 
 def get_weather(city: str = "auto") -> str:
     """Current weather via wttr.in — no API key needed."""
@@ -154,9 +152,7 @@ def get_battery() -> str:
         return f"Battery error: {e}"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # PRODUCTIVITY
-# ─────────────────────────────────────────────────────────────────────────────
 
 _NOTES_DIR = data_path("notes")
 
@@ -332,9 +328,7 @@ def convert_units(value: float, from_unit: str, to_unit: str) -> str:
             "speed (m/s/km/h/mph/knot), data (b/kb/mb/gb/tb)")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # FILES
-# ─────────────────────────────────────────────────────────────────────────────
 
 def zip_files(paths: list | str, output: str = "") -> str:
     """Zip one or more files/folders."""
@@ -516,9 +510,7 @@ def batch_rename(folder: str, pattern: str, replacement: str,
         return f"Rename error: {e}"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # SYSTEM — processes, windows, input
-# ─────────────────────────────────────────────────────────────────────────────
 
 def list_processes(filter_name: str = "", top: int = 20) -> str:
     """List running processes sorted by CPU usage."""
@@ -660,9 +652,7 @@ def set_system_volume(level: int) -> str:
         return f"Volume error: {e}"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # CODE
-# ─────────────────────────────────────────────────────────────────────────────
 
 def run_python(code: str, timeout: int = 10) -> str:
     """Fail closed until arbitrary code can run in an OS-enforced sandbox."""
@@ -748,9 +738,7 @@ def lint_python(path: str) -> str:
         return f"Lint error: {e}"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # NETWORK
-# ─────────────────────────────────────────────────────────────────────────────
 
 def ping_host(host: str, count: int = 4) -> str:
     """Ping a hostname or IP address."""
@@ -815,9 +803,7 @@ def get_local_ip() -> str:
         return f"IP error: {e}"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # MEDIA — local files
-# ─────────────────────────────────────────────────────────────────────────────
 
 def play_file(path: str) -> str:
     """Open a media file with the system default player."""
@@ -836,9 +822,7 @@ def play_file(path: str) -> str:
         return f"Play error: {e}"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # MISC
-# ─────────────────────────────────────────────────────────────────────────────
 
 def generate_qr(text: str, save_path: str = "") -> str:
     """Generate a QR code image. Requires: pip install qrcode Pillow"""
@@ -928,9 +912,7 @@ def random_fact() -> str:
         return f"Fact error: {e}"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # DISPATCH — called by agent/executor.py and main.py _execute_tool
-# ─────────────────────────────────────────────────────────────────────────────
 
 from core.risk import gated, extra_tool_extract  # noqa: E402
 @gated("extra_tool", extract=extra_tool_extract)
@@ -945,7 +927,7 @@ def run_extra_tool(action: str, params: dict) -> str:
     """
     a = action.strip().lower()
 
-    # ── Information ──────────────────────────────────────────────────────────
+    # Information
     if a == "wikipedia":
         return get_wikipedia(params.get("topic", params.get("query", "")),
                              int(params.get("sentences", 4)))
@@ -958,7 +940,7 @@ def run_extra_tool(action: str, params: dict) -> str:
     if a == "datetime":
         return get_current_datetime(params.get("timezone", ""))
 
-    # ── Notes ────────────────────────────────────────────────────────────────
+    # Notes
     if a == "save_note":
         return save_note(params.get("title", ""), params.get("content", ""))
     if a == "list_notes":
@@ -968,7 +950,7 @@ def run_extra_tool(action: str, params: dict) -> str:
     if a == "delete_note":
         return delete_note(params.get("title", ""))
 
-    # ── Reminders / Timers ───────────────────────────────────────────────────
+    # Reminders / Timers
     if a == "remind_me":
         return remind_me(params.get("message", ""), float(params.get("minutes", 5)))
     if a == "list_reminders":
@@ -978,7 +960,7 @@ def run_extra_tool(action: str, params: dict) -> str:
     if a == "timer":
         return set_timer(int(params.get("seconds", 60)), params.get("label", "Timer"))
 
-    # ── Security / Utilities ─────────────────────────────────────────────────
+    # Security / Utilities
     if a == "password":
         return generate_password(int(params.get("length", 16)),
                                  bool(params.get("symbols", True)))
@@ -986,7 +968,7 @@ def run_extra_tool(action: str, params: dict) -> str:
         return convert_units(float(params.get("value", 0)),
                              params.get("from_unit", ""), params.get("to_unit", ""))
 
-    # ── Files ────────────────────────────────────────────────────────────────
+    # Files
     if a == "zip":
         return zip_files(params.get("paths", []), params.get("output", ""))
     if a == "unzip":
@@ -1004,7 +986,7 @@ def run_extra_tool(action: str, params: dict) -> str:
                             params.get("replacement", ""),
                             bool(params.get("dry_run", True)))
 
-    # ── Processes / Windows ──────────────────────────────────────────────────
+    # Processes / Windows
     if a == "list_processes":
         return list_processes(params.get("filter_name", ""), int(params.get("top", 20)))
     if a == "kill_process":
@@ -1014,13 +996,13 @@ def run_extra_tool(action: str, params: dict) -> str:
     if a == "focus_window":
         return focus_window(params.get("title", ""))
 
-    # ── Input ────────────────────────────────────────────────────────────────
+    # Input
     if a in ("auto_type", "type"):
         return type_text(params.get("text", ""))
     if a == "set_volume":
         return set_system_volume(int(params.get("level", 50)))
 
-    # ── Code / Dev ───────────────────────────────────────────────────────────
+    # Code / Dev
     if a == "run_python":
         return run_python(params.get("code", ""), int(params.get("timeout", 10)))
     if a == "calculate":
@@ -1030,7 +1012,7 @@ def run_extra_tool(action: str, params: dict) -> str:
     if a == "lint":
         return lint_python(params.get("path", ""))
 
-    # ── Network ──────────────────────────────────────────────────────────────
+    # Network
     if a == "ping":
         return ping_host(params.get("host", ""), int(params.get("count", 4)))
     if a == "check_port":
@@ -1040,7 +1022,7 @@ def run_extra_tool(action: str, params: dict) -> str:
     if a == "local_ip":
         return get_local_ip()
 
-    # ── Media / Misc ─────────────────────────────────────────────────────────
+    # Media / Misc
     if a == "play_file":
         return play_file(params.get("path", ""))
     if a in ("qr_code", "qr"):
@@ -1053,7 +1035,7 @@ def run_extra_tool(action: str, params: dict) -> str:
     if a == "translate":
         return translate_text(params.get("text", ""), params.get("target_lang", "en"))
 
-    # ── Clipboard (pyperclip) ─────────────────────────────────────────────────
+    # Clipboard (pyperclip)
     if a == "clipboard_read":
         try:
             import pyperclip

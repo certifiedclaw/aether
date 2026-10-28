@@ -8,6 +8,9 @@ import sys
 from pathlib import Path
 
 from core.llm_client import call_llm_text
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_base_dir() -> Path:
@@ -79,7 +82,7 @@ def _generate_search_query(topic: str) -> str:
             
     except Exception as e:
         # Fallback: simple truncation if LLM fails
-        print(f"[Planner] Warning: Query generation failed: {e}")
+        logger.warning(f"[Planner] Warning: Query generation failed: {e}")
         # Take first 8 words as fallback
         words = topic.split()[:8]
         return ' '.join(words).strip() if words else topic[:100].strip()
@@ -238,25 +241,25 @@ def create_plan(goal: str, context: str = "") -> dict:
 
         for step in plan["steps"]:
             if step.get("tool") == "generated_code":
-                print(f"[Planner] ⚠️ generated_code in step {step.get('step')} — replacing with web_search")
+                logger.warning(f"[Planner] generated_code in step {step.get('step')} — replacing with web_search")
                 step["tool"]       = "web_search"
                 step["parameters"] = {"query": _generate_search_query(step.get("description", goal))}
 
-        print(f"[Planner] ✅ Plan: {len(plan['steps'])} steps")
+        logger.info(f"[Planner] Plan: {len(plan['steps'])} steps")
         for s in plan["steps"]:
             print(f"  Step {s['step']}: [{s['tool']}] {s['description']}")
         return plan
 
     except json.JSONDecodeError as e:
-        print(f"[Planner] ⚠️ JSON parse failed: {e}")
+        logger.warning(f"[Planner] JSON parse failed: {e}")
         return _fallback_plan(goal)
     except Exception as e:
-        print(f"[Planner] ⚠️ Planning failed: {e}")
+        logger.warning(f"[Planner] Planning failed: {e}")
         return _fallback_plan(goal)
 
 
 def _fallback_plan(goal: str) -> dict:
-    print("[Planner] 🔄 Fallback plan")
+    logger.info("[Planner] Fallback plan")
     return {
         "goal":  goal,
         "steps": [
@@ -297,8 +300,8 @@ Create a REVISED plan for the remaining work only. Do not repeat completed steps
                 step["tool"]       = "web_search"
                 step["parameters"] = {"query": _generate_search_query(step.get("description", goal))}
 
-        print(f"[Planner] 🔄 Revised plan: {len(plan['steps'])} steps")
+        logger.info(f"[Planner] Revised plan: {len(plan['steps'])} steps")
         return plan
     except Exception as e:
-        print(f"[Planner] ⚠️ Replan failed: {e}")
+        logger.warning(f"[Planner] Replan failed: {e}")
         return _fallback_plan(goal)

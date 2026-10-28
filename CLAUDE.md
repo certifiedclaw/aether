@@ -13,7 +13,7 @@ Then read `MAINTENANCE.md` — the auto-generated index into current project sta
 - `DEPENDENCY_REPORT.md` — latest PyPI/upstream versions vs what's pinned
 - `ROADMAP.md` — the actual backlog (edit via `python -m tools.maintenance.roadmap`, never by hand)
 
-These are regenerated automatically on every app launch (see the maintenance hook in `main.py`'s `main()`) and are safe to trust as current — don't rely on `IMPROVEMENTS_V2.md` through `V6.md` or `CHANGES.md`, those are historical snapshots that stop being updated.
+These are regenerated automatically on every app launch (see the maintenance hook in `main.py`'s `main()`) and are safe to trust as current — don't rely on `docs/IMPROVEMENTS_V2.md` through `V6.md` or `docs/CHANGES.md`, those are historical snapshots that stop being updated.
 
 If it's been a while since Aether was last launched, or you're working from a fresh clone, run this before trusting the reports:
 
@@ -27,7 +27,7 @@ Before you finish this session, log a handoff entry so the next session (Claude 
 python -m tools.maintenance.handoff add --by "Claude Code" --summary "..." --files "..." --next "..."
 ```
 
-See also: `AGENTS.md` (onboarding written for any LLM, not just Claude) and `PROJECT_INSTRUCTIONS.md` (the text to paste into a Claude Project's custom instructions, for when work happens in claude.ai chat instead of Claude Code).
+See also: `AGENTS.md` (onboarding written for any LLM, not just Claude) and `docs/PROJECT_INSTRUCTIONS.md` (the text to paste into a Claude Project's custom instructions, for when work happens in claude.ai chat instead of Claude Code).
 
 ## Conventions
 

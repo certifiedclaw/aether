@@ -24,17 +24,17 @@ from enum import Enum
 
 
 class Capability(str, Enum):
-    # ── Always granted to any paired device (cannot be revoked) ──
+    # Always granted to any paired device (cannot be revoked)
     CHAT          = "CHAT"            # send text commands
     WAKE          = "WAKE"            # trigger Aether's wake-word equivalent
     NOTIFICATIONS  = "NOTIFICATIONS"  # receive push / backgrounded WS pushes
 
-    # ── Default at first pairing ──
+    # Default at first pairing
     FILES_LIST    = "FILES_LIST"      # GET /api/files
     VOICE_RX      = "VOICE_RX"        # receive audio replies from Aether (future)
     AUDIT_READ    = "AUDIT_READ"      # read logs/security.log
 
-    # ── Off by default; user must explicitly grant ──
+    # Off by default; user must explicitly grant
     FILES_UPLOAD  = "FILES_UPLOAD"    # POST /api/upload
     FILES_DOWNLOAD = "FILES_DOWNLOAD" # GET /uploads/{name}
     VOICE_TX      = "VOICE_TX"        # send audio frames (future)
@@ -44,7 +44,7 @@ class Capability(str, Enum):
     SHELL         = "SHELL"           # run shell commands via actions/extra_tools.py
     PLUGIN_EXEC   = "PLUGIN_EXEC"     # invoke a plugin by name
 
-    # ── Admin (only the user's own desktop UI has this) ──
+    # Admin (only the user's own desktop UI has this)
     ADMIN         = "ADMIN"           # device management, audit, rotation
 
     @classmethod
@@ -79,7 +79,7 @@ class RiskLevel(str, Enum):
     HIGH   = "HIGH"
 
 
-# ── Capability → risk mapping ──────────────────────────────────────────────
+# Capability → risk mapping
 # Used by `policy.py` to decide whether a request needs desktop-UI approval.
 # Every capability must be in exactly one risk level. Add a new capability →
 # add it here.

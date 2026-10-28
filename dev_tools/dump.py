@@ -7,7 +7,7 @@ Perfect for sharing with AI assistants or for code reviews.
 import os
 from pathlib import Path
 
-# ── Config ────────────────────────────────────────────────────────────────
+# Config
 # Folders to skip entirely (to avoid bloating the dump)
 IGNORE_LIST = {
     '.git', '__pycache__', '.venv', 'venv', 'node_modules',

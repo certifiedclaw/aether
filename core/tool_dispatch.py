@@ -55,6 +55,9 @@ from actions.computer_control  import computer_control
 from actions.game_updater      import game_updater
 
 from core import undo as undo_stack
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ToolDispatchMixin:
@@ -64,7 +67,7 @@ class ToolDispatchMixin:
     """
 
     def _execute_tool(self, name: str, args: dict) -> str:
-        print(f"[Aether] 🔧 {name}  {args}")
+        logger.info(f"[Aether] {name}  {args}")
         self.ui.set_state("THINKING")
 
         if name == "save_memory":
@@ -96,7 +99,7 @@ class ToolDispatchMixin:
                 # goal_state docstring.
                 result = self._tool_goal_alias(name, args)
             else:
-                # ── Try plugin tools ───────────────────────────────────
+                # Try plugin tools
                 if self._plugins:
                     # Support both "plugin.tool_name" and bare "tool_name"
                     tool_key = name.replace("plugin.", "")
@@ -110,7 +113,7 @@ class ToolDispatchMixin:
                         if not self.ui.muted:
                             self.ui.set_state("LISTENING")
                         return result
-                # ── Try MCP tools, else unknown ────────────────────────
+                # Try MCP tools, else unknown
                 result = self._tool_fallback(name, args)
 
         except Exception as e:
@@ -123,7 +126,7 @@ class ToolDispatchMixin:
         if not self.ui.muted:
             self.ui.set_state("LISTENING")
 
-        print(f"[Aether] 📤 {name} → {str(result)[:80]}")
+        logger.info(f"[Aether] {name} → {str(result)[:80]}")
         return result
 
     def _tool_save_memory(self, args: dict) -> str:
@@ -133,7 +136,7 @@ class ToolDispatchMixin:
         if key and value:
             from main import update_memory  # lazy: avoids circular import at module load time
             update_memory({category: {key: {"value": value}}})
-            print(f"[Memory] 💾 {category}/{key} = {value}")
+            logger.info(f"[Memory] {category}/{key} = {value}")
         if not self.ui.muted:
             self.ui.set_state("LISTENING")
         return "__SILENT__"
@@ -232,7 +235,7 @@ class ToolDispatchMixin:
         r = flight_finder(parameters=args, player=self.ui)
         return r or "Done."
 
-    # ── NEW tools ─────────────────────────────────────────────────
+    # NEW tools
 
     def _tool_osint_lookup(self, args: dict) -> str:
         try:
@@ -317,7 +320,7 @@ class ToolDispatchMixin:
         except Exception as e:
             return f"Diagnostics error: {e}"
 
-    # ── NEW v2: goal manager ───────────────────────────────────
+    # goal manager
 
     def _tool_goal_manager(self, args: dict) -> str:
         if self._goals:
@@ -330,12 +333,12 @@ class ToolDispatchMixin:
             return self._goals.handle_tool(name, args)
         return "Goal system not initialised."
 
-    # ── NEW v2: observability report ───────────────────────────
+    # observability report
 
     def _tool_obs_report(self, args: dict) -> str:
         return self._obs.report()
 
-    # ── NEW v4: memory management tools ───────────────────────
+    # memory management tools
 
     @gated("memory_tool")
     def _tool_memory_tool(self, args: dict) -> str:
@@ -354,19 +357,19 @@ class ToolDispatchMixin:
         else:
             return f"Unknown memory_tool action '{action}'. Use: backup | export | import | prune | stats"
 
-    # ── NEW v4: crash report ───────────────────────────────────
+    # crash report
 
     def _tool_crash_report(self, args: dict) -> str:
         from main import get_recent_crashes  # lazy: avoids circular import at module load time
         return get_recent_crashes(n=args.get("n", 5))
 
-    # ── extra utility toolkit ──────────────────────────────────
+    # extra utility toolkit
 
     def _tool_extra_tool(self, args: dict) -> str:
         from actions.extra_tools import run_extra_tool
         return run_extra_tool(args.get("action", ""), args)
 
-    # ── NEW v3: LangChain integration ──────────────────────────
+    # LangChain integration
 
     def _tool_langchain(self, args: dict) -> str:
         from main import _LANGCHAIN_OK, langchain_tool  # lazy: avoids circular import at module load time
@@ -384,7 +387,7 @@ class ToolDispatchMixin:
             "langchain-ollama ddgs wikipedia"
         )
 
-    # ── NEW v3: Open Interpreter ───────────────────────────────
+    # Open Interpreter
 
     def _tool_open_interpreter(self, args: dict) -> str:
         from main import _OI_OK, oi_tool  # lazy: avoids circular import at module load time
@@ -398,7 +401,7 @@ class ToolDispatchMixin:
             "Fix: pip install open-interpreter"
         )
 
-    # ── NEW v3: LlamaIndex RAG ─────────────────────────────────
+    # LlamaIndex RAG
 
     def _tool_llama_index(self, args: dict) -> str:
         from main import _LLAMA_OK, llama_index_tool  # lazy: avoids circular import at module load time

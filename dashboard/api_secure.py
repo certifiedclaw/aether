@@ -47,7 +47,7 @@ from security import audit
 router = APIRouter()
 
 
-# ── request bodies ─────────────────────────────────────────────────────
+# request bodies
 class PairRequest(BaseModel):
     pin: str = Field(min_length=1, max_length=12)
     device_name: str = Field(default="unnamed device", max_length=64)
@@ -57,7 +57,7 @@ class ReauthRequest(BaseModel):
     device_token: str = Field(min_length=1, max_length=256)
 
 
-# ── pairing: no session required -- this is how a device gets one ──────
+# pairing: no session required -- this is how a device gets one
 @router.post("/pair")
 async def pair(req: Request, body: PairRequest):
     mgr = get_manager()
@@ -101,7 +101,7 @@ async def reauth(req: Request, body: ReauthRequest):
     return result
 
 
-# ── identity ─────────────────────────────────────────────────────────
+# identity
 @router.get("/me")
 async def me(session=Depends(require_session)):
     device, sess = session
@@ -113,7 +113,7 @@ async def me(session=Depends(require_session)):
     }
 
 
-# ── approvals: a device polls the outcome of its own HIGH-risk request ─
+# approvals: a device polls the outcome of its own HIGH-risk request
 @router.get("/approvals/{approval_id}")
 async def get_approval(approval_id: str, session=Depends(require_session)):
     device, _sess = session

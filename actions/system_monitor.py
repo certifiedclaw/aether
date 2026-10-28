@@ -20,7 +20,7 @@ DEFAULT_THRESHOLDS = {
 _COOLDOWN   = 300
 _CPU_STREAK = 3
 
-# ── NVML DLL cache (Windows: nvml.dll, Linux: libnvidia-ml.so.1) ─────────────
+# NVML DLL cache (Windows: nvml.dll, Linux: libnvidia-ml.so.1)
 _nvml_lib: object = None
 _nvml_ok:  object = None   # None=untested  True=works  False=unavailable
 

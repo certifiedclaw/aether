@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-18 00:02 UTC
+Generated: 2026-10-28 22:35 UTC
 
 ## In progress
 
@@ -15,6 +15,8 @@ Generated: 2026-10-18 00:02 UTC
 
 - [ ] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option `high`
   - Repository protections already implemented: config/api_keys.json is ignored, example templates are present, and credentials resolve environment -> OS keyring -> local file with a migration CLI. Confirmed the config file is not tracked in this Git history. Previously shared full-folder archives are outside this checkout; the owner still needs to check/remove any such archives and rotate keys if one contained them.
+- [ ] **#92** Small-model replies that promise but never act ('I will research...') - retry once forcing the tool call `high`
+  - Seen live: Artemis research turn ended after 2 rounds with only a promise; qwen3:8b
 - [ ] **#48** [F0] Auto-update with rollback: pull, run tests, roll back on failure `medium`
 - [ ] **#53** [F1] Self-check pass: model re-reads its answer for obvious mistakes `medium`
   - ~300 lines.
@@ -43,6 +45,12 @@ Generated: 2026-10-18 00:02 UTC
 - [ ] **#81** [F4] Coding agent: sandbox first (container), then edit-test-retry loop with git checkpoints `medium`
   - Sandbox also brings run_python back.
 - [ ] **#82** [F4] Skills system: drop-in folders of instructions and scripts `medium`
+- [ ] **#93** Trim per-turn prompt (2.6-4.5k tokens even for 'whats 2+2'): fewer tool schemas, shorter system prompt - TTFT is 1.4-3.2s `medium`
+  - From perf.jsonl on RTX 3050: ~30 tok/s, TTFT dominated by prompt processing
+- [ ] **#94** Investigate: duplicated user text in turns ('x\nx'), langchain research tool returning in 5ms, web_search paging 5 Bing pages (8.7s) `medium`
+  - From live_turns.jsonl / events.jsonl / aether.log of 2026-10-17
+- [ ] **#95** Push-to-talk / wake-word default so background media is never transcribed `medium`
+  - Energy VAD treats any loud audio (TikTok) as speech; confidence filter helps but only a gate fixes it. Set stt_language to en meanwhile.
 - [ ] **#14** Route the 174 stray print() calls through core/observability.py `low`
   - Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules — actions/ is intentionally exempt (CLI-facing tool output).
 - [ ] **#16** Decide fate of the vestigial session_memory param across actions/ `low`

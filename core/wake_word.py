@@ -214,7 +214,7 @@ class WakeWordDetector:
             pass
 
 
-# ── Aether additions ────────────────────────────────────────────────────────
+# Aether additions
 import time
 
 

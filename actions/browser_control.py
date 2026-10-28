@@ -115,12 +115,12 @@ def _real_profile_dir(browser: str) -> str:
 
     for p in candidates:
         if p.exists():
-            print(f"[Browser] ✅ Real profile found for {browser}: {p}")
+            logger.info(f"[Browser] Real profile found for {browser}: {p}")
             return str(p)
 
     fallback = home / ".aether_profiles" / browser
     fallback.mkdir(parents=True, exist_ok=True)
-    print(f"[Browser] ⚠️  Real profile not found for {browser}, using: {fallback}")
+    logger.warning(f"[Browser] Real profile not found for {browser}, using: {fallback}")
     return str(fallback)
 
 def _firefox_profile_dir() -> Optional[str]:
@@ -158,7 +158,7 @@ def _firefox_profile_dir() -> Optional[str]:
         default_path = str(base / p) if is_rel else p
 
     if default_path and Path(default_path).exists():
-        print(f"[Browser] Firefox real profile: {default_path}")
+        logger.info(f"[Browser] Firefox real profile: {default_path}")
         return default_path
     return None
 
@@ -175,7 +175,7 @@ def _find_opera_windows() -> Optional[str]:
     ]
     for p in candidates:
         if p.exists():
-            print(f"[Browser] Opera found at: {p}")
+            logger.info(f"[Browser] Opera found at: {p}")
             return str(p)
 
     try:
@@ -194,7 +194,7 @@ def _find_opera_windows() -> Optional[str]:
                     winreg.CloseKey(k)
                     exe = val.strip().strip('"').split('"')[0].split(" --")[0].strip()
                     if exe and Path(exe).exists():
-                        print(f"[Browser] Opera found via registry: {exe}")
+                        logger.info(f"[Browser] Opera found via registry: {exe}")
                         return exe
                 except Exception:
                     continue
@@ -287,7 +287,7 @@ def _resolve_browser(name: str) -> dict | None:
     if spec.get("special") == "opera_windows":
         exe = _find_opera_windows()
         if not exe:
-            print(f"[Browser] ⚠️  Opera executable not found on Windows.")
+            logger.warning(f"[Browser] Opera executable not found on Windows.")
         return {"engine": engine, "exe": exe, "channel": channel}
 
     for b in bins:
@@ -479,14 +479,14 @@ class _BrowserSession:
             try:
                 self._context = await engine_obj.launch_persistent_context(profile, **kwargs)
             except Exception as e:
-                print(f"[Browser] Firefox real profile failed ({e}), using Aether profile")
+                logger.warning(f"[Browser] Firefox real profile failed ({e}), using Aether profile")
                 aether = str(Path.home() / ".aether_profiles" / "firefox_aether")
                 Path(aether).mkdir(parents=True, exist_ok=True)
                 self._context = await engine_obj.launch_persistent_context(aether, **kwargs)
 
             await asyncio.sleep(0.5)  
             self._page = await adopt_page(self._context)
-            print(f"[Browser] ✅ Firefox launched")
+            logger.info(f"[Browser] Firefox launched")
             return
 
         if engine_name == "webkit":
@@ -501,7 +501,7 @@ class _BrowserSession:
             self._context = await engine_obj.launch_persistent_context(safari_profile, **kwargs)
             await asyncio.sleep(0.5)
             self._page = await adopt_page(self._context)
-            print(f"[Browser] ✅ Safari launched")
+            logger.info(f"[Browser] Safari launched")
             return
 
         profile = _real_profile_dir(self.browser_name)
@@ -535,20 +535,20 @@ class _BrowserSession:
             self._context = await engine_obj.launch_persistent_context(profile, **kwargs)
             await asyncio.sleep(0.5) 
             self._page = await adopt_page(self._context)
-            print(f"[Browser] ✅ Launched [{label}] profile={profile}")
+            logger.info(f"[Browser] Launched [{label}] profile={profile}")
             return
         except Exception as e:
-            print(f"[Browser] ⚠️  Real profile failed for {label}: {e}")
+            logger.warning(f"[Browser] Real profile failed for {label}: {e}")
 
         aether_profile = str(Path.home() / ".aether_profiles" / self.browser_name)
         Path(aether_profile).mkdir(parents=True, exist_ok=True)
-        print(f"[Browser] Retrying with Aether profile: {aether_profile}")
+        logger.info(f"[Browser] Retrying with Aether profile: {aether_profile}")
 
         try:
             self._context = await engine_obj.launch_persistent_context(aether_profile, **kwargs)
             await asyncio.sleep(0.5)
             self._page = await adopt_page(self._context)
-            print(f"[Browser] ✅ Launched [{label}] with Aether profile")
+            logger.info(f"[Browser] Launched [{label}] with Aether profile")
         except Exception as e2:
             raise RuntimeError(f"Could not launch {self.browser_name}: {e2}") from e2
 
@@ -575,19 +575,19 @@ class _BrowserSession:
             except PlaywrightTimeout:
                 pass   # page may have partially loaded — check URL below
             except Exception as e:
-                print(f"[Browser] goto exception (non-fatal): {e}")
+                logger.info(f"[Browser] goto exception (non-fatal): {e}")
             return p.url
 
         result_url = await _do_goto(page)
 
         if result_url in ("about:blank", "", None, prev_url) and prev_url in ("about:blank", "", None):
-            print(f"[Browser] Still blank after goto — retrying on new tab: {url}")
+            logger.info(f"[Browser] Still blank after goto — retrying on new tab: {url}")
             try:
                 new_page   = await adopt_page(self._context)
                 self._page = new_page
                 result_url = await _do_goto(new_page)
             except Exception as e:
-                print(f"[Browser] New-tab retry failed: {e}")
+                logger.warning(f"[Browser] New-tab retry failed: {e}")
 
         if result_url and result_url not in ("about:blank", "", None):
             return f"Opened: {result_url}"
@@ -789,7 +789,7 @@ class _SessionRegistry:
                 sess = _BrowserSession(browser_name)
                 sess.start()
                 self._sessions[browser_name] = sess
-                print(f"[Registry] New session: {browser_name}")
+                logger.info(f"[Registry] New session: {browser_name}")
             return self._sessions[browser_name]
 
     def get(self, browser_name: str | None = None) -> _BrowserSession:
@@ -843,6 +843,9 @@ class _SessionRegistry:
 _registry = _SessionRegistry()
 
 from core.risk import gated  # noqa: E402
+import logging
+
+logger = logging.getLogger(__name__)
 @gated("browser_control")
 def browser_control(
     parameters:    dict = None,
@@ -937,6 +940,6 @@ def browser_control(
 
 def _log(player, text: str):
     short = str(text)[:80]
-    print(f"[Browser] {short}")
+    logger.info(f"[Browser] {short}")
     if player:
         player.write_log(f"[browser] {short[:60]}")

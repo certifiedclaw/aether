@@ -50,7 +50,7 @@ class MemoryEngine:
         self._cache_ts:    list[float] = []
         self._cache_vecs:  list        = []  # np.ndarray, parallel to the above
 
-    # ── DB setup ──────────────────────────────────────────────────────────────
+    # DB setup
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self._db_path), check_same_thread=False)
         conn.execute("""CREATE TABLE IF NOT EXISTS memories (
@@ -64,7 +64,7 @@ class MemoryEngine:
         conn.commit()
         return conn
 
-    # ── Lazy encoder ──────────────────────────────────────────────────────────
+    # Lazy encoder
     def _ensure_encoder(self) -> None:
         """Load sentence-transformers only on first use, not at startup."""
         if self._encoder_tried:
@@ -102,7 +102,7 @@ class MemoryEngine:
         self._cache_ts    = [r[2] for r in rows]
         self._cache_vecs  = [np.frombuffer(r[3], dtype=np.float32) for r in rows]
 
-    # ── Write ──────────────────────────────────────────────────────────────────
+    # Write
     def store(self, user_input: str, response: str) -> None:
         ts  = time.time()
         combined = f"User: {user_input}\nAssistant: {response}"
@@ -134,7 +134,7 @@ class MemoryEngine:
         if len(self._session) > self._history_limit:
             self._session = self._session[-self._history_limit:]
 
-    # ── Read ───────────────────────────────────────────────────────────────────
+    # Read
     def get_session(self) -> list[dict]:
         return list(self._session)
 
@@ -196,7 +196,7 @@ class MemoryEngine:
         except Exception:
             return None
 
-    # ── Stats ──────────────────────────────────────────────────────────────────
+    # Stats
     def stats(self) -> dict:
         total = self._conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
         return {

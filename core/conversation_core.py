@@ -249,7 +249,7 @@ class ConversationCoreMixin:
         self.ui.set_state("THINKING")
         self.ui.write_log(f"You: {user_text}")
 
-        # ── Store to memory — only one engine writes, never both ───────
+        # Store to memory — only one engine writes, never both
         # hybrid_mem supersedes semantic_mem; if both exist only hybrid writes.
         _active_mem = self._hybrid_mem or self._semantic_mem
         if _active_mem:
@@ -285,7 +285,7 @@ class ConversationCoreMixin:
             }
         ] + list(self._conversation)
 
-        # ── NEW: compress context to fit token window ─────────────────
+        # compress context to fit token window
         # Reserve budget for the tool schema this turn will actually carry —
         # otherwise a request judged "under 3000 tokens" on message content
         # alone can still blow the model's real context once several
@@ -351,7 +351,7 @@ class ConversationCoreMixin:
                 _arg_hint = f" ({_first_k}={_first_v})"
             self.ui.write_log(f"SYS: ▶ {tname}{_arg_hint}")
 
-            # ── NEW v2: loop guard — block if tool called too many times ──
+            # loop guard — block if tool called too many times
             if self._loop_guard:
                 verdict = self._loop_guard.check(tname, targs)
                 if verdict.blocked:
@@ -457,7 +457,7 @@ class ConversationCoreMixin:
         return True
 
     def _process_message_inner(self, user_text: str) -> None:
-        # ── NEW v2: reset loop guard for new request ──────────────────
+        # reset loop guard for new request
         if self._loop_guard:
             self._loop_guard.reset()
         # New request: ends any tool approvals granted for the previous one (core/risk.py
@@ -474,17 +474,17 @@ class ConversationCoreMixin:
             pass
         # Track message in observability
         self._obs.count("messages.received")
-        # ── NEW: handle built-in chat commands ────────────────────────
+        # handle built-in chat commands
         if self._handle_chat_command(user_text):
             return
 
-        # ── Deterministic shortcuts for simple commands (volume, weather, ──
+        # Deterministic shortcuts for simple commands (volume, weather,
         # list files, open app). Small local models invent tool names/actions
         # or answer from imagination; these phrases need no model at all.
         if self._try_quick_intent(user_text):
             return
 
-        # ── Fast path for trivial turns (greetings, "thanks", "ok", …) ──
+        # Fast path for trivial turns (greetings, "thanks", "ok", …)
         # Skips the full tool schema and the expensive system-prompt
         # additions (memory retrieval, goals, MCP/plugin/integration
         # inventories) that were previously sent on every single turn
@@ -495,7 +495,7 @@ class ConversationCoreMixin:
         _route = _classify_tier(user_text, has_active_task=_has_active_task)
         _is_quick = _route.tier == _Tier.QUICK
 
-        # ── HARD tier: escalate this turn to Gemini ─────────────────────
+        # HARD tier: escalate this turn to Gemini
         # Only relevant when the *primary* configured provider is local
         # (Ollama/LM Studio) — if Gemini is already the primary provider
         # there's nothing to escalate to. Silently no-ops (stays on the
@@ -519,7 +519,7 @@ class ConversationCoreMixin:
             else:
                 self.ui.write_log("WRN: complex-reasoning tier wanted Gemini, but no gemini_api_key is configured — staying on the default model")
 
-        # ── Opt-in cloud route for tool turns (gemini_for_tools=true) ─────
+        # Opt-in cloud route for tool turns (gemini_for_tools=true)
         # Off by default. When on, tool-using turns go to Gemini because small
         # local models are unreliable at structured tool calls. This sends the
         # message, injected memory and tool results to Google, so every such
@@ -924,7 +924,7 @@ class ConversationCoreMixin:
                 final_assistant_reply = _reply
                 break
 
-        # ── Tool loop exhausted without ever producing a reply ──────────
+        # Tool loop exhausted without ever producing a reply
         # Every round returned a tool call that needed another LLM round
         # (so no round's `not any(... in _NEEDS_LLM_ROUND)` check broke the
         # loop) and none were silent-only, so the for-loop ran out of
@@ -945,7 +945,7 @@ class ConversationCoreMixin:
             self.ui.write_log(f"Aether: {final_assistant_reply}")
             self.speak(final_assistant_reply)
 
-        # ── Live usage dump — logs/live_turns.jsonl + logs/live_report.md ──
+        # Live usage dump — logs/live_turns.jsonl + logs/live_report.md
         # Best-effort, never raises; see core/live_report.py.
         from core.live_report import record_turn
         record_turn(
@@ -957,22 +957,20 @@ class ConversationCoreMixin:
             latency_ms=(time.monotonic() - _turn_start) * 1000,
         )
 
-        # ── Store full exchange + self-evaluate ─────────────────────────
+        # Store full exchange + self-evaluate
         self._finalize_response(user_text, "" if _turn_cancelled else final_assistant_reply, _active_mem,
                                  _tool_results, _llm_synthesized)
 
         if not self.ui.muted:
             self.ui.set_state("LISTENING")
 
-    # ------------------------------------------------------------------
     # STT loops
-    # ------------------------------------------------------------------
 
     def _finalize_response(self, user_text: str, final_assistant_reply: str,
                             _active_mem, _tool_results: list, _llm_synthesized: bool) -> None:
         """After the tool-call loop ends: store the full exchange to memory
         and, if applicable, run the self-evaluator on the LLM's reply."""
-        # ── Store full exchange — only the active engine ───────────────
+        # Store full exchange — only the active engine
         from core.memory_hygiene import is_storable_exchange
         if _active_mem and final_assistant_reply and is_storable_exchange(user_text, final_assistant_reply):
             try:
@@ -980,7 +978,7 @@ class ConversationCoreMixin:
             except Exception:
                 pass
 
-        # ── NEW v2: self-evaluate the response ────────────────────────
+        # self-evaluate the response
         # Only evaluate when the LLM produced the final reply; skip when we
         # used a raw tool result directly (score would be meaningless noise).
         if self._evaluator and final_assistant_reply and _tool_results and _llm_synthesized:

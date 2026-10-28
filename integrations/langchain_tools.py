@@ -30,7 +30,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# ── Availability probe ────────────────────────────────────────────────────
+# Availability probe
 # `import integrations.langchain_tools` only proves THIS file imports (every
 # langchain import below is lazy). main.py used that to print "LangChain ✓"
 # and to offer the tool to the model even when langchain was missing or too
@@ -104,7 +104,7 @@ def langchain_available() -> bool:
         return False
 
 
-# ── Lazy Ollama LLM (shared across all LangChain calls) ───────────────────
+# Lazy Ollama LLM (shared across all LangChain calls)
 
 @lru_cache(maxsize=1)
 def _get_llm(model: str = "qwen3:8b", base_url: str = "http://localhost:11434"):
@@ -133,7 +133,7 @@ def _llm_from_config() -> Any:
         return _get_llm()
 
 
-# ── Web search ────────────────────────────────────────────────────────────
+# Web search
 
 def lc_web_search(query: str, num_results: int = 5) -> str:
     """
@@ -177,7 +177,7 @@ def _research_source_rows(intermediate_steps) -> list[dict]:
     return rows
 
 
-# ── Wikipedia ─────────────────────────────────────────────────────────────
+# Wikipedia
 
 def lc_wikipedia(query: str, sentences: int = 5) -> str:
     """Quick Wikipedia lookup."""
@@ -194,7 +194,7 @@ def lc_wikipedia(query: str, sentences: int = 5) -> str:
         return f"Wikipedia error: {e}"
 
 
-# ── Summarisation ─────────────────────────────────────────────────────────
+# Summarisation
 
 def lc_summarize(text: str, style: str = "concise") -> str:
     """
@@ -248,7 +248,7 @@ def lc_summarize(text: str, style: str = "concise") -> str:
         return f"Summarisation error: {e}"
 
 
-# ── ReAct research agent ──────────────────────────────────────────────────
+# ReAct research agent
 
 def lc_research_agent(task: str, extra_context: str = "") -> str:
     """
@@ -331,7 +331,7 @@ def lc_research_agent(task: str, extra_context: str = "") -> str:
         return _unavailable("research agent", f"error: {e}")
 
 
-# ── Smart context compression (replaces smart_context.compress_if_needed) ─
+# Smart context compression (replaces smart_context.compress_if_needed)
 
 def lc_compress_history(messages: list[dict], max_tokens: int = 3000,
                          router=None) -> list[dict]:
@@ -389,7 +389,7 @@ def lc_compress_history(messages: list[dict], max_tokens: int = 3000,
         return messages
 
 
-# ── Document loader (for files → RAG via LangChain loaders) ──────────────
+# Document loader (for files → RAG via LangChain loaders)
 
 def lc_load_document(path: str) -> str:
     """
@@ -426,7 +426,7 @@ def lc_load_document(path: str) -> str:
         return f"Load error: {e}"
 
 
-# ── Main dispatch ─────────────────────────────────────────────────────────
+# Main dispatch
 
 def langchain_tool(action: str, args: dict) -> str:
     """
@@ -467,7 +467,7 @@ def langchain_tool(action: str, args: dict) -> str:
     return f"Unknown LangChain action: {action}. Options: {list(dispatch)}"
 
 
-# ── Tool declaration (add to TOOL_DECLARATIONS in main.py) ────────────────
+# Tool declaration (add to TOOL_DECLARATIONS in main.py)
 
 LANGCHAIN_TOOL_DECLARATION = {
     "name": "langchain",

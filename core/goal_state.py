@@ -127,7 +127,7 @@ class GoalState:
         active = sum(1 for g in self._goals.values() if g.is_active())
         logger.info("GoalState: loaded %d goals (%d active)", len(self._goals), active)
 
-    # ── CRUD ──────────────────────────────────────────────────────────────
+    # CRUD
 
     def create(self, title: str, description: str = "",
                priority: str = GoalPriority.NORMAL) -> Goal:
@@ -186,7 +186,7 @@ class GoalState:
         self._save()
         return f"Subtask {task_id} completed."
 
-    # ── Query ─────────────────────────────────────────────────────────────
+    # Query
 
     def get(self, goal_id: str) -> Goal | None:
         return self._goals.get(goal_id)
@@ -205,7 +205,7 @@ class GoalState:
         with self._lock:
             return sorted(self._goals.values(), key=lambda g: g.created_at, reverse=True)
 
-    # ── Prompt injection ──────────────────────────────────────────────────
+    # Prompt injection
 
     def format_for_prompt(self, max_goals: int = 5) -> str:
         """Returns a compact summary of active goals for injection into the system prompt."""
@@ -220,7 +220,7 @@ class GoalState:
         lines.append("[/Active Goals]")
         return "\n".join(lines)
 
-    # ── Tool interface (called by _execute_tool in main.py) ───────────────
+    # Tool interface (called by _execute_tool in main.py)
 
     def handle_tool(self, action: str, args: dict) -> str:
         """
@@ -256,7 +256,7 @@ class GoalState:
 
         return f"Unknown goal action: {action}"
 
-    # ── Persistence ───────────────────────────────────────────────────────
+    # Persistence
 
     def _save(self) -> None:
         try:
@@ -277,7 +277,7 @@ class GoalState:
             logger.warning("GoalState load error: %s", e)
 
 
-# ── Goal tool declarations (add these to TOOL_DECLARATIONS in main.py) ────
+# Goal tool declarations (add these to TOOL_DECLARATIONS in main.py)
 
 GOAL_TOOL_DECLARATIONS = [
     {

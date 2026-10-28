@@ -5,6 +5,9 @@ from pathlib import Path
 import sys
 
 from core.data_home import long_term_path
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_base_dir() -> Path:
     if getattr(sys, "frozen", False):
@@ -42,7 +45,7 @@ def load_memory() -> dict:
                 return data
             return _empty_memory()
         except Exception as e:
-            print(f"[Memory] ⚠️ Load error: {e}")
+            logger.error(f"[Memory] Load error: {e}")
             return _empty_memory()
 
 def _all_entries(memory: dict) -> list[tuple]:
@@ -65,7 +68,7 @@ def _trim_to_limit(memory: dict) -> dict:
         if len(json.dumps(memory, ensure_ascii=False)) <= MEMORY_MAX_CHARS:
             break
         del memory[cat][key]
-        print(f"[Memory] 🗑️  Trimmed {cat}/{key}")
+        logger.info(f"[Memory] Trimmed {cat}/{key}")
     return memory
 
 def save_memory(memory: dict) -> None:
@@ -115,7 +118,7 @@ def update_memory(memory_update: dict) -> dict:
     memory = load_memory()
     if _recursive_update(memory, memory_update):
         save_memory(memory)
-        print(f"[Memory] 💾 Saved: {list(memory_update.keys())}")
+        logger.info(f"[Memory] Saved: {list(memory_update.keys())}")
     return memory
 
 def format_memory_for_prompt(memory: dict | None) -> str:

@@ -34,7 +34,7 @@ _RAG_INDEX = data_path("rag_index")
 _CHROMA_DB = data_path("chroma_db")
 
 
-# ── Backup ────────────────────────────────────────────────────────────────
+# Backup
 
 def backup_memory(tag: str = "") -> str:
     """
@@ -79,7 +79,7 @@ def backup_memory(tag: str = "") -> str:
         return f"Backup failed: {e}"
 
 
-# ── Export ────────────────────────────────────────────────────────────────
+# Export
 
 def export_memory(output_path: str = "") -> str:
     """
@@ -133,7 +133,7 @@ def export_memory(output_path: str = "") -> str:
         return f"Export failed: {e}"
 
 
-# ── Import ────────────────────────────────────────────────────────────────
+# Import
 
 def import_memory(source_path: str) -> str:
     """
@@ -198,7 +198,7 @@ def import_memory(source_path: str) -> str:
         return f"Import failed: {e}"
 
 
-# ── Prune ─────────────────────────────────────────────────────────────────
+# Prune
 
 def prune_memory(max_age_days: int = 90, min_length: int = 20,
                  dry_run: bool = False) -> str:
@@ -268,7 +268,7 @@ def prune_memory(max_age_days: int = 90, min_length: int = 20,
         return f"Prune failed: {e}"
 
 
-# ── Stats ─────────────────────────────────────────────────────────────────
+# Stats
 
 def memory_stats() -> str:
     """Comprehensive stats across all memory systems."""
@@ -328,7 +328,7 @@ def memory_stats() -> str:
     return "\n".join(lines)
 
 
-# ── Tool declarations ──────────────────────────────────────────────────────
+# Tool declarations
 
 MEMORY_TOOL_DECLARATIONS = [
     {

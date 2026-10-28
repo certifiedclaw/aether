@@ -29,8 +29,8 @@ https://github.com/certifiedclaw/aether
    bare excepts, stray prints, unresolved TODOs, syntax errors).
 5. **`ROADMAP.md`** — the actual backlog.
 
-Do not trust `IMPROVEMENTS_V2.md` through `IMPROVEMENTS_V6.md`,
-`CHANGES.md`, or `CHANGELOG.md` as current state — they're historical
+Do not trust `docs/IMPROVEMENTS_V2.md` through `docs/IMPROVEMENTS_V6.md`,
+`docs/CHANGES.md`, or `docs/CHANGELOG.md` as current state — they're historical
 snapshots, frozen at whatever moment they were last hand-written, and nothing
 keeps them in sync with the code anymore.
 

@@ -60,7 +60,7 @@ def _save_config_key(key: str, value) -> None:
         from core.config_io import save_config   # atomic, merges, keeps every other setting
         save_config(_CONFIG_PATH, {key: value})
     except Exception as e:
-        print(f"[Vision] ⚠️ Could not save config key '{key}': {e}")
+        logger.warning(f"[Vision] Could not save config key '{key}': {e}")
 
 
 def _get_os() -> str:
@@ -70,9 +70,7 @@ def _get_os() -> str:
     return "linux"
 
 
-# ---------------------------------------------------------------------------
 # Image capture helpers (unchanged from original)
-# ---------------------------------------------------------------------------
 
 def _compress(img_bytes: bytes, source_format: str = "PNG") -> tuple[bytes, str]:
     if not _PIL:
@@ -84,7 +82,7 @@ def _compress(img_bytes: bytes, source_format: str = "PNG") -> tuple[bytes, str]
         img.save(buf, format="JPEG", quality=_JPEG_Q, optimize=False)
         return buf.getvalue(), "image/jpeg"
     except Exception as e:
-        print(f"[Vision] ⚠️ Image compress failed: {e}")
+        logger.warning(f"[Vision] Image compress failed: {e}")
         return img_bytes, f"image/{source_format.lower()}"
 
 
@@ -128,14 +126,14 @@ def _probe_camera(index: int, backend: int, warmup: int = 5) -> bool:
 
 def _detect_camera_index() -> int:
     backend = _cv2_backend()
-    print("[Vision] 🔍 Auto-detecting camera…")
+    logger.info("[Vision] Auto-detecting camera…")
     for idx in range(6):
         if _probe_camera(idx, backend):
-            print(f"[Vision] ✅ Camera found at index {idx}")
+            logger.info(f"[Vision] Camera found at index {idx}")
             _save_config_key("camera_index", idx)
             return idx
-        print(f"[Vision] ⚠️ Camera index {idx}: no usable frame")
-    print("[Vision] ⚠️ No camera found — defaulting to index 0")
+        logger.warning(f"[Vision] Camera index {idx}: no usable frame")
+    logger.warning("[Vision] No camera found — defaulting to index 0")
     _save_config_key("camera_index", 0)
     return 0
 
@@ -173,9 +171,7 @@ def _capture_camera() -> tuple[bytes, str]:
     return buf.tobytes(), "image/jpeg"
 
 
-# ---------------------------------------------------------------------------
 # Vision analysis via Ollama
-# ---------------------------------------------------------------------------
 
 _SYSTEM_PROMPT = (
     "You are Aether, an advanced AI assistant. "
@@ -215,11 +211,12 @@ def _call_vision(image_bytes: bytes, mime: str, user_text: str) -> str:
         return f"Vision analysis failed: {e}"
 
 
-# ---------------------------------------------------------------------------
 # Public entry point
-# ---------------------------------------------------------------------------
 
 from core.risk import gated  # noqa: E402
+import logging
+
+logger = logging.getLogger(__name__)
 @gated("screen_process")
 def screen_process(
     parameters:     dict,
@@ -248,19 +245,19 @@ def screen_process(
     try:
         if angle == "camera":
             image_bytes, mime = _capture_camera()
-            print(f"[Vision] 📷 Camera: {len(image_bytes):,} bytes")
+            logger.info(f"[Vision] Camera: {len(image_bytes):,} bytes")
         else:
             image_bytes, mime = _capture_screen()
-            print(f"[Vision] 🖥️  Screen: {len(image_bytes):,} bytes")
+            logger.info(f"[Vision] Screen: {len(image_bytes):,} bytes")
     except Exception as e:
         msg = f"Capture error: {e}"
-        print(f"[Vision] ❌ {msg}")
+        logger.error(f"[Vision] {msg}")
         if player: player.write_log(f"ERR: {msg}")
         return msg
 
     # Analyse
     analysis = _call_vision(image_bytes, mime, user_text)
-    print(f"[Vision] 💬 {analysis[:120]}")
+    logger.info(f"[Vision] {analysis[:120]}")
 
     if player:
         player.write_log(f"Aether: {analysis}")

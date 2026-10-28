@@ -15,7 +15,9 @@ from typing import Callable, Optional
 
 import numpy as np
 import sounddevice as sd
+import logging
 
+logger = logging.getLogger(__name__)
 
 
 # USE_TF=0 stops transformers from importing TensorFlow (saves 4-8 s startup).
@@ -26,9 +28,7 @@ os.environ.setdefault("USE_TF",                 "0")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 
-# ---------------------------------------------------------------------------
 # Audio playback helpers
-# ---------------------------------------------------------------------------
 
 try:
     from core.echo import tap_output as _tap_output, stop_tap as _stop_tap
@@ -108,9 +108,7 @@ def _play_audio_bytes(audio_bytes: bytes) -> None:
     sd.wait()
 
 
-# ---------------------------------------------------------------------------
 # Engines
-# ---------------------------------------------------------------------------
 
 class EdgeTTSEngine:
     """Microsoft EdgeTTS – free, requires internet."""
@@ -137,9 +135,7 @@ class EdgeTTSEngine:
         return bytes(buf)
 
 
-# ---------------------------------------------------------------------------
 # Kokoro import helper — auto-upgrades on version-mismatch errors
-# ---------------------------------------------------------------------------
 
 # Errors that indicate the installed kokoro uses old transformers classes
 # (AlbertModel, AutoModel) that are no longer exported at the top level.
@@ -177,8 +173,8 @@ def _import_kokoro_pipeline():
                 "3.12 venv. Keep the quotes: in cmd.exe an unquoted \">=\" is a redirect.)"
             ) from first_err
 
-        # ── Version mismatch: upgrade kokoro silently and retry ──────────
-        print("[TTS] Kokoro/transformers version mismatch detected — upgrading kokoro…")
+        # Version mismatch: upgrade kokoro silently and retry
+        logger.info("[TTS] Kokoro/transformers version mismatch detected — upgrading kokoro…")
         import subprocess
         result = subprocess.run(
             [sys.executable, "-m", "pip", "install", "kokoro>=0.9",
@@ -197,7 +193,7 @@ def _import_kokoro_pipeline():
         for key in stale:
             del sys.modules[key]
 
-        print("[TTS] Kokoro upgraded — retrying import…")
+        logger.info("[TTS] Kokoro upgraded — retrying import…")
         try:
             return _try_import()
         except Exception as retry_err:
@@ -272,7 +268,7 @@ class KokoroTTSEngine:
         except Exception:
             device = "cpu"
 
-        print(f"[TTS] Kokoro — loading (lang='{lang}', device='{device}')…")
+        logger.info(f"[TTS] Kokoro — loading (lang='{lang}', device='{device}')…")
 
         KPipeline = _import_kokoro_pipeline()
 
@@ -288,28 +284,28 @@ class KokoroTTSEngine:
             # Offline flag set but model not cached yet → download once
             _e = str(_first_err).lower()
             if any(k in _e for k in ("offline", "not found", "cache", "localentry", "does not exist")):
-                print("[TTS] Kokoro model not cached — downloading (internet required for first run)…")
+                logger.info("[TTS] Kokoro model not cached — downloading (internet required for first run)…")
                 from core.hf_offline import allow_online
                 with allow_online():
                     self._pipeline = _create_pipeline()
             else:
                 raise
 
-        print("[TTS] Kokoro compiling (first-time only)…")
+        logger.info("[TTS] Kokoro compiling (first-time only)…")
         # Warmup: compiles PyTorch JIT graph so first real speak() call is instant.
         try:
             for _ in self._pipeline("hello", voice=self.voice, speed=self.speed):
                 pass
-            print("[TTS] Kokoro ready.")
+            logger.info("[TTS] Kokoro ready.")
         except Exception as e:
-            print(f"[TTS] Kokoro warmup warning: {e}")
+            logger.warning(f"[TTS] Kokoro warmup warning: {e}")
 
     def speak(self, text: str) -> None:
         with self._lock:
             if self._pipeline is None:
                 self._init()
 
-        # ── Concurrent synthesise + playback ────────────────────────────────
+        # Concurrent synthesise + playback
         # Kokoro generates audio chunks lazily.  Without threading, we:
         #   synthesise chunk N → play N → synthesise N+1 → play N+1 …
         # With a producer/consumer pair, chunk N+1 synthesises WHILE chunk N
@@ -390,9 +386,7 @@ class ElevenLabsTTSEngine:
         _play_audio_bytes(resp.content)
 
 
-# ---------------------------------------------------------------------------
 # Thread-safe player wrapper
-# ---------------------------------------------------------------------------
 
 class TTSPlayer:
     """
@@ -435,9 +429,7 @@ class TTSPlayer:
             self._playing = False
 
 
-# ---------------------------------------------------------------------------
 # Factory
-# ---------------------------------------------------------------------------
 
 def create_tts_player(config: dict) -> TTSPlayer:
     engine_name = config.get("tts_engine", "edgetts").lower()

@@ -32,7 +32,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# ── Config helpers ────────────────────────────────────────────────────────
+# Config helpers
 
 def _oi_config() -> dict:
     """Pull relevant settings from Aether config, with safe defaults."""
@@ -77,7 +77,7 @@ def _make_interpreter():
     return oi
 
 
-# ── Module-level session (persists across calls in one Aether session) ───
+# Module-level session (persists across calls in one Aether session)
 
 _oi_instance: Any = None
 
@@ -88,7 +88,7 @@ def _get_oi():
     return _oi_instance
 
 
-# ── Public API ────────────────────────────────────────────────────────────
+# Public API
 
 def _run_with_timeout(fn, timeout: int = 120) -> str:
     """
@@ -179,7 +179,7 @@ def oi_status() -> str:
         return f"Status error: {e}"
 
 
-# ── Output formatting ─────────────────────────────────────────────────────
+# Output formatting
 
 def _extract_output(messages: list[dict]) -> str:
     """
@@ -203,7 +203,7 @@ def _extract_output(messages: list[dict]) -> str:
     return "\n\n".join(parts).strip() or "Done (no output)."
 
 
-# ── Main dispatch (called from _execute_tool) ─────────────────────────────
+# Main dispatch (called from _execute_tool)
 
 def oi_tool(action: str, args: dict) -> str:
     """
@@ -236,7 +236,7 @@ def oi_tool(action: str, args: dict) -> str:
     return f"Unknown action: {action}. Options: {list(dispatch)}"
 
 
-# ── Tool declaration (add to TOOL_DECLARATIONS in main.py) ────────────────
+# Tool declaration (add to TOOL_DECLARATIONS in main.py)
 
 OI_TOOL_DECLARATION = {
     "name": "open_interpreter",

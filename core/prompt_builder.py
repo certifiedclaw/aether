@@ -95,7 +95,7 @@ class PromptBuilderMixin:
             parts.append(mem_str)
 
         if not light:
-            # ── Inject memory context — only from the active engine ────
+            # Inject memory context — only from the active engine
             mem_engine = self._hybrid_mem or self._semantic_mem
             if mem_engine and user_text:
                 try:
@@ -105,25 +105,25 @@ class PromptBuilderMixin:
                 except Exception:
                     pass
 
-            # ── NEW v2: inject active goals ─────────────────────────────
+            # inject active goals
             if self._goals:
                 goal_ctx = self._goals.format_for_prompt()
                 if goal_ctx:
                     parts.append(goal_ctx)
 
-            # ── NEW: inject MCP tool list so the LLM knows what's available
+            # inject MCP tool list so the LLM knows what's available
             if self._mcp:
                 mcp_tools = self._mcp.list_all_tools()
                 if mcp_tools:
                     parts.append("[CONNECTED MCP TOOLS]\n" + "\n".join(f"  {t}" for t in mcp_tools))
 
-            # ── NEW: inject plugin tool list ────────────────────────────
+            # inject plugin tool list
             if self._plugins:
                 plugin_tools = self._plugins.list_tools()
                 if plugin_tools:
                     parts.append("[LOADED PLUGINS]\n" + "\n".join(f"  plugin.{t}" for t in plugin_tools))
 
-            # ── NEW v3: inject active integration list ───────────────────
+            # inject active integration list
             active_integrations = []
             if _LANGCHAIN_OK:
                 active_integrations.append(

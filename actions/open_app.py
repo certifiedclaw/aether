@@ -167,7 +167,7 @@ def _launch_windows(app_name: str) -> bool:
             time.sleep(1.5)
             return True
         except Exception as e:
-            print(f"[open_app] subprocess failed: {e}")
+            logger.warning(f"[open_app] subprocess failed: {e}")
 
     # URI-style targets only (ms-settings:, spotify:, ...). The old code ran
     # f"start {app_name}" through the shell, so a model-supplied name such as
@@ -194,7 +194,7 @@ def _launch_windows(app_name: str) -> bool:
             time.sleep(1.0)
             return True
         except Exception as e:
-            print(f"[open_app] Start app launch failed: {e}")
+            logger.warning(f"[open_app] Start app launch failed: {e}")
 
     try:
         import pyautogui
@@ -209,7 +209,7 @@ def _launch_windows(app_name: str) -> bool:
         # search. Only report success if a window with that name appeared.
         return _window_appeared(app_name)
     except Exception as e:
-        print(f"[open_app] Start Menu search failed: {e}")
+        logger.warning(f"[open_app] Start Menu search failed: {e}")
 
     return False
 
@@ -261,7 +261,7 @@ def _launch_macos(app_name: str) -> bool:
         time.sleep(1.5)
         return _window_appeared(app_name)
     except Exception as e:
-        print(f"[open_app] Spotlight failed: {e}")
+        logger.warning(f"[open_app] Spotlight failed: {e}")
 
     return False
 
@@ -321,6 +321,9 @@ _OS_LAUNCHERS = {
 }
 
 from core.risk import gated  # noqa: E402
+import logging
+
+logger = logging.getLogger(__name__)
 @gated("open_app")
 def open_app(
     parameters=None,
@@ -338,7 +341,7 @@ def open_app(
         return f"Unsupported operating system: {_SYSTEM}"
 
     normalized = _normalize(app_name)
-    print(f"[open_app] Launching: '{app_name}' → '{normalized}' ({_SYSTEM})")
+    logger.info(f"[open_app] Launching: '{app_name}' → '{normalized}' ({_SYSTEM})")
 
     if player:
         player.write_log(f"[open_app] {app_name}")
@@ -354,5 +357,5 @@ def open_app(
             f"It may still be loading, or it might not be installed."
         )
     except Exception as e:
-        print(f"[open_app] Error: {e}")
+        logger.error(f"[open_app] Error: {e}")
         return f"Failed to open {app_name}: {e}"

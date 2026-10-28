@@ -35,7 +35,7 @@ class TaskScheduler:
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
 
-    # ── Public API ─────────────────────────────────────────────────────────
+    # Public API
 
     def register(self, name: str, fn: Callable, interval_sec: float = 3600.0):
         """Register a task under `name`. Calling this again with a name
@@ -73,7 +73,7 @@ class TaskScheduler:
 
         return {"register_task": register_task}
 
-    # ── Lifecycle ──────────────────────────────────────────────────────────
+    # Lifecycle
 
     def start(self):
         if self._thread and self._thread.is_alive():
@@ -89,7 +89,7 @@ class TaskScheduler:
             self._thread.join(timeout=5)
         log.info("TaskScheduler stopped")
 
-    # ── Internal ───────────────────────────────────────────────────────────
+    # Internal
 
     @staticmethod
     def _governor_allows(task, now: float) -> bool:

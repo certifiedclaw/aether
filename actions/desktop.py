@@ -11,6 +11,9 @@ import platform
 from core.known_folders import known_folder as _known_folder
 from pathlib import Path
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 try:
     import pyautogui
@@ -36,7 +39,7 @@ def _get_desktop() -> Path:
             return Path(xdg)
     return Path.home() / "Desktop"
 
-# ── Generated-code sandbox (roadmap #23) ────────────────────────────────────
+# Generated-code sandbox (roadmap #23)
 # Model-written code is (1) statically validated against an ALLOWLIST, then
 # (2) shown to the user for confirmation via core/safety (denied by default
 # when no UI callback is registered), and only then (3) exec'd with a
@@ -117,7 +120,7 @@ def _confirm_generated_code(code: str) -> bool:
             "Aether generated this code to run on your desktop (all of it is shown):\n\n" + code,
         ))
     except Exception as e:
-        print(f"[Desktop] confirmation unavailable, denying: {e}")
+        logger.warning(f"[Desktop] confirmation unavailable, denying: {e}")
         return False
 
 
@@ -195,7 +198,7 @@ def _exec_in_process(code: str) -> tuple[bool, str]:
         exec(compile(code, "<aether_desktop>", "exec"), sandbox)
         return True, "\n".join(output_lines) if output_lines else "Done."
     except Exception as e:  # noqa: BLE001
-        print(f"[Desktop] Exec error: {e}\nCode:\n{code[:300]}")
+        logger.error(f"[Desktop] Exec error: {e}\nCode:\n{code[:300]}")
         return False, f"Execution error: {e}"
 
 
@@ -227,7 +230,7 @@ def _run_isolated(code: str, timeout: int | None = None) -> str:
             [sys.executable, str(runner)], input=code, capture_output=True, text=True,
             encoding="utf-8", errors="replace", timeout=timeout, env=env, **kwargs)
     except subprocess.TimeoutExpired:
-        print(f"[Desktop] Task exceeded {timeout}s and was stopped.")
+        logger.warning(f"[Desktop] Task exceeded {timeout}s and was stopped.")
         return f"The desktop task ran longer than {timeout} seconds and was stopped."
     except Exception as e:  # noqa: BLE001
         return f"Execution error: could not start the task ({e})."
@@ -249,7 +252,7 @@ def _execute_generated_code(code: str, player=None) -> str:
 
     problem = _validate_generated_code(code)
     if problem:
-        print(f"[Desktop] Rejected generated code: {problem}")
+        logger.info(f"[Desktop] Rejected generated code: {problem}")
         return f"Blocked: the generated code was not allowed ({problem})."
 
     if not _confirm_generated_code(code):
@@ -638,7 +641,7 @@ def desktop_control(
             if not actual_task:
                 return "Please describe what you want to do on the desktop."
 
-            print(f"[Desktop] Asking Gemini: {actual_task}")
+            logger.info(f"[Desktop] Asking Gemini: {actual_task}")
             if player:
                 player.write_log("[Desktop] Generating action...")
 
@@ -652,5 +655,5 @@ def desktop_control(
             return "No action or task specified."
 
     except Exception as e:
-        print(f"[Desktop] Error: {e}")
+        logger.error(f"[Desktop] Error: {e}")
         return f"Desktop control error: {e}"

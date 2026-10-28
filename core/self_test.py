@@ -119,7 +119,7 @@ def _timed(fn: Callable) -> tuple[Any, float]:
     return result, (time.perf_counter() - t0) * 1000
 
 
-# ── Individual test functions ─────────────────────────────────────────────
+# Individual test functions
 
 def _test_python() -> TestResult:
     import sys
@@ -374,7 +374,7 @@ def _test_loop_guard(aether) -> TestResult:
         return TestResult("Loop guard", False, str(e))
 
 
-# ── Public API ─────────────────────────────────────────────────────────────
+# Public API
 
 def run_self_test(aether=None, config=None) -> SelfTestReport:
     """

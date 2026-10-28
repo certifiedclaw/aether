@@ -89,7 +89,7 @@ class HeadlessUI:
         self.state           = "IDLE"
         logger.info("[Aether] Running headless (no GUI) — AETHER_HEADLESS=1.")
 
-    # ── State / logging ─────────────────────────────────────────────
+    # State / logging
     def set_chat_sessions(self, *args, **kwargs) -> None:
         """No chat picker headless; remember the list for introspection."""
         self.chat_sessions = list(args[0]) if args and isinstance(args[0], (list, tuple)) else []
@@ -104,7 +104,7 @@ class HeadlessUI:
     def write_log(self, text: str) -> None:
         logger.info(text)
 
-    # ── Confirmation gate (core.safety.SafetyLayer callback) ───────
+    # Confirmation gate (core.safety.SafetyLayer callback)
     def confirm_blocking(self, message: str, timeout: float = 120.0) -> bool:
         auto = os.environ.get("AETHER_HEADLESS_AUTO_CONFIRM", "").strip().lower()
         if auto in ("1", "true", "yes", "allow"):
@@ -141,11 +141,11 @@ class HeadlessUI:
         logger.warning(f"[Confirm] {message} — {'approved' if approved else 'denied (no response or explicit deny)'}.")
         return approved
 
-    # ── Message stats panel (no-op headless) ────────────────────────
+    # Message stats panel (no-op headless)
     def update_message_stats(self, data: dict) -> None:
         logger.debug(f"[stats] {data}")
 
-    # ── Startup panel (all no-op/log headless) ──────────────────────
+    # Startup panel (all no-op/log headless)
     def show_startup_panel(self) -> None:
         logger.info("[startup] checking services…")
 

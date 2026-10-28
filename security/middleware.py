@@ -41,7 +41,7 @@ from .tokens import get_manager, DeviceRecord, SessionRecord
 from . import audit
 
 
-# ── Context: stash the (DeviceRecord, SessionRecord) on request.state ─────
+# Context: stash the (DeviceRecord, SessionRecord) on request.state
 # FastAPI's `Depends` machinery gives us a place to attach this; we use
 # request.state so the rest of the handler can read it without re-parsing.
 
@@ -67,7 +67,7 @@ def _client_ip(req: Request) -> str:
     return "0.0.0.0"
 
 
-# ── Public dependency: require_session ────────────────────────────────────
+# Public dependency: require_session
 async def require_session(req: Request) -> tuple[DeviceRecord, SessionRecord]:
     """Dependency: 401 if no/invalid session, else attach device to request."""
     auth = req.headers.get("authorization", "")
@@ -95,7 +95,7 @@ def current_device(req: Request) -> DeviceRecord:
     return state[0]
 
 
-# ── Public dependency factory: check_capability ──────────────────────────
+# Public dependency factory: check_capability
 def check_capability(cap: Capability) -> Callable[[Request], Awaitable[None]]:
     """Dependency factory: 403 if the device's token doesn't include `cap`."""
     async def _checker(req: Request) -> None:
@@ -127,7 +127,7 @@ def check_capability(cap: Capability) -> Callable[[Request], Awaitable[None]]:
     return _checker
 
 
-# ── High-risk approval gate ──────────────────────────────────────────────
+# High-risk approval gate
 async def require_approval(req: Request, cap: Capability) -> str:
     """For HIGH-risk caps: enforce that an approval has been granted within
     the last 60s. Returns the approval_id. If the request body has a

@@ -103,7 +103,7 @@ def search_in_document(path: str, query: str, context_chars: int = 200) -> str:
         return f"Search error: {e}"
 
 
-# ── Aether entry point ────────────────────────────────────────────────────
+# Aether entry point
 
 def run_pdf_tool(action: str, file_path: str, query: str = "", pages=None) -> str:
     """

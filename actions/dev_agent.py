@@ -19,6 +19,9 @@ PROJECTS_DIR     = _desktop_dir() / "AetherProjects"
 MAX_FIX_ATTEMPTS = 5
 
 from core.llm_client import call_llm_text as _llm
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _strip_fences(text: str) -> str:
@@ -190,7 +193,7 @@ def _write_file(
     full_path.parent.mkdir(parents=True, exist_ok=True)
     full_path = _project_file_path(project_dir, file_path)
     full_path.write_text(code, encoding="utf-8")
-    print(f"[DevAgent] ✅ Written: {file_path} ({len(code)} chars)")
+    logger.info(f"[DevAgent] Written: {file_path} ({len(code)} chars)")
     return code
 
 def _install_dependencies(dependencies: list[str], project_dir: Path) -> str:
@@ -207,12 +210,12 @@ def _install_dependencies(dependencies: list[str], project_dir: Path) -> str:
         if result.returncode != 0:
             to_install.append(dep)
         else:
-            print(f"[DevAgent] ✓ Already installed: {pkg_name}")
+            logger.info(f"[DevAgent] ✓ Already installed: {pkg_name}")
 
     if not to_install:
         return f"All dependencies already installed: {', '.join(dependencies)}"
 
-    print(f"[DevAgent] 📦 Installing: {to_install}")
+    logger.info(f"[DevAgent] Installing: {to_install}")
     try:
         result = subprocess.run(
             [sys.executable, "-m", "pip", "install"] + to_install,
@@ -243,14 +246,14 @@ def _open_vscode(project_dir: Path) -> bool:
                 stderr=subprocess.DEVNULL
             )
             time.sleep(1.5)
-            print(f"[DevAgent] 💻 VSCode opened: {project_dir}")
+            logger.info(f"[DevAgent] VSCode opened: {project_dir}")
             return True
         except Exception:
             continue
     return False
 
 def _run_project(run_command: str, project_dir: Path, timeout: int = 30) -> str:
-    print(f"[DevAgent] 🚀 Running: {run_command}")
+    logger.info(f"[DevAgent] Running: {run_command}")
     try:
         parts = run_command.split()
         if parts[0].lower() == "python":
@@ -292,7 +295,7 @@ def _try_auto_install(error_output: str, project_dir: Path) -> bool:
         return False
 
     pkg = match.group(1).replace("_", "-").split(".")[0]
-    print(f"[DevAgent] 🔧 Auto-installing missing package: {pkg}")
+    logger.info(f"[DevAgent] Auto-installing missing package: {pkg}")
     try:
         result = subprocess.run(
             [sys.executable, "-m", "pip", "install", pkg],
@@ -364,9 +367,9 @@ def _fix_files(
             full_path = _project_file_path(project_dir, fix_path)
             full_path.write_text(fixed, encoding="utf-8")
             updated_codes[fix_path] = fixed
-            print(f"[DevAgent] 🔧 Fixed: {fix_path}")
+            logger.info(f"[DevAgent] Fixed: {fix_path}")
         except Exception as e:
-            print(f"[DevAgent] ⚠️ Could not fix {fix_path}: {e}")
+            logger.warning(f"[DevAgent] Could not fix {fix_path}: {e}")
 
     return updated_codes
 
@@ -380,7 +383,7 @@ def _build_project(
 ) -> str:
 
     def log(msg: str):
-        print(f"[DevAgent] {msg}")
+        logger.info(f"[DevAgent] {msg}")
         if player:
             player.write_log(f"[DevAgent] {msg}")
 
