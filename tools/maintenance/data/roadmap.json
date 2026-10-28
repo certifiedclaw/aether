@@ -833,10 +833,10 @@
       "id": 93,
       "title": "Trim per-turn prompt (2.6-4.5k tokens even for 'whats 2+2'): fewer tool schemas, shorter system prompt - TTFT is 1.4-3.2s",
       "priority": "medium",
-      "status": "backlog",
-      "notes": "From perf.jsonl on RTX 3050: ~30 tok/s, TTFT dominated by prompt processing",
+      "status": "in-progress",
+      "notes": "Partly done, left in progress. Measured (60-msg chat, same estimator as smart_context): small-talk turn 4956 -> 3073 tokens (-38%); normal turn ~unchanged (4917 -> 4902). Changes: (1) integration routing docs moved out of core/prompt.txt into the builder's [ACTIVE INTEGRATIONS] block, so they only appear when the integration exists and the turn isn't light (-267 tok on small talk / installs without them); (2) prompt blocks reordered static-first, per-turn last (retrieved memory, goals, clock) so Ollama can reuse its KV-cache prefix -- structural only, TTFT NOT measured (no Ollama in the sandbox); (3) light turns on the local model cap history at llm.quick_history_budget (default 2000 tokens, 0 disables; cloud-routed turns and the saved chat are untouched). 12 tests in tests/test_prompt_budget.py guard the prompt ceiling, conditional docs, ordering and the cap. NOT done: trimming tool-schema descriptions (extra_tool 619 tok, osint 356, browser_control 329 -- osint OPSEC text must stay) and shortening prompt.txt wording; both change small-model behaviour and need the eval harness (#39) on the real machine. To verify: compare TTFT in logs/perf.jsonl before/after on a small-talk turn.",
       "created": "2026-10-18",
-      "updated": "2026-10-18"
+      "updated": "2026-10-28"
     },
     {
       "id": 94,

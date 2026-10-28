@@ -59,6 +59,50 @@ def model_prompt_guidance(model_name: str) -> str:
     )
 
 
+# Routing guidance for the optional v3 integrations. This used to live in
+# core/prompt.txt, so every turn paid for it (~330 tokens) even on installs
+# without these packages and on small-talk turns that get no tools. It is now
+# added only when the integration is actually available and the turn is not
+# "light" (roadmap #93). The wording is unchanged.
+_INTEGRATION_DOCS = {
+    "langchain": (
+        "  langchain(action=web_search|wikipedia|summarize|research|load_doc)",
+        [
+            "For web search (no API key), Wikipedia lookup, long-document summarisation, "
+            "and multi-hop research. Use action=research for complex questions needing "
+            "several web searches. Use action=summarize for long documents.",
+            "- Quick web question → langchain(action=web_search)",
+            "- Complex research needing 3+ searches → langchain(action=research)",
+        ],
+    ),
+    "open_interpreter": (
+        "  open_interpreter(action=run|chat|reset|status) — writes+runs real code",
+        [
+            "Natural language computer control — writes and runs real code (Python/shell). "
+            "Use for: data processing, file manipulation, plotting, installing software, "
+            "automation tasks. action=run for single tasks, action=chat for follow-up in "
+            "same session.",
+            "- Run/edit code or files → open_interpreter(action=run)",
+        ],
+    ),
+    "llama_index": (
+        "  llama_index(action=index|query|summarize|collections) — production RAG",
+        [
+            "Production document search. Use action=index to add files/folders, "
+            "action=query to search them. Better than rag_query for complex questions over "
+            "large document sets. Use mode=sub for multi-part questions.",
+            "- Search your indexed documents → llama_index(action=query) or rag_query",
+            "- Summarise a large folder of docs → llama_index(action=summarize)",
+        ],
+    ),
+}
+
+
+def _integration_block(name: str) -> str:
+    signature, guidance = _INTEGRATION_DOCS[name]
+    return "\n".join([signature] + [f"    {g}" for g in guidance])
+
+
 class PromptBuilderMixin:
     """Owns system-prompt assembly for each turn.
 
@@ -87,6 +131,12 @@ class PromptBuilderMixin:
             f"Right now it is: {now.strftime('%A, %B %d, %Y — %I:%M %p')}\n"
             f"Use this to calculate exact times for reminders."
         )
+        # ── Ordering matters for latency (roadmap #93) ─────────────────────
+        # Ollama reuses its KV cache only for an identical PREFIX of the prompt.
+        # Static blocks therefore come first and per-turn content (retrieved
+        # memory, goals, the clock) last, so a change late in the prompt doesn't
+        # force the whole thing -- including the tool schema the chat template
+        # renders after it -- to be re-processed every turn.
         parts = [sys_p]
         model_guidance = model_prompt_guidance(model_name)
         if model_guidance:
@@ -95,7 +145,30 @@ class PromptBuilderMixin:
             parts.append(mem_str)
 
         if not light:
-            # ── Inject memory context — only from the active engine ────
+            # ── static: connected MCP tools, plugins, active integrations ──
+            if self._mcp:
+                mcp_tools = self._mcp.list_all_tools()
+                if mcp_tools:
+                    parts.append("[CONNECTED MCP TOOLS]\n" + "\n".join(f"  {t}" for t in mcp_tools))
+
+            if self._plugins:
+                plugin_tools = self._plugins.list_tools()
+                if plugin_tools:
+                    parts.append("[LOADED PLUGINS]\n" + "\n".join(f"  plugin.{t}" for t in plugin_tools))
+
+            # Integration routing guidance lives here, not in prompt.txt, so it
+            # is only paid for when the integration exists (roadmap #93).
+            active_integrations = []
+            if _LANGCHAIN_OK:
+                active_integrations.append(_integration_block("langchain"))
+            if _OI_OK:
+                active_integrations.append(_integration_block("open_interpreter"))
+            if _LLAMA_OK:
+                active_integrations.append(_integration_block("llama_index"))
+            if active_integrations:
+                parts.append("[ACTIVE INTEGRATIONS]\n" + "\n".join(active_integrations))
+
+            # ── per-turn: retrieved memory for THIS message, then active goals ──
             mem_engine = self._hybrid_mem or self._semantic_mem
             if mem_engine and user_text:
                 try:
@@ -105,40 +178,10 @@ class PromptBuilderMixin:
                 except Exception:
                     pass
 
-            # ── NEW v2: inject active goals ─────────────────────────────
             if self._goals:
                 goal_ctx = self._goals.format_for_prompt()
                 if goal_ctx:
                     parts.append(goal_ctx)
 
-            # ── NEW: inject MCP tool list so the LLM knows what's available
-            if self._mcp:
-                mcp_tools = self._mcp.list_all_tools()
-                if mcp_tools:
-                    parts.append("[CONNECTED MCP TOOLS]\n" + "\n".join(f"  {t}" for t in mcp_tools))
-
-            # ── NEW: inject plugin tool list ────────────────────────────
-            if self._plugins:
-                plugin_tools = self._plugins.list_tools()
-                if plugin_tools:
-                    parts.append("[LOADED PLUGINS]\n" + "\n".join(f"  plugin.{t}" for t in plugin_tools))
-
-            # ── NEW v3: inject active integration list ───────────────────
-            active_integrations = []
-            if _LANGCHAIN_OK:
-                active_integrations.append(
-                    "  langchain(action=web_search|wikipedia|summarize|research|load_doc)"
-                )
-            if _OI_OK:
-                active_integrations.append(
-                    "  open_interpreter(action=run|chat|reset|status) — writes+runs real code"
-                )
-            if _LLAMA_OK:
-                active_integrations.append(
-                    "  llama_index(action=index|query|summarize|collections) — production RAG"
-                )
-            if active_integrations:
-                parts.append("[ACTIVE INTEGRATIONS]\n" + "\n".join(active_integrations))
-
-        parts.append(time_ctx)
+        parts.append(time_ctx)      # changes every minute: always last
         return "\n\n".join(parts)

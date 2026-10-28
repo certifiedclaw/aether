@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-27 12:01 UTC
+Generated: 2026-10-28 19:12 UTC
+
+## #119 — 2026-10-28 19:12 UTC — Claude Code
+
+#92 promise-without-action retry, #95 listen modes/push-to-talk (config key is ptt_shortcut: test_invariants flags any config key containing 'key'), #93 partly (prompt trim, static-first ordering, small-talk history cap; still in-progress on the roadmap). Added roadmap #96-#99. Prompt personality changed to funny/uncensored. Full suite 950 passed + the same 5 pre-existing sandbox failures. Lesson: re-run the FULL suite after any config/doc edit, not just py_compile -- the #95 commit once shipped with a failing invariant test.
+
+**Touched:** `core/conversation_core.py`, `core/prompt_builder.py`, `core/prompt.txt`, `core/listen_mode.py`, `core/listen_loops.py`, `tests/test_prompt_budget.py`, `tests/test_listen_mode.py`, `tests/test_promise_without_action.py`
+
+**Next steps:** Run a small-talk turn on the real machine and compare TTFT in logs/perf.jsonl; then trim tool-schema descriptions under the eval harness. Repo-presentation cleanup (license mismatch MIT vs CC BY-NC in core/wake_word.py, root clutter, README claims) was proposed, not started. #88 still needs free -h / ollama list from the server.
+
+---
 
 ## #118 — 2026-10-27 12:01 UTC — Claude Code
 

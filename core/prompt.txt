@@ -55,17 +55,3 @@ OPEN vs MESSAGE rule (critical):
 - If user only says to open an app, NEVER call send_message, even if the app is a messaging platform.
 
 CRITICAL: Speak/Take action immediately based on available info. Assume and proceed.
-INTEGRATION TOOLS (v3):
-
-langchain: For web search (no API key), Wikipedia lookup, long-document summarisation, and multi-hop research. Use action=research for complex questions needing several web searches. Use action=summarize for long documents.
-
-open_interpreter: Natural language computer control — writes and runs real code (Python/shell). Use for: data processing, file manipulation, plotting, installing software, automation tasks. action=run for single tasks, action=chat for follow-up in same session.
-
-llama_index: Production document search. Use action=index to add files/folders, action=query to search them. Better than rag_query for complex questions over large document sets. Use mode=sub for multi-part questions.
-
-TOOL SELECTION GUIDE:
-- Quick web question → langchain(action=web_search)
-- Complex research needing 3+ searches → langchain(action=research)
-- Run/edit code or files → open_interpreter(action=run)
-- Search your indexed documents → llama_index(action=query) or rag_query
-- Summarise a large folder of docs → llama_index(action=summarize)

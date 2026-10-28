@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-28 19:09 UTC
+Generated: 2026-10-28 19:12 UTC
 
 ## In progress
 
@@ -10,6 +10,8 @@ Generated: 2026-10-28 19:09 UTC
   - Handoff #15's sweep covered core/, security/, agent/, dashboard/server.py, main.py, core/llm_client.py (~20 of 111 bare except-pass blocks). This session covered the 62 pass-only (zero-logging, highest-risk shape) blocks specifically in actions/ -- reviewed all of them; found one dead-code path (see #16) but no active silently-broken call like the 3 prior real bugs. Still unreviewed: the ~235 'except Exception as e: log...' blocks across the whole codebase (lower risk shape since they at least log, but not zero -- worth a pass if time allows) and actions/'s non-pass-only except blocks.
 - [ ] **#88** [F0] Deploy Aether always-on on iansserver (Docker, headless, small CPU model, PC GPU as optional boost) `high`
   - HP ProDesk 600 G4 (i5-8500, 32GB, HDD; NVMe planned). Docker + headless Aether + Ollama, behind Tailscale/Authelia. Needs free -h / ollama list output from the server.
+- [ ] **#93** Trim per-turn prompt (2.6-4.5k tokens even for 'whats 2+2'): fewer tool schemas, shorter system prompt - TTFT is 1.4-3.2s `medium`
+  - Partly done, left in progress. Measured (60-msg chat, same estimator as smart_context): small-talk turn 4956 -> 3073 tokens (-38%); normal turn ~unchanged (4917 -> 4902). Changes: (1) integration routing docs moved out of core/prompt.txt into the builder's [ACTIVE INTEGRATIONS] block, so they only appear when the integration exists and the turn isn't light (-267 tok on small talk / installs without them); (2) prompt blocks reordered static-first, per-turn last (retrieved memory, goals, clock) so Ollama can reuse its KV-cache prefix -- structural only, TTFT NOT measured (no Ollama in the sandbox); (3) light turns on the local model cap history at llm.quick_history_budget (default 2000 tokens, 0 disables; cloud-routed turns and the saved chat are untouched). 12 tests in tests/test_prompt_budget.py guard the prompt ceiling, conditional docs, ordering and the cap. NOT done: trimming tool-schema descriptions (extra_tool 619 tok, osint 356, browser_control 329 -- osint OPSEC text must stay) and shortening prompt.txt wording; both change small-model behaviour and need the eval harness (#39) on the real machine. To verify: compare TTFT in logs/perf.jsonl before/after on a small-talk turn.
 
 ## Backlog
 
@@ -41,8 +43,6 @@ Generated: 2026-10-28 19:09 UTC
 - [ ] **#81** [F4] Coding agent: sandbox first (container), then edit-test-retry loop with git checkpoints `medium`
   - Sandbox also brings run_python back.
 - [ ] **#82** [F4] Skills system: drop-in folders of instructions and scripts `medium`
-- [ ] **#93** Trim per-turn prompt (2.6-4.5k tokens even for 'whats 2+2'): fewer tool schemas, shorter system prompt - TTFT is 1.4-3.2s `medium`
-  - From perf.jsonl on RTX 3050: ~30 tok/s, TTFT dominated by prompt processing
 - [ ] **#94** Investigate: duplicated user text in turns ('x\nx'), langchain research tool returning in 5ms, web_search paging 5 Bing pages (8.7s) `medium`
   - From live_turns.jsonl / events.jsonl / aether.log of 2026-10-17
 - [ ] **#96** [F1] Learn from corrections: turn 'no, not that' / 'stop doing X' into small editable rules applied to future prompts `medium`

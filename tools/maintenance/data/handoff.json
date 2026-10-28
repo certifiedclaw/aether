@@ -1,5 +1,5 @@
 {
-  "next_id": 119,
+  "next_id": 120,
   "entries": [
     {
       "id": 1,
@@ -1659,6 +1659,23 @@
         "core/prompt.txt"
       ],
       "next_steps": "Try a live research prompt on qwen3:8b and watch for the promise-retry WRN log; then #95 (push-to-talk default) and #93 (trim per-turn prompt). #88 still needs free -h / ollama list from the server."
+    },
+    {
+      "id": 119,
+      "timestamp": "2026-10-28 19:12 UTC",
+      "by": "Claude Code",
+      "summary": "#92 promise-without-action retry, #95 listen modes/push-to-talk (config key is ptt_shortcut: test_invariants flags any config key containing 'key'), #93 partly (prompt trim, static-first ordering, small-talk history cap; still in-progress on the roadmap). Added roadmap #96-#99. Prompt personality changed to funny/uncensored. Full suite 950 passed + the same 5 pre-existing sandbox failures. Lesson: re-run the FULL suite after any config/doc edit, not just py_compile -- the #95 commit once shipped with a failing invariant test.",
+      "files": [
+        "core/conversation_core.py",
+        "core/prompt_builder.py",
+        "core/prompt.txt",
+        "core/listen_mode.py",
+        "core/listen_loops.py",
+        "tests/test_prompt_budget.py",
+        "tests/test_listen_mode.py",
+        "tests/test_promise_without_action.py"
+      ],
+      "next_steps": "Run a small-talk turn on the real machine and compare TTFT in logs/perf.jsonl; then trim tool-schema descriptions under the eval harness. Repo-presentation cleanup (license mismatch MIT vs CC BY-NC in core/wake_word.py, root clutter, README claims) was proposed, not started. #88 still needs free -h / ollama list from the server."
     }
   ]
 }

@@ -50,6 +50,21 @@ from core.tool_router import filter_tools_hard as _filter_tools_hard
 _CLOUD_HISTORY_BUDGET = 8000   # message tokens for Gemini-routed turns (schema is extra)
 
 
+_QUICK_HISTORY_DEFAULT = 2000
+
+
+def _quick_history_cap() -> int:
+    """Max tokens of chat history a light (small-talk) local turn carries.
+    Config "llm.quick_history_budget" (default 2000; 0 disables the cap).
+    Junk or negative values fall back to the default rather than failing a turn."""
+    try:
+        from core.llm_client import _load_config
+        v = int(_load_config().get("llm.quick_history_budget", _QUICK_HISTORY_DEFAULT))
+    except Exception:
+        return _QUICK_HISTORY_DEFAULT
+    return v if v >= 0 else _QUICK_HISTORY_DEFAULT
+
+
 def _local_total_budget() -> int:
     """Total request budget (messages + tool schema) for local turns.
     Config "llm.history_budget" (default 5000). Clamped so it always leaves
@@ -348,6 +363,7 @@ class ConversationCoreMixin:
         _tool_tokens = estimate_tool_tokens(tools)
         # history_budget is the MESSAGE budget; cloud (Gemini) turns pass a larger
         # one since that window is huge, local turns keep 3000 total with the schema.
+        _is_local_turn = history_budget is None
         if history_budget is None:
             history_budget = _local_total_budget()
         _budget = history_budget if history_budget >= _CLOUD_HISTORY_BUDGET else history_budget - _tool_tokens
@@ -358,6 +374,19 @@ class ConversationCoreMixin:
                 "nominal %d remaining", _tool_tokens, _budget,
             )
             _budget = 500
+
+        # Small-talk turns ("whats 2+2", "thanks") on the local model don't need the
+        # whole history window: the history backfills the budget, so a trivial turn
+        # was carrying up to ~3.6k tokens of unrelated chat and paying for it in
+        # time-to-first-token (roadmap #93). Cap the history a light turn carries.
+        # Only this turn's request shrinks -- self._conversation is untouched, and
+        # compress_if_needed drops the OLDEST messages first, so the latest exchange
+        # (what a short "yes" / "do that" refers to) is kept.
+        if light and _is_local_turn:
+            _cap = _quick_history_cap()
+            if _cap > 0:
+                _sys_tokens = len(str(messages[0].get("content", ""))) // 4
+                _budget = max(500, min(_budget, _sys_tokens + _cap))
 
         from main import _LANGCHAIN_OK  # lazy: avoids circular import at module load time
         if _LANGCHAIN_OK:
