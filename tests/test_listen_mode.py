@@ -323,7 +323,7 @@ def test_hotkey_failure_falls_back_to_always_listening_with_a_warning(monkeypatc
 def test_custom_hotkey_from_config(monkeypatch):
     def feeder(ctl):
         time.sleep(0.2)
-    seen = _harness(monkeypatch, {**BASE, "ptt_hotkey": "f9"}, feeder)
+    seen = _harness(monkeypatch, {**BASE, "ptt_shortcut": "f9"}, feeder)
     assert seen["hotkey"] == "f9"
     assert any("press f9" in m for m in seen["logs"])
 

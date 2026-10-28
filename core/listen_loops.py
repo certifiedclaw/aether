@@ -178,7 +178,7 @@ class ListenLoopsMixin:
             else:
                 self.ui.write_log("SYS: Wake word on - say 'Hey Jarvis'. Sleeping.")
         elif mode == "ptt":
-            hotkey = str(cfg.get("ptt_hotkey") or _lm.DEFAULT_PTT_HOTKEY)
+            hotkey = str(cfg.get("ptt_shortcut") or _lm.DEFAULT_PTT_HOTKEY)
             try:
                 idle_s = float(cfg.get("ptt_idle_secs", _lm.DEFAULT_PTT_IDLE_S))
             except (TypeError, ValueError):

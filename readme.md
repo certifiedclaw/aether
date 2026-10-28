@@ -116,7 +116,7 @@ An always-open mic treats any loud audio (a video playing in the background, a T
 | `listen_mode` | Behavior |
 | --- | --- |
 | `auto` (default) | Wake word if it is installed and ready, otherwise push-to-talk, otherwise always-listening (with a warning in the log). |
-| `ptt` | Push-to-talk: the mic is closed until you press the hotkey (`ptt_hotkey`, default `ctrl+alt+space`), then it captures one utterance and closes again. The window also closes after `ptt_idle_secs` (default 6) if you do not start speaking, and never closes while you are mid-sentence. |
+| `ptt` | Push-to-talk: the mic is closed until you press the hotkey (`ptt_shortcut`, default `ctrl+alt+space`), then it captures one utterance and closes again. The window also closes after `ptt_idle_secs` (default 6) if you do not start speaking, and never closes while you are mid-sentence. |
 | `wake` | Say "Hey Jarvis" (needs `openwakeword`). Falls back to always-listening if the model is not ready. |
 | `always` | The old behavior: the mic is always open, so background audio is transcribed. |
 

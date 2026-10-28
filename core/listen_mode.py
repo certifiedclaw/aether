@@ -17,7 +17,7 @@ deaf without telling you.
 
 Config keys (config/api_keys.json):
     listen_mode       "auto" (default) | "always" | "wake" | "ptt"
-    ptt_hotkey        default "ctrl+alt+space"
+    ptt_shortcut        default "ctrl+alt+space"
     ptt_idle_secs     default 6 -- how long the window stays open waiting for you to start speaking
 
 An explicit legacy `wake_word_enabled` (true or false) is still honoured when
