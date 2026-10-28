@@ -109,7 +109,7 @@ def _open_app(app_name: str) -> bool:
             return launched
 
     except Exception as e:
-        print(f"[SendMessage] ⚠️ Could not open {app_name}: {e}")
+        logger.warning(f"[SendMessage] Could not open {app_name}: {e}")
         return False
 
 
@@ -120,7 +120,7 @@ def _open_browser_url(url: str) -> bool:
         time.sleep(4.0) 
         return True
     except Exception as e:
-        print(f"[SendMessage] ⚠️ Could not open browser: {e}")
+        logger.warning(f"[SendMessage] Could not open browser: {e}")
         return False
 
 def _search_in_app(query: str) -> None:
@@ -230,6 +230,9 @@ def _resolve_platform(platform_str: str):
 
 
 from core.risk import gated  # noqa: E402
+import logging
+
+logger = logging.getLogger(__name__)
 @gated("send_message")
 def send_message(
     parameters: dict,
@@ -250,7 +253,7 @@ def send_message(
         return "PyAutoGUI is not installed — cannot control the desktop."
 
     preview = message_text[:50] + ("…" if len(message_text) > 50 else "")
-    print(f"[SendMessage] 📨 {platform} → {receiver}: {preview}")
+    logger.info(f"[SendMessage] {platform} → {receiver}: {preview}")
     if player:
         player.write_log(f"[msg] {platform} → {receiver}")
 
@@ -260,7 +263,7 @@ def send_message(
     except Exception as e:
         result = f"Could not send message: {e}"
 
-    print(f"[SendMessage] {'✅' if 'sent' in result.lower() else '❌'} {result}")
+    logger.error(f"[SendMessage] {'' if 'sent' in result.lower() else ''} {result}")
     if player:
         player.write_log(f"[msg] {result}")
 

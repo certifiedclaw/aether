@@ -81,7 +81,7 @@ UPLOADS_DIR = _make_uploads_dir()
 _KEY_CHARS = [c for c in (string.ascii_uppercase + string.digits)
               if c not in ('O', 'I', 'L', '0', '1')]
 
-# ── AES-256-CBC ───────────────────────────────────────────────────────────────
+# AES-256-CBC
 _AES_SALT = b'AETHER-DASHBOARD-v1'
 
 
@@ -125,7 +125,7 @@ def _decrypt_cbc(aes_key: bytes, enc_b64: str, mac_key: bytes) -> str:
     return (unpadder.update(padded) + unpadder.finalize()).decode('utf-8')
 
 
-# ── login brute-force limiter ─────────────────────────────────────────────────
+# login brute-force limiter
 _MAX_FAILS   = 5
 _LOCKOUT_S   = 900.0     # 15 min
 _FAIL_WINDOW = 600.0     # 10 min
@@ -161,7 +161,7 @@ class _LoginLimiter:
         self._fails.pop(ip, None)
 
 
-# ── CryptoJS (auto-download once, served locally) ─────────────────────────────
+# CryptoJS (auto-download once, served locally)
 _CRYPTOJS_CDN  = ("https://cdnjs.cloudflare.com/ajax/libs/"
                   "crypto-js/4.2.0/crypto-js.min.js")
 _CRYPTOJS_FILE = STATIC_DIR / "crypto-js.min.js"
@@ -259,7 +259,7 @@ def _ensure_network_access_windows(port: int) -> None:
             pass
         return
 
-    # ── Try running directly (succeeds when already admin) ────────────────
+    # Try running directly (succeeds when already admin)
     try:
         r = subprocess.run(
             [bat_path], capture_output=True, timeout=8, shell=True
@@ -274,7 +274,7 @@ def _ensure_network_access_windows(port: int) -> None:
     except Exception:
         pass
 
-    # ── ShellExecuteW: native UAC elevation (most reliable on Windows) ────
+    # ShellExecuteW: native UAC elevation (most reliable on Windows)
     # ShellExecuteW with verb "runas" always shows the UAC dialog regardless
     # of UAC level settings. Non-blocking — uvicorn is already running.
     print("[Dashboard] One-time network setup required.")
@@ -406,7 +406,7 @@ def _ensure_crypto_js() -> None:
 _ensure_crypto_js()
 
 
-# ── helpers ───────────────────────────────────────────────────────────────────
+# helpers
 
 def _local_ip() -> str:
     """Return the best LAN-facing IPv4 address, no internet required."""
@@ -447,7 +447,7 @@ def _read(name: str) -> str:
     return (STATIC_DIR / name).read_text(encoding="utf-8")
 
 
-# ── DashboardServer ───────────────────────────────────────────────────────────
+# DashboardServer
 
 class DashboardServer:
 
@@ -489,7 +489,7 @@ class DashboardServer:
             return self._host
         return _local_ip()
 
-    # ── one-time key management ───────────────────────────────────────────
+    # one-time key management
 
     def new_key(self, expiry_secs: int = 600) -> str:
         now = time.time()
@@ -552,7 +552,7 @@ class DashboardServer:
         except Exception:
             return None
 
-    # ── callbacks ────────────────────────────────────────────────────────
+    # callbacks
 
     def set_wake_callback(self, fn) -> None:
         self._wake_callback = fn
@@ -560,7 +560,7 @@ class DashboardServer:
     def set_connect_callback(self, fn) -> None:
         self._connect_callback = fn
 
-    # ── broadcast ────────────────────────────────────────────────────────
+    # broadcast
 
     async def broadcast(self, msg: dict) -> None:
         self._history.append(msg)
@@ -574,7 +574,7 @@ class DashboardServer:
                 dead.add(ws)
         self._clients -= dead
 
-    # ── FastAPI app ───────────────────────────────────────────────────────
+    # FastAPI app
 
     def _auth(self, req: Request) -> bool:
         tok = req.headers.get("authorization", "").removeprefix("Bearer ").strip()
@@ -652,7 +652,7 @@ class DashboardServer:
         except Exception as e:
             print(f"[Aether] OpenAI-compatible API not mounted: {e}")
 
-    # ── static / login page routes ────────────────────────────────────────
+    # static / login page routes
 
     def _register_static_routes(self, app: "FastAPI") -> None:
         # serve CryptoJS from local cache, fallback to CDN redirect
@@ -678,7 +678,7 @@ class DashboardServer:
                     .replace("__PORT__", str(PORT)))
             return HTMLResponse(html)
 
-    # ── auth / pairing routes ────────────────────────────────────────────
+    # auth / pairing routes
 
     def _register_auth_routes(self, app: "FastAPI") -> None:
         @app.post("/api/ws-ticket")
@@ -812,7 +812,7 @@ class DashboardServer:
             self._device_sessions.clear()
             return JSONResponse({"ok": True, "revoked": count})
 
-    # ── pending approvals (headless remote-approval flow) ──────────────────
+    # pending approvals (headless remote-approval flow)
 
     def _register_approval_routes(self, app: "FastAPI") -> None:
         """Backs core.headless_ui.HeadlessUI.confirm_blocking()'s remote-
@@ -847,7 +847,7 @@ class DashboardServer:
                 return JSONResponse({"error": "Not found or already resolved"}, status_code=404)
             return JSONResponse({"ok": True})
 
-    # ── LLM backend status (remote-PC / local-CPU fallback) ────────────────
+    # LLM backend status (remote-PC / local-CPU fallback)
 
     def _register_llm_status_routes(self, app: "FastAPI") -> None:
         """Web-dashboard counterpart of the "LLM Backend" line in the CLI
@@ -862,7 +862,7 @@ class DashboardServer:
             return JSONResponse(await asyncio.get_running_loop().run_in_executor(
                 None, get_llm_backend_status))
 
-    # ── audit log viewer (core/audit_log.py) ─────────────────────────────
+    # audit log viewer (core/audit_log.py)
 
     def _register_audit_routes(self, app: "FastAPI") -> None:
         @app.get("/audit", response_class=HTMLResponse)
@@ -896,7 +896,7 @@ class DashboardServer:
                         "chain": {"ok": ok, "message": msg}}
             return JSONResponse(await asyncio.get_running_loop().run_in_executor(None, _load))
 
-    # ── speed / memory / cloud-usage (core/perf_stats.py) ────────────────
+    # speed / memory / cloud-usage (core/perf_stats.py)
 
     def _register_perf_routes(self, app: "FastAPI") -> None:
         @app.get("/perf", response_class=HTMLResponse)
@@ -915,7 +915,7 @@ class DashboardServer:
             return JSONResponse(await asyncio.get_running_loop().run_in_executor(
                 None, perf_stats.full_report, hours))
 
-    # ── voice command routes ─────────────────────────────────────────────
+    # voice command routes
 
     def _register_command_routes(self, app: "FastAPI") -> None:
         @app.post("/api/command")
@@ -945,7 +945,7 @@ class DashboardServer:
                 self._wake_callback()
             return JSONResponse({"ok": True})
 
-    # ── phone mic real-time audio ────────────────────────────────────────
+    # phone mic real-time audio
 
     def _register_phone_audio_ws(self, app: "FastAPI") -> None:
         # Client (dashboard/static/app.html doMic()) already resamples to
@@ -981,7 +981,7 @@ class DashboardServer:
                     {"type": "sys", "text": "Phone microphone stopped."}
                 ))
 
-    # ── file sharing routes ──────────────────────────────────────────────
+    # file sharing routes
 
     def _register_file_routes(self, app: "FastAPI") -> None:
         if _UPLOAD_OK:
@@ -1089,7 +1089,7 @@ class DashboardServer:
                 return JSONResponse({"error": "Not found"}, status_code=404)
             return FileResponse(str(path), filename=safe, headers={"Cache-Control": "no-store"})
 
-    # ── main relay websocket ──────────────────────────────────────────────
+    # main relay websocket
 
     def _register_main_ws(self, app: "FastAPI") -> None:
         @app.websocket("/ws")
@@ -1121,7 +1121,7 @@ class DashboardServer:
                 self._clients.discard(websocket)
 
 
-    # ── serve ─────────────────────────────────────────────────────────────
+    # serve
 
     async def _serve_alias(self) -> None:
         """Second HTTPS server on PORT+1 sharing the same app and in-memory state.
@@ -1170,7 +1170,7 @@ class DashboardServer:
         await uvicorn.Server(cfg).serve()
 
 
-# ── Aether integration helper ─────────────────────────────────────────────
+# Aether integration helper
 # Runs the dashboard's asyncio event loop on a background thread so it can
 # live alongside Aether's synchronous/threaded main.py.
 

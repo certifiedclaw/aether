@@ -104,7 +104,7 @@ class _MarkConfigAdapter:
             return str(resolve_data_path(value, path_names[key]))
         return value
 
-    # ── Properties expected by router.py / diagnostics.py ────────────────
+    # Properties expected by router.py / diagnostics.py
     @property
     def ollama_url(self):
         return self._raw.get("llm_url", self._DEFAULTS["llm.ollama_url"])

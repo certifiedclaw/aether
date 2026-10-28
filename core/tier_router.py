@@ -40,7 +40,7 @@ class Tier(Enum):
     HARD = "hard"
 
 
-# ---- Config: adjust these to match your setup -----------------------------
+# Config: adjust these to match your setup
 
 TIER_MODELS = {
     Tier.QUICK: "qwen2.5:1.5b",
@@ -118,7 +118,7 @@ def escalate_to_hard(reason: str = "loop guard failure") -> RouteDecision:
     return RouteDecision(Tier.HARD, TIER_MODELS[Tier.HARD], reason)
 
 
-# ---- Generation dispatch ---------------------------------------------------
+# Generation dispatch
 
 def default_call_ollama(model_name: str, message: str) -> str:
     """Default QUICK/EVERYDAY dispatch — plain text call to whichever Ollama

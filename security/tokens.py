@@ -36,7 +36,7 @@ from .capabilities import Capability
 from . import audit
 
 
-# ── Paths ────────────────────────────────────────────────────────────────
+# Paths
 _REPO_ROOT  = Path(__file__).resolve().parent.parent
 _DATA_DIR   = data_path("security")
 _INSTALL    = _DATA_DIR / "install.json"
@@ -45,7 +45,7 @@ _SESSIONS   = _DATA_DIR / "sessions.json"
 _PENDING    = _DATA_DIR / "pending_pins.json"
 
 
-# ── Tunables ─────────────────────────────────────────────────────────────
+# Tunables
 _PIN_LEN              = 6
 _PIN_ALPHABET         = string.ascii_uppercase + string.digits
 _PIN_TTL_SECS         = 10 * 60         # 10 minutes
@@ -58,7 +58,7 @@ _RATE_LIMIT_LOCKOUT   = 60 * 60        # 1 hour after 10 consecutive fails
 _MAX_CONSEC_FAILS     = 10
 
 
-# ── Data classes ──────────────────────────────────────────────────────────
+# Data classes
 @dataclass
 class DeviceRecord:
     device_id: str
@@ -115,7 +115,7 @@ class SessionRecord:
         )
 
 
-# ── SecurityManager ──────────────────────────────────────────────────────
+# SecurityManager
 class SecurityManager:
     """Single instance per process. Thread-safe.
 
@@ -142,7 +142,7 @@ class SecurityManager:
         self._lockouts: dict[str, float]         = {}   # ip → lock-until
         self._load_all()
 
-    # ── Persistence ────────────────────────────────────────────────────
+    # Persistence
     def _load_all(self) -> None:
         with self._lock:
             for path, container, ctor in (
@@ -196,7 +196,7 @@ class SecurityManager:
     def _save_pending(self) -> None:
         self._save("pending_pins", self._pending)
 
-    # ── First-run setup ────────────────────────────────────────────────
+    # First-run setup
     def is_installed(self) -> bool:
         return self._install_path.exists()
 
@@ -235,7 +235,7 @@ class SecurityManager:
         # Constant-time compare to avoid timing leaks
         return secrets.compare_digest(candidate, data["admin_password_hash"])
 
-    # ── PIN issuance & rate limiting ───────────────────────────────────
+    # PIN issuance & rate limiting
     def _prune_attempts(self, ip: str, now: float) -> None:
         window_start = now - _RATE_LIMIT_WINDOW
         if ip in self._attempts:
@@ -308,7 +308,7 @@ class SecurityManager:
                 return True
             return False
 
-    # ── Device pairing ─────────────────────────────────────────────────
+    # Device pairing
     def pair_device(self, device_name: str, caps: set[Capability] | None = None) -> dict:
         """Pair a new device. Returns {device_id, device_token, session_token, caps}."""
         with self._lock:
@@ -427,7 +427,7 @@ class SecurityManager:
                 self._save_devices()
             return True
 
-    # ── Session validation (called from middleware) ────────────────────
+    # Session validation (called from middleware)
     def validate_session(self, session_token: str) -> tuple[DeviceRecord, SessionRecord] | None:
         with self._lock:
             now = time.time()

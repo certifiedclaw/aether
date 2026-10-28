@@ -76,7 +76,7 @@ class MCPServerProcess:
         self._tools: list[dict] = []
         self._stdout_queue: queue.Queue[bytes | None] = queue.Queue(maxsize=_MCP_STDOUT_QUEUE_SIZE)
 
-    # ── Lifecycle ─────────────────────────────────────────────────────────
+    # Lifecycle
 
     def start(self) -> None:
         if self._proc and self._proc.poll() is None:
@@ -146,7 +146,7 @@ class MCPServerProcess:
     def is_alive(self) -> bool:
         return self._proc is not None and self._proc.poll() is None
 
-    # ── RPC ──────────────────────────────────────────────────────────────
+    # RPC
 
     def _next_id(self) -> int:
         self._msg_id += 1
@@ -218,7 +218,7 @@ class MCPServerProcess:
             logger.warning("MCP: could not fetch tools from '%s': %s", self.name, e)
             return []
 
-    # ── Public ────────────────────────────────────────────────────────────
+    # Public
 
     @property
     def tools(self) -> list[dict]:

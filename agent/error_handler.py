@@ -9,6 +9,9 @@ from enum import Enum
 from pathlib import Path
 
 from core.llm_client import call_llm_text
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_base_dir() -> Path:
@@ -55,7 +58,7 @@ def analyze_error(
     max_attempts: int = 2,
 ) -> dict:
     if attempt >= max_attempts:
-        print(f"[ErrorHandler] ⚠️ Max attempts for step {step.get('step')} — forcing replan")
+        logger.error(f"[ErrorHandler] Max attempts for step {step.get('step')} — forcing replan")
         return {
             "decision":       ErrorDecision.REPLAN,
             "reason":         f"Failed {attempt} times: {error[:100]}",
@@ -93,11 +96,11 @@ Attempt number: {attempt}"""
             result["decision"]     = ErrorDecision.REPLAN
             result["user_message"] = "This step is critical — finding alternative approach, sir."
 
-        print(f"[ErrorHandler] Decision: {result['decision'].value} — {result.get('reason', '')}")
+        logger.error(f"[ErrorHandler] Decision: {result['decision'].value} — {result.get('reason', '')}")
         return result
 
     except Exception as e:
-        print(f"[ErrorHandler] ⚠️ Analysis failed: {e} — defaulting to replan")
+        logger.error(f"[ErrorHandler] Analysis failed: {e} — defaulting to replan")
         return {
             "decision":       ErrorDecision.REPLAN,
             "reason":         str(e),
@@ -138,7 +141,7 @@ Return ONLY the Python code, no explanation."""
             "critical":   step.get("critical", False),
         }
     except Exception as e:
-        print(f"[ErrorHandler] ⚠️ Fix generation failed: {e}")
+        logger.error(f"[ErrorHandler] Fix generation failed: {e}")
         return {
             "step":        step.get("step"),
             "tool":        "generated_code",

@@ -294,9 +294,9 @@ def ensure_ollama_running(timeout: int = 15) -> bool:
         try:
             ok = requests.get(health, headers=_auth_headers(provider), timeout=5).status_code == 200
             if ok:
-                print(f"[LLM] OpenAI-compatible server reachable at {url}")
+                logger.info(f"[LLM] OpenAI-compatible server reachable at {url}")
             else:
-                print(f"[LLM] Server at {url} returned non-200.  Is it running?")
+                logger.info(f"[LLM] Server at {url} returned non-200.  Is it running?")
             return ok
         except Exception as e:
             print(
@@ -305,7 +305,7 @@ def ensure_ollama_running(timeout: int = 15) -> bool:
             )
             return False
 
-    # ── Ollama ──────────────────────────────────────────────────────────────
+    # Ollama
     health = f"{url}/api/tags"
 
     def _is_up() -> bool:
@@ -317,27 +317,27 @@ def ensure_ollama_running(timeout: int = 15) -> bool:
     if _is_up():
         return True
 
-    print("[LLM] Ollama not running — launching 'ollama serve'…")
+    logger.info("[LLM] Ollama not running — launching 'ollama serve'…")
     try:
         kwargs: dict = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
         if sys.platform == "win32":
             kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
         subprocess.Popen(["ollama", "serve"], **kwargs)
     except FileNotFoundError:
-        print("[LLM] 'ollama' command not found. Install Ollama from https://ollama.com")
+        logger.warning("[LLM] 'ollama' command not found. Install Ollama from https://ollama.com")
         return False
     except Exception as e:
-        print(f"[LLM] Could not launch Ollama: {e}")
+        logger.warning(f"[LLM] Could not launch Ollama: {e}")
         return False
 
     deadline = time.time() + timeout
     while time.time() < deadline:
         time.sleep(1.0)
         if _is_up():
-            print("[LLM] Ollama started successfully.")
+            logger.info("[LLM] Ollama started successfully.")
             return True
 
-    print("[LLM] Ollama did not respond within the timeout.")
+    logger.warning("[LLM] Ollama did not respond within the timeout.")
     return False
 
 
@@ -358,7 +358,7 @@ def warmup_model(system_prompt: str | None = None) -> bool:
     """
     url, model = get_llm_settings()
     provider   = get_llm_provider()
-    print(f"[LLM] Warming up '{model}' ({provider})…")
+    logger.info(f"[LLM] Warming up '{model}' ({provider})…")
 
     messages: list[dict] = []
     if system_prompt:
@@ -379,13 +379,13 @@ def warmup_model(system_prompt: str | None = None) -> bool:
             resp = requests.post(_chat_completions_endpoint(url, provider), json=payload,
                                   headers=_auth_headers(provider), timeout=180)
             resp.raise_for_status()
-            print(f"[LLM] '{model}' ready ({provider}).")
+            logger.info(f"[LLM] '{model}' ready ({provider}).")
             return True
         except Exception as e:
-            print(f"[LLM] Warmup failed (non-fatal): {e}")
+            logger.warning(f"[LLM] Warmup failed (non-fatal): {e}")
             return False
 
-    # ── Ollama ──────────────────────────────────────────────────────────────
+    # Ollama
     payload = {
         "model":      model,
         "messages":   messages,
@@ -399,10 +399,10 @@ def warmup_model(system_prompt: str | None = None) -> bool:
     try:
         resp = requests.post(f"{url}/api/chat", json=payload, timeout=180)
         resp.raise_for_status()
-        print(f"[LLM] '{model}' loaded and KV cache primed.")
+        logger.info(f"[LLM] '{model}' loaded and KV cache primed.")
         return True
     except Exception as e:
-        print(f"[LLM] Warmup failed (non-fatal): {e}")
+        logger.warning(f"[LLM] Warmup failed (non-fatal): {e}")
         return False
 
 
@@ -486,9 +486,9 @@ def get_llm_settings() -> tuple[str, str]:
 
     if changed:
         if reachable:
-            print(f"[LLM] Remote host reachable ({remote_url}) -- using it for inference.")
+            logger.info(f"[LLM] Remote host reachable ({remote_url}) -- using it for inference.")
         else:
-            print(f"[LLM] Remote host unreachable ({remote_url}) -- falling back to local CPU ({local_url}).")
+            logger.info(f"[LLM] Remote host unreachable ({remote_url}) -- falling back to local CPU ({local_url}).")
 
     return (remote_url, remote_model) if reachable else (local_url, local_model)
 
@@ -649,7 +649,7 @@ def call_llm(
                 "tool_calls": msg.get("tool_calls") or [],
             }
         except requests.exceptions.ConnectionError as e:
-            print(f"[LLM] ConnectionError — trying to restart Ollama… ({e})")
+            logger.error(f"[LLM] ConnectionError — trying to restart Ollama… ({e})")
             if ensure_ollama_running():
                 try:
                     resp = requests.post(endpoint, json=payload, timeout=timeout)
@@ -671,15 +671,15 @@ def call_llm(
         except requests.exceptions.HTTPError as e:
             status = e.response.status_code
             body   = e.response.text[:400]
-            print(f"[LLM] HTTPError: {status} — {body}")
+            logger.error(f"[LLM] HTTPError: {status} — {body}")
             if status == 404 or "model not found" in body.lower() or "pull" in body.lower():
                 raise RuntimeError(_ollama_missing_model_message(model, url))
             raise RuntimeError(f"Ollama HTTP error: {status}")
         except Exception as e:
-            print(f"[LLM] Unexpected error: {type(e).__name__}: {e}")
+            logger.error(f"[LLM] Unexpected error: {type(e).__name__}: {e}")
             raise RuntimeError(f"LLM call failed: {e}")
 
-    # ── OpenAI-compatible ───────────────────────────────────────────────────
+    # OpenAI-compatible
     endpoint = _chat_completions_endpoint(url, provider)
     payload: dict = {
         "model": model,
@@ -1093,7 +1093,7 @@ def _cloud_max_tokens(provider: str) -> int:
     return max(256, min(v, 8192))
 
 
-# ── Gemini circuit breaker ────────────────────────────────────────────────────
+# Gemini circuit breaker
 # After a real failure (the single retry also failed) Gemini ESCALATION calls
 # fast-fail for a while, so each HARD turn during an outage doesn't pay the
 # timeout + retry before falling back to the local model. Keyed per model.
@@ -1418,7 +1418,7 @@ def call_llm_stream(
     try:
         yield from _do_stream()
     except requests.exceptions.ConnectionError as e:
-        print(f"[LLM] Stream ConnectionError — trying to restart Ollama… ({e})")
+        logger.error(f"[LLM] Stream ConnectionError — trying to restart Ollama… ({e})")
         if ensure_ollama_running():
             try:
                 yield from _do_stream()
@@ -1442,5 +1442,5 @@ def call_llm_stream(
             raise RuntimeError(_ollama_missing_model_message(model, url))
         raise RuntimeError(f"Ollama HTTP error: {e.response.status_code}")
     except Exception as e:
-        print(f"[LLM] Stream error: {type(e).__name__}: {e}")
+        logger.error(f"[LLM] Stream error: {type(e).__name__}: {e}")
         raise RuntimeError(f"LLM stream failed: {e}")

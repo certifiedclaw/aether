@@ -52,7 +52,7 @@ class ValidationResult:
         return "\n".join(lines)
 
 
-# ── Validators ────────────────────────────────────────────────────────────
+# Validators
 
 _VALID_STT   = {"whisper", "vosk", "faster_whisper"}
 _VALID_TTS   = {"edgetts", "kokoro", "elevenlabs", "edge_tts", "pyttsx3"}
@@ -166,7 +166,7 @@ def _check_memory(result: ValidationResult, cfg) -> None:
             f"Must be a float — got: {threshold!r}")
 
 
-# ── Public API ─────────────────────────────────────────────────────────────
+# Public API
 
 def validate_config(config=None) -> ValidationResult:
     """

@@ -18,6 +18,9 @@ MAX_BUILD_ATTEMPTS = 3
 
 from core.llm_client import call_llm_text as _llm
 from core.protected_paths import DENIED, is_protected
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _clean_code(text: str) -> str:
@@ -95,10 +98,10 @@ def _take_screenshot() -> Path | None:
         screenshot_path = __import__("core.known_folders",fromlist=["x"]).desktop_dir() / f"aether_debug_{int(time.time())}.png"
         screenshot = pyautogui.screenshot()
         screenshot.save(str(screenshot_path))
-        print(f"[Code] 📸 Screenshot: {screenshot_path}")
+        logger.info(f"[Code] Screenshot: {screenshot_path}")
         return screenshot_path
     except Exception as e:
-        print(f"[Code] ⚠️ Screenshot failed: {e}")
+        logger.warning(f"[Code] Screenshot failed: {e}")
         return None
 
 
@@ -234,7 +237,7 @@ def _build(description, language, output_path, args, timeout, speak=None, player
         status = _save_file(path, code)
         if status.startswith("Access denied:") or status.startswith("Could not save:"):
             return status
-        print(f"[Code] ✅ Written: {path}")
+        logger.info(f"[Code] Written: {path}")
     except Exception as e:
         msg = f"Could not write initial code: {e}"
         if speak: speak(msg)
@@ -242,7 +245,7 @@ def _build(description, language, output_path, args, timeout, speak=None, player
 
     last_output = ""
     for attempt in range(1, MAX_BUILD_ATTEMPTS + 1):
-        print(f"[Code] 🔄 Attempt {attempt}/{MAX_BUILD_ATTEMPTS}")
+        logger.info(f"[Code] Attempt {attempt}/{MAX_BUILD_ATTEMPTS}")
         if player:
             player.write_log(f"[Code] Attempt {attempt}...")
 
@@ -257,7 +260,7 @@ def _build(description, language, output_path, args, timeout, speak=None, player
             if speak: speak(msg)
             return f"{msg}\n\nOutput:\n{last_output}"
 
-        print(f"[Code] ⚠️ Error on attempt {attempt}, fixing...")
+        logger.error(f"[Code] Error on attempt {attempt}, fixing...")
         if player:
             player.write_log(f"[Code] Fixing (attempt {attempt})...")
 
@@ -288,7 +291,7 @@ def _write_action(description, language, output_path, player) -> str:
         status = _save_file(path, code)
         if status.startswith("Access denied:") or status.startswith("Could not save:"):
             return status
-        print(f"[Code] ✅ Written: {path}")
+        logger.info(f"[Code] Written: {path}")
         return f"Code written. {status}\n\nPreview:\n{_preview(code)}"
     except Exception as e:
         return f"Could not generate code: {e}"
@@ -324,7 +327,7 @@ def _edit_action(file_path, instruction, player) -> str:
     status = _save_file(save_path, edited)
     if status.startswith("Access denied:") or status.startswith("Could not save:"):
         return status
-    print(f"[Code] ✅ Edited: {file_path}")
+    logger.info(f"[Code] Edited: {file_path}")
     return f"File edited. {status}\n\nPreview:\n{_preview(edited)}"
 
 
@@ -396,7 +399,7 @@ def _optimize_action(file_path, code, language, output_path, player) -> str:
     status = _save_file(save_path, optimized)
     if status.startswith("Access denied:") or status.startswith("Could not save:"):
         return status
-    print(f"[Code] ✅ Optimized: {save_path}")
+    logger.info(f"[Code] Optimized: {save_path}")
 
     original_lines  = len(code.splitlines())
     optimized_lines = len(optimized.splitlines())
@@ -415,7 +418,7 @@ def _screen_debug_action(description, file_path, player, speak=None) -> str:
     if player:
         player.write_log("[Code] Taking screenshot for analysis...")
 
-    print("[Code] 📸 Capturing screen for debug...")
+    logger.info("[Code] Capturing screen for debug...")
 
 
     screenshot_path = _take_screenshot()
@@ -427,7 +430,7 @@ def _screen_debug_action(description, file_path, player, speak=None) -> str:
     if file_path:
         file_content, err = _read_file(file_path)
         if err:
-            print(f"[Code] ⚠️ Could not read file: {err}")
+            logger.warning(f"[Code] Could not read file: {err}")
 
     try:
         import base64, json as _json, requests as _req
@@ -475,7 +478,7 @@ def _screen_debug_action(description, file_path, player, speak=None) -> str:
         )
         resp.raise_for_status()
         analysis = (resp.json().get("message", {}).get("content") or "").strip()
-        print("[Code] ✅ Screen analysis complete")
+        logger.info("[Code] Screen analysis complete")
 
         try:
             screenshot_path.unlink()
@@ -493,7 +496,7 @@ def _screen_debug_action(description, file_path, player, speak=None) -> str:
                 if status.startswith("Access denied:") or status.startswith("Could not save:"):
                     return analysis + f"\n\n{status}"
                 analysis += f"\n\n✅ Fixed code has been saved to: {file_path}"
-                print(f"[Code] ✅ Fixed code saved: {file_path}")
+                logger.info(f"[Code] Fixed code saved: {file_path}")
 
         return analysis
 
@@ -537,7 +540,7 @@ def code_helper(
 
     if action == "auto":
         action = _detect_intent(description, file_path, code)
-        print(f"[Code] 🤖 Auto-detected: {action}")
+        logger.info(f"[Code] Auto-detected: {action}")
 
     if action == "write":
         return _write_action(description, language, output_path, player)

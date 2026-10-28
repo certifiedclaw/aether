@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import webbrowser
 from urllib.parse import quote_plus
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def weather_action(
@@ -70,12 +73,12 @@ def _fetch_weather(city: str, when: str) -> str | None:
         return (f"It is {cur['temp_C']} degrees Celsius in {city}, {desc}, feels like "
                 f"{cur['FeelsLikeC']}, humidity {cur['humidity']} percent, sir.")
     except Exception as e:
-        print(f"[Weather] wttr.in lookup failed: {e}")
+        logger.warning(f"[Weather] wttr.in lookup failed: {e}")
         return None
 
 
 def _log(message: str, player=None) -> None:
-    print(f"[Weather] {message}")
+    logger.info(f"[Weather] {message}")
     if player:
         try:
             player.write_log(f"Aether: {message}")

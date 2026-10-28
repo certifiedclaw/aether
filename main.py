@@ -17,7 +17,7 @@ NEW in this release (integrated from Aether v4.2):
   ✅ Diagnostics      — type "status" in chat for a full system report
   ✅ Rotating logs    — logs/ directory, 5 MB cap per file
 """
-# ── Silence verbose logs + block heavy unused backends ─────────────────────
+# Silence verbose logs + block heavy unused backends
 import os as _os
 _os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL",  "3")
 _os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
@@ -31,16 +31,15 @@ import warnings as _warnings
 _warnings.filterwarnings("ignore", category=UserWarning)
 _warnings.filterwarnings("ignore", category=DeprecationWarning)
 _warnings.filterwarnings("ignore", category=FutureWarning)
-# ───────────────────────────────────────────────────────────────────────────
 
-# ── Headless mode — run on a server with no display/GUI/mic ────────────────
+# Headless mode — run on a server with no display/GUI/mic
 # Set AETHER_HEADLESS=1 (or true/yes) to skip PyQt6 and the desktop UI
 # entirely; interaction happens via the web dashboard / phone remote
 # instead (dashboard/server.py already delivers typed commands straight
 # to AetherLocal, bypassing the UI). See core/headless_ui.py.
 HEADLESS = _os.environ.get("AETHER_HEADLESS", "").strip().lower() in ("1", "true", "yes")
 
-# ── Bootstrap: auto-install base UI packages before anything else ──────────
+# Bootstrap: auto-install base UI packages before anything else
 import importlib.util as _ilu
 import subprocess      as _sp
 import sys             as _sys
@@ -71,7 +70,6 @@ def _bootstrap() -> None:
     _os.execv(_sys.executable, [_sys.executable] + _sys.argv)
 
 _bootstrap()
-# ───────────────────────────────────────────────────────────────────────────
 
 import json
 import logging
@@ -106,7 +104,7 @@ else:
 from version import APP_NAME, __version__, version_string
 from memory.memory_manager import load_memory as _load_memory_raw, update_memory as _update_memory_raw, format_memory_for_prompt
 
-# ── Memory cache — avoid re-reading the JSON file every turn ──────────────
+# Memory cache — avoid re-reading the JSON file every turn
 _memory_cache: dict | None = None
 
 def load_memory() -> dict:
@@ -139,7 +137,7 @@ from actions.web_search        import web_search as web_search_action
 from actions.computer_control  import computer_control
 from actions.game_updater      import game_updater
 
-# ── NEW: Aether-sourced modules ────────────────────────────────────────────
+# Aether-sourced modules
 from memory.semantic_memory    import MemoryEngine
 from memory.rag                import RAGEngine
 from core.smart_context        import compress_if_needed, estimate_tool_tokens
@@ -154,7 +152,7 @@ from core.mcp_bridge            import MCPBridge
 from core                       import undo as undo_stack
 from memory.config_manager     import get_mark_config
 
-# ── NEW v2: advanced modules ───────────────────────────────────────────────
+# advanced modules
 from core.observability        import get_obs
 from core.goal_state           import GoalState, GOAL_TOOL_DECLARATIONS
 from memory.hybrid_memory      import HybridMemory
@@ -171,7 +169,7 @@ try:
 except ImportError:
     _ADVANCED_OK = False
 
-# ── NEW v4: crash logger, self-test, memory tools, config validator ────────
+# crash logger, self-test, memory tools, config validator
 try:
     from core.crash_logger  import log_crash, get_recent_crashes
     from core.self_test     import run_self_test, run_self_test_async
@@ -193,7 +191,7 @@ except ImportError as _v4_err:
     def memory_stats(): return "Memory tools not available."
     def validate_config(config=None): return None
 
-# ── NEW v3: integration modules (lazy — graceful if not installed) ─────────
+# integration modules (lazy — graceful if not installed)
 try:
     from integrations.langchain_tools import (
         langchain_tool, LANGCHAIN_TOOL_DECLARATION, langchain_available,
@@ -229,7 +227,7 @@ except ImportError:
     _SEARXNG_OK = False
     SEARXNG_TOOL_DECLARATION = None
 
-# ── Logging setup ──────────────────────────────────────────────────────────
+# Logging setup
 Path("logs").mkdir(exist_ok=True)
 from logging.handlers import RotatingFileHandler as _RFH
 _root_log = logging.getLogger()
@@ -242,11 +240,8 @@ if not _root_log.handlers:
     _root_log.addHandler(_fh)
     _root_log.addHandler(_ch)
 logger = logging.getLogger("aether")
-# ───────────────────────────────────────────────────────────────────────────
 
-# ---------------------------------------------------------------------------
 # Paths
-# ---------------------------------------------------------------------------
 
 def _get_base_dir() -> Path:
     if getattr(sys, "frozen", False):
@@ -261,9 +256,7 @@ PROMPT_PATH     = BASE_DIR / "core" / "prompt.txt"
 
 # SAMPLE_RATE_IN, BLOCK_SIZE, CHANNELS moved to core/listen_loops.py.
 
-# ---------------------------------------------------------------------------
 # Tool declarations
-# ---------------------------------------------------------------------------
 
 # Tools whose raw output must go back through the LLM for synthesis before
 # being spoken/displayed. Defined once here rather than inside the hot loop.
@@ -282,7 +275,6 @@ _NEEDS_LLM_ROUND: frozenset[str] = frozenset({
 from core.tool_declarations import TOOL_DECLARATIONS, _to_ollama_tools
 
 
-
 _INTEGRATION_DECLS = [
     d for d in [LANGCHAIN_TOOL_DECLARATION, OI_TOOL_DECLARATION, LLAMA_INDEX_TOOL_DECLARATION]
     if d is not None
@@ -290,9 +282,7 @@ _INTEGRATION_DECLS = [
 OLLAMA_TOOLS = _to_ollama_tools(TOOL_DECLARATIONS + GOAL_TOOL_DECLARATIONS + _INTEGRATION_DECLS)
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 def _load_config() -> dict:
     return _config_home.load_config(API_CONFIG_PATH)
@@ -332,9 +322,7 @@ def _load_system_prompt() -> str:
 # _VADBuffer, SAMPLE_RATE_IN, BLOCK_SIZE, CHANNELS moved to
 # core/listen_loops.py (mechanical extraction, used nowhere else).
 
-# ---------------------------------------------------------------------------
 # AetherLocal — main assistant class
-# ---------------------------------------------------------------------------
 
 class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, ChatCommandsMixin, ListenLoopsMixin):
 
@@ -361,7 +349,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         # atomic with respect to the others.
         self._conversation_lock = threading.RLock()
 
-        # ── Safety layer: gates high-risk operations behind a blocking UI
+        # Safety layer: gates high-risk operations behind a blocking UI
         # confirmation dialog. Was previously imported (get_safety) but
         # never instantiated or wired to a callback anywhere in the
         # codebase -- requires_confirmation()/request_confirmation() would
@@ -372,7 +360,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         self._safety = get_safety()
         self._safety.set_confirm_callback(self.ui.confirm_blocking)
 
-        # ── NEW: Aether-sourced subsystems ────────────────────────────────
+        # Aether-sourced subsystems
         self._semantic_mem: MemoryEngine | None = None
         self._rag:          RAGEngine    | None = None
         self._plugins:      PluginSystem | None = None
@@ -380,7 +368,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         self._hotkey:       HotkeyManager | None = None
         self._mcp:          MCPBridge    | None = None
 
-        # ── NEW v2: advanced systems ───────────────────────────────────────
+        # advanced systems
         self._hybrid_mem:   HybridMemory | None = None
         self._goals:        GoalState    | None = None
         self._loop_guard                        = None
@@ -388,13 +376,13 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         self._file_watcher                      = None
         self._obs           = get_obs()
 
-        # ── Barge-in: audio energy accumulator used while TTS is speaking ──
+        # Barge-in: audio energy accumulator used while TTS is speaking
         self._barge_in_energy: float = 0.0
         self._barge_in_count:  int   = 0
         self._BARGE_IN_THRESHOLD: float = 0.02   # RMS threshold
         self._BARGE_IN_FRAMES:    int   = 6      # consecutive loud frames to trigger
 
-        # ── NEW v4 (ported from Mark-XLVIII): dashboard, proactive, monitor ─
+        # Ported from Mark-XLVIII: dashboard, proactive, monitor
         self._dashboard                         = None   # DashboardServer | None
         self._proactive                         = None   # ProactiveEngine | None
         self._sys_monitor                       = None   # SystemMonitor   | None
@@ -421,24 +409,18 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             self._chat_sessions.active_title,
         )
 
-    # ------------------------------------------------------------------
     # System prompt — now injects semantic memory context
-    # ------------------------------------------------------------------
 
-    # ── System prompt assembly — moved to core/prompt_builder.py ───
+    # System prompt assembly — moved to core/prompt_builder.py
     # See PromptBuilderMixin, which AetherLocal now inherits from.
 
 
-    # ------------------------------------------------------------------
     # Message stats — pushes per-response metrics to the UI stats panel
-    # ------------------------------------------------------------------
 
-    # ── Message stats — moved to core/conversation_core.py ────────
+    # Message stats — moved to core/conversation_core.py
 
 
-    # ------------------------------------------------------------------
     # TTS queue worker
-    # ------------------------------------------------------------------
 
     def _tts_worker(self) -> None:
         self._tts_ready.wait(timeout=120)
@@ -507,9 +489,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
                 spoken = "I can't reach the language model. Check that Ollama is running."
         self.speak(spoken)
 
-    # ------------------------------------------------------------------
     # Reconfigure
-    # ------------------------------------------------------------------
 
     def reconfigure(self, new_config: dict) -> None:
         threading.Thread(
@@ -583,9 +563,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         else:
             self.speak("LLM and TTS updated. Restart for speech engine change.")
 
-    # ------------------------------------------------------------------
     # Text command (from UI)
-    # ------------------------------------------------------------------
 
     def _on_text_command(self, text: str) -> None:
         self._text_queue.put(text)
@@ -610,28 +588,24 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         self._interrupt_speaking(reason="response stopped")
         self.ui.write_log("SYS: Stop requested; an active tool action may finish first.")
 
-    # ------------------------------------------------------------------
     # Tool execution
-    # ------------------------------------------------------------------
 
-    # ── Tool dispatch (execute_tool + all _tool_* handlers) ────────
+    # Tool dispatch (execute_tool + all _tool_* handlers)
     # Moved to core/tool_dispatch.py — see ToolDispatchMixin, which
     # AetherLocal now inherits from (see class declaration below).
 
 
-    # ------------------------------------------------------------------
     # LLM processing loop — with smart context compression
-    # ------------------------------------------------------------------
 
-    # ── _process_message / _process_message_locked — moved to ─────
+    # _process_message / _process_message_locked — moved to
     # core/conversation_core.py (ConversationCoreMixin).
 
 
-    # ── Built-in chat commands — moved to core/chat_commands.py ────
+    # Built-in chat commands — moved to core/chat_commands.py
     # (ChatCommandsMixin).
 
 
-    # ── Conversation core (context prep / tool loop / finalize) ───
+    # Conversation core (context prep / tool loop / finalize)
     # Moved to core/conversation_core.py — see ConversationCoreMixin,
     # which AetherLocal now inherits from (see class declaration below).
     # Methods that used to live here: _prepare_conversation_messages,
@@ -709,9 +683,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             except queue.Empty:
                 pass
 
-    # ------------------------------------------------------------------
     # Startup — initialise all new subsystems
-    # ------------------------------------------------------------------
 
     def _init_new_subsystems(self) -> None:
         """Initialise Aether-sourced modules in a background thread."""
@@ -742,7 +714,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         except Exception as e:
             self.ui.write_log(f"WRN: RAG engine — {e}")
 
-        # ── NEW v2: Hybrid memory (BM25 + dense + reranker) ───────────────
+        # Hybrid memory (BM25 + dense + reranker)
         try:
             self._hybrid_mem = HybridMemory(cfg)
             stats = self._hybrid_mem.stats()
@@ -796,7 +768,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             self.ui.write_log(f"WRN: MCP bridge — {e}")
 
     def _init_advanced_subsystems(self, cfg) -> None:
-        # ── NEW v2: Goal state manager ────────────────────────────────────
+        # Goal state manager
         try:
             self._goals = GoalState(cfg)
             self._goals.start()
@@ -805,7 +777,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         except Exception as e:
             self.ui.write_log(f"WRN: Goal manager — {e}")
 
-        # ── NEW v2: Loop guard ────────────────────────────────────────────
+        # Loop guard
         if _ADVANCED_OK:
             try:
                 self._loop_guard = LoopGuard(max_repeats=2, window=6)
@@ -813,14 +785,14 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             except Exception as e:
                 self.ui.write_log(f"WRN: Loop guard — {e}")
 
-            # ── NEW v2: Evaluator ─────────────────────────────────────────
+            # Evaluator
             try:
                 self._evaluator = Evaluator(enabled=True, threshold=0.6)
                 self.ui.write_log("SYS: Self-evaluator active.")
             except Exception as e:
                 self.ui.write_log(f"WRN: Evaluator — {e}")
 
-            # ── NEW v2: File watcher → auto-index dropped files ───────────
+            # File watcher → auto-index dropped files
             try:
                 self._file_watcher = start_file_watcher(
                     self._rag, cfg, notify_cb=self.ui.write_log)
@@ -830,7 +802,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
                 self.ui.write_log(f"WRN: File watcher — {e}")
 
     def _init_dashboard_and_integrations(self) -> None:
-        # ── NEW v4 (ported from Mark-XLVIII): Web dashboard ───────────────
+        # Ported from Mark-XLVIII: Web dashboard
         try:
             from dashboard.server import start_dashboard_server
             self._dashboard = start_dashboard_server(
@@ -853,7 +825,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         except Exception as e:
             self.ui.write_log(f"WRN: Dashboard — {e}")
 
-        # ── NEW v4: Proactive check-in engine ─────────────────────────────
+        # Proactive check-in engine
         try:
             from actions.proactive import ProactiveEngine
             self._proactive = ProactiveEngine(
@@ -864,7 +836,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         except Exception as e:
             self.ui.write_log(f"WRN: Proactive engine — {e}")
 
-        # ── NEW v4: System resource monitor (voice alerts) ────────────────
+        # System resource monitor (voice alerts)
         try:
             from actions.system_monitor import SystemMonitor
             self._sys_monitor = SystemMonitor()
@@ -872,7 +844,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         except Exception as e:
             self.ui.write_log(f"WRN: System monitor — {e}")
 
-        # ── NEW v3: report integration status ─────────────────────────────
+        # report integration status
         integration_status = []
         if _LANGCHAIN_OK:
             integration_status.append("LangChain ✓")
@@ -1026,9 +998,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             traceback.print_exc()
 
 
-# ---------------------------------------------------------------------------
 # Entry
-# ---------------------------------------------------------------------------
 
 def main() -> None:
     def _preload_torch():
@@ -1100,7 +1070,7 @@ def main() -> None:
 
         aether = AetherLocal(ui)
 
-        # ── NEW v4: validate config before any subsystem loads ────────────
+        # validate config before any subsystem loads
         if _V4_OK:
             try:
                 val = validate_config()
@@ -1113,7 +1083,7 @@ def main() -> None:
             except Exception as _val_err:
                 ui.write_log(f"WRN: Config validation failed — {_val_err}")
 
-        # ── Headless scripted testing ────────────────────────────────
+        # Headless scripted testing
         # Set AETHER_HEADLESS=1 AETHER_HEADLESS_STDIN=1 and pipe a file of
         # test messages, one per line, into stdin -- e.g.:
         #   set AETHER_HEADLESS=1

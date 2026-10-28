@@ -103,9 +103,7 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
         self.sock = self._context.wrap_socket(sock, server_hostname=self.host)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # USERNAME  /  SOCIAL MEDIA
-# ─────────────────────────────────────────────────────────────────────────────
 
 # Platforms to check: {display_name: url_template}
 _PLATFORMS = {
@@ -214,9 +212,7 @@ def social_search(name: str) -> str:
     return "\n".join(lines)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # EMAIL
-# ─────────────────────────────────────────────────────────────────────────────
 
 def email_breach_check(email: str, api_key: str = "") -> str:
     """
@@ -313,9 +309,7 @@ def email_format_guess(domain: str) -> str:
     return "\n".join(lines)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # DOMAIN  /  DNS
-# ─────────────────────────────────────────────────────────────────────────────
 
 def whois_lookup(domain: str) -> str:
     """WHOIS lookup via IANA/registrar."""
@@ -691,9 +685,7 @@ def tech_stack(domain: str) -> str:
     return "\n".join(lines)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # IP / HOST
-# ─────────────────────────────────────────────────────────────────────────────
 
 def ip_osint(ip_or_host: str) -> str:
     """
@@ -855,9 +847,7 @@ _COMMON_PORTS = {
 }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # GOOGLE DORKING
-# ─────────────────────────────────────────────────────────────────────────────
 
 def generate_dorks(target: str, dork_type: str = "all") -> str:
     """
@@ -945,9 +935,7 @@ def google_dork(query: str) -> str:
     return f"Search: {query}\nURL: {url}\nOpen in browser: {url}"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # GITHUB OSINT
-# ─────────────────────────────────────────────────────────────────────────────
 
 def github_user_osint(username: str) -> str:
     """
@@ -1051,9 +1039,7 @@ def github_secret_search(repo: str) -> str:
     return "\n".join(lines)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # FILE / DOCUMENT METADATA
-# ─────────────────────────────────────────────────────────────────────────────
 
 def extract_metadata(file_path: str) -> str:
     """
@@ -1146,9 +1132,7 @@ def extract_metadata(file_path: str) -> str:
     return "\n".join(lines)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # REVERSE IMAGE / FACE SEARCH
-# ─────────────────────────────────────────────────────────────────────────────
 
 def reverse_image_search(image_path_or_url: str) -> str:
     """
@@ -1185,9 +1169,7 @@ def reverse_image_search(image_path_or_url: str) -> str:
     return "\n".join(lines)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # PHONE
-# ─────────────────────────────────────────────────────────────────────────────
 
 def phone_lookup(number: str) -> str:
     """
@@ -1224,9 +1206,7 @@ def phone_lookup(number: str) -> str:
     return "\n".join(lines)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # COMPREHENSIVE TARGET REPORT
-# ─────────────────────────────────────────────────────────────────────────────
 
 def full_domain_report(domain: str) -> str:
     """
@@ -1318,7 +1298,7 @@ def full_person_report(name: str, extras: str = "") -> str:
     return "\n".join(sections)
 
 
-# ── Aether entry point ────────────────────────────────────────────────────
+# Aether entry point
 
 def run_osint(action: str, target: str, args: dict = None) -> str:
     """

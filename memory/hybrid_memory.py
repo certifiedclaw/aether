@@ -32,7 +32,7 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-# ── BM25 (no dependencies) ────────────────────────────────────────────────
+# BM25 (no dependencies)
 
 def _load_cached_first(factory, name):
     """Load a Hugging Face model from the local cache without touching the network.
@@ -111,7 +111,7 @@ class BM25Index:
         return out
 
 
-# ── HybridMemory ──────────────────────────────────────────────────────────
+# HybridMemory
 
 class MemoryEntry(NamedTuple):
     id: int
@@ -170,7 +170,7 @@ class HybridMemory:
             target=self._preload_models, daemon=True, name="hybrid-mem-preload"
         ).start()
 
-    # ── DB ────────────────────────────────────────────────────────────────
+    # DB
 
     def _setup_db(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self._db_path), check_same_thread=False)
@@ -185,7 +185,7 @@ class HybridMemory:
         conn.commit()
         return conn
 
-    # ── Lazy loaders ──────────────────────────────────────────────────────
+    # Lazy loaders
     #
     # `blocking=True` (used by the background preload thread started in
     # __init__) waits for the load to finish. `blocking=False` (used by
@@ -240,7 +240,7 @@ class HybridMemory:
         finally:
             self._re_lock.release()
 
-    # ── Write ─────────────────────────────────────────────────────────────
+    # Write
 
     def store(self, user_input: str, response: str) -> None:
         ts = time.time()
@@ -269,7 +269,7 @@ class HybridMemory:
         if len(self._session) > self._history_limit:
             self._session = self._session[-self._history_limit:]
 
-    # ── Read ──────────────────────────────────────────────────────────────
+    # Read
 
     def get_session(self) -> list[dict]:
         return list(self._session)
@@ -300,7 +300,7 @@ class HybridMemory:
             "bm25_docs":        len(self._doc_texts),
         }
 
-    # ── Three-stage retrieval ─────────────────────────────────────────────
+    # Three-stage retrieval
 
     def _retrieve(self, query: str, top_k: int = 5) -> list[MemoryEntry]:
         # NOTE: these early-outs return [] rather than get_recent(top_k).
@@ -389,7 +389,7 @@ class HybridMemory:
                 result.append(MemoryEntry(doc_id, "exchange", text, 0.0, score))
         return result
 
-    # ── Helpers ───────────────────────────────────────────────────────────
+    # Helpers
 
     def _encode_one(self, text: str) -> bytes | None:
         # Non-blocking — a memory write shouldn't stall the turn either;

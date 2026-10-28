@@ -50,7 +50,7 @@ DEFAULT_PER_CASE_S = 90          # CPU-only hosts are slow; override with --per-
 TOOL_CASES = ROOT / "tests" / "eval_suite_tool_calls.json"
 
 
-# ── pure helpers (unit-tested; no Aether imports, no subprocess) ──────────────────
+# pure helpers (unit-tested; no Aether imports, no subprocess)
 def load_suite(name: str) -> list[dict]:
     if name not in SUITES:
         raise ValueError(f"unknown suite {name!r}; choose from {sorted(SUITES)}")
@@ -339,7 +339,7 @@ def load_result(label: str) -> dict:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
-# ── running a suite (needs a working Aether install; not unit-tested) ─────────────
+# running a suite (needs a working Aether install; not unit-tested)
 def model_installed(url: str, model: str, timeout: float = 5.0) -> tuple[bool, str]:
     """Ollama only: is `model` present? Returns (ok, message)."""
     try:

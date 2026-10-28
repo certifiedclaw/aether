@@ -113,7 +113,7 @@ def count_crashes() -> int:
     return len(list(CRASH_DIR.glob("*.json"))) if CRASH_DIR.exists() else 0
 
 
-# ── Whole-run checks ─────────────────────────────────────────────────────
+# Whole-run checks
 # Unlike grade_case (one reply vs. one expectation) these look across ALL turns,
 # stderr and the console. Severity: FAIL breaks the run, WARN is reported only.
 

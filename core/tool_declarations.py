@@ -366,7 +366,7 @@ TOOL_DECLARATIONS = [
             "required": ["category", "key", "value"]
         }
     },
-    # ── NEW tools from Aether v4.2 ─────────────────────────────────────────
+    # NEW tools from Aether v4.2
     {
         "name": "osint_lookup",
         "description": (
@@ -540,9 +540,7 @@ MCP_TOOL_DECLARATION = {
 }
 
 
-# ---------------------------------------------------------------------------
 # Convert Gemini-style declarations to OpenAI/Ollama format
-# ---------------------------------------------------------------------------
 
 _TYPE_MAP = {
     "OBJECT": "object", "STRING": "string", "ARRAY": "array",

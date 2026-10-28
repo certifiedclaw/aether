@@ -4,6 +4,9 @@ import json
 import sys
 from pathlib import Path
 from urllib.parse import urlsplit
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _get_base_dir() -> Path:
@@ -157,22 +160,22 @@ def web_search(
     if player:
         player.write_log(f"[Search] {query or ', '.join(items)}")
 
-    print(f"[WebSearch] 🔍 Query: {query!r}  Mode: {mode}")
+    logger.info(f"[WebSearch] Query: {query!r}  Mode: {mode}")
 
     try:
         if mode == "compare" and items:
-            print(f"[WebSearch] 📊 Comparing: {items}")
+            logger.info(f"[WebSearch] Comparing: {items}")
             return _compare(items, aspect)
 
         results = _usable_results(_ddg_search(query))
         if not results:
             return f"No web results found for: {query}"
         raw     = _format_ddg(query, results)
-        print(f"[WebSearch] ✅ DDG: {len(results)} result(s).")
+        logger.info(f"[WebSearch] DDG: {len(results)} result(s).")
         # Let Ollama summarise the results for a cleaner spoken response
         answer = _llm_summarize(query, raw)
         return _append_sources(answer, results)
 
     except Exception as e:
-        print(f"[WebSearch] ❌ Failed: {e}")
+        logger.error(f"[WebSearch] Failed: {e}")
         return f"Search failed, sir: {e}"

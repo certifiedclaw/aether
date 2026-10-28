@@ -72,7 +72,7 @@ Dependency check: {dep_status}
 Also in this repo:
 - [`AGENTS.md`](AGENTS.md) — onboarding for any AI assistant, not just Claude
 - [`CLAUDE.md`](CLAUDE.md) — auto-read by Claude Code at session start
-- [`PROJECT_INSTRUCTIONS.md`](PROJECT_INSTRUCTIONS.md) — the exact text to paste into a Claude Project's custom instructions
+- [`docs/PROJECT_INSTRUCTIONS.md`](docs/PROJECT_INSTRUCTIONS.md) — the exact text to paste into a Claude Project's custom instructions
 
 ## Before you finish a session
 Add a handoff entry — the next session (possibly a different LLM entirely) depends on it:

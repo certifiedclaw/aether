@@ -12,7 +12,7 @@ import subprocess
 import sys
 from typing import Callable
 
-# ── Package lists ─────────────────────────────────────────────────────────
+# Package lists
 # Each entry: (import_name, pip_package_name)
 
 _CORE: list[tuple[str, str]] = [
@@ -70,7 +70,7 @@ _INTEGRATIONS: list[tuple[str, str]] = [
 ]
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────
+# Helpers
 
 def _available(module: str) -> bool:
     """Return True if the module can be imported (no actual import)."""
@@ -94,7 +94,7 @@ def _pip(package: str, log: Callable | None = None) -> bool:
     return ok
 
 
-# ── Public API ────────────────────────────────────────────────────────────
+# Public API
 
 def installs_disabled() -> bool:
     """True when runtime package installs must not happen (servers/containers).

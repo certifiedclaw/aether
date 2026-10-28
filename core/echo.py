@@ -135,7 +135,7 @@ class EchoGuard:
         self._run = 0             # consecutive blocks called speech
         self._head = 0.13         # near-worst echo residual here; learned
 
-    # ── diagnostics, for the log and for tests ──────────────────────────────
+    # diagnostics, for the log and for tests
 
     @property
     def gain(self) -> float:
@@ -181,7 +181,7 @@ class EchoGuard:
         self._hist.clear()
         self._last_sim = 0.0
 
-    # ── the two entry points ────────────────────────────────────────────────
+    # the two entry points
 
     def note_output(self, pcm, sr: int, level: float, when: float | None = None) -> None:
         """Record a slice of what is being played, for later comparison."""
@@ -291,7 +291,7 @@ class EchoGuard:
             return False      # any doubt: do not interrupt
 
 
-# ── Aether additions ────────────────────────────────────────────────────────
+# Aether additions
 import threading
 
 # Level scale: int16 sample magnitude, the scale the thresholds above were

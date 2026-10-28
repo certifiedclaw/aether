@@ -39,7 +39,7 @@ class Finding:
     auto: str = ""         # key into AUTO_FIXES if `/doctor fix` can do it safely
 
 
-# ── probes (module-level so tests can replace them) ──────────────────────────────
+# probes (module-level so tests can replace them)
 def _http_json(url: str, timeout: float = 4.0):
     """GET `url`, return parsed JSON or None on any failure."""
     try:
@@ -68,7 +68,7 @@ def _git(root: Path, *args: str) -> int | None:
         return None
 
 
-# ── config loading (never raises) ───────────────────────────────────────────────
+# config loading (never raises)
 def _load_cfg(root: Path) -> tuple[dict, Finding]:
     from core import config_home
     p = config_home.config_path(root)
@@ -102,7 +102,7 @@ def _cfg_get(cfg: dict, dotted: str, default=None):
     return cur
 
 
-# ── checks ──────────────────────────────────────────────────────────────────────
+# checks
 def check_python() -> Finding:
     v = sys.version_info
     ok = v >= (3, 10)
@@ -352,7 +352,7 @@ def check_resources() -> Finding | None:
                    "" if st == OK else "RAM is nearly full: models will stall. Stop heavy containers or apps.")
 
 
-# ── auto-fixes (safe + reversible only) ─────────────────────────────────────────
+# auto-fixes (safe + reversible only)
 def _fix_make_dirs(root: Path) -> str:
     from core.data_home import data_dir
     made = []
@@ -383,7 +383,7 @@ def apply_fixes(findings: list[Finding], root: Path = ROOT) -> list[str]:
     return done
 
 
-# ── run + render ────────────────────────────────────────────────────────────────
+# run + render
 def run_checks(root: Path = ROOT) -> list[Finding]:
     cfg, cfg_finding = _load_cfg(root)
     found: list[Finding] = [check_python(), cfg_finding]

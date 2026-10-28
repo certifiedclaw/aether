@@ -6,6 +6,9 @@ Vosk     – offline streaming transcription (lighter)
 """
 import json
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class WhisperSTT:
@@ -14,7 +17,7 @@ class WhisperSTT:
     def __init__(self, model_name: str = "small", language: str | None = None):
         import os
         from faster_whisper import WhisperModel
-        print(f"[STT] Loading Whisper '{model_name}'…")
+        logger.info(f"[STT] Loading Whisper '{model_name}'…")
         try:
             import torch
             device  = "cuda" if torch.cuda.is_available() else "cpu"
@@ -28,7 +31,7 @@ class WhisperSTT:
             # Offline flag set but model not cached yet → download once, then offline forever
             _e = str(_first_err).lower()
             if any(k in _e for k in ("offline", "not found", "cache", "localentry", "does not exist")):
-                print(f"[STT] '{model_name}' not cached — downloading (internet required for first run)…")
+                logger.info(f"[STT] '{model_name}' not cached — downloading (internet required for first run)…")
                 from core.hf_offline import allow_online
                 with allow_online():
                     self._model = WhisperModel(model_name, device=device, compute_type=compute)
@@ -36,7 +39,7 @@ class WhisperSTT:
                 raise
 
         self._language = None if (not language or language.strip().lower() == "auto") else language.strip().lower()
-        print(f"[STT] Whisper '{model_name}' ready ({device})")
+        logger.info(f"[STT] Whisper '{model_name}' ready ({device})")
 
     # Whisper's own "this is not speech / not confident" signals. Background video audio,
     # music and room noise come back as low-confidence segments; real speech does not.
@@ -85,7 +88,7 @@ class WhisperSTT:
             kept = [s.text for s in segments if self.keep_segment(s)]
             return " ".join(kept).strip()
         except Exception as e:
-            print(f"[STT] Transcription error: {e}")
+            logger.error(f"[STT] Transcription error: {e}")
             raise
 
 
@@ -94,14 +97,14 @@ class VoskSTT:
 
     def __init__(self, model_path: str | None = None, language: str = "en-us"):
         from vosk import Model, KaldiRecognizer
-        print("[STT] Loading Vosk model…")
+        logger.info("[STT] Loading Vosk model…")
         if model_path:
             model = Model(model_path)
         else:
             lang  = language.strip().lower() if language and language.strip().lower() != "auto" else "en-us"
             model = Model(lang=lang)
         self._rec = KaldiRecognizer(model, 16000)
-        print("[STT] Vosk ready.")
+        logger.info("[STT] Vosk ready.")
 
     def process_chunk(self, audio_bytes: bytes) -> tuple[str, bool]:
         """Feed raw int16 LE PCM bytes. Returns (text, is_final)."""

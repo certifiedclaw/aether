@@ -37,7 +37,7 @@ def _chroma_dir() -> Path:
     return resolve_data_path(_li_config().get("chroma_dir"), "chroma_db")
 
 
-# ── Config ────────────────────────────────────────────────────────────────
+# Config
 
 def _li_config() -> dict:
     try:
@@ -62,7 +62,7 @@ def _li_config() -> dict:
         }
 
 
-# ── Lazy singletons ───────────────────────────────────────────────────────
+# Lazy singletons
 
 _llm_instance:   Any = None
 _embed_instance: Any = None
@@ -110,7 +110,7 @@ def _get_service_context():
         )
 
 
-# ── Index management ──────────────────────────────────────────────────────
+# Index management
 
 def _chroma_collection(name: str = "aether"):
     """Get or create a ChromaDB collection for persistence."""
@@ -164,7 +164,7 @@ def _cited_result(result) -> str:
     return f"{answer}\n\nSources:\n{refs}" if answer else f"Sources:\n{refs}"
 
 
-# ── Public API ────────────────────────────────────────────────────────────
+# Public API
 
 def li_index_path(path: str, collection: str = "aether") -> str:
     """
@@ -300,7 +300,7 @@ def li_list_collections() -> str:
         return f"List error: {e}"
 
 
-# ── Central dispatch ──────────────────────────────────────────────────────
+# Central dispatch
 
 def llama_index_tool(action: str, args: dict) -> str:
     """
@@ -333,7 +333,7 @@ def llama_index_tool(action: str, args: dict) -> str:
     return f"Unknown action: {action}. Options: {list(dispatch)}"
 
 
-# ── Tool declaration ───────────────────────────────────────────────────────
+# Tool declaration
 
 LLAMA_INDEX_TOOL_DECLARATION = {
     "name": "llama_index",

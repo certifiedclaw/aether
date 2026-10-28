@@ -29,7 +29,7 @@ IGNORE_DIRS = {".git", "__pycache__", ".venv", "venv", "node_modules", "data", "
 FILE_LINE_LIMIT = 600
 FUNC_LINE_LIMIT = 80
 # Scripts where print() is expected/fine
-PRINT_OK_FILES = {"main.py", "self_test.py", "evaluator.py", "dump.py", "code_dump.txt"}
+PRINT_OK_FILES = {"main.py", "self_test.py", "evaluator.py", "dump.py"}
 TODO_RE = re.compile(r"#\s*(TODO|FIXME|XXX)\b[:\-]?\s*(.*)", re.IGNORECASE)
 
 

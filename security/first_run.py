@@ -134,7 +134,7 @@ def print_first_run_banner(info: dict) -> None:
     print("=" * 64)
 
 
-# ── CLI entry point: `python -m security.first_run` ──────────────────────
+# CLI entry point: `python -m security.first_run`
 if __name__ == "__main__":
     info = maybe_first_run()
     if info is None:

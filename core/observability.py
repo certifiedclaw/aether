@@ -46,7 +46,7 @@ from typing import Any, Generator
 logger = logging.getLogger(__name__)
 
 
-# ── Span ──────────────────────────────────────────────────────────────────
+# Span
 
 @dataclass
 class Span:
@@ -72,7 +72,7 @@ class Span:
         return (time.monotonic() * 1000) - self.start_ms
 
 
-# ── MetricsCollector ──────────────────────────────────────────────────────
+# MetricsCollector
 
 class MetricsCollector:
     def __init__(self) -> None:
@@ -126,7 +126,7 @@ class MetricsCollector:
         return f"{name}[{tag_str}]"
 
 
-# ── StructuredLogger ──────────────────────────────────────────────────────
+# StructuredLogger
 
 class StructuredLogger:
     """
@@ -184,7 +184,7 @@ class StructuredLogger:
             return []
 
 
-# ── Tracer ────────────────────────────────────────────────────────────────
+# Tracer
 
 class Tracer:
     def __init__(self, structured_logger: StructuredLogger,
@@ -222,7 +222,7 @@ class Tracer:
             return list(self._spans[-n:])
 
 
-# ── Observability facade ──────────────────────────────────────────────────
+# Observability facade
 
 class Observability:
     """Single entry-point for all observability concerns."""
@@ -253,7 +253,7 @@ class Observability:
         except ImportError:
             return None
 
-    # ── Convenience pass-throughs ─────────────────────────────────────────
+    # Convenience pass-throughs
 
     def log(self, kind: str, **kwargs) -> None:
         self.slog.event(kind, **kwargs)
@@ -267,7 +267,7 @@ class Observability:
     def span(self, name: str, **attrs):
         return self.tracer.span(name, **attrs)
 
-    # ── Report ────────────────────────────────────────────────────────────
+    # Report
 
     def report(self) -> str:
         lines = ["## Aether — Observability Report", ""]
@@ -308,7 +308,7 @@ class Observability:
         }
 
 
-# ── Singleton ─────────────────────────────────────────────────────────────
+# Singleton
 
 _obs: Observability | None = None
 _obs_lock = threading.Lock()

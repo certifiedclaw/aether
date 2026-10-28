@@ -345,11 +345,14 @@ def _screen_find(description: str) -> tuple[int, int] | None:
             return int(match.group(1)), int(match.group(2))
 
     except Exception as e:
-        print(f"[ComputerControl] ⚠️ screen_find failed: {e}")
+        logger.warning(f"[ComputerControl] screen_find failed: {e}")
 
     return None
 
 from core.risk import gated  # noqa: E402
+import logging
+
+logger = logging.getLogger(__name__)
 @gated("computer_control")
 def computer_control(
     parameters: dict,
@@ -408,7 +411,7 @@ def computer_control(
     if player:
         player.write_log(f"[Computer] {action}")
 
-    print(f"[ComputerControl] ▶ {action}  {params}")
+    logger.info(f"[ComputerControl] ▶ {action}  {params}")
 
     try:
 
@@ -490,7 +493,7 @@ def computer_control(
         if action == "random_data":
             dt     = params.get("type", "name")
             result = _random_data(dt)
-            print(f"[ComputerControl] 🎲 random {dt} → {result}")
+            logger.info(f"[ComputerControl] random {dt} → {result}")
             return result
 
         if action == "user_data":
@@ -499,11 +502,11 @@ def computer_control(
             value   = profile.get(field, "")
             if not value:
                 value = _random_data(field)
-                print(f"[ComputerControl] ⚠️ No '{field}' in memory, using random: {value}")
+                logger.warning(f"[ComputerControl] No '{field}' in memory, using random: {value}")
             return value
 
         return f"Unknown action: '{action}'"
 
     except Exception as e:
-        print(f"[ComputerControl] ❌ {action}: {e}")
+        logger.error(f"[ComputerControl] {action}: {e}")
         return f"computer_control '{action}' failed: {e}"

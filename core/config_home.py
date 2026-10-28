@@ -84,7 +84,7 @@ def last_good_path(path: Path) -> Path:
     return path.with_name(path.name + ".last_good")
 
 
-# ── one-time copy from the old location ──────────────────────────────────────────
+# one-time copy from the old location
 
 def ensure_migrated() -> list[str]:
     """Copy the old in-app config (and certs) to the per-user folder, once, if it is not there
@@ -137,7 +137,7 @@ def stale_legacy_copy() -> Path | None:
         return None
 
 
-# ── loading that survives a typo ─────────────────────────────────────────────────
+# loading that survives a typo
 
 def load_config(path: Path | None = None) -> dict:
     """Read the config as a dict. Cached by mtime. Never raises, never returns a half-read file.
@@ -195,7 +195,7 @@ def _warn_once(key: str, mtime, msg: str) -> None:
         return
     _warned.add(token)
     logger.error("[config] %s", msg)
-    print(f"[Aether] WARNING: {msg}")
+    print(f"[Aether] {msg}")
 
 
 def reset_for_tests() -> None:

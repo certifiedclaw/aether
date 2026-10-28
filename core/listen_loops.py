@@ -30,6 +30,9 @@ import time
 import traceback
 
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 SAMPLE_RATE_IN = 16_000
 BLOCK_SIZE     = 1_024
@@ -115,7 +118,7 @@ class ListenLoopsMixin:
             try:
                 self._interrupt_speaking()
             except Exception as e:      # noqa: BLE001 - an interrupt must never take the app down
-                print(f"[Barge-in] interrupt failed: {e}")
+                logger.warning(f"[Barge-in] interrupt failed: {e}")
             finally:
                 self._barge_in_busy = False
 
@@ -135,7 +138,7 @@ class ListenLoopsMixin:
         vad = _VADBuffer()
         q: queue.Queue = queue.Queue(maxsize=200)
 
-        # ── Echo guard (ported from MARK LV; config echo_guard, default on) ──
+        # Echo guard (ported from MARK LV; config echo_guard, default on)
         # Replaces the old "loud audio = barge-in" test, which on speakers made
         # Aether interrupt itself, and drops our own voice's tail after a reply
         # so it stops answering its last sentence.
@@ -144,7 +147,7 @@ class ListenLoopsMixin:
         state = {"was_speaking": False, "tail_until": 0.0}
         TAIL_S = 0.45  # device output latency + room margin
 
-        # ── Wake word (config wake_word_enabled, default off) ──
+        # Wake word (config wake_word_enabled, default off)
         gate = WakeGate(enabled=get_config_flag("wake_word_enabled", False))
         detector = None
         if gate.enabled:
@@ -236,7 +239,7 @@ class ListenLoopsMixin:
                         pass
         except Exception as e:
             log_crash(e, context="STT-Whisper")
-            print(f"[STT-Whisper] Mic error: {e}")
+            logger.error(f"[STT-Whisper] Mic error: {e}")
             traceback.print_exc()
 
     def _listen_vosk(self) -> None:
@@ -271,7 +274,7 @@ class ListenLoopsMixin:
                         pass
         except Exception as e:
             log_crash(e, context="STT-Vosk")
-            print(f"[STT-Vosk] Mic error: {e}")
+            logger.error(f"[STT-Vosk] Mic error: {e}")
             traceback.print_exc()
 
     def _phone_audio_stt_loop(self) -> None:

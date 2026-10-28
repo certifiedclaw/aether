@@ -64,7 +64,7 @@ def strictest(*tiers: str) -> str:
 
 # tool -> tier, or tool -> {action: tier, "*": default for unlisted actions}
 RISK_TABLE: dict[str, str | dict[str, str]] = {
-    # ── read-only / harmless ────────────────────────────────────────────────
+    # read-only / harmless
     "web_search":      SAFE,
     "weather_report":  SAFE,
     "reminder":        SAFE,
@@ -80,14 +80,14 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
     # actions below, so asking here as well would just double the dialogs.
     "agent_task":      SAFE,
 
-    # ── allowed but recorded ────────────────────────────────────────────────
+    # allowed but recorded
     "open_app":        MONITOR,
     "screen_process":  MONITOR,      # a screenshot is sent to a model
     "shutdown_aether": MONITOR,
     "game_updater":    {"list": SAFE, "download_status": SAFE, "schedule_status": SAFE,
                         "cancel_schedule": MONITOR, "*": MONITOR},
 
-    # ── needs the user ──────────────────────────────────────────────────────
+    # needs the user
     "send_message":    ASK,          # leaves the machine and cannot be taken back
     "mcp.call":        ASK,          # external MCP tools have server-defined side effects
 
@@ -151,7 +151,7 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
         "ping": SAFE, "check_port": SAFE, "local_ip": SAFE,
     },
 
-    # ── enforced INSIDE the function (richer dialog); see SELF_GATED ─────────
+    # enforced INSIDE the function (richer dialog); see SELF_GATED
     "computer_settings": {"shutdown": ASK, "restart": ASK, "*": SAFE},
     "desktop_control":   {
         "task": ASK, "wallpaper": ASK, "wallpaper_url": ASK,
@@ -264,7 +264,7 @@ def _find_params(args: tuple, kwargs: dict) -> dict:
     return {}
 
 
-# ── TASK tier: one approval per user request ─────────────────────────────────
+# TASK tier: one approval per user request
 _STATE_LOCK = threading.Lock()
 _TURN = 0                      # increments at every new user request
 _TURN_TEXT = ""                # what the user actually said, shown in the dialog

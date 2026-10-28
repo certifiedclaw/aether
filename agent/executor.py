@@ -15,6 +15,9 @@ from typing import Callable
 from agent.planner       import create_plan, replan
 from agent.error_handler import analyze_error, generate_fix, ErrorDecision
 from core.llm_client     import call_llm_text
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_base_dir() -> Path:
@@ -31,9 +34,7 @@ class GeneratedCodeNotRun(RuntimeError):
     """Generated Python was blocked or declined and must not be retried silently."""
 
 
-# ---------------------------------------------------------------------------
 # Code generation helper (replaces _run_generated_code with Gemini)
-# ---------------------------------------------------------------------------
 
 def _run_generated_code(description: str, speak: Callable | None = None) -> str:
     if speak:
@@ -89,7 +90,7 @@ def _run_generated_code(description: str, speak: Callable | None = None) -> str:
             f.write(code)
             tmp_path = f.name
 
-        print(f"[Executor] 🐍 Running generated code: {tmp_path}")
+        logger.info(f"[Executor] Running generated code: {tmp_path}")
 
         result = subprocess.run(
             [sys.executable, tmp_path],
@@ -121,9 +122,7 @@ def _run_generated_code(description: str, speak: Callable | None = None) -> str:
         raise RuntimeError(f"Generated code failed: {e}")
 
 
-# ---------------------------------------------------------------------------
 # Context injection
-# ---------------------------------------------------------------------------
 
 def _detect_language(text: str) -> str:
     try:
@@ -142,7 +141,7 @@ def _translate_to_goal_language(content: str, goal: str) -> str:
         return content
     try:
         target_lang = _detect_language(goal)
-        print(f"[Executor] 🌐 Translating to: {target_lang}")
+        logger.info(f"[Executor] Translating to: {target_lang}")
         prompt = (
             f"You are a professional translator. "
             f"Translate the following text into {target_lang}.\n"
@@ -154,10 +153,10 @@ def _translate_to_goal_language(content: str, goal: str) -> str:
             f"Text to translate:\n{content[:4000]}"
         )
         translated = call_llm_text(prompt)
-        print(f"[Executor] ✅ Translation done ({target_lang})")
+        logger.info(f"[Executor] Translation done ({target_lang})")
         return translated
     except Exception as e:
-        print(f"[Executor] ⚠️ Translation failed: {e}")
+        logger.warning(f"[Executor] Translation failed: {e}")
         return content
 
 
@@ -184,7 +183,7 @@ def _inject_context(params: dict, tool: str, step_results: dict, goal: str = "")
     ]
     last_result = ordered_results[-1] if ordered_results else None
 
-    # ── Mode 1: explicit {step_N} placeholders ─────────────────────────────
+    # Mode 1: explicit {step_N} placeholders
     for key, val in list(params.items()):
         if not isinstance(val, str):
             continue
@@ -194,7 +193,7 @@ def _inject_context(params: dict, tool: str, step_results: dict, goal: str = "")
             if replacement:
                 params[key] = val.replace(f"{{step_{match}}}", str(replacement))
 
-    # ── Mode 2: auto-inject into content-bearing parameters ────────────────
+    # Mode 2: auto-inject into content-bearing parameters
     _CONTENT_PARAMS = {"content", "text", "input", "body", "message_text"}
     for pname in _CONTENT_PARAMS:
         if pname not in params:
@@ -208,15 +207,13 @@ def _inject_context(params: dict, tool: str, step_results: dict, goal: str = "")
         combined   = "\n\n---\n\n".join(ordered_results)
         translated = _translate_to_goal_language(combined, goal)
         params[pname] = translated
-        print(f"[Executor] 💉 Auto-injected + translated into '{pname}'")
+        logger.info(f"[Executor] Auto-injected + translated into '{pname}'")
         break   # only inject once
 
     return params
 
 
-# ---------------------------------------------------------------------------
 # Tool routing
-# ---------------------------------------------------------------------------
 
 def _call_tool(tool: str, parameters: dict, speak: Callable | None) -> str:
     if tool == "open_app":
@@ -295,13 +292,11 @@ def _call_tool(tool: str, parameters: dict, speak: Callable | None) -> str:
         return run_extra_tool(parameters.get("action", ""), parameters)
 
     else:
-        print(f"[Executor] ⚠️ Unknown tool '{tool}' — falling back to generated_code")
+        logger.warning(f"[Executor] Unknown tool '{tool}' — falling back to generated_code")
         return _run_generated_code(f"Accomplish this task: {parameters}", speak=speak)
 
 
-# ---------------------------------------------------------------------------
 # AgentExecutor
-# ---------------------------------------------------------------------------
 
 class AgentExecutor:
 
@@ -313,7 +308,7 @@ class AgentExecutor:
         speak:       Callable | None        = None,
         cancel_flag: threading.Event | None = None,
     ) -> str:
-        print(f"\n[Executor] 🎯 Goal: {goal}")
+        logger.info(f"[Executor] Goal: {goal}")
 
         replan_attempts = 0
         completed_steps: list = []
@@ -342,7 +337,7 @@ class AgentExecutor:
                 params   = step.get("parameters", {})
                 params   = _inject_context(params, tool, step_results, goal=goal)
 
-                print(f"\n[Executor] ▶️ Step {step_num}: [{tool}] {desc}")
+                logger.info(f"[Executor] ▶ Step {step_num}: [{tool}] {desc}")
 
                 attempt = 1
                 step_ok = False
@@ -354,7 +349,7 @@ class AgentExecutor:
                         result = _call_tool(tool, params, speak)
                         step_results[step_num] = result
                         completed_steps.append(step)
-                        print(f"[Executor] ✅ Step {step_num} done: {str(result)[:100]}")
+                        logger.info(f"[Executor] Step {step_num} done: {str(result)[:100]}")
                         step_ok = True
                         break
 
@@ -364,7 +359,7 @@ class AgentExecutor:
 
                     except Exception as e:
                         error_msg = str(e)
-                        print(f"[Executor] ❌ Step {step_num} attempt {attempt} failed: {error_msg}")
+                        logger.error(f"[Executor] Step {step_num} attempt {attempt} failed: {error_msg}")
 
                         recovery = analyze_error(step, error_msg, attempt=attempt)
                         decision = recovery["decision"]
@@ -379,7 +374,7 @@ class AgentExecutor:
                             continue
 
                         elif decision == ErrorDecision.SKIP:
-                            print(f"[Executor] ⏭️ Skipping step {step_num}")
+                            logger.info(f"[Executor] ⏭ Skipping step {step_num}")
                             completed_steps.append(step)
                             step_ok = True
                             break
@@ -405,7 +400,7 @@ class AgentExecutor:
                                     step_ok = True
                                     break
                                 except Exception as fix_err:
-                                    print(f"[Executor] ⚠️ Fix failed: {fix_err}")
+                                    logger.warning(f"[Executor] Fix failed: {fix_err}")
 
                             failed_step  = step
                             failed_error = error_msg

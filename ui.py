@@ -127,7 +127,7 @@ def qcol(h: str, a: int = 255) -> QColor:
     c = QColor(h); c.setAlpha(a); return c
 
 
-# ── Bundled fonts (Rajdhani for display, system sans for body) ──────────
+# Bundled fonts (Rajdhani for display, system sans for body)
 FONTS_DIR    = BASE_DIR / "assets" / "fonts"
 FONT_DISPLAY = "Segoe UI"
 FONT_BODY    = "Segoe UI" if _OS == "Windows" else ("Helvetica Neue" if _OS == "Darwin" else "Inter")
@@ -458,7 +458,7 @@ class AetherOrb(QWidget):
         else:
             base_col, sec_col = C.PRI, C.SEC
 
-        # ── outer halo glow (soft layered rings) ──
+        # outer halo glow (soft layered rings)
         for i in range(9):
             r   = core_r * (2.0 - i * 0.11)
             frc = 1.0 - i / 9
@@ -498,7 +498,7 @@ class AetherOrb(QWidget):
                 p.setBrush(QBrush(qcol(sec_col, a)))
                 p.drawEllipse(QPointF(dx, dy), 3.2, 3.2)
 
-        # ── inner nebula swirl (layered translucent arcs inside the core) ──
+        # inner nebula swirl (layered translucent arcs inside the core)
         grad = QRadialGradient(cx, cy, core_r)
         cA = QColor(base_col); cA.setAlpha(min(255, int(self._glow * 2.2)))
         cB = QColor(sec_col);  cB.setAlpha(min(255, int(self._glow * 0.9)))
@@ -903,7 +903,7 @@ class StatsBar(QWidget):
             self._value_labels[key] = val
             grid.addLayout(cell, 0, i)
 
-        # ── Context-window usage bar ───────────────────────────────────
+        # Context-window usage bar
         ctx_row = QHBoxLayout()
         ctx_row.setSpacing(8)
         ctx_cap = QLabel("Context window")
@@ -936,7 +936,6 @@ class StatsBar(QWidget):
         ctx_row.addWidget(self._ctx_label)
         grid.addLayout(ctx_row, 1, 0, 1, 6)
 
-    # ------------------------------------------------------------------
     def update_stats(self, data: dict) -> None:
         """
         data keys (all optional):
@@ -1234,7 +1233,6 @@ class SetupOverlay(QWidget):
     # Emits a JSON string containing the full config dict
     done = pyqtSignal(str)
 
-    # ------------------------------------------------------------------ #
     _INPUT_STYLE = ""  # filled in __init__ after C is available
 
     def __init__(self, parent=None, initial: dict | None = None, mode: str = "init"):
@@ -1301,7 +1299,7 @@ class SetupOverlay(QWidget):
         layout.setContentsMargins(22, 16, 22, 16)
         layout.setSpacing(6)
 
-        # ── Header ──────────────────────────────────────────────────── #
+        # Header ──────────────────────────────────────────────────── #
         if mode == "config":
             layout.addWidget(self._lbl("CONFIGURATION", 12, True))
             layout.addWidget(self._lbl("Update Aether\u2019s settings and click Apply.", 8, col=C.PRI_DIM))
@@ -1319,9 +1317,7 @@ class SetupOverlay(QWidget):
 
         self._build_action_buttons(layout, mode)
 
-    # ------------------------------------------------------------------ #
     # Shared widget-builder helpers (formerly local closures in __init__)
-    # ------------------------------------------------------------------ #
 
     def _lbl(self, txt, sz=9, bold=False, col=C.PRI, align=Qt.AlignmentFlag.AlignCenter):
         w = QLabel(txt); w.setAlignment(align)
@@ -1379,9 +1375,7 @@ class SetupOverlay(QWidget):
                 QPushButton:hover {{ color: {C.TEXT}; border: 1px solid {C.BORDER_B}; }}
             """)
 
-    # ------------------------------------------------------------------ #
     # Section builders (formerly inline in __init__)
-    # ------------------------------------------------------------------ #
 
     def _build_stt_section(self, layout, _init) -> None:
         layout.addWidget(self._lbl("SPEECH-TO-TEXT ENGINE", 7, col=C.TEXT_DIM,
@@ -1469,7 +1463,7 @@ class SetupOverlay(QWidget):
         )
         layout.addLayout(engine_row)
 
-        # ── Local panel (Ollama / LM Studio + device-based recommendations) ──
+        # Local panel (Ollama / LM Studio + device-based recommendations)
         self._llm_local_widget = QWidget()
         self._llm_local_widget.setStyleSheet("background: transparent;")
         local_lay = QVBoxLayout(self._llm_local_widget)
@@ -1549,7 +1543,7 @@ class SetupOverlay(QWidget):
 
         layout.addWidget(self._llm_local_widget)
 
-        # ── Gemini panel (cloud, just needs an API key + model) ────────────
+        # Gemini panel (cloud, just needs an API key + model)
         self._llm_gemini_widget = QWidget()
         self._llm_gemini_widget.setStyleSheet("background: transparent;")
         gem_lay = QVBoxLayout(self._llm_gemini_widget)
@@ -1717,7 +1711,7 @@ class SetupOverlay(QWidget):
         layout.addWidget(self._sep())
 
     def _build_action_buttons(self, layout, mode) -> None:
-        # ── Action buttons ─────────────────────────────────────────────── #
+        # Action buttons ─────────────────────────────────────────────── #
         btn_row = QHBoxLayout(); btn_row.setSpacing(8)
 
         if mode == "config":
@@ -1755,7 +1749,6 @@ class SetupOverlay(QWidget):
         btn_row.addWidget(init_btn)
         layout.addLayout(btn_row)
 
-    # ------------------------------------------------------------------ #
     def _update_tts_ui(self, key: str) -> None:
         """Show/hide and relabel TTS fields based on selected engine."""
         if not hasattr(self, "_voice_lbl"):
@@ -1983,7 +1976,7 @@ class StartupPanel(QWidget):
         lay.setContentsMargins(28, 20, 28, 20)
         lay.setSpacing(10)
 
-        # ── Title ──────────────────────────────────────────────────────
+        # Title
         title = QLabel("SYSTEMS INITIALISING")
         title.setFont(QFont(FONT_BODY, 11, QFont.Weight.Bold))
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -1992,7 +1985,7 @@ class StartupPanel(QWidget):
 
         lay.addSpacing(2)
 
-        # ── Component rows ──────────────────────────────────────────────
+        # Component rows
         self._rows: dict[str, dict] = {}
         _COMPS = [
             ("stt", "SPEECH RECOGNITION  (STT)", C.GREEN),
@@ -2041,7 +2034,7 @@ class StartupPanel(QWidget):
 
         lay.addSpacing(4)
 
-        # ── Bottom status ───────────────────────────────────────────────
+        # Bottom status
         self._status_lbl = QLabel("Initialising components…")
         self._status_lbl.setFont(QFont(FONT_BODY, 8))
         self._status_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -2239,7 +2232,7 @@ class MainWindow(QMainWindow):
                 pw, ph,
             )
 
-    # ── Startup panel (thread-safe via _startup_sig) ────────────────────
+    # Startup panel (thread-safe via _startup_sig)
     def _on_confirm_requested(self, message: str, result_holder: dict) -> None:
         """Runs on the Qt UI thread — shows a blocking Yes/No dialog for a
         high-risk operation (shell exec, file delete, port scan, etc.) and
@@ -3647,7 +3640,7 @@ class AetherUI:
         self._win._stats_sig.emit(data)
 
 
-    # ── Startup panel (all thread-safe) ──────────────────────────────────
+    # Startup panel (all thread-safe)
     def show_startup_panel(self) -> None:
         self._win._startup_sig.emit("show", "")
 
