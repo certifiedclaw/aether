@@ -77,6 +77,9 @@ class C:
     WHITE     = "#f3f6f4"
     DARK      = "#141b1e"
     BAR_BG    = "#283438"
+    INPUT     = "#0c1215"   # recessed fields
+    ON_PRI    = "#0c1b15"   # text on a PRI fill
+    FAINT     = "#4d6168"   # tertiary captions
 
 
 ROUTE_COLORS = {"local": C.PRI, "remote": C.SEC, "cloud": C.ACC}
@@ -433,18 +436,11 @@ class AetherOrb(QWidget):
         cx, cy = W / 2, H / 2
         fw = min(W, H)
 
-        # deep space background with subtle radial vignette
+        # subtle radial vignette
         bg = QRadialGradient(cx, cy, fw * 0.9)
-        bg.setColorAt(0.0, qcol("#0d0d1c"))
+        bg.setColorAt(0.0, qcol(C.PANEL))
         bg.setColorAt(1.0, qcol(C.BG))
         p.fillRect(self.rect(), QBrush(bg))
-
-        # faint starfield dots
-        rnd = random.Random(42)
-        p.setPen(QPen(qcol(C.TEXT_DIM, 40), 1))
-        for _ in range(60):
-            x = rnd.randint(0, max(1, W)); y = rnd.randint(0, max(1, H))
-            p.drawPoint(x, y)
 
         core_r = fw * 0.30 * self._scale
 
@@ -1015,12 +1011,12 @@ class StatsBar(QWidget):
 
 
 _FILE_ICONS = {
-    "image":   ("🖼", "#00d4ff"), "video":   ("🎬", "#ff6b00"),
-    "audio":   ("🎵", "#cc44ff"), "pdf":     ("📄", "#ff4444"),
-    "word":    ("📝", "#4488ff"), "excel":   ("📊", "#44bb44"),
-    "code":    ("💻", "#ffcc00"), "archive": ("📦", "#ff8844"),
-    "pptx":    ("📊", "#ff6622"), "text":    ("📃", "#aaaaaa"),
-    "data":    ("🔧", "#88ddff"), "unknown": ("📎", "#888888"),
+    "image":   ("IMG", C.PRI),     "video":   ("VID", C.SEC),
+    "audio":   ("AUD", C.SEC),     "pdf":     ("PDF", C.RED),
+    "word":    ("DOC", C.SEC),     "excel":   ("XLS", C.GREEN),
+    "pptx":    ("PPT", C.ACC),     "code":    ("SRC", C.ACC2),
+    "archive": ("ZIP", C.ACC),     "text":    ("TXT", C.TEXT_MED),
+    "data":    ("DAT", C.PRI_DIM), "unknown": ("FILE", C.TEXT_DIM),
 }
 _EXT_TO_CAT = {
     **dict.fromkeys(["jpg","jpeg","png","gif","webp","bmp","tiff","svg","ico"], "image"),
@@ -1139,7 +1135,7 @@ class _DropCanvas(QWidget):
         pad  = 6
         rect = QRectF(pad, pad, W - pad * 2, H - pad * 2)
 
-        bg_col = qcol("#001a24" if z._drag_over else ("#001218" if z._hovering else C.PANEL))
+        bg_col = qcol(C.PRI_GHO if z._drag_over else (C.PANEL2 if z._hovering else C.PANEL))
         p.setBrush(QBrush(bg_col)); p.setPen(Qt.PenStyle.NoPen)
         p.drawRoundedRect(rect, 6, 6)
 
@@ -1170,7 +1166,7 @@ class _DropCanvas(QWidget):
         p.drawText(QRectF(0, cy + 8, W, 16), Qt.AlignmentFlag.AlignCenter,
                    "Drop file here  or  Click to Browse")
         p.setFont(QFont(FONT_BODY, 7))
-        p.setPen(QPen(qcol("#1a4a5a"), 1))
+        p.setPen(QPen(qcol(C.FAINT), 1))
         p.drawText(QRectF(0, cy + 24, W, 14), Qt.AlignmentFlag.AlignCenter,
                    "Images · Video · Audio · PDF · Docs · Code · Data")
 
@@ -1191,7 +1187,7 @@ class _DropCanvas(QWidget):
         ext_str  = path.suffix.upper().lstrip(".") or "FILE"
 
         block_x, block_w = 10, 60
-        p.setFont(QFont("Segoe UI Emoji", 22) if _OS == "Windows" else QFont("Arial", 22))
+        p.setFont(QFont(FONT_BODY, 13, QFont.Weight.Bold))
         p.setPen(QPen(qcol(icon_col), 1))
         p.drawText(QRectF(block_x, 0, block_w, H), Qt.AlignmentFlag.AlignCenter, icon)
 
@@ -1211,7 +1207,7 @@ class _DropCanvas(QWidget):
                    f"{ext_str}  ·  {size_str}")
 
         p.setFont(QFont(FONT_BODY, 6))
-        p.setPen(QPen(qcol("#1e5c6a"), 1))
+        p.setPen(QPen(qcol(C.FAINT), 1))
         par = str(path.parent)
         if len(par) > 42: par = "…" + par[-41:]
         p.drawText(QRectF(tx, H * 0.18 + 34, tw, 12),
@@ -1243,7 +1239,7 @@ class SetupOverlay(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet(f"""
             SetupOverlay {{
-                background: rgba(5, 5, 10, 248);
+                background: rgba(16, 21, 24, 248);
                 border: 1px solid {C.BORDER_B};
                 border-radius: 10px;
             }}
@@ -1251,7 +1247,7 @@ class SetupOverlay(QWidget):
 
         self._INPUT_STYLE = f"""
             QLineEdit {{
-                background: #000d12; color: {C.TEXT};
+                background: {C.INPUT}; color: {C.TEXT};
                 border: 1px solid {C.BORDER}; border-radius: 3px; padding: 3px 7px;
                 font-family: '{FONT_BODY}'; font-size: 9pt;
             }}
@@ -1362,14 +1358,14 @@ class SetupOverlay(QWidget):
         if active:
             btn.setStyleSheet(f"""
                 QPushButton {{
-                    background: {C.PRI}; color: #001a22;
+                    background: {C.PRI}; color: {C.ON_PRI};
                     border: none; border-radius: 3px; font-weight: bold;
                 }}
             """)
         else:
             btn.setStyleSheet(f"""
                 QPushButton {{
-                    background: #000d12; color: {C.TEXT_DIM};
+                    background: {C.INPUT}; color: {C.TEXT_DIM};
                     border: 1px solid {C.BORDER}; border-radius: 3px;
                 }}
                 QPushButton:hover {{ color: {C.TEXT}; border: 1px solid {C.BORDER_B}; }}
@@ -1389,14 +1385,14 @@ class SetupOverlay(QWidget):
 
         self._COMBO_STYLE = f"""
             QComboBox {{
-                background: #000d12; color: {C.TEXT};
+                background: {C.INPUT}; color: {C.TEXT};
                 border: 1px solid {C.BORDER}; border-radius: 3px; padding: 3px 7px;
                 font-family: '{FONT_BODY}'; font-size: 9pt;
             }}
             QComboBox:focus {{ border: 1px solid {C.PRI}; }}
             QComboBox::drop-down {{ border: none; width: 18px; }}
             QComboBox QAbstractItemView {{
-                background: #000d12; color: {C.TEXT};
+                background: {C.INPUT}; color: {C.TEXT};
                 border: 1px solid {C.BORDER};
                 selection-background-color: {C.PRI_GHO};
                 font-family: '{FONT_BODY}'; font-size: 9pt;
@@ -1507,12 +1503,12 @@ class SetupOverlay(QWidget):
             b.setToolTip(f"{rec.note}   (~{rec.approx_gb:.1f}GB, needs {rec.min_ram_gb:.0f}GB+ RAM)")
             if rec.recommended:
                 b.setStyleSheet(f"""
-                    QPushButton {{ background: {C.PRI}; color: #001a22; border: none;
+                    QPushButton {{ background: {C.PRI}; color: {C.ON_PRI}; border: none;
                                    border-radius: 3px; padding: 0 6px; }}
                 """)
             else:
                 b.setStyleSheet(f"""
-                    QPushButton {{ background: #000d12; color: {C.TEXT_DIM};
+                    QPushButton {{ background: {C.INPUT}; color: {C.TEXT_DIM};
                                    border: 1px solid {C.BORDER}; border-radius: 3px; padding: 0 6px; }}
                     QPushButton:hover {{ color: {C.TEXT}; border: 1px solid {C.BORDER_B}; }}
                 """)
@@ -1812,8 +1808,8 @@ class SetupOverlay(QWidget):
             active = (k == key)
             btn.setStyleSheet(f"""
                 QPushButton {{
-                    background: {'#00d4ff' if active else '#000d12'};
-                    color: {'#001a22' if active else C.TEXT_DIM};
+                    background: {C.PRI if active else C.INPUT};
+                    color: {C.ON_PRI if active else C.TEXT_DIM};
                     border: {'none' if active else f'1px solid {C.BORDER}'};
                     border-radius: 3px; font-weight: {'bold' if active else 'normal'};
                 }}
@@ -1846,8 +1842,8 @@ class SetupOverlay(QWidget):
             active = (k == key)
             btn.setStyleSheet(f"""
                 QPushButton {{
-                    background: {'#00d4ff' if active else '#000d12'};
-                    color: {'#001a22' if active else C.TEXT_DIM};
+                    background: {C.PRI if active else C.INPUT};
+                    color: {C.ON_PRI if active else C.TEXT_DIM};
                     border: {'none' if active else f'1px solid {C.BORDER}'};
                     border-radius: 3px; font-weight: {'bold' if active else 'normal'};
                 }}
@@ -1872,8 +1868,8 @@ class SetupOverlay(QWidget):
             active = (k == key)
             btn.setStyleSheet(f"""
                 QPushButton {{
-                    background: {'#00d4ff' if active else '#000d12'};
-                    color: {'#001a22' if active else C.TEXT_DIM};
+                    background: {C.PRI if active else C.INPUT};
+                    color: {C.ON_PRI if active else C.TEXT_DIM};
                     border: {'none' if active else f'1px solid {C.BORDER}'};
                     border-radius: 3px; font-weight: {'bold' if active else 'normal'};
                 }}
@@ -1966,7 +1962,7 @@ class StartupPanel(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet(f"""
             StartupPanel {{
-                background: rgba(0, 6, 10, 235);
+                background: rgba(16, 21, 24, 235);
                 border: 1px solid {C.BORDER_B};
                 border-radius: 8px;
             }}
@@ -2870,7 +2866,7 @@ class MainWindow(QMainWindow):
         dialog.setStyleSheet(f"""
             QDialog {{ background: {C.DARK}; color: {C.TEXT}; }}
             QLineEdit, QComboBox, QPlainTextEdit {{
-                background: #000d14; color: {C.TEXT};
+                background: {C.INPUT}; color: {C.TEXT};
                 border: 1px solid {C.BORDER}; border-radius: 3px; padding: 5px;
             }}
             QPushButton {{
@@ -3049,7 +3045,7 @@ class MainWindow(QMainWindow):
         dialog.setStyleSheet(f"""
             QDialog {{ background: {C.DARK}; color: {C.TEXT}; }}
             QLineEdit, QComboBox, QPlainTextEdit {{
-                background: #000d14; color: {C.TEXT};
+                background: {C.INPUT}; color: {C.TEXT};
                 border: 1px solid {C.BORDER}; border-radius: 3px; padding: 5px;
             }}
             QPushButton {{
@@ -3338,10 +3334,8 @@ class MainWindow(QMainWindow):
     def _on_file_selected(self, path: str):
         self._current_file = path
         p    = Path(path)
-        cat  = _file_category(p)
-        icon, _ = _FILE_ICONS.get(cat, _FILE_ICONS["unknown"])
         size = _fmt_size(p.stat().st_size)
-        self._file_hint.setText(f"{icon}  {p.name}  ·  {size}  ·  Tell Aether what to do with it")
+        self._file_hint.setText(f"{p.name}  ·  {size}  ·  Tell Aether what to do with it")
         self._log.append_log(f"FILE: {p.name} ({size}) loaded")
         if self.on_text_command:
             msg = (
