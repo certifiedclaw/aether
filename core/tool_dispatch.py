@@ -164,7 +164,7 @@ class ToolDispatchMixin:
         return undo_stack.undo_last()
 
     def _tool_send_message(self, args: dict) -> str:
-        r = send_message(parameters=args, response=None, player=self.ui, session_memory=None)
+        r = send_message(parameters=args, response=None, player=self.ui)
         return r or f"Message sent to {args.get('receiver')}."
 
     def _tool_reminder(self, args: dict) -> str:
@@ -176,7 +176,7 @@ class ToolDispatchMixin:
         return r or "Done."
 
     def _tool_screen_process(self, args: dict) -> str:
-        r = screen_process(parameters=args, response=None, player=self.ui, session_memory=None)
+        r = screen_process(parameters=args, response=None, player=self.ui)
         return r if isinstance(r, str) and r else "Screen analyzed."
 
     def _tool_computer_settings(self, args: dict) -> str:

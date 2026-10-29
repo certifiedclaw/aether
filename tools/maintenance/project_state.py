@@ -24,7 +24,7 @@ IGNORE_DIRS = {
 }
 
 KNOWN_ENTRY_POINTS = [
-    "main.py", "ui.py", "run.sh", "run.bat",
+    "main.py", "ui.py", "run.sh", "run.bat", "core/self_test.py",
 ]
 
 

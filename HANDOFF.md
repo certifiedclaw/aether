@@ -2,7 +2,47 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-29 11:51 UTC
+Generated: 2026-10-29 18:35 UTC
+
+## #124 — 2026-10-29 18:35 UTC — Claude Code
+
+Consolidated maintenance/roadmap-24-31, cleanup/repo-presentation and roadmap-session-2026-10-29 into consolidate/roadmap-cleanup. Overlaps resolved in favor of the stacked branch (#92 detector, #95 listen_mode, #31 dep_watcher) plus session-branch-only work (#10 #16 #19 #20 #21 #29 #30 done, #32 partial, shell-safety tests, notify follow-up, wake default). Session branch's multi-paragraph guard added to the promise detector; its wake-default tests now run under listen_mode=auto. Full suite 1019 passed, 4 pre-existing failures (PortAudio / missing module in sandbox); test_create_file_new_file_undo now passes.
+
+**Touched:** `core/conversation_core.py`, `core/listen_loops.py`, `tests/test_promise_retry.py`, `tests/test_mark_lv_ports.py`, `tools/maintenance/data/roadmap.json`, `tools/maintenance/data/handoff.json`
+
+**Next steps:** Open one PR into master; delete the three source branches after merge. Handoff ids 121-123 are the session branch's entries renumbered (originally 117-119).
+
+---
+
+## #123 — 2026-10-29 11:52 UTC — Claude Code (Sonnet 5.5)
+
+Closed #95 per Ian's decision (wake word): wake_word_enabled now defaults true in core/listen_loops.py; missing openwakeword/model still falls back to always-awake but warns loudly. Config example, docs and 3 tests updated. Not validated on a real mic or openwakeword install.
+
+**Touched:** `core/listen_loops.py`, `config/config.example.json`, `docs/MARK_LV_PORTS.md`, `tests/test_mark_lv_ports.py`
+
+**Next steps:** On the real machine: pip install openwakeword and download the model (core.wake_word.install_and_download), then confirm 'Hey Jarvis' wakes it and TikTok does not. Consider a first-run prompt offering that install.
+
+---
+
+## #122 — 2026-10-29 11:42 UTC — Claude Code (Sonnet 5.5)
+
+Second pass on the roadmap. Closed #10 (reviewed all 105 non-pass actions/ handlers; fixed web_search._compare and game_updater crontab check which hid failures), #21 (new dashboard/__main__.py: python -m dashboard, smoke-tested over HTTP), and made a partial fix for #32 (memory_manager no longer stores {'value': None/''}); #32 left open because the real long_term.json is needed to confirm cause. Full suite: 999 passed, 1 failed (test_action_launcher, PortAudio missing in sandbox, env-only).
+
+**Touched:** `actions/web_search.py`, `actions/game_updater.py`, `memory/memory_manager.py`, `dashboard/__main__.py`, `tests/test_except_sweep_actions.py`, `tests/test_memory_empty_values.py`, `tests/test_dashboard_standalone.py`
+
+**Next steps:** Still blocked on you: #94 (needs 2026-10-17 logs), #95 (wake-word default vs push-to-talk decision), #88 (server output), #32 (redacted long_term.json sample). Next tractable candidates: #49 crash reporter, #54 response caching, #48 auto-update with rollback.
+
+---
+
+## #121 — 2026-10-29 11:25 UTC — Claude Code (Sonnet 5.5)
+
+Worked the roadmap in priority order. Implemented #92 (core/conversation_core.py: promise-without-action detector + one-shot nudge retry, 19 new tests) and closed #25 (repo side was already complete; archive check/key rotation stays with the owner). Added scan results/notes to #10, #94, #95 without closing them. Working tree also still holds a large UNCOMMITTED batch from an earlier session (#16 #19 #20 #24 #29 #30 #31: actions/, core/notify.py, core/headless_ui.py, dashboard/server.py, deleted root dump.py/loop_guard.py/memory_tools.py/self_test.py, new tests) -- none of it committed. Full suite: 994 passed, 1 failed (test_action_launcher: PortAudio missing in this sandbox, env-only, same as baseline).
+
+**Touched:** `core/conversation_core.py`, `tests/test_promise_retry.py`, `tools/maintenance/data/roadmap.json`
+
+**Next steps:** Review and commit the uncommitted working tree (git status shows ~40 files). #94 needs the 2026-10-17 live logs. #95 needs a decision on wake-word default vs push-to-talk. #88 needs free -h / ollama list from iansserver. #10: 105 actions/ handlers that ignore the exception variable are still unreviewed (extra_tools.py, file_processor.py first).
+
+---
 
 ## #120 — 2026-10-29 11:51 UTC — Claude Code
 

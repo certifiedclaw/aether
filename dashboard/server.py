@@ -261,8 +261,11 @@ def _ensure_network_access_windows(port: int) -> None:
 
     # ── Try running directly (succeeds when already admin) ────────────────
     try:
+        # No shell=True: a .bat runs directly via CreateProcess, and routing the
+        # temp path through cmd.exe would let a '&' or '^' in the user's temp
+        # directory name be read as a command separator.
         r = subprocess.run(
-            [bat_path], capture_output=True, timeout=8, shell=True
+            [bat_path], capture_output=True, timeout=8
         )
         if r.returncode == 0:
             print(f"[Dashboard] Firewall configured for port {port}.")

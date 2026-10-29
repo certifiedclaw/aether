@@ -2,7 +2,7 @@
 core/self_test.py — Aether Self-Test Mode
 
 Run in chat: "run self test" / "/selftest"
-Run from CLI: python self_test.py
+Run from CLI: python -m core.self_test   (from the repo root)
 
 Tests every major subsystem end-to-end and returns a pass/fail report.
 Does NOT require external network (web search tests are skipped offline).

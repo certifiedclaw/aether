@@ -252,6 +252,49 @@ def test_listener_wake_gate_blocks_audio_until_awake(monkeypatch):
     assert any("not ready" in m for m in seen["logs"])
 
 
+def test_wake_word_is_on_by_default_and_warns_when_not_ready(monkeypatch):
+    """Roadmap #95: no config at all -> wake gate requested; model missing -> loud warning."""
+    from core import wake_word
+    from core import listen_mode
+    monkeypatch.setattr(wake_word, "is_ready", lambda: False)
+    monkeypatch.setattr(listen_mode, "keyboard_available", lambda: False)   # no push-to-talk fallback either
+    blocks = [(False, _loud()) for _ in range(12)] + [(False, np.zeros(1024, np.float32)) for _ in range(20)]
+    obj, seen = _make_listener(monkeypatch, blocks, {"listen_mode": "auto"})
+    obj._listen_whisper()
+    assert any("no wake word model" in m and "background audio" in m for m in seen["logs"])
+
+
+def test_wake_word_can_be_disabled_explicitly(monkeypatch):
+    from core import wake_word
+    monkeypatch.setattr(wake_word, "is_ready", lambda: False)
+    blocks = [(False, _loud()) for _ in range(12)] + [(False, np.zeros(1024, np.float32)) for _ in range(20)]
+    obj, seen = _make_listener(monkeypatch, blocks, {"wake_word_enabled": False})
+    obj._listen_whisper()
+    assert seen["texts"] == ["hi there"]
+    assert not any("openwakeword" in m for m in seen["logs"])
+
+
+def test_default_gate_keeps_background_speech_out_when_model_ready(monkeypatch):
+    """With the detector available and never triggered, loud background audio is not transcribed."""
+    from core import wake_word
+
+    class Silent:
+        def __init__(self, **kw): pass
+        def start(self): return True
+        def feed(self, pcm): pass
+    monkeypatch.setattr(wake_word, "is_ready", lambda: True)
+    monkeypatch.setattr(wake_word, "WakeWordDetector", Silent)
+    blocks = [(False, _loud()) for _ in range(12)] + [(False, np.zeros(1024, np.float32)) for _ in range(30)]
+    obj, seen = _make_listener(monkeypatch, blocks, {"listen_mode": "auto"})
+    obj._finished = True
+    try:
+        obj._listen_whisper()
+    except Exception:
+        pass
+    assert seen["texts"] == []
+    assert any("Hey Jarvis" in m for m in seen["logs"])
+
+
 def test_listener_drops_own_voice_during_tail(monkeypatch):
     """Playback ends, then the mic still hears our own last words: must not be transcribed."""
     g = echo.get_guard()

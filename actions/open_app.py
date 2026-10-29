@@ -326,7 +326,6 @@ def open_app(
     parameters=None,
     response=None,
     player=None,
-    session_memory=None,
 ) -> str:
     app_name = (parameters or {}).get("app_name", "").strip()
 

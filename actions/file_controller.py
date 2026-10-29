@@ -580,7 +580,6 @@ def file_controller(
     parameters: dict = None,
     response=None,
     player=None,
-    session_memory=None,
 ) -> str:
     params = parameters or {}
     action = params.get("action", "").lower().strip()

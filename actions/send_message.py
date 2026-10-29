@@ -235,7 +235,6 @@ def send_message(
     parameters: dict,
     response=None,
     player=None,
-    session_memory=None,
 ) -> str:
     params       = parameters or {}
     receiver     = params.get("receiver", "").strip()

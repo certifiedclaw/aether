@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.dep_watcher` (or `run_all`) to refresh. Requires internet access.
 
-Generated: 2026-10-29T11:51:30.331209+00:00
+Generated: 2026-10-29T18:32:49.114962+00:00
 
 Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 3 versions behind" — it reports the latest available so you can decide whether to pin and bump.
 
@@ -50,7 +50,7 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 | sentence-transformers | 6.2.0 |  |
 | PyMuPDF | 2.0 |  |
 | python-whois | 0.9.6 |  |
-| dnspython | 2.9.0 |  |
+| dnspython | 2.9.1 |  |
 | watchdog | 6.0.0 |  |
 | keyboard | 0.13.5 |  |
 | python-docx | 1.2.0 |  |

@@ -163,7 +163,9 @@ def _looks_like_unfulfilled_promise(text: str) -> bool:
     t = (text or "").strip()
     if not t or len(t) > _PROMISE_MAX_CHARS:
         return False
-    if "?" in t or "```" in t:
+    if "?" in t or "```" in t or "<tool_call" in t:
+        return False
+    if "\n\n" in t:          # multi-paragraph = a real answer that happens to open with a promise
         return False
     sentences = [s for s in re.split(r"(?<=[.!])\s+|\n+", t) if s.strip()]
     if not sentences:

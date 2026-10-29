@@ -2,8 +2,8 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.health_check` (or `run_all`) to refresh. Fix things here, don't edit this file directly.
 
-Generated: 2026-10-28T20:06:53.843456+00:00
-Files scanned: 188
+Generated: 2026-10-29T18:32:42.661042+00:00
+Files scanned: 196
 
 ## Summary
 
@@ -13,37 +13,37 @@ Files scanned: 188
 | Bare `except:` clauses | 0 |
 | Files over 600 lines | 15 |
 | Functions over 80 lines | 55 |
-| Stray `print()` calls (outside scripts) | 239 |
+| Stray `print()` calls (outside scripts) | 242 |
 | TODO / FIXME / XXX comments | 0 |
 | Unreadable files | 0 |
 
 ## Files over 600 lines
 - `ui.py` — 3672 lines
-- `tests/test_all_critical.py` — 2152 lines
+- `tests/test_all_critical.py` — 2165 lines
 - `core/llm_client.py` — 1446 lines
 - `actions/osint_tools.py` — 1355 lines
-- `dashboard/server.py` — 1269 lines
-- `core/conversation_core.py` — 1185 lines
+- `dashboard/server.py` — 1272 lines
+- `core/conversation_core.py` — 1187 lines
 - `main.py` — 1174 lines
 - `actions/extra_tools.py` — 1077 lines
-- `actions/game_updater.py` — 1050 lines
+- `actions/game_updater.py` — 1052 lines
 - `actions/file_processor.py` — 950 lines
-- `actions/browser_control.py` — 942 lines
-- `actions/computer_settings.py` — 734 lines
+- `actions/browser_control.py` — 941 lines
+- `actions/computer_settings.py` — 755 lines
 - `tests/test_invariants.py` — 674 lines
-- `actions/desktop.py` — 656 lines
-- `actions/file_controller.py` — 652 lines
+- `actions/desktop.py` — 655 lines
+- `actions/file_controller.py` — 651 lines
 
 ## Functions over 80 lines
-- `core/conversation_core.py:539` — `_process_message_inner()` (525 lines)
+- `core/conversation_core.py:541` — `_process_message_inner()` (525 lines)
 - `ui.py:2453` — `_build_right_panel()` (278 lines)
 - `core/chat_commands.py:70` — `_handle_chat_command()` (250 lines)
 - `ui.py:2804` — `_open_action_catalog()` (205 lines)
 - `core/llm_client.py:1256` — `call_llm_stream()` (190 lines)
 - `core/llm_client.py:887` — `_stream_openai_once()` (186 lines)
 - `ui.py:1456` — `_build_llm_section()` (167 lines)
-- `actions/computer_control.py:354` — `computer_control()` (155 lines)
-- `actions/dev_agent.py:373` — `_build_project()` (154 lines)
+- `actions/dev_agent.py:401` — `_build_project()` (154 lines)
+- `actions/computer_control.py:354` — `computer_control()` (154 lines)
 - `core/listen_loops.py:135` — `_listen_whisper()` (150 lines)
 - `ui.py:3045` — `_open_action_form()` (149 lines)
 - `ui.py:428` — `paintEvent()` (140 lines)
@@ -51,17 +51,17 @@ Files scanned: 188
 - `main.py:1033` — `main()` (138 lines)
 - `tests/test_action_launcher.py:10` — `test_action_launcher_builds_form_and_dispatches_values()` (138 lines)
 - `main.py:893` — `run()` (133 lines)
-- `dashboard/server.py:683` — `_register_auth_routes()` (130 lines)
+- `dashboard/server.py:686` — `_register_auth_routes()` (130 lines)
 - `actions/file_processor.py:582` — `_process_video()` (127 lines)
 - `actions/osint_tools.py:564` — `tech_stack()` (127 lines)
 - `agent/executor.py:310` — `execute()` (127 lines)
-- `dashboard/server.py:190` — `_ensure_network_access_windows()` (120 lines)
-- `actions/game_updater.py:928` — `game_updater()` (115 lines)
+- `dashboard/server.py:190` — `_ensure_network_access_windows()` (123 lines)
+- `actions/game_updater.py:930` — `game_updater()` (115 lines)
 - `tests/test_all_critical.py:760` — `test_setup_overlay_refactor_preserves_behavior()` (115 lines)
 - `core/llm_client.py:613` — `call_llm()` (112 lines)
-- `core/conversation_core.py:296` — `_prepare_conversation_messages()` (105 lines)
+- `core/conversation_core.py:298` — `_prepare_conversation_messages()` (105 lines)
 - `actions/browser_control.py:449` — `_launch()` (104 lines)
-- `dashboard/server.py:986` — `_register_file_routes()` (104 lines)
+- `dashboard/server.py:989` — `_register_file_routes()` (104 lines)
 - `tests/test_all_critical.py:1178` — `test_confirm_blocking_dialog_thread_safety()` (102 lines)
 - `core/portable_bundle.py:65` — `_write_bundle()` (101 lines)
 - `actions/reminder.py:40` — `_write_notify_script()` (98 lines)
@@ -76,12 +76,12 @@ Files scanned: 188
 - `core/diagnostics.py:22` — `run_all()` (91 lines)
 - `actions/file_processor.py:81` — `_process_image()` (90 lines)
 - `actions/desktop.py:302` — `set_wallpaper()` (89 lines)
-- `actions/browser_control.py:847` — `browser_control()` (88 lines)
 - `actions/osint_tools.py:1058` — `extract_metadata()` (88 lines)
-- `actions/computer_settings.py:647` — `computer_settings()` (87 lines)
-- `actions/desktop.py:569` — `desktop_control()` (87 lines)
+- `actions/browser_control.py:847` — `browser_control()` (87 lines)
 - `main.py:1082` — `runner()` (86 lines)
 - `ui.py:2097` — `__init__()` (86 lines)
+- `actions/computer_settings.py:669` — `computer_settings()` (86 lines)
+- `actions/desktop.py:569` — `desktop_control()` (86 lines)
 - `tools/live_grader.py:132` — `grade_overall()` (86 lines)
 - `ui.py:1971` — `__init__()` (85 lines)
 - `tools/eval_harness.py:125` — `run_tool_call_suite()` (85 lines)
@@ -143,4 +143,4 @@ Found outside of scripts/tests — consider routing through `core/observability.
 - `tools/live_grader.py:236`
 - `tools/apply_roadmap_v12.py:105`
 - `tools/apply_roadmap_v12.py:107`
-- ...and 189 more
+- ...and 192 more

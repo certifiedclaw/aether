@@ -15,11 +15,11 @@
     },
     {
       "file": "actions/browser_control.py",
-      "lines": 942
+      "lines": 941
     },
     {
       "file": "actions/computer_settings.py",
-      "lines": 734
+      "lines": 755
     },
     {
       "file": "actions/file_processor.py",
@@ -27,11 +27,11 @@
     },
     {
       "file": "actions/file_controller.py",
-      "lines": 652
+      "lines": 651
     },
     {
       "file": "actions/game_updater.py",
-      "lines": 1050
+      "lines": 1052
     },
     {
       "file": "actions/osint_tools.py",
@@ -39,7 +39,7 @@
     },
     {
       "file": "actions/desktop.py",
-      "lines": 656
+      "lines": 655
     },
     {
       "file": "tests/test_invariants.py",
@@ -47,11 +47,11 @@
     },
     {
       "file": "tests/test_all_critical.py",
-      "lines": 2152
+      "lines": 2165
     },
     {
       "file": "dashboard/server.py",
-      "lines": 1269
+      "lines": 1272
     },
     {
       "file": "core/llm_client.py",
@@ -59,7 +59,7 @@
     },
     {
       "file": "core/conversation_core.py",
-      "lines": 1185
+      "lines": 1187
     }
   ],
   "large_functions": [
@@ -151,12 +151,12 @@
       "file": "actions/dev_agent.py",
       "function": "_build_project",
       "lines": 154,
-      "at_line": 373
+      "at_line": 401
     },
     {
       "file": "actions/browser_control.py",
       "function": "browser_control",
-      "lines": 88,
+      "lines": 87,
       "at_line": 847
     },
     {
@@ -168,8 +168,8 @@
     {
       "file": "actions/computer_settings.py",
       "function": "computer_settings",
-      "lines": 87,
-      "at_line": 647
+      "lines": 86,
+      "at_line": 669
     },
     {
       "file": "actions/file_processor.py",
@@ -199,7 +199,7 @@
       "file": "actions/game_updater.py",
       "function": "game_updater",
       "lines": 115,
-      "at_line": 928
+      "at_line": 930
     },
     {
       "file": "actions/osint_tools.py",
@@ -228,13 +228,13 @@
     {
       "file": "actions/desktop.py",
       "function": "desktop_control",
-      "lines": 87,
+      "lines": 86,
       "at_line": 569
     },
     {
       "file": "actions/computer_control.py",
       "function": "computer_control",
-      "lines": 155,
+      "lines": 154,
       "at_line": 354
     },
     {
@@ -300,20 +300,20 @@
     {
       "file": "dashboard/server.py",
       "function": "_ensure_network_access_windows",
-      "lines": 120,
+      "lines": 123,
       "at_line": 190
     },
     {
       "file": "dashboard/server.py",
       "function": "_register_auth_routes",
       "lines": 130,
-      "at_line": 683
+      "at_line": 686
     },
     {
       "file": "dashboard/server.py",
       "function": "_register_file_routes",
       "lines": 104,
-      "at_line": 986
+      "at_line": 989
     },
     {
       "file": "core/diagnostics.py",
@@ -361,13 +361,13 @@
       "file": "core/conversation_core.py",
       "function": "_prepare_conversation_messages",
       "lines": 105,
-      "at_line": 296
+      "at_line": 298
     },
     {
       "file": "core/conversation_core.py",
       "function": "_process_message_inner",
       "lines": 525,
-      "at_line": 539
+      "at_line": 541
     },
     {
       "file": "core/portable_bundle.py",
@@ -773,24 +773,28 @@
       "line": 141
     },
     {
-      "file": "dashboard/server.py",
-      "line": 268
+      "file": "dashboard/__main__.py",
+      "line": 24
+    },
+    {
+      "file": "dashboard/__main__.py",
+      "line": 31
+    },
+    {
+      "file": "dashboard/__main__.py",
+      "line": 32
     },
     {
       "file": "dashboard/server.py",
-      "line": 280
+      "line": 271
     },
     {
       "file": "dashboard/server.py",
-      "line": 281
+      "line": 283
     },
     {
       "file": "dashboard/server.py",
-      "line": 295
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 296
+      "line": 284
     },
     {
       "file": "dashboard/server.py",
@@ -806,43 +810,43 @@
     },
     {
       "file": "dashboard/server.py",
-      "line": 332
+      "line": 302
     },
     {
       "file": "dashboard/server.py",
-      "line": 360
+      "line": 304
     },
     {
       "file": "dashboard/server.py",
-      "line": 362
+      "line": 335
     },
     {
       "file": "dashboard/server.py",
-      "line": 375
+      "line": 363
     },
     {
       "file": "dashboard/server.py",
-      "line": 377
+      "line": 365
     },
     {
       "file": "dashboard/server.py",
-      "line": 386
+      "line": 378
     },
     {
       "file": "dashboard/server.py",
-      "line": 388
+      "line": 380
     },
     {
       "file": "dashboard/server.py",
-      "line": 398
+      "line": 389
     },
     {
       "file": "dashboard/server.py",
-      "line": 400
+      "line": 391
     },
     {
       "file": "dashboard/server.py",
-      "line": 402
+      "line": 401
     },
     {
       "file": "dashboard/server.py",
@@ -850,39 +854,47 @@
     },
     {
       "file": "dashboard/server.py",
-      "line": 626
+      "line": 405
     },
     {
       "file": "dashboard/server.py",
-      "line": 653
+      "line": 406
     },
     {
       "file": "dashboard/server.py",
-      "line": 1138
+      "line": 629
     },
     {
       "file": "dashboard/server.py",
-      "line": 1143
+      "line": 656
     },
     {
       "file": "dashboard/server.py",
-      "line": 1144
+      "line": 1141
     },
     {
       "file": "dashboard/server.py",
-      "line": 1153
+      "line": 1146
     },
     {
       "file": "dashboard/server.py",
-      "line": 1168
+      "line": 1147
     },
     {
       "file": "dashboard/server.py",
-      "line": 1169
+      "line": 1156
     },
     {
       "file": "dashboard/server.py",
-      "line": 1210
+      "line": 1171
+    },
+    {
+      "file": "dashboard/server.py",
+      "line": 1172
+    },
+    {
+      "file": "dashboard/server.py",
+      "line": 1213
     },
     {
       "file": "core/diagnostics.py",
@@ -986,7 +998,7 @@
     },
     {
       "file": "core/headless_ui.py",
-      "line": 70
+      "line": 91
     },
     {
       "file": "core/stt.py",
@@ -1154,7 +1166,7 @@
     },
     {
       "file": "memory/memory_manager.py",
-      "line": 118
+      "line": 124
     },
     {
       "file": "tools/maintenance/roadmap.py",
@@ -1356,7 +1368,7 @@
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-10-29T11:51:22.399809+00:00",
-    "files_scanned": 188
+    "generated": "2026-10-29T18:35:30.268531+00:00",
+    "files_scanned": 196
   }
 }
