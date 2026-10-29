@@ -30,6 +30,8 @@
   "stt_engine":   "whisper",
   "stt_model":    "small",
   "stt_language": "auto",
+  "_comment_wake_word": "Say 'Hey Jarvis' to wake Aether; it sleeps after 2 min of silence so background media is never transcribed. Needs openwakeword + its model; if missing, Aether stays always-awake and logs a warning. Set false for always-listening.",
+  "wake_word_enabled": true,
 
   "_comment_tts": "── Text-to-speech ───────────────────────────────────────",
   "tts_engine":   "edgetts",

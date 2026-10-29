@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-29 11:41 UTC
+Generated: 2026-10-29 11:52 UTC
 
 ## In progress
 
@@ -43,8 +43,6 @@ Generated: 2026-10-29 11:41 UTC
   - From perf.jsonl on RTX 3050: ~30 tok/s, TTFT dominated by prompt processing
 - [ ] **#94** Investigate: duplicated user text in turns ('x\nx'), langchain research tool returning in 5ms, web_search paging 5 Bing pages (8.7s) `medium`
   - Not started: needs the 2026-10-17 live_turns.jsonl / events.jsonl / aether.log, which are not in the repo (logs/ is gitignored). Three separate symptoms; web_search.py itself has no Bing paging, so the 5-page cost likely lives in the langchain/research path.
-- [ ] **#95** Push-to-talk / wake-word default so background media is never transcribed `medium`
-  - Not started, needs a decision: core/listen_loops.py already has an optional wake gate (wake_word_enabled, default False, falls back to always-awake if openwakeword is not ready). Making it the default or adding push-to-talk changes default voice behavior and needs a hotkey/UI choice.
 - [ ] **#14** Route the 174 stray print() calls through core/observability.py `low`
   - Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules — actions/ is intentionally exempt (CLI-facing tool output).
 - [ ] **#32** Investigate long_term.json identity entries missing value `low`
@@ -172,3 +170,5 @@ Generated: 2026-10-29 11:41 UTC
   - Added per-user data storage with one-time non-destructive migration for app data, long-term memory, and chat history; routed data consumers and Docker/doctor/security/test coverage.
 - [x] **#92** Small-model replies that promise but never act ('I will research...') - retry once forcing the tool call
   - Implemented in core/conversation_core.py: _is_unfulfilled_promise() flags short first-person future-tense action announcements ('I will research...', 'Let me check...') that end a round with no tool call; the turn loop appends the promise plus PROMISE_NUDGE to this turn's messages only (not saved history) and retries exactly once, before anything is spoken. Skipped when truncated, when tools are off (after the empty-response retry), or for questions/long/multi-paragraph/code replies. tests/test_promise_retry.py: 19 tests (detector + wiring guard). Not covered: a live loop test against a real model (qwen3:8b); the nudge is a message, not tool_choice=required, since Ollama support for that is uneven.
+- [x] **#95** Push-to-talk / wake-word default so background media is never transcribed
+  - Decision (Ian): wake word. wake_word_enabled now defaults to TRUE in core/listen_loops.py (was false), so background media (TikTok/TV) is not transcribed: the mic only feeds Whisper after 'Hey Jarvis', and the gate sleeps after 2 min of silence. Needs openwakeword + its model; if missing, Aether still falls back to always-awake but now logs a loud warning saying background audio WILL be transcribed. wake_word_enabled=false restores always-listening. config.example.json and docs/MARK_LV_PORTS.md updated; 3 new tests in tests/test_mark_lv_ports.py (default on + warning, explicit off, gate keeps background speech out). NOT validated on a real mic/openwakeword. Not done: push-to-talk, and a one-click 'install wake word' prompt on first run -- until openwakeword is installed on the machine, behavior is unchanged apart from the warning.

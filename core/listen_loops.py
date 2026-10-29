@@ -144,8 +144,10 @@ class ListenLoopsMixin:
         state = {"was_speaking": False, "tail_until": 0.0}
         TAIL_S = 0.45  # device output latency + room margin
 
-        # ── Wake word (config wake_word_enabled, default off) ──
-        gate = WakeGate(enabled=get_config_flag("wake_word_enabled", False))
+        # ── Wake word (config wake_word_enabled, default ON since roadmap #95) ──
+        # Always-listening VAD transcribes any loud audio (TikTok, TV); the gate stops
+        # that. Set wake_word_enabled=false to go back to always-awake.
+        gate = WakeGate(enabled=get_config_flag("wake_word_enabled", True))
         detector = None
         if gate.enabled:
             if _wake_ready():
@@ -156,7 +158,8 @@ class ListenLoopsMixin:
                     detector = None
             if detector is None:
                 gate.set_enabled(False)
-                self.ui.write_log("WRN: wake word enabled but openwakeword is not ready - staying always-awake")
+                self.ui.write_log("WRN: wake word is on by default but openwakeword is not ready (not installed / model not downloaded) - staying always-awake, so background audio WILL be transcribed. "
+                                 "Install it (pip install openwakeword, then download the model) or set wake_word_enabled=false to silence this.")
             else:
                 self.ui.write_log("SYS: Wake word on - say 'Hey Jarvis'. Sleeping.")
 

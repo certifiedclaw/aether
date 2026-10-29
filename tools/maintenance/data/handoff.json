@@ -1,5 +1,5 @@
 {
-  "next_id": 119,
+  "next_id": 120,
   "entries": [
     {
       "id": 1,
@@ -1660,6 +1660,19 @@
         "tests/test_dashboard_standalone.py"
       ],
       "next_steps": "Still blocked on you: #94 (needs 2026-10-17 logs), #95 (wake-word default vs push-to-talk decision), #88 (server output), #32 (redacted long_term.json sample). Next tractable candidates: #49 crash reporter, #54 response caching, #48 auto-update with rollback."
+    },
+    {
+      "id": 119,
+      "timestamp": "2026-10-29 11:52 UTC",
+      "by": "Claude Code (Sonnet 5.5)",
+      "summary": "Closed #95 per Ian's decision (wake word): wake_word_enabled now defaults true in core/listen_loops.py; missing openwakeword/model still falls back to always-awake but warns loudly. Config example, docs and 3 tests updated. Not validated on a real mic or openwakeword install.",
+      "files": [
+        "core/listen_loops.py",
+        "config/config.example.json",
+        "docs/MARK_LV_PORTS.md",
+        "tests/test_mark_lv_ports.py"
+      ],
+      "next_steps": "On the real machine: pip install openwakeword and download the model (core.wake_word.install_and_download), then confirm 'Hey Jarvis' wakes it and TikTok does not. Consider a first-run prompt offering that install."
     }
   ]
 }

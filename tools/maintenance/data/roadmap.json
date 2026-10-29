@@ -851,8 +851,8 @@
       "id": 95,
       "title": "Push-to-talk / wake-word default so background media is never transcribed",
       "priority": "medium",
-      "status": "backlog",
-      "notes": "Not started, needs a decision: core/listen_loops.py already has an optional wake gate (wake_word_enabled, default False, falls back to always-awake if openwakeword is not ready). Making it the default or adding push-to-talk changes default voice behavior and needs a hotkey/UI choice.",
+      "status": "done",
+      "notes": "Decision (Ian): wake word. wake_word_enabled now defaults to TRUE in core/listen_loops.py (was false), so background media (TikTok/TV) is not transcribed: the mic only feeds Whisper after 'Hey Jarvis', and the gate sleeps after 2 min of silence. Needs openwakeword + its model; if missing, Aether still falls back to always-awake but now logs a loud warning saying background audio WILL be transcribed. wake_word_enabled=false restores always-listening. config.example.json and docs/MARK_LV_PORTS.md updated; 3 new tests in tests/test_mark_lv_ports.py (default on + warning, explicit off, gate keeps background speech out). NOT validated on a real mic/openwakeword. Not done: push-to-talk, and a one-click 'install wake word' prompt on first run -- until openwakeword is installed on the machine, behavior is unchanged apart from the warning.",
       "created": "2026-10-18",
       "updated": "2026-10-29"
     }

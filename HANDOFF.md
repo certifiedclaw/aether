@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-29 11:42 UTC
+Generated: 2026-10-29 11:52 UTC
+
+## #119 — 2026-10-29 11:52 UTC — Claude Code (Sonnet 5.5)
+
+Closed #95 per Ian's decision (wake word): wake_word_enabled now defaults true in core/listen_loops.py; missing openwakeword/model still falls back to always-awake but warns loudly. Config example, docs and 3 tests updated. Not validated on a real mic or openwakeword install.
+
+**Touched:** `core/listen_loops.py`, `config/config.example.json`, `docs/MARK_LV_PORTS.md`, `tests/test_mark_lv_ports.py`
+
+**Next steps:** On the real machine: pip install openwakeword and download the model (core.wake_word.install_and_download), then confirm 'Hey Jarvis' wakes it and TikTok does not. Consider a first-run prompt offering that install.
+
+---
 
 ## #118 — 2026-10-29 11:42 UTC — Claude Code (Sonnet 5.5)
 
