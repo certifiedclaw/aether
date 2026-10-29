@@ -1,3 +1,5 @@
+import os
+import shutil
 import subprocess
 import sys
 import json
@@ -228,17 +230,43 @@ def _install_dependencies(dependencies: list[str], project_dir: Path) -> str:
     except Exception as e:
         return f"Install error (non-fatal): {e}"
 
-def _open_vscode(project_dir: Path) -> bool:
-    vscode_candidates = [
-        "code",
+# Characters cmd.exe treats specially. Windows runs .cmd/.bat launchers through
+# cmd.exe even without shell=True, so a path containing any of these could be
+# interpreted as extra commands instead of as an argument.
+_CMD_METACHARS = frozenset('&|<>^%!"\r\n')
+
+
+def _vscode_candidates() -> list[str]:
+    """Resolved launcher paths for VS Code's `code` command, best first.
+    Only files that actually exist are returned, so a missing install makes
+    _open_vscode() report failure instead of silently "succeeding"."""
+    found: list[str] = []
+    on_path = shutil.which("code")  # honours PATHEXT, so finds code.cmd on Windows
+    if on_path:
+        found.append(on_path)
+    for fixed in (
         rf"C:\Users\{Path.home().name}\AppData\Local\Programs\Microsoft VS Code\bin\code.cmd",
         r"C:\Program Files\Microsoft VS Code\bin\code.cmd",
-    ]
-    for cmd in vscode_candidates:
+    ):
+        if os.path.isfile(fixed) and fixed not in found:
+            found.append(fixed)
+    return found
+
+
+def _open_vscode(project_dir: Path) -> bool:
+    # No shell=True: the project path is passed as a plain argument, never
+    # parsed by a shell. (The old shell=True form also dropped the path on
+    # POSIX and never raised for a missing `code`, so it always claimed
+    # success.)
+    target = str(project_dir)
+    for exe in _vscode_candidates():
+        if exe.lower().endswith((".cmd", ".bat")) and _CMD_METACHARS & set(target):
+            print(f"[DevAgent] ⚠️ Not opening VSCode: project path contains characters "
+                  f"cmd.exe would interpret: {target!r}")
+            continue
         try:
             subprocess.Popen(
-                [cmd, str(project_dir)],
-                shell=True,
+                [exe, target],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
             )
@@ -531,7 +559,6 @@ def dev_agent(
     parameters: dict,
     response=None,
     player=None,
-    session_memory=None,
     speak=None,
 ) -> str:
     p            = parameters or {}

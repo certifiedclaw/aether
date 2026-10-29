@@ -1910,9 +1910,22 @@ def _fc_sandbox(tmp_path):
     """Point file_controller's safe-root allowlist at a tmp dir, and give
     each test a clean core.undo stack instance so tests can't see each
     other's registered undo entries."""
+    import types
     import core.undo as undo_mod
     fresh_stack = undo_mod.UndoStack()
+
+    # Hermetic stand-in for send2trash: removes the file instead of touching
+    # the real OS Trash. Keeps these tests independent of whether send2trash
+    # is installed or whether a per-volume trash folder is available (roadmap
+    # #30: this group failed on a Linux box without send2trash), and stops the
+    # suite from filling the developer's actual Trash.
+    def _fake_send2trash(path):
+        Path(path).unlink()
+
+    fake_mod = types.SimpleNamespace(send2trash=_fake_send2trash)
     with patch('actions.file_controller._SAFE_ROOTS', [tmp_path]), \
+         patch('actions.file_controller._SEND2TRASH', True), \
+         patch('actions.file_controller.send2trash', fake_mod, create=True), \
          patch.object(undo_mod, '_stack', fresh_stack):
         yield tmp_path
 

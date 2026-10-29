@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 import time
 
 logger = logging.getLogger("aether")
@@ -55,6 +56,26 @@ def _dashboard_url() -> str | None:
         return f"{proto}://{_local_ip()}:{PORT}"
     except Exception:
         return None
+
+
+def _audit_approval_requested(approval_id: str, message: str, timeout: float) -> None:
+    """Leave a trace in the audit log the moment a remote approval is requested.
+
+    Pending approvals are deliberately in-memory only: an approval belongs to
+    the thread blocked waiting on it, so one restored after a restart could
+    grant an action nobody is waiting on any more. The cost is that a restart
+    mid-approval made the request vanish without a trace (roadmap #19). This
+    entry ("approval.requested", decision "pending") is the trace -- a
+    "pending" row with no later approved/denied row for the same action in
+    /audit means the request was interrupted. Never raises.
+    """
+    try:
+        from core import audit_log
+        audit_log.record("approval", "requested", "high", "pending",
+                         {"approval_id": approval_id, "timeout_s": round(float(timeout))},
+                         note=message)
+    except Exception:  # noqa: BLE001 - auditing must never break the approval flow
+        pass
 
 
 class _HeadlessRootShim:
@@ -120,24 +141,37 @@ class HeadlessUI:
         # POST /api/approvals/{id}/approve|deny resolves it -- or timeout,
         # which still fails closed (denied) same as before this existed.
         from core.pending_approvals import get_approval_store
-        from core.notify import send_ntfy
+        from core.notify import send_ntfy, keep_notifying, remind_after_seconds
 
         store = get_approval_store()
         approval = store.create(message, timeout=timeout)
         click_url = _dashboard_url()
+        _audit_approval_requested(approval.id, message, timeout)
 
         sent = send_ntfy(
             message=message,
             title="Aether needs your approval",
             click_url=click_url,
         )
+        # Follow-through off the calling thread: retry a failed push with
+        # backoff and send one reminder if it's still unanswered. The thread
+        # ends as soon as approval.event is set (below) or the deadline hits.
+        threading.Thread(
+            target=keep_notifying, name="aether-ntfy-followup", daemon=True,
+            args=(message, approval.event, approval.created_at + approval.timeout),
+            kwargs=dict(first_sent=sent, title="Aether needs your approval",
+                        click_url=click_url, remind_after=remind_after_seconds()),
+        ).start()
         logger.warning(
             f"[Confirm] {message} — pending remote approval (id={approval.id}). "
             + ("ntfy push sent. " if sent else "ntfy push NOT sent (check ntfy_topic in config, or network). ")
             + f"Waiting up to {timeout:.0f}s for a response via the dashboard, "
             "denying if unanswered."
         )
-        approved = store.wait(approval.id, timeout=timeout)
+        try:
+            approved = store.wait(approval.id, timeout=timeout)
+        finally:
+            approval.event.set()   # also stops the ntfy follow-up thread on timeout
         logger.warning(f"[Confirm] {message} — {'approved' if approved else 'denied (no response or explicit deny)'}.")
         return approved
 

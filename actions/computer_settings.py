@@ -113,6 +113,40 @@ def volume_set(value: int):
     if r.returncode != 0:
         raise RuntimeError((r.stderr or b"").decode(errors="replace").strip() or "volume command failed")
 
+def _xrandr_first_output() -> tuple[str | None, float | None]:
+    """(name, current software brightness) of the first connected output, from
+    `xrandr --verbose`. Either is None if it can't be determined."""
+    out = subprocess.check_output(["xrandr", "--verbose"], text=True, timeout=5)
+    first = current = None
+    brightness = None
+    for line in out.splitlines():
+        if line and not line[0].isspace():          # an output header line
+            parts = line.split()
+            current = parts[0] if len(parts) >= 2 and parts[1] == "connected" else None
+            if current and first is None:
+                first = current
+        elif current is not None and current == first and line.strip().startswith("Brightness:"):
+            brightness = float(line.split(":", 1)[1].split()[0])
+    return first, brightness
+
+
+def _xrandr_adjust_brightness(delta: float, lo: float, hi: float) -> bool:
+    """Linux fallback when brightnessctl is missing: nudge xrandr's software
+    brightness on the first connected output. Plain argv, no shell."""
+    try:
+        output, current = _xrandr_first_output()
+        if not output or current is None:
+            print("[Settings] xrandr: no connected output with a brightness value")
+            return False
+        new_value = max(lo, min(hi, current + delta))
+        subprocess.run(["xrandr", "--output", output, "--brightness", f"{new_value:.2f}"],
+                       capture_output=True, timeout=5)
+        return True
+    except (OSError, subprocess.SubprocessError, ValueError) as e:
+        print(f"[Settings] xrandr brightness adjust failed: {e}")
+        return False
+
+
 def brightness_up():
     if _OS == "Darwin":
         subprocess.run(["osascript", "-e",
@@ -123,13 +157,7 @@ def brightness_up():
                 capture_output=True).returncode == 0:
             subprocess.run(["brightnessctl", "set", "+10%"], capture_output=True)
         else:
-            subprocess.run(
-                'xrandr --output $(xrandr | grep " connected" | head -1 | cut -d " " -f1)'
-                ' --brightness $(python3 -c "import subprocess; '
-                'b=float(subprocess.check_output([\"xrandr\",\"--verbose\"]).decode()'
-                '.split(\"Brightness:\")[1].split()[0]); print(min(1.0,b+0.1))")',
-                shell=True, capture_output=True
-            )
+            _xrandr_adjust_brightness(+0.1, 0.1, 1.0)
     else:
         try:
             subprocess.run(
@@ -152,13 +180,7 @@ def brightness_down():
                 capture_output=True).returncode == 0:
             subprocess.run(["brightnessctl", "set", "10%-"], capture_output=True)
         else:
-            subprocess.run(
-                'xrandr --output $(xrandr | grep " connected" | head -1 | cut -d " " -f1)'
-                ' --brightness $(python3 -c "import subprocess; '
-                'b=float(subprocess.check_output([\"xrandr\",\"--verbose\"]).decode()'
-                '.split(\"Brightness:\")[1].split()[0]); print(max(0.1,b-0.1))")',
-                shell=True, capture_output=True
-            )
+            _xrandr_adjust_brightness(-0.1, 0.1, 1.0)
     else:
         try:
             subprocess.run(
@@ -648,7 +670,6 @@ def computer_settings(
     parameters: dict = None,
     response=None,
     player=None,
-    session_memory=None,
 ) -> str:
     if not _PYAUTOGUI:
         return "pyautogui is not installed. Run: pip install pyautogui"

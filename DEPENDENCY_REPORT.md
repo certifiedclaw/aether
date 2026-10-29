@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.dep_watcher` (or `run_all`) to refresh. Requires internet access.
 
-Generated: 2026-10-14T01:06:56.489864+00:00
+Generated: 2026-10-29T05:22:30.826039+00:00
 
 Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 3 versions behind" — it reports the latest available so you can decide whether to pin and bump.
 
@@ -10,26 +10,26 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 
 | Component | Latest | Why it matters |
 |---|---|---|
-| [Ollama](https://github.com/ollama/ollama) | unknown (lookup failed) | local LLM runtime — core/llm_client.py talks to it |
-| [faster-whisper (engine)](https://github.com/SYSTRAN/faster-whisper) | unknown (lookup failed) | default STT engine per requirements.txt |
-| [Kokoro TTS](https://github.com/hexgrad/Kokoro-82M) | unknown (lookup failed) | offline TTS option, alternative to edge-tts |
+| [Ollama](https://github.com/ollama/ollama) | unknown (lookup failed: API releases HTTP 403; API tags HTTP 403; releases page HTTP 403) | local LLM runtime — core/llm_client.py talks to it |
+| [faster-whisper (engine)](https://github.com/SYSTRAN/faster-whisper) | 1.2.1 (PyPI) | default STT engine per requirements.txt |
+| [Kokoro TTS](https://github.com/hexgrad/kokoro) | 0.9.4 (PyPI) | offline TTS option, alternative to edge-tts |
 
 ## Python packages (from requirements.txt)
 
 | Package | Latest on PyPI | Notes |
 |---|---|---|
-| fastapi | 0.143.0 |  |
+| fastapi | 0.162.0 |  |
 | uvicorn | 0.54.0 |  |
 | cryptography | 50.0.2 |  |
 | python-multipart | 0.0.32 |  |
-| PyQt6 | 6.11.0 |  |
+| PyQt6 | 6.12.0 |  |
 | psutil | 7.2.2 |  |
-| pillow | 12.3.0 |  |
+| pillow | 13.0.0 |  |
 | sounddevice | 0.5.6 |  |
 | numpy | 2.5.4 |  |
 | soundfile | 0.14.0 |  |
 | requests | 2.34.2 |  |
-| playwright | 1.64.0 |  |
+| playwright | 1.64.1 |  |
 | beautifulsoup4 | 4.15.0 |  |
 | duckduckgo-search | 8.1.1 |  |
 | pyautogui | 0.9.54 |  |
@@ -47,14 +47,14 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 | miniaudio | 1.71 |  |
 | faster-whisper | 1.2.1 |  |
 | edge-tts | 7.3.1 |  |
-| sentence-transformers | 6.1.0 |  |
-| PyMuPDF | 1.28.2 |  |
+| sentence-transformers | 6.2.0 |  |
+| PyMuPDF | 2.0 |  |
 | python-whois | 0.9.6 |  |
 | dnspython | 2.9.0 |  |
 | watchdog | 6.0.0 |  |
 | keyboard | 0.13.5 |  |
 | python-docx | 1.2.0 |  |
-| langchain | 1.4.5 | Fast-moving API; pin a version once Aether's LangChain tool wiring is stable. |
+| langchain | 1.4.7 | Fast-moving API; pin a version once Aether's LangChain tool wiring is stable. |
 | langchain-community | 0.4.2 |  |
 | langchain-ollama | 1.1.0 |  |
 | llama-index | 0.14.25 | Splits into many llama-index-* subpackages frequently; check changelog before bumping. |
@@ -63,7 +63,7 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 | qrcode | 8.2 |  |
 | wikipedia-api | 0.16.0 |  |
 | google-generativeai | 0.8.6 |  |
-| google-genai | 2.30.1 |  |
+| google-genai | 2.33.0 |  |
 
 ## Flagged for extra attention
 - **langchain** — Fast-moving API; pin a version once Aether's LangChain tool wiring is stable.

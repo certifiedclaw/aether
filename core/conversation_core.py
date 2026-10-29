@@ -133,6 +133,41 @@ def _parse_fake_tool_call(text: str) -> tuple[str, dict] | None:
     return name, args
 
 
+# Small models sometimes end a turn with a promise ("I will research that now.")
+# instead of calling the tool they just announced. Detect that shape so the turn
+# loop can nudge once. Deliberately narrow: short, future-tense, first person,
+# an action verb, and not a question or a finished answer.
+_PROMISE_START_RE = re.compile(
+    r"^(?:(?:ok(?:ay)?|sure|certainly|alright|great|got it|absolutely)[,!.]?\s+)?"
+    r"(?:i\s*(?:will|'ll|’ll|am going to|'m going to|’m going to)|let\s+me|"
+    r"i\s+(?:can|shall)\s+now|one\s+moment[,.]?\s+i(?:'ll|’ll|\s+will))\s+"
+    r"(?:now\s+|first\s+|go\s+ahead\s+and\s+)?"
+    r"(?:research|search|look|find|check|fetch|open|run|read|write|create|save|"
+    r"set|start|launch|gather|investigate|query|pull|get|try|use|call|execute|"
+    r"browse|download|analy[sz]e|scan|list|send|schedule|remind|update|"
+    r"delete|move|copy)\b",
+    re.IGNORECASE,
+)
+_PROMISE_MAX_CHARS = 280
+
+PROMISE_NUDGE = (
+    "You said you would do something but did not do it. Do it now: call the "
+    "appropriate tool immediately. Do not reply with text that only describes "
+    "what you are about to do."
+)
+
+
+def _is_unfulfilled_promise(text: str) -> bool:
+    """True if `text` is a short 'I will <action>...' announcement with no
+    result, i.e. the model promised a tool call and stopped."""
+    t = (text or "").strip()
+    if not t or len(t) > _PROMISE_MAX_CHARS or "\n\n" in t:
+        return False
+    if t.endswith("?") or "```" in t or "<tool_call" in t:
+        return False
+    return bool(_PROMISE_START_RE.match(t))
+
+
 # Qwen/Hermes-style text tool calls: <tool_call>{"name": ..., "arguments": {...}}</tool_call>
 # Ollama normally converts these into structured tool_calls itself; when its
 # parser misses one the raw tag text would otherwise be shown and spoken.
@@ -605,6 +640,7 @@ class ConversationCoreMixin:
 
         tools = _turn_tools
         _empty_retried = False   # one no-tools retry after an empty model response
+        _promise_retried = False  # one nudge after a promise-without-action reply
 
         for _round in range(MAX_TOOL_ROUNDS):
             if self._cancel_current_turn.is_set():
@@ -799,6 +835,20 @@ class ConversationCoreMixin:
                         )
                         self._obs.count("llm.fake_tool_call_unrecoverable")
                         final_content = ""
+
+            # Promise without action ("I will research..." and then nothing): retry
+            # once with a nudge. Nothing was spoken yet (sentences are spoken below),
+            # and the nudge lives only in this turn's `messages`, not saved history.
+            if (not final_tool_calls and tools and not _promise_retried
+                    and not _was_truncated
+                    and _is_unfulfilled_promise(final_content or " ".join(_streamed))):
+                _promise_retried = True
+                _promise_text = (final_content or " ".join(_streamed)).strip()
+                self.ui.write_log("WRN: model promised an action without calling a tool — retrying once")
+                self._obs.count("llm.promise_without_action_retry")
+                messages.append({"role": "assistant", "content": _promise_text})
+                messages.append({"role": "user", "content": PROMISE_NUDGE})
+                continue
 
             if not final_tool_calls:
                 if _streamed:

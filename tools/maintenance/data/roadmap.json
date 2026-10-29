@@ -87,9 +87,9 @@
       "title": "Finish the except-pass sweep across actions/ (~90 blocks unreviewed)",
       "priority": "low",
       "status": "in-progress",
-      "notes": "Handoff #15's sweep covered core/, security/, agent/, dashboard/server.py, main.py, core/llm_client.py (~20 of 111 bare except-pass blocks). This session covered the 62 pass-only (zero-logging, highest-risk shape) blocks specifically in actions/ -- reviewed all of them; found one dead-code path (see #16) but no active silently-broken call like the 3 prior real bugs. Still unreviewed: the ~235 'except Exception as e: log...' blocks across the whole codebase (lower risk shape since they at least log, but not zero -- worth a pass if time allows) and actions/'s non-pass-only except blocks.",
+      "notes": "AST scan this session (actions/): 80 pass-only handlers (reviewed earlier, see prior note) and 105 handlers that never use the exception variable. Most are legitimate optional-import / best-effort fallbacks but the 105 were NOT individually reviewed; start with extra_tools.py (15), file_processor.py (17), desktop.py, dev_agent.py. Scan script is trivial: walk ast.ExceptHandler, flag bodies that neither raise nor reference the bound name.",
       "created": "2026-07-15",
-      "updated": "2026-07-17"
+      "updated": "2026-10-29"
     },
     {
       "id": 11,
@@ -140,10 +140,10 @@
       "id": 16,
       "title": "Decide fate of the vestigial session_memory param across actions/",
       "priority": "low",
-      "status": "backlog",
-      "notes": "~16 action functions accept session_memory=None in their signature (weather_report.py, open_app.py, reminder.py, code_helper.py, dev_agent.py, browser_control.py, send_message.py, computer_settings.py, file_controller.py, screen_processor.py, web_search.py, desktop.py, youtube_video.py, computer_control.py...) but no SessionMemory-like class exists anywhere and every call site passes None or omits it -- confirmed via grep. weather_report.py's 'session_memory.set_last_search(...)' (guarded by 'if session_memory:') is dead code as a result, not an active bug like the plugin_watcher/config_cache ones -- it never fires. Either implement the intended feature or strip the dead parameter across all ~16 signatures.",
+      "status": "done",
+      "notes": "Decision: strip it. Confirmed dead by grep + reading call sites: in 14 action functions the param appeared only in the signature, weather_report's use called set_last_search, which exists nowhere in the repo (so that block could never run), and the only callers passing it (core/tool_dispatch send_message/screen_process) passed None. The earlier note that call sites pass None or omit it is still true for actions/; the plugin path is different and was left alone: core/plugins + plugins/_template.py pass a real memory engine (semantic or hybrid) to plugins, which is a documented plugin API. Removed from open_app, reminder, code_helper, dev_agent, browser_control, send_message, computer_settings, weather_report, file_controller, screen_processor, web_search, desktop, youtube_video, computer_control. tests/test_action_signatures.py guards both sides.",
       "created": "2026-07-15",
-      "updated": "2026-07-15"
+      "updated": "2026-10-29"
     },
     {
       "id": 17,
@@ -167,19 +167,19 @@
       "id": 19,
       "title": "Pending approvals don't survive a restart",
       "priority": "low",
-      "status": "backlog",
-      "notes": "core/pending_approvals.ApprovalStore is in-memory only. A dashboard/process restart while something's mid-approval loses it -- the calling thread just times out and denies (safe default, not a security hole), but the operator gets no indication the original request ever existed. Worth deciding whether that's acceptable long-term or if approvals should persist (e.g. to disk/sqlite) across restarts.",
+      "status": "done",
+      "notes": "Decision: approvals stay in-memory by design. An approval belongs to the thread blocked on it; restoring one after a restart could approve an action nobody is waiting on, and timeout-deny is the safe default. The real gap was that a restart made the request vanish without a trace, so confirm_blocking now writes an audit entry (tool=approval, action=requested, decision=pending, with the approval id and message) the moment a request is created; a pending row with no later approved/denied row in /audit means it was interrupted. Added 'pending' to the /audit decision filter. Not implemented: surfacing interrupted requests proactively on the next startup.",
       "created": "2026-07-28",
-      "updated": "2026-07-28"
+      "updated": "2026-10-29"
     },
     {
       "id": 20,
       "title": "ntfy push for approvals is one-shot, no retry/queue",
       "priority": "low",
-      "status": "backlog",
-      "notes": "core/notify.send_ntfy() is fire-and-forget -- if the push fails (network blip, ntfy down), the approval still shows up in the dashboard's Pending Approvals list, but the operator isn't proactively re-notified and may not know to check. Consider a retry with backoff, or re-pushing once if unresolved after N seconds.",
+      "status": "done",
+      "notes": "core/notify.keep_notifying runs on a daemon thread started by HeadlessUI.confirm_blocking: a failed first push is retried after 5s/15s/45s, and one 'Still waiting' reminder goes out if the approval is unanswered ntfy_remind_after_s (default 60, 0 disables) after the first push. Stops the instant the approval resolves or its deadline passes (the approval's event is set when confirm_blocking returns, including on timeout); never delays the wait. First push stays synchronous so the exactly-one-push-per-request test still holds. Mocked-network tests only; no real ntfy server was contacted.",
       "created": "2026-07-28",
-      "updated": "2026-07-28"
+      "updated": "2026-10-29"
     },
     {
       "id": 21,
@@ -212,19 +212,19 @@
       "id": 24,
       "title": "Delete stray root copies: loop_guard.py, memory_tools.py, self_test.py (stale vs core/), dump.py (vs dev_tools/)",
       "priority": "low",
-      "status": "backlog",
-      "notes": "Nothing imports them; self_test.py and dump.py have drifted from their real copies. Confirm no external script uses them, then delete.",
+      "status": "done",
+      "notes": "Deleted root loop_guard.py, memory_tools.py, self_test.py, dump.py after confirming nothing imports them and each was an older copy of core/ or dev_tools/ (memory_tools.py lacked the Chroma backup path; self_test.py lacked data_home resolution). Fixed the 'python self_test.py' CLI docstring to 'python -m core.self_test' and KNOWN_ENTRY_POINTS in project_state.py. Note: a stray root evaluator.py also exists next to core/evaluator.py and was NOT part of this item.",
       "created": "2026-10-05",
-      "updated": "2026-10-05"
+      "updated": "2026-10-29"
     },
     {
       "id": 25,
       "title": "Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option",
       "priority": "high",
-      "status": "backlog",
-      "notes": "Repository protections already implemented: config/api_keys.json is ignored, example templates are present, and credentials resolve environment -> OS keyring -> local file with a migration CLI. Confirmed the config file is not tracked in this Git history. Previously shared full-folder archives are outside this checkout; the owner still needs to check/remove any such archives and rotate keys if one contained them.",
+      "status": "done",
+      "notes": "Repo side verified complete: config/api_keys.json is gitignored and untracked (git ls-files shows only api_keys.example.json), credentials resolve env -> OS keyring -> local file, and tools/secrets_cli.py migrates. Remaining is owner-only and cannot be done from the repo: check/delete any previously shared full-folder zips and rotate keys if one contained api_keys.json.",
       "created": "2026-10-07",
-      "updated": "2026-10-17"
+      "updated": "2026-10-29"
     },
     {
       "id": 26,
@@ -257,28 +257,28 @@
       "id": 29,
       "title": "Review shell=True call sites (dev_agent._open_vscode, computer_settings, dashboard/server)",
       "priority": "low",
-      "status": "backlog",
-      "notes": "dev_agent passes a project-derived path with shell=True on Windows: metacharacters in a project name could inject. computer_settings strings are constant.",
+      "status": "done",
+      "notes": "Removed every shell=True call site. dev_agent._open_vscode: argv list, resolves 'code' via shutil.which, skips candidates that don't exist (the old form always reported success and dropped the path on POSIX), refuses cmd.exe metacharacters in the path for .cmd/.bat launchers. computer_settings: Linux xrandr brightness fallback rewritten in pure Python (same 0.1 step, 0.1-1.0 clamp, now reads the chosen output's own brightness). dashboard/server: firewall .bat now run directly, not through cmd.exe. tests/test_shell_safety.py adds a source guard so shell=True can't return. Windows launch paths (code.cmd, firewall .bat) are covered by mocks only; not exercised on real Windows.",
       "created": "2026-10-07",
-      "updated": "2026-10-07"
+      "updated": "2026-10-29"
     },
     {
       "id": 30,
       "title": "Make test_create_file_new_file_undo_removes_it pass on Linux",
       "priority": "low",
-      "status": "backlog",
-      "notes": "Only failing test in a Linux sandbox run; passes on Windows.",
+      "status": "done",
+      "notes": "Root cause was not Linux itself: the test hit the real send2trash/OS Trash, which fails when send2trash isn't installed or no per-volume trash exists. The _fc_sandbox fixture now stubs send2trash (hermetic, never touches the developer's real Trash). Passes with and without send2trash installed.",
       "created": "2026-10-07",
-      "updated": "2026-10-07"
+      "updated": "2026-10-29"
     },
     {
       "id": 31,
       "title": "Fix dep_watcher lookups for Ollama, faster-whisper and Kokoro",
       "priority": "low",
-      "status": "backlog",
-      "notes": "DEPENDENCY_REPORT.md shows lookup failed for all three upstream checks.",
+      "status": "done",
+      "notes": "Lookups now try GitHub API releases, API tags, the github.com releases/latest redirect (not API rate-limited), then PyPI; GITHUB_TOKEN is honoured for the API host only. Kokoro now points at hexgrad/kokoro (+PyPI 'kokoro'); hexgrad/Kokoro-82M is a Hugging Face model repo with no GitHub releases. Failures report the real reason (HTTP status etc.) instead of a bare 'lookup failed'. Verified live in a sandbox: faster-whisper and Kokoro resolve via PyPI. Ollama could not be verified live there (sandbox proxy returns 403 for non-session GitHub repos) so the GitHub-redirect path is unit-tested only; check Ollama on the owner's machine.",
       "created": "2026-10-07",
-      "updated": "2026-10-07"
+      "updated": "2026-10-29"
     },
     {
       "id": 32,
@@ -824,10 +824,10 @@
       "id": 92,
       "title": "Small-model replies that promise but never act ('I will research...') - retry once forcing the tool call",
       "priority": "high",
-      "status": "backlog",
-      "notes": "Seen live: Artemis research turn ended after 2 rounds with only a promise; qwen3:8b",
+      "status": "done",
+      "notes": "Implemented in core/conversation_core.py: _is_unfulfilled_promise() flags short first-person future-tense action announcements ('I will research...', 'Let me check...') that end a round with no tool call; the turn loop appends the promise plus PROMISE_NUDGE to this turn's messages only (not saved history) and retries exactly once, before anything is spoken. Skipped when truncated, when tools are off (after the empty-response retry), or for questions/long/multi-paragraph/code replies. tests/test_promise_retry.py: 19 tests (detector + wiring guard). Not covered: a live loop test against a real model (qwen3:8b); the nudge is a message, not tool_choice=required, since Ollama support for that is uneven.",
       "created": "2026-10-18",
-      "updated": "2026-10-18"
+      "updated": "2026-10-29"
     },
     {
       "id": 93,
@@ -843,18 +843,18 @@
       "title": "Investigate: duplicated user text in turns ('x\\nx'), langchain research tool returning in 5ms, web_search paging 5 Bing pages (8.7s)",
       "priority": "medium",
       "status": "backlog",
-      "notes": "From live_turns.jsonl / events.jsonl / aether.log of 2026-10-17",
+      "notes": "Not started: needs the 2026-10-17 live_turns.jsonl / events.jsonl / aether.log, which are not in the repo (logs/ is gitignored). Three separate symptoms; web_search.py itself has no Bing paging, so the 5-page cost likely lives in the langchain/research path.",
       "created": "2026-10-18",
-      "updated": "2026-10-18"
+      "updated": "2026-10-29"
     },
     {
       "id": 95,
       "title": "Push-to-talk / wake-word default so background media is never transcribed",
       "priority": "medium",
       "status": "backlog",
-      "notes": "Energy VAD treats any loud audio (TikTok) as speech; confidence filter helps but only a gate fixes it. Set stt_language to en meanwhile.",
+      "notes": "Not started, needs a decision: core/listen_loops.py already has an optional wake gate (wake_word_enabled, default False, falls back to always-awake if openwakeword is not ready). Making it the default or adding push-to-talk changes default voice behavior and needs a hotkey/UI choice.",
       "created": "2026-10-18",
-      "updated": "2026-10-18"
+      "updated": "2026-10-29"
     }
   ]
 }

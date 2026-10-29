@@ -509,7 +509,6 @@ def code_helper(
     parameters: dict,
     response=None,
     player=None,
-    session_memory=None,
     speak=None
 ) -> str:
     """

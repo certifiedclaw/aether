@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-19 22:08 UTC
+Generated: 2026-10-29 11:25 UTC
+
+## #117 — 2026-10-29 11:25 UTC — Claude Code (Sonnet 5.5)
+
+Worked the roadmap in priority order. Implemented #92 (core/conversation_core.py: promise-without-action detector + one-shot nudge retry, 19 new tests) and closed #25 (repo side was already complete; archive check/key rotation stays with the owner). Added scan results/notes to #10, #94, #95 without closing them. Working tree also still holds a large UNCOMMITTED batch from an earlier session (#16 #19 #20 #24 #29 #30 #31: actions/, core/notify.py, core/headless_ui.py, dashboard/server.py, deleted root dump.py/loop_guard.py/memory_tools.py/self_test.py, new tests) -- none of it committed. Full suite: 994 passed, 1 failed (test_action_launcher: PortAudio missing in this sandbox, env-only, same as baseline).
+
+**Touched:** `core/conversation_core.py`, `tests/test_promise_retry.py`, `tools/maintenance/data/roadmap.json`
+
+**Next steps:** Review and commit the uncommitted working tree (git status shows ~40 files). #94 needs the 2026-10-17 live logs. #95 needs a decision on wake-word default vs push-to-talk. #88 needs free -h / ollama list from iansserver. #10: 105 actions/ handlers that ignore the exception variable are still unreviewed (extra_tools.py, file_processor.py first).
+
+---
 
 ## #116 — 2026-10-19 22:08 UTC — Claude Code
 

@@ -225,7 +225,6 @@ def screen_process(
     parameters:     dict,
     response=None,
     player=None,
-    session_memory=None,
     speak:          Optional[Callable[[str], None]] = None,
 ) -> str:
     """

@@ -2,19 +2,17 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-18 00:02 UTC
+Generated: 2026-10-29 11:25 UTC
 
 ## In progress
 
 - [ ] **#10** Finish the except-pass sweep across actions/ (~90 blocks unreviewed) `low`
-  - Handoff #15's sweep covered core/, security/, agent/, dashboard/server.py, main.py, core/llm_client.py (~20 of 111 bare except-pass blocks). This session covered the 62 pass-only (zero-logging, highest-risk shape) blocks specifically in actions/ -- reviewed all of them; found one dead-code path (see #16) but no active silently-broken call like the 3 prior real bugs. Still unreviewed: the ~235 'except Exception as e: log...' blocks across the whole codebase (lower risk shape since they at least log, but not zero -- worth a pass if time allows) and actions/'s non-pass-only except blocks.
+  - AST scan this session (actions/): 80 pass-only handlers (reviewed earlier, see prior note) and 105 handlers that never use the exception variable. Most are legitimate optional-import / best-effort fallbacks but the 105 were NOT individually reviewed; start with extra_tools.py (15), file_processor.py (17), desktop.py, dev_agent.py. Scan script is trivial: walk ast.ExceptHandler, flag bodies that neither raise nor reference the bound name.
 - [ ] **#88** [F0] Deploy Aether always-on on iansserver (Docker, headless, small CPU model, PC GPU as optional boost) `high`
   - HP ProDesk 600 G4 (i5-8500, 32GB, HDD; NVMe planned). Docker + headless Aether + Ollama, behind Tailscale/Authelia. Needs free -h / ollama list output from the server.
 
 ## Backlog
 
-- [ ] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option `high`
-  - Repository protections already implemented: config/api_keys.json is ignored, example templates are present, and credentials resolve environment -> OS keyring -> local file with a migration CLI. Confirmed the config file is not tracked in this Git history. Previously shared full-folder archives are outside this checkout; the owner still needs to check/remove any such archives and rotate keys if one contained them.
 - [ ] **#48** [F0] Auto-update with rollback: pull, run tests, roll back on failure `medium`
 - [ ] **#53** [F1] Self-check pass: model re-reads its answer for obvious mistakes `medium`
   - ~300 lines.
@@ -43,24 +41,16 @@ Generated: 2026-10-18 00:02 UTC
 - [ ] **#81** [F4] Coding agent: sandbox first (container), then edit-test-retry loop with git checkpoints `medium`
   - Sandbox also brings run_python back.
 - [ ] **#82** [F4] Skills system: drop-in folders of instructions and scripts `medium`
+- [ ] **#93** Trim per-turn prompt (2.6-4.5k tokens even for 'whats 2+2'): fewer tool schemas, shorter system prompt - TTFT is 1.4-3.2s `medium`
+  - From perf.jsonl on RTX 3050: ~30 tok/s, TTFT dominated by prompt processing
+- [ ] **#94** Investigate: duplicated user text in turns ('x\nx'), langchain research tool returning in 5ms, web_search paging 5 Bing pages (8.7s) `medium`
+  - Not started: needs the 2026-10-17 live_turns.jsonl / events.jsonl / aether.log, which are not in the repo (logs/ is gitignored). Three separate symptoms; web_search.py itself has no Bing paging, so the 5-page cost likely lives in the langchain/research path.
+- [ ] **#95** Push-to-talk / wake-word default so background media is never transcribed `medium`
+  - Not started, needs a decision: core/listen_loops.py already has an optional wake gate (wake_word_enabled, default False, falls back to always-awake if openwakeword is not ready). Making it the default or adding push-to-talk changes default voice behavior and needs a hotkey/UI choice.
 - [ ] **#14** Route the 174 stray print() calls through core/observability.py `low`
   - Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules — actions/ is intentionally exempt (CLI-facing tool output).
-- [ ] **#16** Decide fate of the vestigial session_memory param across actions/ `low`
-  - ~16 action functions accept session_memory=None in their signature (weather_report.py, open_app.py, reminder.py, code_helper.py, dev_agent.py, browser_control.py, send_message.py, computer_settings.py, file_controller.py, screen_processor.py, web_search.py, desktop.py, youtube_video.py, computer_control.py...) but no SessionMemory-like class exists anywhere and every call site passes None or omits it -- confirmed via grep. weather_report.py's 'session_memory.set_last_search(...)' (guarded by 'if session_memory:') is dead code as a result, not an active bug like the plugin_watcher/config_cache ones -- it never fires. Either implement the intended feature or strip the dead parameter across all ~16 signatures.
-- [ ] **#19** Pending approvals don't survive a restart `low`
-  - core/pending_approvals.ApprovalStore is in-memory only. A dashboard/process restart while something's mid-approval loses it -- the calling thread just times out and denies (safe default, not a security hole), but the operator gets no indication the original request ever existed. Worth deciding whether that's acceptable long-term or if approvals should persist (e.g. to disk/sqlite) across restarts.
-- [ ] **#20** ntfy push for approvals is one-shot, no retry/queue `low`
-  - core/notify.send_ntfy() is fire-and-forget -- if the push fails (network blip, ntfy down), the approval still shows up in the dashboard's Pending Approvals list, but the operator isn't proactively re-notified and may not know to check. Consider a retry with backoff, or re-pushing once if unresolved after N seconds.
 - [ ] **#21** dashboard/server.py has no standalone entrypoint `low`
   - Noted since the original headless-mode work: start_dashboard_server() only ever gets called from AetherLocal._init_dashboard_and_integrations(), itself only reachable after the full AetherLocal boot sequence runs. Fine for the current headless design (still boots AetherLocal, just skips the GUI), but if a lighter API-only deployment (dashboard + approvals + LLM status, nothing else) is ever wanted, this coupling needs breaking.
-- [ ] **#24** Delete stray root copies: loop_guard.py, memory_tools.py, self_test.py (stale vs core/), dump.py (vs dev_tools/) `low`
-  - Nothing imports them; self_test.py and dump.py have drifted from their real copies. Confirm no external script uses them, then delete.
-- [ ] **#29** Review shell=True call sites (dev_agent._open_vscode, computer_settings, dashboard/server) `low`
-  - dev_agent passes a project-derived path with shell=True on Windows: metacharacters in a project name could inject. computer_settings strings are constant.
-- [ ] **#30** Make test_create_file_new_file_undo_removes_it pass on Linux `low`
-  - Only failing test in a Linux sandbox run; passes on Windows.
-- [ ] **#31** Fix dep_watcher lookups for Ollama, faster-whisper and Kokoro `low`
-  - DEPENDENCY_REPORT.md shows lookup failed for all three upstream checks.
 - [ ] **#32** Investigate long_term.json identity entries missing value `low`
   - Handoff guesses user redaction; unconfirmed.
 - [ ] **#49** [F0] Crash reporter: sanitized report saved locally `low`
@@ -113,20 +103,36 @@ Generated: 2026-10-18 00:02 UTC
   - One-shot startup wiring, not hot-path — lower priority than _execute_tool() (#7) and _build_app() above, but same shape of oversized-function debt.
 - [x] **#15** Fix stress_test.py pytest collection failure + bare excepts + health_check.py TODO false-positive
   - pytest tests/ was aborting entirely (8 collection errors from stress_test.py's non-fixture test_* signatures) instead of running the real 34-test suite. Fixed via tests/conftest.py collect_ignore, both bare excepts changed to except Exception, and health_check.py's TODO_RE switched from a raw-line regex to real tokenize.COMMENT tokens (was matching a '#' inside this file's own markdown-heading string literal).
+- [x] **#16** Decide fate of the vestigial session_memory param across actions/
+  - Decision: strip it. Confirmed dead by grep + reading call sites: in 14 action functions the param appeared only in the signature, weather_report's use called set_last_search, which exists nowhere in the repo (so that block could never run), and the only callers passing it (core/tool_dispatch send_message/screen_process) passed None. The earlier note that call sites pass None or omit it is still true for actions/; the plugin path is different and was left alone: core/plugins + plugins/_template.py pass a real memory engine (semantic or hybrid) to plugins, which is a documented plugin API. Removed from open_app, reminder, code_helper, dev_agent, browser_control, send_message, computer_settings, weather_report, file_controller, screen_processor, web_search, desktop, youtube_video, computer_control. tests/test_action_signatures.py guards both sides.
 - [x] **#17** Headless server mode (AETHER_HEADLESS=1) + dual-host LLM fallback
   - core/headless_ui.py drop-in for ui.AetherUI with no PyQt6 dependency; main.py gates the PyQt6 bootstrap/import and defensively wraps the sounddevice import on AETHER_HEADLESS=1. core/llm_client.get_llm_settings() gained dual-host resolution -- prefers llm_remote_url (e.g. a home PC's GPU-backed Ollama) when reachable (cached health-check, default 20s interval / 2.5s timeout), falls back to llm_local_url (CPU on this machine) otherwise; unchanged behavior with no llm_remote_url configured. Verified via 9 tests + full suite.
 - [x] **#18** Remote-approval flow for headless confirm_blocking() + dashboard LLM backend status
   - core/pending_approvals.py (thread-safe ApprovalStore, event-based blocking, fails closed on timeout) + core/notify.py (ntfy push -- new integration, no ntfy setup existed in this codebase before; ntfy_base_url/ntfy_topic added as new config keys). confirm_blocking() registers a pending approval, fires the push, and blocks until dashboard/server.py's new POST /api/approvals/{id}/approve|deny resolves it or times out. AETHER_HEADLESS_AUTO_CONFIRM=1 bypass unchanged. Dashboard also gained GET /api/llm-status surfacing core.llm_client.get_llm_backend_status() (active backend + real IP/host, including the fallback IP), polled in app.html. Verified via 9 tests + full suite; caught and fixed an old test that started blocking for the real 120s default timeout once confirm_blocking() became a genuine blocking call.
+- [x] **#19** Pending approvals don't survive a restart
+  - Decision: approvals stay in-memory by design. An approval belongs to the thread blocked on it; restoring one after a restart could approve an action nobody is waiting on, and timeout-deny is the safe default. The real gap was that a restart made the request vanish without a trace, so confirm_blocking now writes an audit entry (tool=approval, action=requested, decision=pending, with the approval id and message) the moment a request is created; a pending row with no later approved/denied row in /audit means it was interrupted. Added 'pending' to the /audit decision filter. Not implemented: surfacing interrupted requests proactively on the next startup.
+- [x] **#20** ntfy push for approvals is one-shot, no retry/queue
+  - core/notify.keep_notifying runs on a daemon thread started by HeadlessUI.confirm_blocking: a failed first push is retried after 5s/15s/45s, and one 'Still waiting' reminder goes out if the approval is unanswered ntfy_remind_after_s (default 60, 0 disables) after the first push. Stops the instant the approval resolves or its deadline passes (the approval's event is set when confirm_blocking returns, including on timeout); never delays the wait. First push stays synchronous so the exactly-one-push-per-request test still holds. Mocked-network tests only; no real ntfy server was contacted.
 - [x] **#22** Client-side parser for raw <tool_call> text from Ollama (needs user approval)
   - 4 of 7 failed prompts showed raw <tool_call>{...}</tool_call> instead of acting. Touches streaming path and makes model text executable, so get explicit go-ahead; check ollama --version first. See handoff #37.
 - [x] **#23** actions/desktop.py exec() sandbox is escapable and runs model-written code without a confirmation
   - safe_builtins exposes getattr and the sandbox passes Path/time objects, so getattr(Path.__init__,'__globals__') reaches os/sys; Windows also exposes ctypes. Needs a design decision: confirmation via core/safety, or a real allowlist DSL instead of exec. See handoff #39.
+- [x] **#24** Delete stray root copies: loop_guard.py, memory_tools.py, self_test.py (stale vs core/), dump.py (vs dev_tools/)
+  - Deleted root loop_guard.py, memory_tools.py, self_test.py, dump.py after confirming nothing imports them and each was an older copy of core/ or dev_tools/ (memory_tools.py lacked the Chroma backup path; self_test.py lacked data_home resolution). Fixed the 'python self_test.py' CLI docstring to 'python -m core.self_test' and KNOWN_ENTRY_POINTS in project_state.py. Note: a stray root evaluator.py also exists next to core/evaluator.py and was NOT part of this item.
+- [x] **#25** Secrets handling: stop shipping config/api_keys.json in zips; add .gitignore, example template, env/credential-store option
+  - Repo side verified complete: config/api_keys.json is gitignored and untracked (git ls-files shows only api_keys.example.json), credentials resolve env -> OS keyring -> local file, and tools/secrets_cli.py migrates. Remaining is owner-only and cannot be done from the repo: check/delete any previously shared full-folder zips and rotate keys if one contained api_keys.json.
 - [x] **#26** Retry once (about 1s backoff) on Gemini 503/429 before falling back to local
   - Seen in two consecutive verify runs; local HARD fallback costs 2-4s more.
 - [x] **#27** Execution timeout for AI-generated desktop code
   - exec() cannot be killed in-process; approved code with an infinite loop hangs its thread. Run in a worker with a deadline.
 - [x] **#28** verify_local.py: flag packages declared in requirements.txt but not installed
   - watchdog and keyboard were missing for several runs, disabling plugin hot-reload and the ctrl+alt+j hotkey without any verify warning.
+- [x] **#29** Review shell=True call sites (dev_agent._open_vscode, computer_settings, dashboard/server)
+  - Removed every shell=True call site. dev_agent._open_vscode: argv list, resolves 'code' via shutil.which, skips candidates that don't exist (the old form always reported success and dropped the path on POSIX), refuses cmd.exe metacharacters in the path for .cmd/.bat launchers. computer_settings: Linux xrandr brightness fallback rewritten in pure Python (same 0.1 step, 0.1-1.0 clamp, now reads the chosen output's own brightness). dashboard/server: firewall .bat now run directly, not through cmd.exe. tests/test_shell_safety.py adds a source guard so shell=True can't return. Windows launch paths (code.cmd, firewall .bat) are covered by mocks only; not exercised on real Windows.
+- [x] **#30** Make test_create_file_new_file_undo_removes_it pass on Linux
+  - Root cause was not Linux itself: the test hit the real send2trash/OS Trash, which fails when send2trash isn't installed or no per-volume trash exists. The _fc_sandbox fixture now stubs send2trash (hermetic, never touches the developer's real Trash). Passes with and without send2trash installed.
+- [x] **#31** Fix dep_watcher lookups for Ollama, faster-whisper and Kokoro
+  - Lookups now try GitHub API releases, API tags, the github.com releases/latest redirect (not API rate-limited), then PyPI; GITHUB_TOKEN is honoured for the API host only. Kokoro now points at hexgrad/kokoro (+PyPI 'kokoro'); hexgrad/Kokoro-82M is a Hugging Face model repo with no GitHub releases. Failures report the real reason (HTTP status etc.) instead of a bare 'lookup failed'. Verified live in a sandbox: faster-whisper and Kokoro resolve via PyPI. Ollama could not be verified live there (sandbox proxy returns 403 for non-session GitHub repos) so the GitHub-redirect path is unit-tested only; check Ollama on the owner's machine.
 - [x] **#33** Dashboard: replace AES-CBC (no MAC, key = SHA-256 of the 6-char session code) with AES-GCM and a random per-session key
   - dashboard/server.py _aes_key/decrypt: anyone who captures one ciphertext can brute-force the ~30-bit code offline in seconds, and CBC without a MAC is malleable. Needs a matching change in the CryptoJS client in dashboard/static, so it must be tested with a real phone/browser. Over plain HTTP (no config/certs) the traffic is also sniffable.
 - [x] **#34** Dashboard: rate-limit the one-time connect key and bind to the LAN interface only
@@ -164,3 +170,5 @@ Generated: 2026-10-18 00:02 UTC
   - Config migration remains in core/config_home.py; the persistent user-data migration follow-up shipped as #91.
 - [x] **#91** Persistent user data survives version upgrades
   - Added per-user data storage with one-time non-destructive migration for app data, long-term memory, and chat history; routed data consumers and Docker/doctor/security/test coverage.
+- [x] **#92** Small-model replies that promise but never act ('I will research...') - retry once forcing the tool call
+  - Implemented in core/conversation_core.py: _is_unfulfilled_promise() flags short first-person future-tense action announcements ('I will research...', 'Let me check...') that end a round with no tool call; the turn loop appends the promise plus PROMISE_NUDGE to this turn's messages only (not saved history) and retries exactly once, before anything is spoken. Skipped when truncated, when tools are off (after the empty-response retry), or for questions/long/multi-paragraph/code replies. tests/test_promise_retry.py: 19 tests (detector + wiring guard). Not covered: a live loop test against a real model (qwen3:8b); the nudge is a message, not tool_choice=required, since Ollama support for that is uneven.
