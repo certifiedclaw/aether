@@ -100,6 +100,12 @@ def _recursive_update(target: dict, updates: dict) -> bool:
             if _recursive_update(target[key], value):
                 changed = True
         else:
+            # {"value": None} / {"value": ""} must not be stored: None became the
+            # literal string "None" and "" became an empty-valued entry.
+            if isinstance(value, dict) and (
+                    value["value"] is None
+                    or (isinstance(value["value"], str) and not value["value"].strip())):
+                continue
             new_val  = _truncate_value(str(value["value"] if isinstance(value, dict) else value))
             entry    = {"value": new_val, "updated": datetime.now().strftime("%Y-%m-%d")}
             existing = target.get(key, {})

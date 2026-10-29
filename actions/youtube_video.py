@@ -390,7 +390,6 @@ def youtube_video(
     parameters:     dict,
     response=None,
     player=None,
-    session_memory=None,
     speak=None,
 ) -> str:
     params = parameters or {}

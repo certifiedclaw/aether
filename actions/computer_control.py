@@ -355,7 +355,6 @@ def computer_control(
     parameters: dict,
     response=None,
     player=None,
-    session_memory=None,
 ) -> str:
     """
     Dispatch table for all computer control actions.

@@ -570,7 +570,6 @@ def desktop_control(
     parameters: dict = None,
     response=None,
     player=None,
-    session_memory=None,
 ) -> str:
     """
     parameters:

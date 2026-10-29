@@ -282,7 +282,6 @@ def reminder(
     parameters: dict,
     response=None,
     player=None,
-    session_memory=None,
 ) -> str:
 
     date_str = parameters.get("date", "").strip()

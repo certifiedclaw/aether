@@ -86,10 +86,10 @@
       "id": 10,
       "title": "Finish the except-pass sweep across actions/ (~90 blocks unreviewed)",
       "priority": "low",
-      "status": "in-progress",
-      "notes": "Handoff #15's sweep covered core/, security/, agent/, dashboard/server.py, main.py, core/llm_client.py (~20 of 111 bare except-pass blocks). This session covered the 62 pass-only (zero-logging, highest-risk shape) blocks specifically in actions/ -- reviewed all of them; found one dead-code path (see #16) but no active silently-broken call like the 3 prior real bugs. Still unreviewed: the ~235 'except Exception as e: log...' blocks across the whole codebase (lower risk shape since they at least log, but not zero -- worth a pass if time allows) and actions/'s non-pass-only except blocks.",
+      "status": "done",
+      "notes": "Reviewed all 105 non-pass handlers in actions/ that ignore the exception variable (AST scan). Almost all are typed, intentional fallbacks (optional imports, TimeoutExpired/FileNotFoundError returning a clear message). Fixed the two that hid a failure: web_search._compare left a failed item blank (now says 'search failed', so the summarizer can't invent it) and game_updater's crontab check reported 'No scheduled game update found' on error (now says it could not check). tests/test_except_sweep_actions.py. Still unreviewed: the ~235 'except Exception as e: log...' blocks outside actions/ (low risk, they log).",
       "created": "2026-07-15",
-      "updated": "2026-07-17"
+      "updated": "2026-10-29"
     },
     {
       "id": 11,
@@ -140,10 +140,10 @@
       "id": 16,
       "title": "Decide fate of the vestigial session_memory param across actions/",
       "priority": "low",
-      "status": "backlog",
-      "notes": "~16 action functions accept session_memory=None in their signature (weather_report.py, open_app.py, reminder.py, code_helper.py, dev_agent.py, browser_control.py, send_message.py, computer_settings.py, file_controller.py, screen_processor.py, web_search.py, desktop.py, youtube_video.py, computer_control.py...) but no SessionMemory-like class exists anywhere and every call site passes None or omits it -- confirmed via grep. weather_report.py's 'session_memory.set_last_search(...)' (guarded by 'if session_memory:') is dead code as a result, not an active bug like the plugin_watcher/config_cache ones -- it never fires. Either implement the intended feature or strip the dead parameter across all ~16 signatures.",
+      "status": "done",
+      "notes": "Decision: strip it. Confirmed dead by grep + reading call sites: in 14 action functions the param appeared only in the signature, weather_report's use called set_last_search, which exists nowhere in the repo (so that block could never run), and the only callers passing it (core/tool_dispatch send_message/screen_process) passed None. The earlier note that call sites pass None or omit it is still true for actions/; the plugin path is different and was left alone: core/plugins + plugins/_template.py pass a real memory engine (semantic or hybrid) to plugins, which is a documented plugin API. Removed from open_app, reminder, code_helper, dev_agent, browser_control, send_message, computer_settings, weather_report, file_controller, screen_processor, web_search, desktop, youtube_video, computer_control. tests/test_action_signatures.py guards both sides.",
       "created": "2026-07-15",
-      "updated": "2026-07-15"
+      "updated": "2026-10-29"
     },
     {
       "id": 17,
@@ -167,28 +167,28 @@
       "id": 19,
       "title": "Pending approvals don't survive a restart",
       "priority": "low",
-      "status": "backlog",
-      "notes": "core/pending_approvals.ApprovalStore is in-memory only. A dashboard/process restart while something's mid-approval loses it -- the calling thread just times out and denies (safe default, not a security hole), but the operator gets no indication the original request ever existed. Worth deciding whether that's acceptable long-term or if approvals should persist (e.g. to disk/sqlite) across restarts.",
+      "status": "done",
+      "notes": "Decision: approvals stay in-memory by design. An approval belongs to the thread blocked on it; restoring one after a restart could approve an action nobody is waiting on, and timeout-deny is the safe default. The real gap was that a restart made the request vanish without a trace, so confirm_blocking now writes an audit entry (tool=approval, action=requested, decision=pending, with the approval id and message) the moment a request is created; a pending row with no later approved/denied row in /audit means it was interrupted. Added 'pending' to the /audit decision filter. Not implemented: surfacing interrupted requests proactively on the next startup.",
       "created": "2026-07-28",
-      "updated": "2026-07-28"
+      "updated": "2026-10-29"
     },
     {
       "id": 20,
       "title": "ntfy push for approvals is one-shot, no retry/queue",
       "priority": "low",
-      "status": "backlog",
-      "notes": "core/notify.send_ntfy() is fire-and-forget -- if the push fails (network blip, ntfy down), the approval still shows up in the dashboard's Pending Approvals list, but the operator isn't proactively re-notified and may not know to check. Consider a retry with backoff, or re-pushing once if unresolved after N seconds.",
+      "status": "done",
+      "notes": "core/notify.keep_notifying runs on a daemon thread started by HeadlessUI.confirm_blocking: a failed first push is retried after 5s/15s/45s, and one 'Still waiting' reminder goes out if the approval is unanswered ntfy_remind_after_s (default 60, 0 disables) after the first push. Stops the instant the approval resolves or its deadline passes (the approval's event is set when confirm_blocking returns, including on timeout); never delays the wait. First push stays synchronous so the exactly-one-push-per-request test still holds. Mocked-network tests only; no real ntfy server was contacted.",
       "created": "2026-07-28",
-      "updated": "2026-07-28"
+      "updated": "2026-10-29"
     },
     {
       "id": 21,
       "title": "dashboard/server.py has no standalone entrypoint",
       "priority": "low",
-      "status": "backlog",
-      "notes": "Noted since the original headless-mode work: start_dashboard_server() only ever gets called from AetherLocal._init_dashboard_and_integrations(), itself only reachable after the full AetherLocal boot sequence runs. Fine for the current headless design (still boots AetherLocal, just skips the GUI), but if a lighter API-only deployment (dashboard + approvals + LLM status, nothing else) is ever wanted, this coupling needs breaking.",
+      "status": "done",
+      "notes": "Added dashboard/__main__.py: 'python -m dashboard' runs only the FastAPI dashboard (approvals, /api/llm-status, audit) with no AetherLocal/UI/models. DashboardServer was already independent of AetherLocal (only optional callbacks), so the real gap was just an entrypoint. Remote text commands have no assistant to run them, so a drain thread drops them with a log line. Smoke-tested live on 127.0.0.1:8000 (/login 200, /api/llm-status 401 unauthenticated); tests/test_dashboard_standalone.py. Not done: Docker/compose service for it, and a headless-assistant-less approvals flow end to end.",
       "created": "2026-07-28",
-      "updated": "2026-07-28"
+      "updated": "2026-10-29"
     },
     {
       "id": 22,
@@ -257,19 +257,19 @@
       "id": 29,
       "title": "Review shell=True call sites (dev_agent._open_vscode, computer_settings, dashboard/server)",
       "priority": "low",
-      "status": "backlog",
-      "notes": "dev_agent passes a project-derived path with shell=True on Windows: metacharacters in a project name could inject. computer_settings strings are constant.",
+      "status": "done",
+      "notes": "Removed every shell=True call site. dev_agent._open_vscode: argv list, resolves 'code' via shutil.which, skips candidates that don't exist (the old form always reported success and dropped the path on POSIX), refuses cmd.exe metacharacters in the path for .cmd/.bat launchers. computer_settings: Linux xrandr brightness fallback rewritten in pure Python (same 0.1 step, 0.1-1.0 clamp, now reads the chosen output's own brightness). dashboard/server: firewall .bat now run directly, not through cmd.exe. tests/test_shell_safety.py adds a source guard so shell=True can't return. Windows launch paths (code.cmd, firewall .bat) are covered by mocks only; not exercised on real Windows.",
       "created": "2026-10-07",
-      "updated": "2026-10-07"
+      "updated": "2026-10-29"
     },
     {
       "id": 30,
       "title": "Make test_create_file_new_file_undo_removes_it pass on Linux",
       "priority": "low",
-      "status": "backlog",
-      "notes": "Only failing test in a Linux sandbox run; passes on Windows.",
+      "status": "done",
+      "notes": "Root cause was not Linux itself: the test hit the real send2trash/OS Trash, which fails when send2trash isn't installed or no per-volume trash exists. The _fc_sandbox fixture now stubs send2trash (hermetic, never touches the developer's real Trash). Passes with and without send2trash installed.",
       "created": "2026-10-07",
-      "updated": "2026-10-07"
+      "updated": "2026-10-29"
     },
     {
       "id": 31,
@@ -285,9 +285,9 @@
       "title": "Investigate long_term.json identity entries missing value",
       "priority": "low",
       "status": "backlog",
-      "notes": "Handoff guesses user redaction; unconfirmed.",
+      "notes": "Cannot confirm the cause without the real long_term.json (user data, not in repo). Found and fixed one verifiable way to produce bad identity entries: memory_manager._recursive_update stored {'value': None} as the literal string 'None' and {'value': ''} as an empty-valued entry; both are now skipped (tests/test_memory_empty_values.py). If an actual long_term.json still has entries with no 'value' key at all, that came from another writer (older version or manual edit) -- send a redacted sample.",
       "created": "2026-10-07",
-      "updated": "2026-10-07"
+      "updated": "2026-10-29"
     },
     {
       "id": 33,

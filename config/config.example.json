@@ -113,6 +113,8 @@
   "_comment_ntfy": "── Push notifications for headless approval requests ────── No ntfy integration existed in this project before -- these are new keys, not a reuse of something pre-configured. With no ntfy_topic set, approval pushes are silently skipped (the request still shows up in the dashboard's Pending Approvals list either way -- ntfy is just how you find out about it without watching the dashboard).",
   "ntfy_base_url": "https://ntfy.sh",
   "ntfy_topic":    "",
+  "_comment_ntfy_remind": "A failed approval push is retried with backoff (5s, 15s, 45s), and if the request is still unanswered ntfy_remind_after_s seconds after the first push, one reminder is sent. Set to 0 to turn the reminder off.",
+  "ntfy_remind_after_s": 60,
   "proactive_min_silence_secs": 900,
   "proactive_check_cooldown":   600
 }

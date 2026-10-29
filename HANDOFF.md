@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-28 19:12 UTC
+Generated: 2026-10-29 12:04 UTC
+
+## #120 — 2026-10-29 12:04 UTC — Claude Code (Sonnet 5.5)
+
+Ported the non-overlapping work from branch roadmap-session-2026-10-29 onto this branch: #10 (actions/ except sweep + web_search._compare / game_updater fixes), #16 (strip dead session_memory param), #19/#20 (approval audit entry + ntfy retry/reminder), #21 (python -m dashboard), #29 (no shell=True), #30 (hermetic send2trash fixture), #32 (partial: memory_manager no longer stores {'value': None/''}). Deliberately NOT ported because this branch already has them: #24, #25, #31, #92, #95 (this branch's listen_mode.py supersedes the wake-word-default flip). Suite on this branch: 1044 passed, 1 failed (PortAudio missing in sandbox, env-only).
+
+**Touched:** `actions/`, `core/notify.py`, `core/headless_ui.py`, `dashboard/__main__.py`, `dashboard/server.py`, `memory/memory_manager.py`, `tests/`
+
+**Next steps:** #32 needs a redacted long_term.json sample to confirm cause. #88 needs server output. #94 needs 2026-10-17 logs. Branch roadmap-session-2026-10-29 still has the competing #92/#95 implementations; do not merge both.
+
+---
 
 ## #119 — 2026-10-28 19:12 UTC — Claude Code
 

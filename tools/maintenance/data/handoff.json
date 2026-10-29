@@ -1,5 +1,5 @@
 {
-  "next_id": 120,
+  "next_id": 121,
   "entries": [
     {
       "id": 1,
@@ -1676,6 +1676,22 @@
         "tests/test_promise_without_action.py"
       ],
       "next_steps": "Run a small-talk turn on the real machine and compare TTFT in logs/perf.jsonl; then trim tool-schema descriptions under the eval harness. Repo-presentation cleanup (license mismatch MIT vs CC BY-NC in core/wake_word.py, root clutter, README claims) was proposed, not started. #88 still needs free -h / ollama list from the server."
+    },
+    {
+      "id": 120,
+      "timestamp": "2026-10-29 12:04 UTC",
+      "by": "Claude Code (Sonnet 5.5)",
+      "summary": "Ported the non-overlapping work from branch roadmap-session-2026-10-29 onto this branch: #10 (actions/ except sweep + web_search._compare / game_updater fixes), #16 (strip dead session_memory param), #19/#20 (approval audit entry + ntfy retry/reminder), #21 (python -m dashboard), #29 (no shell=True), #30 (hermetic send2trash fixture), #32 (partial: memory_manager no longer stores {'value': None/''}). Deliberately NOT ported because this branch already has them: #24, #25, #31, #92, #95 (this branch's listen_mode.py supersedes the wake-word-default flip). Suite on this branch: 1044 passed, 1 failed (PortAudio missing in sandbox, env-only).",
+      "files": [
+        "actions/",
+        "core/notify.py",
+        "core/headless_ui.py",
+        "dashboard/__main__.py",
+        "dashboard/server.py",
+        "memory/memory_manager.py",
+        "tests/"
+      ],
+      "next_steps": "#32 needs a redacted long_term.json sample to confirm cause. #88 needs server output. #94 needs 2026-10-17 logs. Branch roadmap-session-2026-10-29 still has the competing #92/#95 implementations; do not merge both."
     }
   ]
 }
