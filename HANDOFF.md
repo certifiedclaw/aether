@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-28 19:12 UTC
+Generated: 2026-10-29 11:51 UTC
+
+## #120 — 2026-10-29 11:51 UTC — Claude Code
+
+Repo-presentation cleanup: removed root duplicate files, moved historical docs to docs/archive/, stripped '# ── NEW vN' divider comments (31) in main.py/core, dropped emoji header from core/prompt.txt, replaced 'Tony Stark' fallback prompt in main.py, fixed doc/tool references. No logic changes. Full suite: 950 passed, same 5 pre-existing failures (PortAudio/ModuleNotFound in sandbox).
+
+**Touched:** `main.py`, `core/prompt.txt`, `core/tool_dispatch.py`, `core/conversation_core.py`, `core/tool_declarations.py`, `.gitignore`, `docs/`
+
+**Next steps:** Owner decision: license mismatch (README says MIT, no LICENSE file, CC BY-NC headers in core/echo.py and core/wake_word.py). Unreferenced placeholder docs/screenshots/*.png left in place. Generated reports still in repo root (needs tooling change to move). Oversized files (ui.py) and stray prints (#14) not touched.
+
+---
 
 ## #119 — 2026-10-28 19:12 UTC — Claude Code
 

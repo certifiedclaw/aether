@@ -139,7 +139,7 @@ from actions.web_search        import web_search as web_search_action
 from actions.computer_control  import computer_control
 from actions.game_updater      import game_updater
 
-# ── NEW: Aether-sourced modules ────────────────────────────────────────────
+# ── Aether-sourced modules ────────────────────────────────────────────
 from memory.semantic_memory    import MemoryEngine
 from memory.rag                import RAGEngine
 from core.smart_context        import compress_if_needed, estimate_tool_tokens
@@ -154,7 +154,7 @@ from core.mcp_bridge            import MCPBridge
 from core                       import undo as undo_stack
 from memory.config_manager     import get_mark_config
 
-# ── NEW v2: advanced modules ───────────────────────────────────────────────
+# ── Advanced modules ───────────────────────────────────────────────
 from core.observability        import get_obs
 from core.goal_state           import GoalState, GOAL_TOOL_DECLARATIONS
 from memory.hybrid_memory      import HybridMemory
@@ -171,7 +171,7 @@ try:
 except ImportError:
     _ADVANCED_OK = False
 
-# ── NEW v4: crash logger, self-test, memory tools, config validator ────────
+# ── Crash logger, self-test, memory tools, config validator ────────
 try:
     from core.crash_logger  import log_crash, get_recent_crashes
     from core.self_test     import run_self_test, run_self_test_async
@@ -193,7 +193,7 @@ except ImportError as _v4_err:
     def memory_stats(): return "Memory tools not available."
     def validate_config(config=None): return None
 
-# ── NEW v3: integration modules (lazy — graceful if not installed) ─────────
+# ── Integration modules (lazy — graceful if not installed) ─────────
 try:
     from integrations.langchain_tools import (
         langchain_tool, LANGCHAIN_TOOL_DECLARATION, langchain_available,
@@ -310,7 +310,7 @@ def _load_system_prompt() -> str:
     """
     global _system_prompt_cache, _system_prompt_mtime
     fallback = (
-        "You are Aether, Tony Stark's AI assistant. "
+        "You are Aether, a local voice assistant. "
         "Be concise, direct, and always use the provided tools to complete tasks. "
         "Never simulate or guess results — always call the appropriate tool."
     )
@@ -372,7 +372,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         self._safety = get_safety()
         self._safety.set_confirm_callback(self.ui.confirm_blocking)
 
-        # ── NEW: Aether-sourced subsystems ────────────────────────────────
+        # ── Aether-sourced subsystems ────────────────────────────────
         self._semantic_mem: MemoryEngine | None = None
         self._rag:          RAGEngine    | None = None
         self._plugins:      PluginSystem | None = None
@@ -380,7 +380,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         self._hotkey:       HotkeyManager | None = None
         self._mcp:          MCPBridge    | None = None
 
-        # ── NEW v2: advanced systems ───────────────────────────────────────
+        # ── Advanced systems ───────────────────────────────────────
         self._hybrid_mem:   HybridMemory | None = None
         self._goals:        GoalState    | None = None
         self._loop_guard                        = None
@@ -394,7 +394,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         self._BARGE_IN_THRESHOLD: float = 0.02   # RMS threshold
         self._BARGE_IN_FRAMES:    int   = 6      # consecutive loud frames to trigger
 
-        # ── NEW v4 (ported from Mark-XLVIII): dashboard, proactive, monitor ─
+        # ── Dashboard, proactive check-ins, monitor (ported from Mark-XLVIII) ─
         self._dashboard                         = None   # DashboardServer | None
         self._proactive                         = None   # ProactiveEngine | None
         self._sys_monitor                       = None   # SystemMonitor   | None
@@ -742,7 +742,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         except Exception as e:
             self.ui.write_log(f"WRN: RAG engine — {e}")
 
-        # ── NEW v2: Hybrid memory (BM25 + dense + reranker) ───────────────
+        # ── Hybrid memory (BM25 + dense + reranker) ───────────────
         try:
             self._hybrid_mem = HybridMemory(cfg)
             stats = self._hybrid_mem.stats()
@@ -796,7 +796,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             self.ui.write_log(f"WRN: MCP bridge — {e}")
 
     def _init_advanced_subsystems(self, cfg) -> None:
-        # ── NEW v2: Goal state manager ────────────────────────────────────
+        # ── Goal state manager ────────────────────────────────────
         try:
             self._goals = GoalState(cfg)
             self._goals.start()
@@ -805,7 +805,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         except Exception as e:
             self.ui.write_log(f"WRN: Goal manager — {e}")
 
-        # ── NEW v2: Loop guard ────────────────────────────────────────────
+        # ── Loop guard ────────────────────────────────────────────
         if _ADVANCED_OK:
             try:
                 self._loop_guard = LoopGuard(max_repeats=2, window=6)
@@ -813,14 +813,14 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             except Exception as e:
                 self.ui.write_log(f"WRN: Loop guard — {e}")
 
-            # ── NEW v2: Evaluator ─────────────────────────────────────────
+            # ── Evaluator ─────────────────────────────────────────
             try:
                 self._evaluator = Evaluator(enabled=True, threshold=0.6)
                 self.ui.write_log("SYS: Self-evaluator active.")
             except Exception as e:
                 self.ui.write_log(f"WRN: Evaluator — {e}")
 
-            # ── NEW v2: File watcher → auto-index dropped files ───────────
+            # ── File watcher → auto-index dropped files ───────────
             try:
                 self._file_watcher = start_file_watcher(
                     self._rag, cfg, notify_cb=self.ui.write_log)
@@ -830,7 +830,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
                 self.ui.write_log(f"WRN: File watcher — {e}")
 
     def _init_dashboard_and_integrations(self) -> None:
-        # ── NEW v4 (ported from Mark-XLVIII): Web dashboard ───────────────
+        # ── Web dashboard (ported from Mark-XLVIII) ───────────────
         try:
             from dashboard.server import start_dashboard_server
             self._dashboard = start_dashboard_server(
@@ -853,7 +853,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         except Exception as e:
             self.ui.write_log(f"WRN: Dashboard — {e}")
 
-        # ── NEW v4: Proactive check-in engine ─────────────────────────────
+        # ── Proactive check-in engine ─────────────────────────────
         try:
             from actions.proactive import ProactiveEngine
             self._proactive = ProactiveEngine(
@@ -864,7 +864,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         except Exception as e:
             self.ui.write_log(f"WRN: Proactive engine — {e}")
 
-        # ── NEW v4: System resource monitor (voice alerts) ────────────────
+        # ── System resource monitor (voice alerts) ────────────────
         try:
             from actions.system_monitor import SystemMonitor
             self._sys_monitor = SystemMonitor()
@@ -872,7 +872,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         except Exception as e:
             self.ui.write_log(f"WRN: System monitor — {e}")
 
-        # ── NEW v3: report integration status ─────────────────────────────
+        # ── Report integration status ─────────────────────────────
         integration_status = []
         if _LANGCHAIN_OK:
             integration_status.append("LangChain ✓")
@@ -1040,7 +1040,7 @@ def main() -> None:
 
     def _refresh_maintenance_snapshot():
         # Regenerates PROJECT_STATE.md / HEALTH_REPORT.md / ROADMAP.md / HANDOFF.md
-        # so they never go as stale as the old IMPROVEMENTS_V*.md files did, then
+        # so they never go stale like hand-written snapshot docs do, then
         # auto-commits + pushes them to origin (certifiedclaw/aether) so the
         # repo on GitHub reflects current state too.
         #
@@ -1100,7 +1100,7 @@ def main() -> None:
 
         aether = AetherLocal(ui)
 
-        # ── NEW v4: validate config before any subsystem loads ────────────
+        # ── Validate config before any subsystem loads ────────────
         if _V4_OK:
             try:
                 val = validate_config()

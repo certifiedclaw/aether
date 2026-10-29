@@ -68,7 +68,7 @@ will keep working as-is.
   code was ported from, not leftover Aether branding.
 
 ### Fixed
-- N/A this release — purely cosmetic/rebrand changes. See `IMPROVEMENTS_V6.md`
+- N/A this release — purely cosmetic/rebrand changes. See `archive/IMPROVEMENTS_V6.md`
   and earlier for the bug-fix history from the Mark XL line.
 
 ### Known gaps / not yet done
@@ -92,7 +92,7 @@ will keep working as-is.
 
 ## Pre-rebrand history (Mark XL / JARVIS lineage)
 
-Condensed from `IMPROVEMENTS.md` → `IMPROVEMENTS_V6.md`. Kept here for
+Condensed from `archive/IMPROVEMENTS.md` → `archive/IMPROVEMENTS_V6.md`. Kept here for
 reference; those files remain in the repo with full detail.
 
 - **v7 / Mark XL** — Multi-panel UI, agent planning loop, hybrid memory/RAG,

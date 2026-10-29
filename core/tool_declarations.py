@@ -366,7 +366,7 @@ TOOL_DECLARATIONS = [
             "required": ["category", "key", "value"]
         }
     },
-    # ── NEW tools from Aether v4.2 ─────────────────────────────────────────
+    # ── Additional tools ─────────────────────────────────────────
     {
         "name": "osint_lookup",
         "description": (

@@ -24,3 +24,7 @@ __pycache__/
 # ── Local archives and backups ───────────────────────────────────────────
 *.zip
 *.bak
+
+# ── Generated / per-machine (don't commit) ───────────────────────────────
+/code_dump.txt
+/aether_mode.txt

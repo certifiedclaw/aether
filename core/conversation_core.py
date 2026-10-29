@@ -351,7 +351,7 @@ class ConversationCoreMixin:
             }
         ] + list(self._conversation)
 
-        # ── NEW: compress context to fit token window ─────────────────
+        # ── Compress context to fit token window ─────────────────
         # Reserve budget for the tool schema this turn will actually carry —
         # otherwise a request judged "under 3000 tokens" on message content
         # alone can still blow the model's real context once several
@@ -431,7 +431,7 @@ class ConversationCoreMixin:
                 _arg_hint = f" ({_first_k}={_first_v})"
             self.ui.write_log(f"SYS: ▶ {tname}{_arg_hint}")
 
-            # ── NEW v2: loop guard — block if tool called too many times ──
+            # ── Loop guard — block if tool called too many times ──
             if self._loop_guard:
                 verdict = self._loop_guard.check(tname, targs)
                 if verdict.blocked:
@@ -537,7 +537,7 @@ class ConversationCoreMixin:
         return True
 
     def _process_message_inner(self, user_text: str) -> None:
-        # ── NEW v2: reset loop guard for new request ──────────────────
+        # ── Reset loop guard for new request ──────────────────
         if self._loop_guard:
             self._loop_guard.reset()
         # New request: ends any tool approvals granted for the previous one (core/risk.py
@@ -554,7 +554,7 @@ class ConversationCoreMixin:
             pass
         # Track message in observability
         self._obs.count("messages.received")
-        # ── NEW: handle built-in chat commands ────────────────────────
+        # ── Handle built-in chat commands ────────────────────────
         if self._handle_chat_command(user_text):
             return
 
@@ -1079,7 +1079,7 @@ class ConversationCoreMixin:
             except Exception:
                 pass
 
-        # ── NEW v2: self-evaluate the response ────────────────────────
+        # ── Self-evaluate the response ────────────────────────
         # Only evaluate when the LLM produced the final reply; skip when we
         # used a raw tool result directly (score would be meaningless noise).
         if self._evaluator and final_assistant_reply and _tool_results and _llm_synthesized:

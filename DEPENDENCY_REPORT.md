@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.dep_watcher` (or `run_all`) to refresh. Requires internet access.
 
-Generated: 2026-10-26T18:26:40.336485+00:00
+Generated: 2026-10-29T11:51:30.331209+00:00
 
 Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 3 versions behind" — it reports the latest available so you can decide whether to pin and bump.
 
@@ -22,7 +22,7 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 | uvicorn | 0.54.0 |  |
 | cryptography | 50.0.2 |  |
 | python-multipart | 0.0.32 |  |
-| PyQt6 | 6.11.0 |  |
+| PyQt6 | 6.12.0 |  |
 | psutil | 7.2.2 |  |
 | pillow | 13.0.0 |  |
 | sounddevice | 0.5.6 |  |
@@ -63,7 +63,7 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 | qrcode | 8.2 |  |
 | wikipedia-api | 0.16.0 |  |
 | google-generativeai | 0.8.6 |  |
-| google-genai | 2.33.0 |  |
+| google-genai | 2.34.0 |  |
 
 ## Flagged for extra attention
 - **langchain** — Fast-moving API; pin a version once Aether's LangChain tool wiring is stable.

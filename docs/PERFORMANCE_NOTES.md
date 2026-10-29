@@ -1,7 +1,7 @@
 # Performance Notes
 
 Living reference for optimization work on this codebase. Unlike
-`CHANGELOG.md` / `IMPROVEMENTS_V*.md` (which log features + bug fixes
+`CHANGELOG.md` / `archive/IMPROVEMENTS_V*.md` (which log features + bug fixes
 chronologically), this file tracks **perf-specific state**: what's been
 audited, what's still unaudited, and the failure patterns to grep for.
 

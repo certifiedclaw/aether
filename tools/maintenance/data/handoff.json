@@ -1,5 +1,5 @@
 {
-  "next_id": 120,
+  "next_id": 121,
   "entries": [
     {
       "id": 1,
@@ -1676,6 +1676,22 @@
         "tests/test_promise_without_action.py"
       ],
       "next_steps": "Run a small-talk turn on the real machine and compare TTFT in logs/perf.jsonl; then trim tool-schema descriptions under the eval harness. Repo-presentation cleanup (license mismatch MIT vs CC BY-NC in core/wake_word.py, root clutter, README claims) was proposed, not started. #88 still needs free -h / ollama list from the server."
+    },
+    {
+      "id": 120,
+      "timestamp": "2026-10-29 11:51 UTC",
+      "by": "Claude Code",
+      "summary": "Repo-presentation cleanup: removed root duplicate files, moved historical docs to docs/archive/, stripped '# \u2500\u2500 NEW vN' divider comments (31) in main.py/core, dropped emoji header from core/prompt.txt, replaced 'Tony Stark' fallback prompt in main.py, fixed doc/tool references. No logic changes. Full suite: 950 passed, same 5 pre-existing failures (PortAudio/ModuleNotFound in sandbox).",
+      "files": [
+        "main.py",
+        "core/prompt.txt",
+        "core/tool_dispatch.py",
+        "core/conversation_core.py",
+        "core/tool_declarations.py",
+        ".gitignore",
+        "docs/"
+      ],
+      "next_steps": "Owner decision: license mismatch (README says MIT, no LICENSE file, CC BY-NC headers in core/echo.py and core/wake_word.py). Unreferenced placeholder docs/screenshots/*.png left in place. Generated reports still in repo root (needs tooling change to move). Oversized files (ui.py) and stray prints (#14) not touched."
     }
   ]
 }

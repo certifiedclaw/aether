@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-10-26T18:26:40.336485+00:00",
+    "generated": "2026-10-29T11:51:30.331209+00:00",
     "pip_packages": 46
   },
   "pip": [
@@ -26,7 +26,7 @@
     },
     {
       "package": "PyQt6",
-      "latest": "6.11.0",
+      "latest": "6.12.0",
       "note": null
     },
     {
@@ -231,7 +231,7 @@
     },
     {
       "package": "google-genai",
-      "latest": "2.33.0",
+      "latest": "2.34.0",
       "note": null
     }
   ],

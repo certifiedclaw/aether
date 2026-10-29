@@ -3,8 +3,8 @@
 > **Auto-generated.** Rerun `python -m tools.maintenance.run_all` to refresh
 > everything. This is the front door — start here.
 
-Last full run: 2026-10-17 02:40 UTC
-Dependency check: skipped
+Last full run: 2026-10-29 11:51 UTC
+Dependency check: ok
 
 | Report | What it tells you |
 |---|---|
@@ -17,7 +17,7 @@ Dependency check: skipped
 Also in this repo:
 - [`AGENTS.md`](AGENTS.md) — onboarding for any AI assistant, not just Claude
 - [`CLAUDE.md`](CLAUDE.md) — auto-read by Claude Code at session start
-- [`PROJECT_INSTRUCTIONS.md`](PROJECT_INSTRUCTIONS.md) — the exact text to paste into a Claude Project's custom instructions
+- [`docs/PROJECT_INSTRUCTIONS.md`](docs/PROJECT_INSTRUCTIONS.md) — the exact text to paste into a Claude Project's custom instructions
 
 ## Before you finish a session
 Add a handoff entry — the next session (possibly a different LLM entirely) depends on it:
@@ -28,4 +28,4 @@ python -m tools.maintenance.handoff add --by "<model/tool>" --summary "..." --fi
 ## Recommended cadence
 Run this at the start of a work session (or hand a fresh Aether zip to
 Claude and ask it to run this first) so both you and Claude are looking at
-current state instead of a stale IMPROVEMENTS_V*.md snapshot.
+current state instead of a stale, hand-written snapshot document.

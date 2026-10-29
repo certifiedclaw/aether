@@ -22,7 +22,7 @@ Work on this project spans multiple separate sessions/instances with no shared m
 1. Open HANDOFF.md first. It's a running log of what previous sessions actually did and what they left for you to do next. This is the only continuity mechanism that survives across sessions — read it before anything else.
 2. Open MAINTENANCE.md — auto-generated index into current project state.
 3. From there: PROJECT\_STATE.md (module layout, sizes, entry points, real recent git history), HEALTH\_REPORT.md (TODOs, oversized files, bare excepts, syntax errors), and ROADMAP.md (actual backlog) as needed for the task.
-4. Do NOT trust IMPROVEMENTS\_V2.md through IMPROVEMENTS\_V6.md, CHANGES.md, or CHANGELOG.md as current state — historical snapshots, not maintained.
+4. Do NOT trust anything under docs/archive/ or docs/CHANGELOG.md as current state — historical snapshots, not maintained.
 5. If those files look stale or missing, run: python -m tools.maintenance.run\_all — then re-read them.
 
 The GitHub repo may lag behind whatever zip or files you're handed — main.py's auto-push hook only commits the report files, not source changes, so check the actual repo (fetch https://github.com/certifiedclaw/aether) rather than assuming it's in sync if that matters for the task.
