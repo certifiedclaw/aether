@@ -109,8 +109,13 @@ def _compare(items: list[str], aspect: str) -> str:
     for item in items:
         try:
             results = _usable_results(_ddg_search(f"{item} {aspect}", max_results=3))[:2]
-        except Exception:
+        except Exception as exc:
             results = []
+            # Say so: an empty section would look like "no results" and invite
+            # the summarizer to fill the gap from its own knowledge.
+            lines.append(f"\n▸ {item}")
+            lines.append(f"  (search failed: {type(exc).__name__}; no sources available for this item)")
+            continue
 
         lines.append(f"\n▸ {item}")
         for result in results:

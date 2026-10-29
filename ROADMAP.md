@@ -2,12 +2,10 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-29 11:25 UTC
+Generated: 2026-10-29 11:41 UTC
 
 ## In progress
 
-- [ ] **#10** Finish the except-pass sweep across actions/ (~90 blocks unreviewed) `low`
-  - AST scan this session (actions/): 80 pass-only handlers (reviewed earlier, see prior note) and 105 handlers that never use the exception variable. Most are legitimate optional-import / best-effort fallbacks but the 105 were NOT individually reviewed; start with extra_tools.py (15), file_processor.py (17), desktop.py, dev_agent.py. Scan script is trivial: walk ast.ExceptHandler, flag bodies that neither raise nor reference the bound name.
 - [ ] **#88** [F0] Deploy Aether always-on on iansserver (Docker, headless, small CPU model, PC GPU as optional boost) `high`
   - HP ProDesk 600 G4 (i5-8500, 32GB, HDD; NVMe planned). Docker + headless Aether + Ollama, behind Tailscale/Authelia. Needs free -h / ollama list output from the server.
 
@@ -49,10 +47,8 @@ Generated: 2026-10-29 11:25 UTC
   - Not started, needs a decision: core/listen_loops.py already has an optional wake gate (wake_word_enabled, default False, falls back to always-awake if openwakeword is not ready). Making it the default or adding push-to-talk changes default voice behavior and needs a hotkey/UI choice.
 - [ ] **#14** Route the 174 stray print() calls through core/observability.py `low`
   - Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules — actions/ is intentionally exempt (CLI-facing tool output).
-- [ ] **#21** dashboard/server.py has no standalone entrypoint `low`
-  - Noted since the original headless-mode work: start_dashboard_server() only ever gets called from AetherLocal._init_dashboard_and_integrations(), itself only reachable after the full AetherLocal boot sequence runs. Fine for the current headless design (still boots AetherLocal, just skips the GUI), but if a lighter API-only deployment (dashboard + approvals + LLM status, nothing else) is ever wanted, this coupling needs breaking.
 - [ ] **#32** Investigate long_term.json identity entries missing value `low`
-  - Handoff guesses user redaction; unconfirmed.
+  - Cannot confirm the cause without the real long_term.json (user data, not in repo). Found and fixed one verifiable way to produce bad identity entries: memory_manager._recursive_update stored {'value': None} as the literal string 'None' and {'value': ''} as an empty-valued entry; both are now skipped (tests/test_memory_empty_values.py). If an actual long_term.json still has entries with no 'value' key at all, that came from another writer (older version or manual edit) -- send a redacted sample.
 - [ ] **#49** [F0] Crash reporter: sanitized report saved locally `low`
 - [ ] **#50** [F0] Telemetry that stays local: usage stats for the owner only `low`
 - [ ] **#54** [F1] Response caching for repeated questions `low`
@@ -95,6 +91,8 @@ Generated: 2026-10-29 11:25 UTC
   - Second-biggest oversized function per HEALTH_REPORT.md. Lower priority than main.py's since it's a one-shot Windows-firewall setup path, not hot-path chat/agent logic.
 - [x] **#9** Grep for silent except-swallow blocks that might hide another load-bearing bug
   - The plugin_watcher.py hot-reload bug (handoff #13) was invisible for as long as this code existed because a bare AttributeError from a missing reload() method was caught and just logged. Worth a dedicated pass over 'except Exception: pass' / 'except Exception as e: log...' blocks across the codebase specifically looking for ones swallowing something load-bearing rather than genuinely optional, the way this whole audit series (handoffs #6, #9-#14) kept finding real bugs by actually reading and exercising code rather than skimming for style issues.
+- [x] **#10** Finish the except-pass sweep across actions/ (~90 blocks unreviewed)
+  - Reviewed all 105 non-pass handlers in actions/ that ignore the exception variable (AST scan). Almost all are typed, intentional fallbacks (optional imports, TimeoutExpired/FileNotFoundError returning a clear message). Fixed the two that hid a failure: web_search._compare left a failed item blank (now says 'search failed', so the summarizer can't invent it) and game_updater's crontab check reported 'No scheduled game update found' on error (now says it could not check). tests/test_except_sweep_actions.py. Still unreviewed: the ~235 'except Exception as e: log...' blocks outside actions/ (low risk, they log).
 - [x] **#11** Refactor ui.py __init__() (333 lines)
   - Largest single oversized function per HEALTH_REPORT.md — bigger than main.py's _execute_tool() (#7). Same extraction treatment: pull out pure, behavior-preserving setup helpers, verify with py_compile + literal diff review.
 - [x] **#12** Refactor dashboard/server.py _build_app() (318 lines)
@@ -113,6 +111,8 @@ Generated: 2026-10-29 11:25 UTC
   - Decision: approvals stay in-memory by design. An approval belongs to the thread blocked on it; restoring one after a restart could approve an action nobody is waiting on, and timeout-deny is the safe default. The real gap was that a restart made the request vanish without a trace, so confirm_blocking now writes an audit entry (tool=approval, action=requested, decision=pending, with the approval id and message) the moment a request is created; a pending row with no later approved/denied row in /audit means it was interrupted. Added 'pending' to the /audit decision filter. Not implemented: surfacing interrupted requests proactively on the next startup.
 - [x] **#20** ntfy push for approvals is one-shot, no retry/queue
   - core/notify.keep_notifying runs on a daemon thread started by HeadlessUI.confirm_blocking: a failed first push is retried after 5s/15s/45s, and one 'Still waiting' reminder goes out if the approval is unanswered ntfy_remind_after_s (default 60, 0 disables) after the first push. Stops the instant the approval resolves or its deadline passes (the approval's event is set when confirm_blocking returns, including on timeout); never delays the wait. First push stays synchronous so the exactly-one-push-per-request test still holds. Mocked-network tests only; no real ntfy server was contacted.
+- [x] **#21** dashboard/server.py has no standalone entrypoint
+  - Added dashboard/__main__.py: 'python -m dashboard' runs only the FastAPI dashboard (approvals, /api/llm-status, audit) with no AetherLocal/UI/models. DashboardServer was already independent of AetherLocal (only optional callbacks), so the real gap was just an entrypoint. Remote text commands have no assistant to run them, so a drain thread drops them with a log line. Smoke-tested live on 127.0.0.1:8000 (/login 200, /api/llm-status 401 unauthenticated); tests/test_dashboard_standalone.py. Not done: Docker/compose service for it, and a headless-assistant-less approvals flow end to end.
 - [x] **#22** Client-side parser for raw <tool_call> text from Ollama (needs user approval)
   - 4 of 7 failed prompts showed raw <tool_call>{...}</tool_call> instead of acting. Touches streaming path and makes model text executable, so get explicit go-ahead; check ollama --version first. See handoff #37.
 - [x] **#23** actions/desktop.py exec() sandbox is escapable and runs model-written code without a confirmation

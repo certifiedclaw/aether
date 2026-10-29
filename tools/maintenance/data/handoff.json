@@ -1,5 +1,5 @@
 {
-  "next_id": 118,
+  "next_id": 119,
   "entries": [
     {
       "id": 1,
@@ -1644,6 +1644,22 @@
         "tools/maintenance/data/roadmap.json"
       ],
       "next_steps": "Review and commit the uncommitted working tree (git status shows ~40 files). #94 needs the 2026-10-17 live logs. #95 needs a decision on wake-word default vs push-to-talk. #88 needs free -h / ollama list from iansserver. #10: 105 actions/ handlers that ignore the exception variable are still unreviewed (extra_tools.py, file_processor.py first)."
+    },
+    {
+      "id": 118,
+      "timestamp": "2026-10-29 11:42 UTC",
+      "by": "Claude Code (Sonnet 5.5)",
+      "summary": "Second pass on the roadmap. Closed #10 (reviewed all 105 non-pass actions/ handlers; fixed web_search._compare and game_updater crontab check which hid failures), #21 (new dashboard/__main__.py: python -m dashboard, smoke-tested over HTTP), and made a partial fix for #32 (memory_manager no longer stores {'value': None/''}); #32 left open because the real long_term.json is needed to confirm cause. Full suite: 999 passed, 1 failed (test_action_launcher, PortAudio missing in sandbox, env-only).",
+      "files": [
+        "actions/web_search.py",
+        "actions/game_updater.py",
+        "memory/memory_manager.py",
+        "dashboard/__main__.py",
+        "tests/test_except_sweep_actions.py",
+        "tests/test_memory_empty_values.py",
+        "tests/test_dashboard_standalone.py"
+      ],
+      "next_steps": "Still blocked on you: #94 (needs 2026-10-17 logs), #95 (wake-word default vs push-to-talk decision), #88 (server output), #32 (redacted long_term.json sample). Next tractable candidates: #49 crash reporter, #54 response caching, #48 auto-update with rollback."
     }
   ]
 }

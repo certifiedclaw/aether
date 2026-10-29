@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-29 11:25 UTC
+Generated: 2026-10-29 11:42 UTC
+
+## #118 — 2026-10-29 11:42 UTC — Claude Code (Sonnet 5.5)
+
+Second pass on the roadmap. Closed #10 (reviewed all 105 non-pass actions/ handlers; fixed web_search._compare and game_updater crontab check which hid failures), #21 (new dashboard/__main__.py: python -m dashboard, smoke-tested over HTTP), and made a partial fix for #32 (memory_manager no longer stores {'value': None/''}); #32 left open because the real long_term.json is needed to confirm cause. Full suite: 999 passed, 1 failed (test_action_launcher, PortAudio missing in sandbox, env-only).
+
+**Touched:** `actions/web_search.py`, `actions/game_updater.py`, `memory/memory_manager.py`, `dashboard/__main__.py`, `tests/test_except_sweep_actions.py`, `tests/test_memory_empty_values.py`, `tests/test_dashboard_standalone.py`
+
+**Next steps:** Still blocked on you: #94 (needs 2026-10-17 logs), #95 (wake-word default vs push-to-talk decision), #88 (server output), #32 (redacted long_term.json sample). Next tractable candidates: #49 crash reporter, #54 response caching, #48 auto-update with rollback.
+
+---
 
 ## #117 — 2026-10-29 11:25 UTC — Claude Code (Sonnet 5.5)
 

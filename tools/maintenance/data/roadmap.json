@@ -86,8 +86,8 @@
       "id": 10,
       "title": "Finish the except-pass sweep across actions/ (~90 blocks unreviewed)",
       "priority": "low",
-      "status": "in-progress",
-      "notes": "AST scan this session (actions/): 80 pass-only handlers (reviewed earlier, see prior note) and 105 handlers that never use the exception variable. Most are legitimate optional-import / best-effort fallbacks but the 105 were NOT individually reviewed; start with extra_tools.py (15), file_processor.py (17), desktop.py, dev_agent.py. Scan script is trivial: walk ast.ExceptHandler, flag bodies that neither raise nor reference the bound name.",
+      "status": "done",
+      "notes": "Reviewed all 105 non-pass handlers in actions/ that ignore the exception variable (AST scan). Almost all are typed, intentional fallbacks (optional imports, TimeoutExpired/FileNotFoundError returning a clear message). Fixed the two that hid a failure: web_search._compare left a failed item blank (now says 'search failed', so the summarizer can't invent it) and game_updater's crontab check reported 'No scheduled game update found' on error (now says it could not check). tests/test_except_sweep_actions.py. Still unreviewed: the ~235 'except Exception as e: log...' blocks outside actions/ (low risk, they log).",
       "created": "2026-07-15",
       "updated": "2026-10-29"
     },
@@ -185,10 +185,10 @@
       "id": 21,
       "title": "dashboard/server.py has no standalone entrypoint",
       "priority": "low",
-      "status": "backlog",
-      "notes": "Noted since the original headless-mode work: start_dashboard_server() only ever gets called from AetherLocal._init_dashboard_and_integrations(), itself only reachable after the full AetherLocal boot sequence runs. Fine for the current headless design (still boots AetherLocal, just skips the GUI), but if a lighter API-only deployment (dashboard + approvals + LLM status, nothing else) is ever wanted, this coupling needs breaking.",
+      "status": "done",
+      "notes": "Added dashboard/__main__.py: 'python -m dashboard' runs only the FastAPI dashboard (approvals, /api/llm-status, audit) with no AetherLocal/UI/models. DashboardServer was already independent of AetherLocal (only optional callbacks), so the real gap was just an entrypoint. Remote text commands have no assistant to run them, so a drain thread drops them with a log line. Smoke-tested live on 127.0.0.1:8000 (/login 200, /api/llm-status 401 unauthenticated); tests/test_dashboard_standalone.py. Not done: Docker/compose service for it, and a headless-assistant-less approvals flow end to end.",
       "created": "2026-07-28",
-      "updated": "2026-07-28"
+      "updated": "2026-10-29"
     },
     {
       "id": 22,
@@ -285,9 +285,9 @@
       "title": "Investigate long_term.json identity entries missing value",
       "priority": "low",
       "status": "backlog",
-      "notes": "Handoff guesses user redaction; unconfirmed.",
+      "notes": "Cannot confirm the cause without the real long_term.json (user data, not in repo). Found and fixed one verifiable way to produce bad identity entries: memory_manager._recursive_update stored {'value': None} as the literal string 'None' and {'value': ''} as an empty-valued entry; both are now skipped (tests/test_memory_empty_values.py). If an actual long_term.json still has entries with no 'value' key at all, that came from another writer (older version or manual edit) -- send a redacted sample.",
       "created": "2026-10-07",
-      "updated": "2026-10-07"
+      "updated": "2026-10-29"
     },
     {
       "id": 33,

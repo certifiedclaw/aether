@@ -919,8 +919,10 @@ def _get_schedule_status() -> str:
                 if "Aether_GameUpdater" in line:
                     return f"Game update is scheduled: {line.split('#')[0].strip()}"
         return "No scheduled game update found."
-    except Exception:
-        return "No scheduled game update found."
+    except FileNotFoundError:
+        return "Could not check the schedule: crontab is not available on this system."
+    except Exception as exc:
+        return f"Could not check the schedule ({type(exc).__name__})."
 
 
 from core.risk import gated  # noqa: E402
