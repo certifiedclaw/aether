@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-30 03:31 UTC
+Generated: 2026-10-30 11:59 UTC
 
 ## In progress
 
@@ -161,7 +161,7 @@ Generated: 2026-10-30 03:31 UTC
 - [x] **#46** [F0] Resource governor: pause heavy jobs when other containers (Palworld) need CPU/RAM
 - [x] **#47** [F0] Cost and speed dashboard: tokens/s, memory use, latency per model
 - [x] **#48** [F0] Auto-update with rollback: pull, run tests, roll back on failure
-  - Done as core/updater.py (python -m core.updater check|apply). Fast-forward only; refuses dirty tracked tree, local commits, diverged or detached branches. Records HEAD, ff-merges, runs the test command (default: full pytest suite, 900s timeout, or --test-cmd), and git reset --hard back to the recorded HEAD if tests fail, time out or cannot start. Never installs packages; flags requirements*.txt changes. Manual only, not wired to launch. Logged to update_log.jsonl in the data dir. 20 tests against real git repos (bare remote + clones); mutation-checked that a no-op rollback and a removed dirty-tree guard are both caught. Not yet run on the real Windows install, and no /update chat command or doctor hook yet.
+  - Done as core/updater.py (python -m core.updater check|apply|log). Fast-forward only; refuses dirty tracked tree, local commits, diverged or detached branches. Records HEAD, ff-merges, runs the test command (default full pytest, 900s timeout, or --test-cmd), and resets --hard to the recorded HEAD if tests fail, time out, cannot start, or Ctrl-C. Never installs packages; flags requirements changes. Manual only. Logging: timed live progress (-v streams tests), update_log.jsonl summary per run (check too), update_runs/<id>.jsonl step-by-step flushed per event (crash-safe), update_runs/<id>.tests.log full output (2MB cap), phase timings, parsed failed tests and summary, env context, URL credentials masked, newest 25 runs kept, index rotates at 512KB, unfinished runs flagged as interrupted, timeout kills the whole test process group, log viewer with --run/--json. 48 tests on real git repos; mutation-checked rollback, dirty-tree guard, secret masking, per-event flush and Ctrl-C rollback. Not yet run on the real Windows install (process-group kill is POSIX-only there; falls back to killing the runner); no /update chat command or doctor hook yet.
 - [x] **#51** [F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones
   - Completed: optional llm_quick_model, llm_everyday_model and llm_hard_model select per-tier models for Ollama conversations. Aether checks the currently selected Ollama host (including remote/local fallback); a missing or uncheckable tag falls back to that host's configured default and is logged. Gemini HARD escalation and opted-in Gemini tool routing retain precedence; OpenAI-compatible providers are unchanged. See core/llm_client.py, core/conversation_core.py and config/config.example.json.
 - [x] **#52** [F1] Prompt and tool-schema tuning per model, driven by benchmark results

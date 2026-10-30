@@ -60,6 +60,10 @@
     {
       "file": "core/conversation_core.py",
       "lines": 1217
+    },
+    {
+      "file": "core/updater.py",
+      "lines": 708
     }
   ],
   "large_functions": [
@@ -368,6 +372,12 @@
       "function": "_process_message_inner",
       "lines": 525,
       "at_line": 541
+    },
+    {
+      "file": "core/updater.py",
+      "function": "_run_tests",
+      "lines": 81,
+      "at_line": 483
     },
     {
       "file": "core/portable_bundle.py",
@@ -1078,19 +1088,39 @@
     },
     {
       "file": "core/updater.py",
-      "line": 217
+      "line": 675
     },
     {
       "file": "core/updater.py",
-      "line": 220
+      "line": 678
     },
     {
       "file": "core/updater.py",
-      "line": 222
+      "line": 681
     },
     {
       "file": "core/updater.py",
-      "line": 224
+      "line": 691
+    },
+    {
+      "file": "core/updater.py",
+      "line": 694
+    },
+    {
+      "file": "core/updater.py",
+      "line": 696
+    },
+    {
+      "file": "core/updater.py",
+      "line": 699
+    },
+    {
+      "file": "core/updater.py",
+      "line": 701
+    },
+    {
+      "file": "core/updater.py",
+      "line": 703
     },
     {
       "file": "core/portable_bundle.py",
@@ -1384,7 +1414,7 @@
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-10-30T03:31:25.873058+00:00",
-    "files_scanned": 200
+    "generated": "2026-10-30T11:59:28.285220+00:00",
+    "files_scanned": 201
   }
 }

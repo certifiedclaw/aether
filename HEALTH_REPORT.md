@@ -2,8 +2,8 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.health_check` (or `run_all`) to refresh. Fix things here, don't edit this file directly.
 
-Generated: 2026-10-30T03:31:25.873058+00:00
-Files scanned: 200
+Generated: 2026-10-30T11:59:28.285220+00:00
+Files scanned: 201
 
 ## Summary
 
@@ -11,9 +11,9 @@ Files scanned: 200
 |---|---|
 | Files that fail to parse | 0 |
 | Bare `except:` clauses | 0 |
-| Files over 600 lines | 15 |
-| Functions over 80 lines | 55 |
-| Stray `print()` calls (outside scripts) | 246 |
+| Files over 600 lines | 16 |
+| Functions over 80 lines | 56 |
+| Stray `print()` calls (outside scripts) | 251 |
 | TODO / FIXME / XXX comments | 0 |
 | Unreadable files | 0 |
 
@@ -30,6 +30,7 @@ Files scanned: 200
 - `actions/file_processor.py` — 950 lines
 - `actions/browser_control.py` — 941 lines
 - `actions/computer_settings.py` — 755 lines
+- `core/updater.py` — 708 lines
 - `tests/test_invariants.py` — 674 lines
 - `actions/desktop.py` — 655 lines
 - `actions/file_controller.py` — 651 lines
@@ -90,6 +91,7 @@ Files scanned: 200
 - `tests/test_action_launcher.py:196` — `test_chat_input_is_discoverable_and_does_not_drop_unsent_text()` (83 lines)
 - `actions/osint_tools.py:952` — `github_user_osint()` (81 lines)
 - `tests/test_listen_mode.py:163` — `_harness()` (81 lines)
+- `core/updater.py:483` — `_run_tests()` (81 lines)
 
 ## Stray `print()` calls
 Found outside of scripts/tests — consider routing through `core/observability.py` or logging instead.
@@ -143,4 +145,4 @@ Found outside of scripts/tests — consider routing through `core/observability.
 - `tools/live_grader.py:236`
 - `tools/apply_roadmap_v12.py:105`
 - `tools/apply_roadmap_v12.py:107`
-- ...and 196 more
+- ...and 201 more

@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Do not hand-edit — rerun `python -m tools.maintenance.project_state` (or `run_all`) to refresh. This is meant to be the one file a new session (human or Claude) reads first to get oriented.
 
-Generated: 2026-10-30 03:31 UTC
+Generated: 2026-10-30 11:59 UTC
 Version: Aether v1.0.0
 
 ## Entry points
@@ -20,16 +20,16 @@ Version: Aether v1.0.0
 | `actions/` | 23 | 11,860 |
 | `agent/` | 4 | 1,163 |
 | `config/` | 1 | 25 |
-| `core/` | 60 | 14,751 |
+| `core/` | 60 | 15,230 |
 | `dashboard/` | 5 | 1,637 |
 | `dev_tools/` | 1 | 78 |
 | `integrations/` | 4 | 1,144 |
 | `memory/` | 6 | 1,242 |
 | `plugins/` | 1 | 44 |
 | `security/` | 7 | 1,340 |
-| `tests/` | 66 | 12,856 |
+| `tests/` | 67 | 13,247 |
 | `tools/` | 19 | 3,167 |
-| **Total** | **200** | **54,169** |
+| **Total** | **201** | **55,039** |
 
 ## Modules with docstrings (top-level summary)
 
@@ -126,7 +126,7 @@ Version: Aether v1.0.0
 - `core/tool_router.py` (144 lines, 0 classes, 5 functions) — tool_router.py — per-turn tool subset selection for EVERYDAY-tier turns.
 - `core/tts.py` (457 lines, 4 classes, 6 functions) — Text-to-Speech engines for Aether.
 - `core/undo.py` (103 lines, 2 classes, 4 functions) — core/undo.py — Aether Undo Stack
-- `core/updater.py` (230 lines, 1 classes, 13 functions) — core/updater.py -- update from git with automatic rollback (roadmap #48).
+- `core/updater.py` (709 lines, 3 classes, 28 functions) — core/updater.py -- update from git with automatic rollback (roadmap #48).
 - `core/wake_word.py` (269 lines, 2 classes, 3 functions) — Local wake-word detection for JARVIS ("Hey Jarvis").
 
 ### `dashboard/`
@@ -227,6 +227,7 @@ Version: Aether v1.0.0
 - `tests/test_tool_call_recovery.py` (101 lines, 0 classes, 12 functions) — Recovery of raw <tool_call> text, held-back streaming, plain monitor alerts, HF offline restore.
 - `tests/test_tts_elevenlabs.py` (74 lines, 0 classes, 6 functions)
 - `tests/test_updater.py` (232 lines, 0 classes, 24 functions) — Roadmap #48: core/updater -- fast-forward update with rollback.
+- `tests/test_updater_logging.py` (391 lines, 0 classes, 35 functions) — Roadmap #48 follow-up: the updater's logging. Real git repos, real subprocesses.
 - `tests/test_v12e_fixes.py` (113 lines, 0 classes, 8 functions) — Regression tests for the v12d review fixes (each fails against v12d).
 - `tests/test_v12f_fixes.py` (40 lines, 0 classes, 5 functions) — v12f: LangChain must not pretend to have researched; live log isolation.
 - `tests/test_v12g_fixes.py` (122 lines, 1 classes, 11 functions) — v12g: a missing Ollama model / missing config must fail loudly and early, not as 24 silent 404s.
@@ -255,6 +256,7 @@ Version: Aether v1.0.0
 - `tools/verify_local.py` (355 lines, 1 classes, 11 functions) — tools/verify_local.py -- one-shot health check for a real Aether install.
 
 ## Recent history (git log)
+- d254479 2026-10-29 Roadmap #48: git updater with automatic rollback
 - af86867 2026-10-29 Roadmap #53/#55: opt-in self-check pass and confidence flagging
 - a3e423a 2026-10-29 Merge roadmap-session-2026-10-29 into the stacked cleanup branch
 - 7513d99 2026-10-29 Wake word on by default (#95)
@@ -262,7 +264,6 @@ Version: Aether v1.0.0
 - 1ed956c 2026-10-29 Roadmap: close #10 and #21, partial #32
 - dc493ed 2026-10-29 Roadmap: promise-retry (#92), close #25, plus earlier uncommitted batch
 - 4aa8173 2026-10-28 Roadmap #93 (partial): trim the per-turn prompt
-- ba6fc55 2026-10-28 Fix #95: rename ptt_hotkey -> ptt_shortcut (secret-scan invariant)
 
 ## See also
 - `HEALTH_REPORT.md` — automated code health scan

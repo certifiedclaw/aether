@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-30 03:31 UTC
+Generated: 2026-10-30 11:59 UTC
+
+## #127 — 2026-10-30 11:59 UTC — Claude Code (Sonnet 5.5)
+
+Reworked core/updater.py logging (follow-up to #48, same branch roadmap-48-updater). Every run including check now writes a summary row (update_log.jsonl v2) plus a step-by-step event file flushed per event (update_runs/<id>.jsonl) and the full test output (<id>.tests.log, 2MB cap). Captures phase timings, environment (python/platform/git), parsed failed test ids and pytest summary; masks URL credentials everywhere; prunes to 25 runs and rotates the index at 512KB; flags runs that never finished as interrupted on next start. Live timed progress in the CLI (-v streams test output, heartbeat every 15s). New 'log' subcommand (list, --run ID|prefix|latest, --json); ambiguous prefix is refused rather than guessed. Behaviour fixes found on the way: Ctrl-C or an unexpected error after the fast-forward now rolls back instead of leaving unvalidated code; a test timeout kills the whole process group, not just the runner. 48 updater tests on real git repos (28 new); mutation-checked redaction, per-event flush and Ctrl-C rollback. Full suite 1099 passed, same 4 sandbox-only failures (PortAudio, fastapi missing). Not run on the real Windows install.
+
+**Touched:** `core/updater.py`, `tests/test_updater_logging.py`, `readme.md`, `tools/maintenance/data/roadmap.json`, `tools/maintenance/data/handoff.json`
+
+**Next steps:** Merge roadmap-48-updater into master when ready (one clean fast-forward). On the real machine run python -m core.updater check, then apply with a quick --test-cmd, then python -m core.updater log --run latest to see the whole path. Optional: a /update chat command and a doctor line showing commits behind. Next roadmap candidates: #49 crash reporter, #54 response caching; #88/#94/#32 still need data from the owner.
+
+---
 
 ## #126 — 2026-10-30 03:31 UTC — Claude Code (Sonnet 5.5)
 

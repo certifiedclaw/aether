@@ -1,5 +1,5 @@
 {
-  "next_id": 127,
+  "next_id": 128,
   "entries": [
     {
       "id": 1,
@@ -1778,6 +1778,20 @@
         "tools/maintenance/data/handoff.json"
       ],
       "next_steps": "Run python -m core.updater check on the real machine, then apply once with a quick --test-cmd to see the whole path. Optional follow-ups: a /update chat command and a doctor line showing 'N commits behind'. Next roadmap candidates: #49 crash reporter, #54 response caching. #88, #94, #32 still need data from the owner."
+    },
+    {
+      "id": 127,
+      "timestamp": "2026-10-30 11:59 UTC",
+      "by": "Claude Code (Sonnet 5.5)",
+      "summary": "Reworked core/updater.py logging (follow-up to #48, same branch roadmap-48-updater). Every run including check now writes a summary row (update_log.jsonl v2) plus a step-by-step event file flushed per event (update_runs/<id>.jsonl) and the full test output (<id>.tests.log, 2MB cap). Captures phase timings, environment (python/platform/git), parsed failed test ids and pytest summary; masks URL credentials everywhere; prunes to 25 runs and rotates the index at 512KB; flags runs that never finished as interrupted on next start. Live timed progress in the CLI (-v streams test output, heartbeat every 15s). New 'log' subcommand (list, --run ID|prefix|latest, --json); ambiguous prefix is refused rather than guessed. Behaviour fixes found on the way: Ctrl-C or an unexpected error after the fast-forward now rolls back instead of leaving unvalidated code; a test timeout kills the whole process group, not just the runner. 48 updater tests on real git repos (28 new); mutation-checked redaction, per-event flush and Ctrl-C rollback. Full suite 1099 passed, same 4 sandbox-only failures (PortAudio, fastapi missing). Not run on the real Windows install.",
+      "files": [
+        "core/updater.py",
+        "tests/test_updater_logging.py",
+        "readme.md",
+        "tools/maintenance/data/roadmap.json",
+        "tools/maintenance/data/handoff.json"
+      ],
+      "next_steps": "Merge roadmap-48-updater into master when ready (one clean fast-forward). On the real machine run python -m core.updater check, then apply with a quick --test-cmd, then python -m core.updater log --run latest to see the whole path. Optional: a /update chat command and a doctor line showing commits behind. Next roadmap candidates: #49 crash reporter, #54 response caching; #88/#94/#32 still need data from the owner."
     }
   ]
 }
