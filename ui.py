@@ -3592,11 +3592,21 @@ class AetherUI:
         # so swallow it here -- this is the single choke point every
         # set_state() caller goes through, so this covers all of them.
         try:
+            from core import trace_log
+            trace_log.event("ui_state", state=state)
+        except Exception:  # noqa: BLE001
+            pass
+        try:
             self._win._state_sig.emit(state)
         except RuntimeError:
             pass
 
     def write_log(self, text: str):
+        try:
+            from core import trace_log
+            trace_log.event("ui_log", text=text)
+        except Exception:  # noqa: BLE001
+            pass
         try:
             self._win._log_sig.emit(text)
         except RuntimeError:

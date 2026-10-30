@@ -3,11 +3,11 @@
   "large_files": [
     {
       "file": "main.py",
-      "lines": 1174
+      "lines": 1196
     },
     {
       "file": "ui.py",
-      "lines": 3672
+      "lines": 3682
     },
     {
       "file": "actions/extra_tools.py",
@@ -55,31 +55,35 @@
     },
     {
       "file": "core/llm_client.py",
-      "lines": 1446
+      "lines": 1570
     },
     {
       "file": "core/conversation_core.py",
-      "lines": 1217
+      "lines": 1336
+    },
+    {
+      "file": "core/trace_log.py",
+      "lines": 976
     }
   ],
   "large_functions": [
     {
       "file": "main.py",
       "function": "main",
-      "lines": 138,
-      "at_line": 1033
+      "lines": 145,
+      "at_line": 1048
     },
     {
       "file": "main.py",
       "function": "run",
       "lines": 133,
-      "at_line": 893
+      "at_line": 908
     },
     {
       "file": "main.py",
       "function": "runner",
-      "lines": 86,
-      "at_line": 1082
+      "lines": 87,
+      "at_line": 1103
     },
     {
       "file": "ui.py",
@@ -323,27 +327,27 @@
     },
     {
       "file": "core/llm_client.py",
-      "function": "call_llm",
+      "function": "_call_llm_impl",
       "lines": 112,
-      "at_line": 613
+      "at_line": 657
     },
     {
       "file": "core/llm_client.py",
       "function": "_stream_openai_once",
       "lines": 186,
-      "at_line": 887
+      "at_line": 960
     },
     {
       "file": "core/llm_client.py",
-      "function": "call_llm_stream",
+      "function": "_call_llm_stream_impl",
       "lines": 190,
-      "at_line": 1256
+      "at_line": 1380
     },
     {
       "file": "core/llm_client.py",
       "function": "_do_stream",
       "lines": 93,
-      "at_line": 1323
+      "at_line": 1447
     },
     {
       "file": "core/echo.py",
@@ -360,14 +364,14 @@
     {
       "file": "core/conversation_core.py",
       "function": "_prepare_conversation_messages",
-      "lines": 105,
-      "at_line": 298
+      "lines": 116,
+      "at_line": 304
     },
     {
       "file": "core/conversation_core.py",
       "function": "_process_message_inner",
-      "lines": 525,
-      "at_line": 541
+      "lines": 596,
+      "at_line": 568
     },
     {
       "file": "core/portable_bundle.py",
@@ -384,8 +388,8 @@
     {
       "file": "core/listen_loops.py",
       "function": "_listen_whisper",
-      "lines": 150,
-      "at_line": 135
+      "lines": 158,
+      "at_line": 139
     },
     {
       "file": "memory/hybrid_memory.py",
@@ -575,6 +579,82 @@
     {
       "file": "tests/stress_test.py",
       "line": 364
+    },
+    {
+      "file": "tests/test_trace_log.py",
+      "line": 117
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 104
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 108
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 115
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 123
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 130
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 133
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 140
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 142
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 149
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 154
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 155
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 156
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 158
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 161
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 163
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 167
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 169
+    },
+    {
+      "file": "tools/trace_view.py",
+      "line": 173
     },
     {
       "file": "tools/apply_handoff_v12.py",
@@ -906,23 +986,19 @@
     },
     {
       "file": "core/tool_dispatch.py",
-      "line": 67
+      "line": 77
     },
     {
       "file": "core/tool_dispatch.py",
-      "line": 126
+      "line": 140
     },
     {
       "file": "core/tool_dispatch.py",
-      "line": 136
+      "line": 150
     },
     {
       "file": "core/llm_client.py",
-      "line": 297
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 299
+      "line": 300
     },
     {
       "file": "core/llm_client.py",
@@ -930,11 +1006,11 @@
     },
     {
       "file": "core/llm_client.py",
-      "line": 320
+      "line": 305
     },
     {
       "file": "core/llm_client.py",
-      "line": 327
+      "line": 323
     },
     {
       "file": "core/llm_client.py",
@@ -942,7 +1018,7 @@
     },
     {
       "file": "core/llm_client.py",
-      "line": 337
+      "line": 333
     },
     {
       "file": "core/llm_client.py",
@@ -950,11 +1026,11 @@
     },
     {
       "file": "core/llm_client.py",
-      "line": 361
+      "line": 343
     },
     {
       "file": "core/llm_client.py",
-      "line": 382
+      "line": 364
     },
     {
       "file": "core/llm_client.py",
@@ -962,7 +1038,7 @@
     },
     {
       "file": "core/llm_client.py",
-      "line": 402
+      "line": 388
     },
     {
       "file": "core/llm_client.py",
@@ -970,31 +1046,35 @@
     },
     {
       "file": "core/llm_client.py",
-      "line": 489
+      "line": 408
     },
     {
       "file": "core/llm_client.py",
-      "line": 491
+      "line": 492
     },
     {
       "file": "core/llm_client.py",
-      "line": 652
+      "line": 494
     },
     {
       "file": "core/llm_client.py",
-      "line": 674
+      "line": 696
     },
     {
       "file": "core/llm_client.py",
-      "line": 679
+      "line": 718
     },
     {
       "file": "core/llm_client.py",
-      "line": 1421
+      "line": 723
     },
     {
       "file": "core/llm_client.py",
-      "line": 1445
+      "line": 1545
+    },
+    {
+      "file": "core/llm_client.py",
+      "line": 1569
     },
     {
       "file": "core/headless_ui.py",
@@ -1002,27 +1082,27 @@
     },
     {
       "file": "core/stt.py",
-      "line": 17
+      "line": 22
     },
     {
       "file": "core/stt.py",
-      "line": 31
+      "line": 36
     },
     {
       "file": "core/stt.py",
-      "line": 39
+      "line": 44
     },
     {
       "file": "core/stt.py",
-      "line": 88
+      "line": 120
     },
     {
       "file": "core/stt.py",
-      "line": 97
+      "line": 129
     },
     {
       "file": "core/stt.py",
-      "line": 104
+      "line": 136
     },
     {
       "file": "core/doctor.py",
@@ -1046,35 +1126,35 @@
     },
     {
       "file": "core/tts.py",
-      "line": 181
+      "line": 183
     },
     {
       "file": "core/tts.py",
-      "line": 200
+      "line": 202
     },
     {
       "file": "core/tts.py",
-      "line": 268
+      "line": 270
     },
     {
       "file": "core/tts.py",
-      "line": 275
+      "line": 277
     },
     {
       "file": "core/tts.py",
-      "line": 291
+      "line": 293
     },
     {
       "file": "core/tts.py",
-      "line": 298
-    },
-    {
-      "file": "core/tts.py",
-      "line": 303
+      "line": 300
     },
     {
       "file": "core/tts.py",
       "line": 305
+    },
+    {
+      "file": "core/tts.py",
+      "line": 307
     },
     {
       "file": "core/portable_bundle.py",
@@ -1082,15 +1162,15 @@
     },
     {
       "file": "core/listen_loops.py",
-      "line": 124
+      "line": 128
     },
     {
       "file": "core/listen_loops.py",
-      "line": 281
+      "line": 293
     },
     {
       "file": "core/listen_loops.py",
-      "line": 319
+      "line": 331
     },
     {
       "file": "security/first_run.py",
@@ -1368,7 +1448,7 @@
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-10-30T03:23:13.075096+00:00",
-    "files_scanned": 198
+    "generated": "2026-10-30T21:08:23.087025+00:00",
+    "files_scanned": 201
   }
 }
