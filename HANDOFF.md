@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-30 22:11 UTC
+Generated: 2026-10-30 22:19 UTC
+
+## #128 — 2026-10-30 22:19 UTC — Claude Code (Sonnet 5.5)
+
+Roadmap #54 response cache done (opt-in, default off): core/response_cache.py + wiring in conversation_core (_try_cached_response after route resolution, _maybe_cache_response at turn end, called via the class so MagicMock-host tests keep working). Conservative eligibility (self-contained factual question, no tool/memory/HARD/goal, not time-sensitive/personal/creative). 38 tests; full suite 1108 passed, same 4 sandbox-only failures. Real headless run vs mock Ollama: rephrased repeat served with no model call. Also fixed a real bug: trace_log redaction turned ~1 in 10 session ids (14 digits) into [REDACTED:card_number] via leak_guard's Luhn check; session ids are now protected (regression test). Stacked on logging/flight-recorder.
+
+**Touched:** `core/response_cache.py`, `core/conversation_core.py`, `core/trace_log.py`, `config/config.example.json`, `readme.md`, `tests/test_response_cache.py`, `tests/test_trace_log.py`, `tools/maintenance/data/roadmap.json`
+
+**Next steps:** Turn on response_cache_enabled on the real box and watch cache_lookup/cache_store in the trace for hit rate and any wrong hits. Consider a /clearcache chat command. Note leak_guard's card regex will also redact other 13-19 digit Luhn-valid numbers (epoch ms etc.) in trace values. Rebase logging/flight-recorder on origin/master and merge. Next: #48 auto-update with rollback.
+
+---
 
 ## #127 — 2026-10-30 22:11 UTC — Claude Code (Sonnet 5.5)
 

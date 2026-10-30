@@ -94,6 +94,10 @@ Web search returns a concise answer with numbered, directly verifiable source li
 
 Set `self_check_enabled` to `true` in your config and, after each reply, Aether asks the model to re-read its own answer once. A clear mistake becomes a short spoken correction; an answer the model rates below `self_check_min_confidence` (default 0.5) gets an offer to search the web. Because the reply has already been spoken, this arrives as a follow-up, not a rewrite. It is off by default because it adds one extra fast model call per checked reply, and it skips short replies, code, and answers that came from a tool.
 
+### Response cache (optional)
+
+Set `"response_cache_enabled": true` to answer a repeated, self-contained factual question ("how does a transistor work") from a local cache instead of the model. It is deliberately narrow: it never caches anything that used a tool or injected memory, mentions you ("my", "I", "you"), points back into the conversation ("it", "that", "again"), or can change ("today", "latest", "price", "weather", "time"), and it skips creative or random requests. Entries are tied to the provider, model and system prompt, expire after `response_cache_ttl_s` (24 h), and are capped at `response_cache_max` (200). Stored in `response_cache.json` in the data folder; delete that file to clear it. Every lookup and store, including why something was not cached, appears in the trace (`cache_lookup`, `cache_store`).
+
 ### Ask questions about your documents
 
 Use the chat to ask Aether to index a PDF, Markdown notes folder, or Obsidian vault, then ask questions about the indexed material. For example: “Index `C:\Notes\Obsidian`” and then “What did I write about local backups?” Answers from the built-in RAG engine include numbered source references with filenames and PDF page numbers when available. LlamaIndex retrieval answers include inline citations and a matching source list; summaries include their source list. Markdown files are supported without a separate Obsidian export.

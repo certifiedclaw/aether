@@ -105,6 +105,10 @@
 
   "_comment_logging": "── Logging / paths ──────────────────────────────────",
   "logging.log_dir":  "logs",
+  "_comment_response_cache": "Opt-in (#54): answer a repeated self-contained factual question from a local cache instead of the model. Never caches anything using tools, memory, the user, or time-sensitive topics.",
+  "response_cache_enabled": false,
+  "response_cache_ttl_s":   86400,
+  "response_cache_max":     200,
   "_comment_trace":   "Flight recorder (logs/trace/*.jsonl): every prompt, reply, tool call, timing. View: python -m tools.trace_view. Secrets are redacted.",
   "logging.trace_enabled":        true,
   "logging.level":                "DEBUG",

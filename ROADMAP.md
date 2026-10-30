@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-30 22:11 UTC
+Generated: 2026-10-30 22:19 UTC
 
 ## In progress
 
@@ -49,8 +49,6 @@ Generated: 2026-10-30 22:11 UTC
 - [ ] **#32** Investigate long_term.json identity entries missing value `low`
   - Cannot confirm the cause without the real long_term.json (user data, not in repo). Found and fixed one verifiable way to produce bad identity entries: memory_manager._recursive_update stored {'value': None} as the literal string 'None' and {'value': ''} as an empty-valued entry; both are now skipped (tests/test_memory_empty_values.py). If an actual long_term.json still has entries with no 'value' key at all, that came from another writer (older version or manual edit) -- send a redacted sample.
 - [ ] **#50** [F0] Telemetry that stays local: usage stats for the owner only `low`
-- [ ] **#54** [F1] Response caching for repeated questions `low`
-  - ~300 lines.
 - [ ] **#72** [F2] Proactive suggestions (always ask first) `low`
 - [ ] **#73** [F2] Multi-device sync of chats and memory `low`
 - [ ] **#76** [F3] Multiple voices and persona `low`
@@ -168,6 +166,8 @@ Generated: 2026-10-30 22:11 UTC
   - Completed Qwen 2.5 1.5B prompt/schema tuning with repeat isolated full-suite evidence and a safe model tool-call benchmark. Two profile-enabled runs scored 102/107 both times (95%); the matched no-guidance controls scored 94/107 and 89/107 (88% and 83%), an average gain of 10.5 cases / 9.8 percentage points. Personal-fact honesty rose from 1/8 in both controls to 7/8 and 8/8 with the profile. Average p50 was 3.10s with profile vs 2.97s without (+131ms); p95 varied and remains host-sensitive. Improvements are concentrated in honesty, with some per-case variation in reasoning/instruction; reversal and translation are not consistently solved. The actual tool-call suite scored 8/8; no schema change was warranted. JSON-only output now passes after fixing bare JSON misclassification in tool-call recovery. Evaluation CLI supports --disable-model-guidance for repeatable control runs and isolates chat history. Remaining weak cases are model capability limits, not evidence for further prompt/schema edits in this item.
 - [x] **#53** [F1] Self-check pass: model re-reads its answer for obvious mistakes
   - Done as core/answer_check.py + ConversationCoreMixin._self_check_follow_up. Opt-in (self_check_enabled, default false): after the reply is spoken the model re-reads it once; a clear mistake becomes a short 'Correction: ...' follow-up. Skips short replies, code and tool-grounded answers. 32 tests in tests/test_answer_check.py. Not exercised against a real Ollama model, so verdict quality on small models is unmeasured.
+- [x] **#54** [F1] Response caching for repeated questions
+  - Opt-in (response_cache_enabled, default false). core/response_cache.py + wiring in conversation_core (lookup right after routing, store at turn end). Only self-contained factual questions with no tool, no injected memory, no HARD tier, no active goal; refuses personal, back-referencing, time-sensitive and creative questions. Scope = provider+model+prompt.txt hash; TTL 24h; LRU 200; persisted in data dir. 38 tests incl. through the real turn loop; verified in a real headless run against a mock Ollama (rephrased repeat served with no model call). NOT measured on real Ollama; exact-match on normalized text only (no semantic matching); no /clearcache command yet (delete response_cache.json). Also fixed: trace/crash session ids were randomly redacted as card numbers (Luhn).
 - [x] **#55** [F1] Confidence and 'I don't know': flag uncertain answers, offer to search
   - Done in the same pass as #53: the check also returns a 0-1 confidence; below self_check_min_confidence (default 0.5) and with web_search not already used, Aether offers to search. Follow-up, not a rewrite, because replies stream and speak before the check runs. Real-model calibration still unmeasured.
 - [x] **#59** [F2] Web search with sources

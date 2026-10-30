@@ -1,5 +1,5 @@
 {
-  "next_id": 128,
+  "next_id": 129,
   "entries": [
     {
       "id": 1,
@@ -1802,6 +1802,23 @@
         "tools/maintenance/data/roadmap.json"
       ],
       "next_steps": "Merge logging/flight-recorder (rebase on origin/master first). Consider calling log_crash from the uncaught-exception hook. Next tractable: #54 response caching, #48 auto-update with rollback."
+    },
+    {
+      "id": 128,
+      "timestamp": "2026-10-30 22:19 UTC",
+      "by": "Claude Code (Sonnet 5.5)",
+      "summary": "Roadmap #54 response cache done (opt-in, default off): core/response_cache.py + wiring in conversation_core (_try_cached_response after route resolution, _maybe_cache_response at turn end, called via the class so MagicMock-host tests keep working). Conservative eligibility (self-contained factual question, no tool/memory/HARD/goal, not time-sensitive/personal/creative). 38 tests; full suite 1108 passed, same 4 sandbox-only failures. Real headless run vs mock Ollama: rephrased repeat served with no model call. Also fixed a real bug: trace_log redaction turned ~1 in 10 session ids (14 digits) into [REDACTED:card_number] via leak_guard's Luhn check; session ids are now protected (regression test). Stacked on logging/flight-recorder.",
+      "files": [
+        "core/response_cache.py",
+        "core/conversation_core.py",
+        "core/trace_log.py",
+        "config/config.example.json",
+        "readme.md",
+        "tests/test_response_cache.py",
+        "tests/test_trace_log.py",
+        "tools/maintenance/data/roadmap.json"
+      ],
+      "next_steps": "Turn on response_cache_enabled on the real box and watch cache_lookup/cache_store in the trace for hit rate and any wrong hits. Consider a /clearcache chat command. Note leak_guard's card regex will also redact other 13-19 digit Luhn-valid numbers (epoch ms etc.) in trace values. Rebase logging/flight-recorder on origin/master and merge. Next: #48 auto-update with rollback."
     }
   ]
 }
