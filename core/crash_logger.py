@@ -10,6 +10,10 @@ Each crash file is a JSON document containing:
   - the user message that triggered it
   - the tool being executed (if any)
   - system context (Python version, platform, memory usage)
+  - the trace session/turn and the last 40 trace events leading up to it
+Every report is sanitized before it is written: secret-named fields and API-key /
+token patterns are removed, and the home directory, user name and install path are
+replaced with ~ / <user> / <aether>, so a report is safe to attach to a bug report.
 
 Usage:
     from core.crash_logger import log_crash, get_recent_crashes
@@ -38,6 +42,52 @@ logger = logging.getLogger(__name__)
 
 _CRASH_DIR = Path("logs/crashes")
 _MAX_CRASH_FILES = 50   # rotate when this many exist
+
+
+def _path_scrubber():
+    """Replace the home dir, user name and project root so a report can be shared
+    without revealing who or where. Longest paths first."""
+    pairs: list[tuple[str, str]] = []
+    root = Path(__file__).resolve().parent.parent
+    for raw, label in ((str(root), "<aether>"), (str(Path.home()), "~")):
+        for variant in {raw, raw.replace("\\", "/"), raw.replace("/", "\\")}:
+            if len(variant) > 3:
+                pairs.append((variant, label))
+    user = ""
+    try:
+        user = os.path.basename(str(Path.home())) or os.environ.get("USERNAME", "") or os.environ.get("USER", "")
+    except Exception:  # noqa: BLE001
+        pass
+    pairs.sort(key=lambda p: -len(p[0]))
+
+    def scrub(text: str) -> str:
+        for old, new in pairs:
+            text = text.replace(old, new)
+        if len(user) >= 3 and user.lower() not in ("root", "user", "home"):
+            text = text.replace(user, "<user>")
+        return text
+    return scrub
+
+
+def sanitize_report(report: dict) -> dict:
+    """Secrets (key names and token patterns) and personal paths removed from every
+    string in the report, however deeply nested."""
+    try:
+        from core import trace_log
+        clean = trace_log.sanitize(report)
+    except Exception:  # noqa: BLE001 - fall back to path scrubbing only
+        clean = report
+    scrub = _path_scrubber()
+
+    def walk(v):
+        if isinstance(v, str):
+            return scrub(v)
+        if isinstance(v, dict):
+            return {k: walk(x) for k, x in v.items()}
+        if isinstance(v, list):
+            return [walk(x) for x in v]
+        return v
+    return walk(clean)
 
 
 def _system_context() -> dict:
@@ -97,12 +147,24 @@ def log_crash(exc: BaseException,
             "date":         datetime.now().isoformat(),
             "exception":    type(exc).__name__,
             "message":      str(exc),
-            "traceback":    traceback.format_exc(),
+            "traceback":    "".join(traceback.format_exception(type(exc), exc, exc.__traceback__)),
             "user_message": user_message[:500] if user_message else "",
             "tool":         tool,
             "system":       _system_context(),
             "extra":        extra or {},
         }
+        try:
+            from core import trace_log
+            report["trace"] = {
+                "session": trace_log.session_id(),
+                "turn": trace_log.current_turn(),
+                "file": str(trace_log.trace_path() or ""),
+                "last_events": trace_log.recent_events(40),
+            }
+        except Exception:  # noqa: BLE001
+            pass
+        report = sanitize_report(report)
+        report["sanitized"] = True
 
         path.write_text(json.dumps(report, indent=2, default=str),
                         encoding="utf-8")

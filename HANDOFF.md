@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-30 21:08 UTC
+Generated: 2026-10-30 22:11 UTC
+
+## #127 — 2026-10-30 22:11 UTC — Claude Code (Sonnet 5.5)
+
+Roadmap #49 crash reporter done: core/crash_logger.py reports are now sanitized (secrets, home/user/install paths), use exc.__traceback__ (was empty outside except), and include trace session/turn + last 40 trace events (new trace_log.sanitize / recent_events). 6 new tests; full suite 1069 passed, same 4 sandbox-only failures. Verified with a real crash. Stacked on logging/flight-recorder.
+
+**Touched:** `core/crash_logger.py`, `core/trace_log.py`, `tests/test_crash_reporter.py`, `tools/maintenance/data/roadmap.json`
+
+**Next steps:** Merge logging/flight-recorder (rebase on origin/master first). Consider calling log_crash from the uncaught-exception hook. Next tractable: #54 response caching, #48 auto-update with rollback.
+
+---
 
 ## #126 — 2026-10-30 21:08 UTC — Claude Code (Sonnet 5.5)
 

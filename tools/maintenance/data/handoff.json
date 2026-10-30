@@ -1,5 +1,5 @@
 {
-  "next_id": 127,
+  "next_id": 128,
   "entries": [
     {
       "id": 1,
@@ -1789,6 +1789,19 @@
         "readme.md"
       ],
       "next_steps": "Commit/push (branch first). Run on the real box with voice and check trace for stt_transcribe/barge_in/speak_* timing; check trace size per hour and tune logging.trace_max_mb. Headless run leaves an empty fault-*.log because main uses os._exit."
+    },
+    {
+      "id": 127,
+      "timestamp": "2026-10-30 22:11 UTC",
+      "by": "Claude Code (Sonnet 5.5)",
+      "summary": "Roadmap #49 crash reporter done: core/crash_logger.py reports are now sanitized (secrets, home/user/install paths), use exc.__traceback__ (was empty outside except), and include trace session/turn + last 40 trace events (new trace_log.sanitize / recent_events). 6 new tests; full suite 1069 passed, same 4 sandbox-only failures. Verified with a real crash. Stacked on logging/flight-recorder.",
+      "files": [
+        "core/crash_logger.py",
+        "core/trace_log.py",
+        "tests/test_crash_reporter.py",
+        "tools/maintenance/data/roadmap.json"
+      ],
+      "next_steps": "Merge logging/flight-recorder (rebase on origin/master first). Consider calling log_crash from the uncaught-exception hook. Next tractable: #54 response caching, #48 auto-update with rollback."
     }
   ]
 }

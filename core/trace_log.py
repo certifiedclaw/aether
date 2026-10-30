@@ -269,6 +269,38 @@ def _jsonable(v: Any, key: str = "", depth: int = 0, limit: int = 200_000) -> An
     return _clip(_redact(repr(v)), limit)
 
 
+def sanitize(value: Any, limit: int = 20_000) -> Any:
+    """JSON-safe copy of `value` with secret-named keys hidden and key/token patterns
+    removed. Works whether or not a trace is running (used by the crash reporter)."""
+    return _jsonable(value, "", 0, limit)
+
+
+def recent_events(n: int = 40, max_bytes: int = 400_000) -> list[dict]:
+    """The last `n` events of the running trace, each field clipped to 300 chars.
+    Empty list if no trace is running. Flushes first so the tail is current."""
+    S = _S
+    if S is None or S.trace_path is None:
+        return []
+    flush(2.0)
+    try:
+        p = S.trace_path
+        size = p.stat().st_size
+        with open(p, "rb") as fh:
+            fh.seek(max(0, size - max_bytes))
+            raw = fh.read().decode("utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+    out: list[dict] = []
+    for ln in raw[-(n + 1):]:
+        try:
+            ev = json.loads(ln)
+        except json.JSONDecodeError:
+            continue                      # first line of the tail may be cut mid-record
+        out.append({k: (_clip(v, 300) if isinstance(v, str) else v) for k, v in ev.items()
+                    if k not in ("schemas", "messages", "stacks")})
+    return out[-n:]
+
+
 def _iso(ts: float) -> str:
     return datetime.fromtimestamp(ts).astimezone().isoformat(timespec="milliseconds")
 

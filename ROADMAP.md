@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-30 03:23 UTC
+Generated: 2026-10-30 22:11 UTC
 
 ## In progress
 
@@ -48,7 +48,6 @@ Generated: 2026-10-30 03:23 UTC
   - Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules — actions/ is intentionally exempt (CLI-facing tool output).
 - [ ] **#32** Investigate long_term.json identity entries missing value `low`
   - Cannot confirm the cause without the real long_term.json (user data, not in repo). Found and fixed one verifiable way to produce bad identity entries: memory_manager._recursive_update stored {'value': None} as the literal string 'None' and {'value': ''} as an empty-valued entry; both are now skipped (tests/test_memory_empty_values.py). If an actual long_term.json still has entries with no 'value' key at all, that came from another writer (older version or manual edit) -- send a redacted sample.
-- [ ] **#49** [F0] Crash reporter: sanitized report saved locally `low`
 - [ ] **#50** [F0] Telemetry that stays local: usage stats for the owner only `low`
 - [ ] **#54** [F1] Response caching for repeated questions `low`
   - ~300 lines.
@@ -161,6 +160,8 @@ Generated: 2026-10-30 03:23 UTC
   - Implemented portable ZIP export/import for named chats, long-term memory, SQLite memory, goals, basic RAG index, Chroma/LlamaIndex index, and non-secret settings. Import validates the manifest, archive size, member paths, JSON, and SQLite integrity; rejects symlinks/traversal; replaces non-secret settings while preserving destination credentials; and writes a recovery bundle before replacement. CLI usage and close-app requirement are documented in README. Round-trip and safety tests pass; 47 focused tests passed (1 skipped), changed Python files compile, diff check passes. Verified #45 was backlog on origin/master before starting.
 - [x] **#46** [F0] Resource governor: pause heavy jobs when other containers (Palworld) need CPU/RAM
 - [x] **#47** [F0] Cost and speed dashboard: tokens/s, memory use, latency per model
+- [x] **#49** [F0] Crash reporter: sanitized report saved locally
+  - Reports in logs/crashes/ are now sanitized (secret keys/patterns removed; home dir, user name, install path scrubbed), use the exception's own traceback, and carry the trace session/turn plus the last 40 trace events. 6 tests in tests/test_crash_reporter.py; verified with a real crash. Not done: auto-submitting anywhere (deliberately local only); the uncaught-exception hook does not yet call log_crash (it is in the trace).
 - [x] **#51** [F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones
   - Completed: optional llm_quick_model, llm_everyday_model and llm_hard_model select per-tier models for Ollama conversations. Aether checks the currently selected Ollama host (including remote/local fallback); a missing or uncheckable tag falls back to that host's configured default and is logged. Gemini HARD escalation and opted-in Gemini tool routing retain precedence; OpenAI-compatible providers are unchanged. See core/llm_client.py, core/conversation_core.py and config/config.example.json.
 - [x] **#52** [F1] Prompt and tool-schema tuning per model, driven by benchmark results

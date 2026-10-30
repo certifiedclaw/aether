@@ -437,10 +437,10 @@
       "id": 49,
       "title": "[F0] Crash reporter: sanitized report saved locally",
       "priority": "low",
-      "status": "backlog",
-      "notes": "",
+      "status": "done",
+      "notes": "Reports in logs/crashes/ are now sanitized (secret keys/patterns removed; home dir, user name, install path scrubbed), use the exception's own traceback, and carry the trace session/turn plus the last 40 trace events. 6 tests in tests/test_crash_reporter.py; verified with a real crash. Not done: auto-submitting anywhere (deliberately local only); the uncaught-exception hook does not yet call log_crash (it is in the trace).",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-30"
     },
     {
       "id": 50,
