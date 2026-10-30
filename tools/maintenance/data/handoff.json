@@ -1,5 +1,5 @@
 {
-  "next_id": 126,
+  "next_id": 127,
   "entries": [
     {
       "id": 1,
@@ -1764,6 +1764,20 @@
         "tools/maintenance/data/handoff.json"
       ],
       "next_steps": "Push this onto consolidate/roadmap-cleanup (or its PR) from a checkout with write access. Try self_check_enabled on the real qwen3:8b box and watch the self_check.* counters and whether low-confidence offers are noisy; tune self_check_min_confidence. Remaining F1 items: #48 auto-update with rollback, #54 response caching, #56/#57 memory."
+    },
+    {
+      "id": 126,
+      "timestamp": "2026-10-30 03:31 UTC",
+      "by": "Claude Code (Sonnet 5.5)",
+      "summary": "Merged consolidate/roadmap-cleanup into master (fast-forward, dfd0d62..af86867; includes #53/#55 self-check). Then built #48: core/updater.py, python -m core.updater check|apply. Fast-forward only; refuses a dirty tracked tree, local commits, diverged or detached branches. Records HEAD, ff-merges, runs the test command (default full pytest, or --test-cmd), and resets --hard back if tests fail, time out or cannot start. Never pip installs; flags requirements changes. Manual only, not run on launch. 20 tests on real temp git repos; mutation-checked rollback and the dirty-tree guard. Full suite 1071 passed, same 4 sandbox-only failures (PortAudio, fastapi missing). Not tried on the real Windows install.",
+      "files": [
+        "core/updater.py",
+        "tests/test_updater.py",
+        "readme.md",
+        "tools/maintenance/data/roadmap.json",
+        "tools/maintenance/data/handoff.json"
+      ],
+      "next_steps": "Run python -m core.updater check on the real machine, then apply once with a quick --test-cmd to see the whole path. Optional follow-ups: a /update chat command and a doctor line showing 'N commits behind'. Next roadmap candidates: #49 crash reporter, #54 response caching. #88, #94, #32 still need data from the owner."
     }
   ]
 }

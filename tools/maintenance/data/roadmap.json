@@ -428,10 +428,10 @@
       "id": 48,
       "title": "[F0] Auto-update with rollback: pull, run tests, roll back on failure",
       "priority": "medium",
-      "status": "backlog",
-      "notes": "",
+      "status": "done",
+      "notes": "Done as core/updater.py (python -m core.updater check|apply). Fast-forward only; refuses dirty tracked tree, local commits, diverged or detached branches. Records HEAD, ff-merges, runs the test command (default: full pytest suite, 900s timeout, or --test-cmd), and git reset --hard back to the recorded HEAD if tests fail, time out or cannot start. Never installs packages; flags requirements*.txt changes. Manual only, not wired to launch. Logged to update_log.jsonl in the data dir. 20 tests against real git repos (bare remote + clones); mutation-checked that a no-op rollback and a removed dirty-tree guard are both caught. Not yet run on the real Windows install, and no /update chat command or doctor hook yet.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-30"
     },
     {
       "id": 49,

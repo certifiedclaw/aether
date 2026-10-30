@@ -90,6 +90,10 @@ ElevenLabs requires an API key and a valid voice ID. Edge TTS is the default onl
 
 Web search returns a concise answer with numbered, directly verifiable source links. Comparison results include links for each item, and multi-step research carries the pages used into its final source list.
 
+### Updating Aether
+
+From a git checkout, `python -m core.updater check` reports whether new commits are waiting and changes nothing. `python -m core.updater apply` fast-forwards to them, runs the test suite (or your own `--test-cmd`), and resets back to where you started if the tests fail or time out. It refuses to run over uncommitted changes to tracked files, local commits, or a diverged branch, so it cannot discard your work, and it never installs packages: if `requirements*.txt` changed it tells you to run `pip install -r requirements.txt` yourself. It only runs when you start it, never on launch. Restart Aether afterwards. Each attempt is logged to `update_log.jsonl` in your Aether data folder.
+
 ### Self-check and "I'm not sure" (optional)
 
 Set `self_check_enabled` to `true` in your config and, after each reply, Aether asks the model to re-read its own answer once. A clear mistake becomes a short spoken correction; an answer the model rates below `self_check_min_confidence` (default 0.5) gets an offer to search the web. Because the reply has already been spoken, this arrives as a follow-up, not a rewrite. It is off by default because it adds one extra fast model call per checked reply, and it skips short replies, code, and answers that came from a tool.

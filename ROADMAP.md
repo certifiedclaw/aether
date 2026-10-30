@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-30 03:23 UTC
+Generated: 2026-10-30 03:31 UTC
 
 ## In progress
 
@@ -13,7 +13,6 @@ Generated: 2026-10-30 03:23 UTC
 
 ## Backlog
 
-- [ ] **#48** [F0] Auto-update with rollback: pull, run tests, roll back on failure `medium`
 - [ ] **#56** [F1] Structured memory: small knowledge graph with conflict handling `medium`
 - [ ] **#57** [F1] Long-term memory panel: view, edit, delete what Aether remembers `medium`
   - Fix #32 first.
@@ -161,6 +160,8 @@ Generated: 2026-10-30 03:23 UTC
   - Implemented portable ZIP export/import for named chats, long-term memory, SQLite memory, goals, basic RAG index, Chroma/LlamaIndex index, and non-secret settings. Import validates the manifest, archive size, member paths, JSON, and SQLite integrity; rejects symlinks/traversal; replaces non-secret settings while preserving destination credentials; and writes a recovery bundle before replacement. CLI usage and close-app requirement are documented in README. Round-trip and safety tests pass; 47 focused tests passed (1 skipped), changed Python files compile, diff check passes. Verified #45 was backlog on origin/master before starting.
 - [x] **#46** [F0] Resource governor: pause heavy jobs when other containers (Palworld) need CPU/RAM
 - [x] **#47** [F0] Cost and speed dashboard: tokens/s, memory use, latency per model
+- [x] **#48** [F0] Auto-update with rollback: pull, run tests, roll back on failure
+  - Done as core/updater.py (python -m core.updater check|apply). Fast-forward only; refuses dirty tracked tree, local commits, diverged or detached branches. Records HEAD, ff-merges, runs the test command (default: full pytest suite, 900s timeout, or --test-cmd), and git reset --hard back to the recorded HEAD if tests fail, time out or cannot start. Never installs packages; flags requirements*.txt changes. Manual only, not wired to launch. Logged to update_log.jsonl in the data dir. 20 tests against real git repos (bare remote + clones); mutation-checked that a no-op rollback and a removed dirty-tree guard are both caught. Not yet run on the real Windows install, and no /update chat command or doctor hook yet.
 - [x] **#51** [F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones
   - Completed: optional llm_quick_model, llm_everyday_model and llm_hard_model select per-tier models for Ollama conversations. Aether checks the currently selected Ollama host (including remote/local fallback); a missing or uncheckable tag falls back to that host's configured default and is logged. Gemini HARD escalation and opted-in Gemini tool routing retain precedence; OpenAI-compatible providers are unchanged. See core/llm_client.py, core/conversation_core.py and config/config.example.json.
 - [x] **#52** [F1] Prompt and tool-schema tuning per model, driven by benchmark results

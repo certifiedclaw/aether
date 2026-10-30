@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-30 03:23 UTC
+Generated: 2026-10-30 03:31 UTC
+
+## #126 — 2026-10-30 03:31 UTC — Claude Code (Sonnet 5.5)
+
+Merged consolidate/roadmap-cleanup into master (fast-forward, dfd0d62..af86867; includes #53/#55 self-check). Then built #48: core/updater.py, python -m core.updater check|apply. Fast-forward only; refuses a dirty tracked tree, local commits, diverged or detached branches. Records HEAD, ff-merges, runs the test command (default full pytest, or --test-cmd), and resets --hard back if tests fail, time out or cannot start. Never pip installs; flags requirements changes. Manual only, not run on launch. 20 tests on real temp git repos; mutation-checked rollback and the dirty-tree guard. Full suite 1071 passed, same 4 sandbox-only failures (PortAudio, fastapi missing). Not tried on the real Windows install.
+
+**Touched:** `core/updater.py`, `tests/test_updater.py`, `readme.md`, `tools/maintenance/data/roadmap.json`, `tools/maintenance/data/handoff.json`
+
+**Next steps:** Run python -m core.updater check on the real machine, then apply once with a quick --test-cmd to see the whole path. Optional follow-ups: a /update chat command and a doctor line showing 'N commits behind'. Next roadmap candidates: #49 crash reporter, #54 response caching. #88, #94, #32 still need data from the owner.
+
+---
 
 ## #125 — 2026-10-30 03:23 UTC — Claude Code (Sonnet 5.5)
 

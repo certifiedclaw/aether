@@ -2,8 +2,8 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.health_check` (or `run_all`) to refresh. Fix things here, don't edit this file directly.
 
-Generated: 2026-10-30T03:23:04.444180+00:00
-Files scanned: 198
+Generated: 2026-10-30T03:31:25.873058+00:00
+Files scanned: 200
 
 ## Summary
 
@@ -13,7 +13,7 @@ Files scanned: 198
 | Bare `except:` clauses | 0 |
 | Files over 600 lines | 15 |
 | Functions over 80 lines | 55 |
-| Stray `print()` calls (outside scripts) | 242 |
+| Stray `print()` calls (outside scripts) | 246 |
 | TODO / FIXME / XXX comments | 0 |
 | Unreadable files | 0 |
 
@@ -143,4 +143,4 @@ Found outside of scripts/tests — consider routing through `core/observability.
 - `tools/live_grader.py:236`
 - `tools/apply_roadmap_v12.py:105`
 - `tools/apply_roadmap_v12.py:107`
-- ...and 192 more
+- ...and 196 more
