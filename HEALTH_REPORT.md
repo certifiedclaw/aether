@@ -2,8 +2,8 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.health_check` (or `run_all`) to refresh. Fix things here, don't edit this file directly.
 
-Generated: 2026-10-29T18:32:42.661042+00:00
-Files scanned: 196
+Generated: 2026-10-30T03:23:04.444180+00:00
+Files scanned: 198
 
 ## Summary
 
@@ -23,7 +23,7 @@ Files scanned: 196
 - `core/llm_client.py` — 1446 lines
 - `actions/osint_tools.py` — 1355 lines
 - `dashboard/server.py` — 1272 lines
-- `core/conversation_core.py` — 1187 lines
+- `core/conversation_core.py` — 1217 lines
 - `main.py` — 1174 lines
 - `actions/extra_tools.py` — 1077 lines
 - `actions/game_updater.py` — 1052 lines

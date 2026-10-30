@@ -90,6 +90,10 @@ ElevenLabs requires an API key and a valid voice ID. Edge TTS is the default onl
 
 Web search returns a concise answer with numbered, directly verifiable source links. Comparison results include links for each item, and multi-step research carries the pages used into its final source list.
 
+### Self-check and "I'm not sure" (optional)
+
+Set `self_check_enabled` to `true` in your config and, after each reply, Aether asks the model to re-read its own answer once. A clear mistake becomes a short spoken correction; an answer the model rates below `self_check_min_confidence` (default 0.5) gets an offer to search the web. Because the reply has already been spoken, this arrives as a follow-up, not a rewrite. It is off by default because it adds one extra fast model call per checked reply, and it skips short replies, code, and answers that came from a tool.
+
 ### Ask questions about your documents
 
 Use the chat to ask Aether to index a PDF, Markdown notes folder, or Obsidian vault, then ask questions about the indexed material. For example: “Index `C:\Notes\Obsidian`” and then “What did I write about local backups?” Answers from the built-in RAG engine include numbered source references with filenames and PDF page numbers when available. LlamaIndex retrieval answers include inline citations and a matching source list; summaries include their source list. Markdown files are supported without a separate Obsidian export.

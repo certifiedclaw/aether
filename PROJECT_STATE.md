@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Do not hand-edit — rerun `python -m tools.maintenance.project_state` (or `run_all`) to refresh. This is meant to be the one file a new session (human or Claude) reads first to get oriented.
 
-Generated: 2026-10-29 18:35 UTC
+Generated: 2026-10-30 03:23 UTC
 Version: Aether v1.0.0
 
 ## Entry points
@@ -20,16 +20,16 @@ Version: Aether v1.0.0
 | `actions/` | 23 | 11,860 |
 | `agent/` | 4 | 1,163 |
 | `config/` | 1 | 25 |
-| `core/` | 58 | 14,368 |
+| `core/` | 59 | 14,521 |
 | `dashboard/` | 5 | 1,637 |
 | `dev_tools/` | 1 | 78 |
 | `integrations/` | 4 | 1,144 |
 | `memory/` | 6 | 1,242 |
 | `plugins/` | 1 | 44 |
 | `security/` | 7 | 1,340 |
-| `tests/` | 64 | 12,430 |
+| `tests/` | 65 | 12,624 |
 | `tools/` | 19 | 3,167 |
-| **Total** | **196** | **53,360** |
+| **Total** | **198** | **53,707** |
 
 ## Modules with docstrings (top-level summary)
 
@@ -69,6 +69,7 @@ Version: Aether v1.0.0
 
 ### `core/`
 - `core/__init__.py` (2 lines, 0 classes, 0 functions)
+- `core/answer_check.py` (123 lines, 1 classes, 6 functions) — core/answer_check.py -- self-check pass and confidence flagging (roadmap #53, #55).
 - `core/archive_safety.py` (21 lines, 0 classes, 1 functions)
 - `core/audit_log.py` (266 lines, 0 classes, 15 functions) — core/audit_log.py - searchable record of every gated tool call and decision (roadmap #44).
 - `core/chat_commands.py` (322 lines, 1 classes, 0 functions) — core/chat_commands.py — Aether Built-in Chat Commands
@@ -76,7 +77,7 @@ Version: Aether v1.0.0
 - `core/config_home.py` (206 lines, 0 classes, 14 functions) — core/config_home.py - where Aether's settings live, and loading them safely.
 - `core/config_io.py` (100 lines, 0 classes, 4 functions) — core/config_io.py -- save the settings dialog's values WITHOUT destroying the rest.
 - `core/config_validator.py` (201 lines, 2 classes, 9 functions) — core/config_validator.py — Aether Configuration Validator
-- `core/conversation_core.py` (1188 lines, 1 classes, 9 functions) — core/conversation_core.py — Aether Conversation Core
+- `core/conversation_core.py` (1218 lines, 1 classes, 9 functions) — core/conversation_core.py — Aether Conversation Core
 - `core/crash_logger.py` (141 lines, 0 classes, 4 functions) — core/crash_logger.py — Aether Crash Recovery Logging
 - `core/credentials.py` (149 lines, 0 classes, 11 functions) — core/credentials.py -- one place to ask "what is the API key for X?".
 - `core/data_home.py` (206 lines, 0 classes, 14 functions) — Stable per-user storage for Aether's persistent data.
@@ -169,6 +170,7 @@ Version: Aether v1.0.0
 - `tests/test_action_launcher.py` (304 lines, 0 classes, 5 functions)
 - `tests/test_action_signatures.py` (44 lines, 0 classes, 4 functions) — Roadmap #16: the dead `session_memory` parameter is gone from actions/,
 - `tests/test_all_critical.py` (2166 lines, 0 classes, 90 functions)
+- `tests/test_answer_check.py` (194 lines, 1 classes, 25 functions) — Roadmap #53 (self-check pass) and #55 (confidence / 'I don't know' flagging).
 - `tests/test_apply_handoff.py` (66 lines, 0 classes, 6 functions) — tools/apply_handoff_v12.py records the session once, through the handoff module.
 - `tests/test_apply_roadmap.py` (97 lines, 0 classes, 8 functions) — tools/apply_roadmap_v12.py must add items through the roadmap module, idempotently.
 - `tests/test_audit_log.py` (165 lines, 0 classes, 16 functions)
@@ -251,14 +253,14 @@ Version: Aether v1.0.0
 - `tools/verify_local.py` (355 lines, 1 classes, 11 functions) — tools/verify_local.py -- one-shot health check for a real Aether install.
 
 ## Recent history (git log)
+- a3e423a 2026-10-29 Merge roadmap-session-2026-10-29 into the stacked cleanup branch
+- 7513d99 2026-10-29 Wake word on by default (#95)
 - 9086f15 2026-10-29 Clean up repo presentation: dedupe root files, archive old docs, strip marker comments
+- 1ed956c 2026-10-29 Roadmap: close #10 and #21, partial #32
+- dc493ed 2026-10-29 Roadmap: promise-retry (#92), close #25, plus earlier uncommitted batch
 - 4aa8173 2026-10-28 Roadmap #93 (partial): trim the per-turn prompt
 - ba6fc55 2026-10-28 Fix #95: rename ptt_hotkey -> ptt_shortcut (secret-scan invariant)
 - 679ce6d 2026-10-27 Roadmap #95: listen modes with push-to-talk so background media isn't transcribed
-- 9c4e65e 2026-10-27 Roadmap #92: retry once when a reply promises an action but calls no tool
-- 098a062 2026-10-26 Roadmap: add #96-#99 (corrections, screen memory, model arena, supervisor)
-- 8d6db2c 2026-10-26 Prompt: give Aether a funny, uncensored personality
-- 0d8534e 2026-10-26 Roadmap #24/#25/#31: remove stray root copies, fix dep_watcher lookups
 
 ## See also
 - `HEALTH_REPORT.md` — automated code health scan

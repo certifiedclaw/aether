@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-29 18:35 UTC
+Generated: 2026-10-30 03:23 UTC
+
+## #125 — 2026-10-30 03:23 UTC — Claude Code (Sonnet 5.5)
+
+Checked out consolidate/roadmap-cleanup; it already closed #24 #29 #30 #31, so my parallel versions of those were stashed, not committed. Built #53 + #55: core/answer_check.py plus ConversationCoreMixin._self_check_follow_up, wired into _finalize_response. Opt-in (self_check_enabled, default false). After the reply is spoken the model re-reads it once; a clear mistake sends a short correction, and low confidence (below self_check_min_confidence, default 0.5) with no web_search used offers to search. Skips short replies, code and tool-grounded answers. 32 new tests; full suite 1051 passed, 4 failed, identical to the clean branch (PortAudio and fastapi missing in sandbox). NOT run against a real Ollama model, so how well small models grade themselves is unmeasured; this session had read-only repo access, so nothing is pushed.
+
+**Touched:** `core/answer_check.py`, `core/conversation_core.py`, `tests/test_answer_check.py`, `config/config.example.json`, `readme.md`, `tools/maintenance/data/roadmap.json`, `tools/maintenance/data/handoff.json`
+
+**Next steps:** Push this onto consolidate/roadmap-cleanup (or its PR) from a checkout with write access. Try self_check_enabled on the real qwen3:8b box and watch the self_check.* counters and whether low-confidence offers are noisy; tune self_check_min_confidence. Remaining F1 items: #48 auto-update with rollback, #54 response caching, #56/#57 memory.
+
+---
 
 ## #124 — 2026-10-29 18:35 UTC — Claude Code
 

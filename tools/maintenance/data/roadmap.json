@@ -42,7 +42,7 @@
       "title": "Check plugin_watcher.py poll interval and rescan scope",
       "priority": "medium",
       "status": "done",
-      "notes": "Hot-reload watcher polls the filesystem — confirm it only rescans changed files, not everything.",
+      "notes": "Hot-reload watcher polls the filesystem \u2014 confirm it only rescans changed files, not everything.",
       "created": "2026-07-13",
       "updated": "2026-07-15"
     },
@@ -51,7 +51,7 @@
       "title": "Check memory/semantic_memory.py for full-rebuild-on-write issue",
       "priority": "high",
       "status": "done",
-      "notes": "Same sqlite/embedding shape as hybrid_memory.py had before that fix — likely has the same bug.",
+      "notes": "Same sqlite/embedding shape as hybrid_memory.py had before that fix \u2014 likely has the same bug.",
       "created": "2026-07-13",
       "updated": "2026-07-14"
     },
@@ -96,7 +96,7 @@
       "title": "Refactor ui.py __init__() (333 lines)",
       "priority": "medium",
       "status": "done",
-      "notes": "Largest single oversized function per HEALTH_REPORT.md — bigger than main.py's _execute_tool() (#7). Same extraction treatment: pull out pure, behavior-preserving setup helpers, verify with py_compile + literal diff review.",
+      "notes": "Largest single oversized function per HEALTH_REPORT.md \u2014 bigger than main.py's _execute_tool() (#7). Same extraction treatment: pull out pure, behavior-preserving setup helpers, verify with py_compile + literal diff review.",
       "created": "2026-07-15",
       "updated": "2026-07-16"
     },
@@ -105,7 +105,7 @@
       "title": "Refactor dashboard/server.py _build_app() (318 lines)",
       "priority": "medium",
       "status": "done",
-      "notes": "Second-largest oversized function per HEALTH_REPORT.md, close behind ui.py's __init__. Route-registration/setup function — likely splits cleanly by route group.",
+      "notes": "Second-largest oversized function per HEALTH_REPORT.md, close behind ui.py's __init__. Route-registration/setup function \u2014 likely splits cleanly by route group.",
       "created": "2026-07-15",
       "updated": "2026-07-16"
     },
@@ -114,7 +114,7 @@
       "title": "Refactor main.py _init_new_subsystems() (158 lines)",
       "priority": "low",
       "status": "done",
-      "notes": "One-shot startup wiring, not hot-path — lower priority than _execute_tool() (#7) and _build_app() above, but same shape of oversized-function debt.",
+      "notes": "One-shot startup wiring, not hot-path \u2014 lower priority than _execute_tool() (#7) and _build_app() above, but same shape of oversized-function debt.",
       "created": "2026-07-15",
       "updated": "2026-07-16"
     },
@@ -123,7 +123,7 @@
       "title": "Route the 174 stray print() calls through core/observability.py",
       "priority": "low",
       "status": "backlog",
-      "notes": "Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules — actions/ is intentionally exempt (CLI-facing tool output).",
+      "notes": "Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules \u2014 actions/ is intentionally exempt (CLI-facing tool output).",
       "created": "2026-07-15",
       "updated": "2026-07-15"
     },
@@ -473,10 +473,10 @@
       "id": 53,
       "title": "[F1] Self-check pass: model re-reads its answer for obvious mistakes",
       "priority": "medium",
-      "status": "backlog",
-      "notes": "~300 lines.",
+      "status": "done",
+      "notes": "Done as core/answer_check.py + ConversationCoreMixin._self_check_follow_up. Opt-in (self_check_enabled, default false): after the reply is spoken the model re-reads it once; a clear mistake becomes a short 'Correction: ...' follow-up. Skips short replies, code and tool-grounded answers. 32 tests in tests/test_answer_check.py. Not exercised against a real Ollama model, so verdict quality on small models is unmeasured.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-30"
     },
     {
       "id": 54,
@@ -491,10 +491,10 @@
       "id": 55,
       "title": "[F1] Confidence and 'I don't know': flag uncertain answers, offer to search",
       "priority": "medium",
-      "status": "backlog",
-      "notes": "",
+      "status": "done",
+      "notes": "Done in the same pass as #53: the check also returns a 0-1 confidence; below self_check_min_confidence (default 0.5) and with web_search not already used, Aether offers to search. Follow-up, not a rewrite, because replies stream and speak before the check runs. Real-model calibration still unmeasured.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-30"
     },
     {
       "id": 56,

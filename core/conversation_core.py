@@ -1106,6 +1106,36 @@ class ConversationCoreMixin:
             except Exception:
                 pass
 
+        if final_assistant_reply and _llm_synthesized:
+            self._self_check_follow_up(user_text, final_assistant_reply, _tool_results)
+
+    def _self_check_follow_up(self, user_text: str, reply: str, tool_results: list) -> None:
+        """Self-check pass + confidence flag (roadmap #53/#55). Opt-in
+        (config self_check_enabled); see core/answer_check.py. The reply has
+        already been spoken, so a problem becomes a short follow-up message.
+        Never raises and never blocks the turn on failure."""
+        try:
+            from core import answer_check
+            from core.llm_client import _load_config
+            cfg = _load_config()
+            if not answer_check.is_enabled(cfg) or not answer_check.should_check(reply, tool_results):
+                return
+            result = answer_check.run_check(user_text, reply)
+            if result is None:
+                self._obs.count("self_check.unusable")
+                return
+            note = result.follow_up(answer_check.min_confidence(cfg),
+                                    can_search=not answer_check.used_search(tool_results))
+            if not note:
+                self._obs.count("self_check.ok")
+                return
+            self._obs.count("self_check.correction" if result.mistake else "self_check.low_confidence")
+            self._conversation.append({"role": "assistant", "content": note})
+            self.ui.write_log(f"Aether: {note}")
+            self.speak(note)
+        except Exception as e:
+            logger.debug("self-check skipped: %s", e)
+
     def _publish_message_stats(self, stats: dict, elapsed: float, stream_kwargs: dict | None = None) -> None:
         """Sends model/token/timing info from the last LLM round to the
         Message Stats panel. Best-effort — any missing field is shown as

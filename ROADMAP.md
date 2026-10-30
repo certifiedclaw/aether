@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-29 18:32 UTC
+Generated: 2026-10-30 03:23 UTC
 
 ## In progress
 
@@ -14,9 +14,6 @@ Generated: 2026-10-29 18:32 UTC
 ## Backlog
 
 - [ ] **#48** [F0] Auto-update with rollback: pull, run tests, roll back on failure `medium`
-- [ ] **#53** [F1] Self-check pass: model re-reads its answer for obvious mistakes `medium`
-  - ~300 lines.
-- [ ] **#55** [F1] Confidence and 'I don't know': flag uncertain answers, offer to search `medium`
 - [ ] **#56** [F1] Structured memory: small knowledge graph with conflict handling `medium`
 - [ ] **#57** [F1] Long-term memory panel: view, edit, delete what Aether remembers `medium`
   - Fix #32 first.
@@ -168,6 +165,10 @@ Generated: 2026-10-29 18:32 UTC
   - Completed: optional llm_quick_model, llm_everyday_model and llm_hard_model select per-tier models for Ollama conversations. Aether checks the currently selected Ollama host (including remote/local fallback); a missing or uncheckable tag falls back to that host's configured default and is logged. Gemini HARD escalation and opted-in Gemini tool routing retain precedence; OpenAI-compatible providers are unchanged. See core/llm_client.py, core/conversation_core.py and config/config.example.json.
 - [x] **#52** [F1] Prompt and tool-schema tuning per model, driven by benchmark results
   - Completed Qwen 2.5 1.5B prompt/schema tuning with repeat isolated full-suite evidence and a safe model tool-call benchmark. Two profile-enabled runs scored 102/107 both times (95%); the matched no-guidance controls scored 94/107 and 89/107 (88% and 83%), an average gain of 10.5 cases / 9.8 percentage points. Personal-fact honesty rose from 1/8 in both controls to 7/8 and 8/8 with the profile. Average p50 was 3.10s with profile vs 2.97s without (+131ms); p95 varied and remains host-sensitive. Improvements are concentrated in honesty, with some per-case variation in reasoning/instruction; reversal and translation are not consistently solved. The actual tool-call suite scored 8/8; no schema change was warranted. JSON-only output now passes after fixing bare JSON misclassification in tool-call recovery. Evaluation CLI supports --disable-model-guidance for repeatable control runs and isolates chat history. Remaining weak cases are model capability limits, not evidence for further prompt/schema edits in this item.
+- [x] **#53** [F1] Self-check pass: model re-reads its answer for obvious mistakes
+  - Done as core/answer_check.py + ConversationCoreMixin._self_check_follow_up. Opt-in (self_check_enabled, default false): after the reply is spoken the model re-reads it once; a clear mistake becomes a short 'Correction: ...' follow-up. Skips short replies, code and tool-grounded answers. 32 tests in tests/test_answer_check.py. Not exercised against a real Ollama model, so verdict quality on small models is unmeasured.
+- [x] **#55** [F1] Confidence and 'I don't know': flag uncertain answers, offer to search
+  - Done in the same pass as #53: the check also returns a 0-1 confidence; below self_check_min_confidence (default 0.5) and with web_search not already used, Aether offers to search. Follow-up, not a rewrite, because replies stream and speak before the check runs. Real-model calibration still unmeasured.
 - [x] **#59** [F2] Web search with sources
   - Implemented source-backed web search across Aether direct search, comparison, LangChain search, and multi-step LangChain research. Search summaries are instructed to cite supplied numbered results and now always include a deterministic Sources list with verified HTTP(S) URLs; results without valid links are excluded, and an empty usable set returns an explicit no-results message. Comparison sources are collected per item, and research carries deduplicated pages from its web-search observations into the final answer. Updated the tool description and README. Mocked regression coverage passed (163 related tests); Python compilation and diff checks pass. No live DuckDuckGo request was made during verification.
 - [x] **#60** [F2] Document Q&A over PDFs, notes, Obsidian, with citations
