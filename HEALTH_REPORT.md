@@ -2,8 +2,8 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.health_check` (or `run_all`) to refresh. Fix things here, don't edit this file directly.
 
-Generated: 2026-10-30T21:08:23.087025+00:00
-Files scanned: 201
+Generated: 2026-10-30T22:19:19.840501+00:00
+Files scanned: 204
 
 ## Summary
 
@@ -21,13 +21,13 @@ Files scanned: 201
 - `ui.py` — 3682 lines
 - `tests/test_all_critical.py` — 2165 lines
 - `core/llm_client.py` — 1570 lines
+- `core/conversation_core.py` — 1427 lines
 - `actions/osint_tools.py` — 1355 lines
-- `core/conversation_core.py` — 1336 lines
 - `dashboard/server.py` — 1272 lines
 - `main.py` — 1196 lines
 - `actions/extra_tools.py` — 1077 lines
 - `actions/game_updater.py` — 1052 lines
-- `core/trace_log.py` — 976 lines
+- `core/trace_log.py` — 1027 lines
 - `actions/file_processor.py` — 950 lines
 - `actions/browser_control.py` — 941 lines
 - `actions/computer_settings.py` — 755 lines
@@ -36,7 +36,7 @@ Files scanned: 201
 - `actions/file_controller.py` — 651 lines
 
 ## Functions over 80 lines
-- `core/conversation_core.py:568` — `_process_message_inner()` (596 lines)
+- `core/conversation_core.py:568` — `_process_message_inner()` (608 lines)
 - `ui.py:2453` — `_build_right_panel()` (278 lines)
 - `core/chat_commands.py:70` — `_handle_chat_command()` (250 lines)
 - `ui.py:2804` — `_open_action_catalog()` (205 lines)
