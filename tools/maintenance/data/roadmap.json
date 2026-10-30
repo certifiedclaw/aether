@@ -482,10 +482,10 @@
       "id": 54,
       "title": "[F1] Response caching for repeated questions",
       "priority": "low",
-      "status": "backlog",
-      "notes": "~300 lines.",
+      "status": "done",
+      "notes": "Opt-in (response_cache_enabled, default false). core/response_cache.py + wiring in conversation_core (lookup right after routing, store at turn end). Only self-contained factual questions with no tool, no injected memory, no HARD tier, no active goal; refuses personal, back-referencing, time-sensitive and creative questions. Scope = provider+model+prompt.txt hash; TTL 24h; LRU 200; persisted in data dir. 38 tests incl. through the real turn loop; verified in a real headless run against a mock Ollama (rephrased repeat served with no model call). NOT measured on real Ollama; exact-match on normalized text only (no semantic matching); no /clearcache command yet (delete response_cache.json). Also fixed: trace/crash session ids were randomly redacted as card numbers (Luhn).",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-30"
     },
     {
       "id": 55,

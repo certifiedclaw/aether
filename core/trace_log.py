@@ -199,7 +199,26 @@ def trace_path() -> Path | None:
 _redactor = None
 
 
+# Our own session ids (20261030-181741) are 14 digits, and ~1 in 10 pass the card-number
+# Luhn check in leak_guard, so they would be randomly replaced by [REDACTED:card_number].
+_SESSION_ID = re.compile(r"(?<!\d)\d{8}-\d{6}(?:-\d+)?(?!\d)")
+
+
 def _redact(text: str) -> str:
+    if not text:
+        return text
+    if not _SESSION_ID.search(text):
+        return _redact_raw(text)
+    kept: list[str] = []
+
+    def stash(m: re.Match) -> str:
+        kept.append(m.group(0))
+        return f"\x00SID{len(kept) - 1}\x00"
+    out = _redact_raw(_SESSION_ID.sub(stash, text))
+    return re.sub(r"\x00SID(\d+)\x00", lambda m: kept[int(m.group(1))], out)
+
+
+def _redact_raw(text: str) -> str:
     global _redactor
     if not text:
         return text

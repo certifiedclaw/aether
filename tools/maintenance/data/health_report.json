@@ -59,11 +59,11 @@
     },
     {
       "file": "core/conversation_core.py",
-      "lines": 1336
+      "lines": 1427
     },
     {
       "file": "core/trace_log.py",
-      "lines": 976
+      "lines": 1027
     }
   ],
   "large_functions": [
@@ -370,7 +370,7 @@
     {
       "file": "core/conversation_core.py",
       "function": "_process_message_inner",
-      "lines": 596,
+      "lines": 608,
       "at_line": 568
     },
     {
@@ -1448,7 +1448,7 @@
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-10-30T21:08:23.087025+00:00",
-    "files_scanned": 201
+    "generated": "2026-10-30T22:19:19.840501+00:00",
+    "files_scanned": 204
   }
 }

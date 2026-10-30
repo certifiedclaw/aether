@@ -151,3 +151,23 @@ def test_viewer_round_trip(trace, capsys):
     out = capsys.readouterr().out
     assert "llm_request" in out and "tool.end" in out
     assert trace_view.main(["--dir", str(trace), "show", "--kind", "tool", "--grep", "web_search"]) == 0
+
+
+def test_session_ids_are_never_mistaken_for_card_numbers(trace):
+    """~1 in 10 14-digit ids pass the Luhn check leak_guard uses for card numbers."""
+    def luhn(d):
+        t, alt = 0, False
+        for ch in reversed(d):
+            n = int(ch)
+            if alt:
+                n = n * 2 - 9 if n * 2 > 9 else n * 2
+            t, alt = t + n, not alt
+        return t % 10 == 0
+    sid = next(f"20261030-18{m:02d}{sec:02d}" for m in range(60) for sec in range(60)
+               if luhn(f"20261030-18{m:02d}{sec:02d}".replace("-", "")))
+    trace_log.event("x", session=sid, path=f"logs/trace/trace-{sid}.jsonl")
+    e = [e for e in _events(trace) if e["kind"] == "x"][0]
+    assert e["session"] == sid and sid in e["path"]
+    # a real card number is still removed
+    trace_log.event("y", note="card 4111 1111 1111 1111 here")
+    assert "4111 1111" not in [e for e in _events(trace) if e["kind"] == "y"][0]["note"]

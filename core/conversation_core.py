@@ -677,6 +677,13 @@ class ConversationCoreMixin:
                      cloud_allowed=_cloud_ok, stream_kwargs=_stream_kwargs,
                      prompt_model=_prompt_model or None)
 
+        # ── Opt-in response cache (roadmap #54, core/response_cache.py) ──
+        _cache_scope = ConversationCoreMixin._response_cache_scope(
+            self, _primary_provider, _prompt_model, _stream_kwargs)
+        if (not _has_active_task and _route.tier != _Tier.HARD
+                and ConversationCoreMixin._try_cached_response(self, user_text, _cache_scope, _turn_start)):
+            return
+
         # Tool exposure scales with tier: QUICK gets none (see above),
         # EVERYDAY gets only the category-relevant subset (core/tool_router)
         # instead of the full ~28-tool catalog on every ordinary turn, and
@@ -1156,6 +1163,11 @@ class ConversationCoreMixin:
             latency_ms=(time.monotonic() - _turn_start) * 1000,
         )
 
+        ConversationCoreMixin._maybe_cache_response(
+            self, user_text, final_assistant_reply, _cache_scope, tools_run=_tool_results,
+            memory_hit=_memory_hit, truncated=_any_truncated, cancelled=_turn_cancelled,
+            exhausted=_loop_exhausted, tier=_route.tier.name, has_active_task=_has_active_task)
+
         # ── Store full exchange + self-evaluate ─────────────────────────
         self._finalize_response(user_text, "" if _turn_cancelled else final_assistant_reply, _active_mem,
                                  _tool_results, _llm_synthesized)
@@ -1166,6 +1178,85 @@ class ConversationCoreMixin:
     # ------------------------------------------------------------------
     # STT loops
     # ------------------------------------------------------------------
+
+    # ------------------------------------------------------------------
+    # Response cache (roadmap #54)
+    # ------------------------------------------------------------------
+    def _response_cache_scope(self, provider: str, prompt_model: str, stream_kwargs: dict) -> str:
+        """Provider + model + system-prompt hash: changing any of them misses the cache."""
+        try:
+            from core import response_cache
+            from core.llm_client import _load_config
+            model = (prompt_model or (stream_kwargs or {}).get("model_override")
+                     or _load_config().get("llm_model", "") or "")
+            return response_cache.make_scope(str((stream_kwargs or {}).get("provider_override")
+                                                 or provider), str(model))
+        except Exception:  # noqa: BLE001
+            return ""
+
+    def _try_cached_response(self, user_text: str, scope: str, turn_start: float) -> bool:
+        """Serve a repeated self-contained question from the cache. True if handled.
+        Off unless response_cache_enabled=true. Never raises."""
+        try:
+            from core import response_cache
+            from core.llm_client import _load_config
+            cfg = _load_config()
+            if not response_cache.is_enabled(cfg) or not scope:
+                return False
+            ok, why = response_cache.question_verdict(user_text)
+            if not ok:
+                _trace.event("cache_lookup", hit=False, reason=why, user_text=user_text)
+                return False
+            reply = response_cache.get_cache(cfg).get(scope, user_text)
+            _trace.event("cache_lookup", hit=reply is not None, reason="ok", scope=scope,
+                         user_text=user_text, reply=reply)
+            if reply is None:
+                return False
+        except Exception as e:  # noqa: BLE001
+            logger.debug("response cache lookup skipped: %s", e)
+            return False
+        self._obs.count("response_cache.hit")
+        self.ui.write_log("SYS: answered from the response cache (no model call)")
+        self.ui.write_log(f"Aether: {reply}")
+        with self._conversation_lock:
+            self._conversation.append({"role": "user", "content": user_text})
+            self._conversation.append({"role": "assistant", "content": reply})
+        try:
+            from core.live_report import record_turn
+            record_turn(user_text=user_text, reply=reply, tier="CACHE", tier_reason="response_cache",
+                        tools_sent=0, rounds_used=0,
+                        latency_ms=(time.monotonic() - turn_start) * 1000)
+        except Exception:  # noqa: BLE001
+            pass
+        self.speak(reply)
+        if not self.ui.muted:
+            self.ui.set_state("LISTENING")
+        return True
+
+    def _maybe_cache_response(self, user_text: str, reply: str, scope: str, *, tools_run: list,
+                              memory_hit, truncated: bool, cancelled: bool, exhausted: bool,
+                              tier: str, has_active_task: bool) -> None:
+        """Remember this answer if the question, the turn and the reply are all safe to reuse."""
+        try:
+            from core import response_cache
+            from core.llm_client import _load_config
+            cfg = _load_config()
+            if not response_cache.is_enabled(cfg) or not scope:
+                return
+            checks = (response_cache.question_verdict(user_text),
+                      response_cache.reply_verdict(reply),
+                      response_cache.turn_verdict(tools_run=tools_run, memory_hit=memory_hit,
+                                                  truncated=truncated, cancelled=cancelled,
+                                                  exhausted=exhausted, tier=tier,
+                                                  has_active_task=has_active_task))
+            for ok, why in checks:
+                if not ok:
+                    _trace.event("cache_store", stored=False, reason=why, user_text=user_text)
+                    return
+            response_cache.get_cache(cfg).put(scope, user_text, reply)
+            _trace.event("cache_store", stored=True, scope=scope, user_text=user_text, reply=reply)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("response cache store skipped: %s", e)
 
     def _finalize_response(self, user_text: str, final_assistant_reply: str,
                             _active_mem, _tool_results: list, _llm_synthesized: bool) -> None:
