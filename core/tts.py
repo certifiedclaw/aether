@@ -16,6 +16,8 @@ from typing import Callable, Optional
 import numpy as np
 import sounddevice as sd
 
+from core import trace_log as _trace
+
 
 
 # USE_TF=0 stops transformers from importing TensorFlow (saves 4-8 s startup).
@@ -421,7 +423,9 @@ class TTSPlayer:
                 self._playing = True
             if on_start:
                 on_start()
-            self._engine.speak(text)
+            with _trace.span("tts", engine=type(self._engine).__name__, text=text,
+                             chars=len(text), voice=getattr(self._engine, "voice", None)):
+                self._engine.speak(text)
         finally:
             with self._lock:
                 self._playing = False
@@ -429,6 +433,7 @@ class TTSPlayer:
                 on_done()
 
     def stop(self) -> None:
+        _trace.event("tts_stop", was_playing=self._playing)
         _stop_tap()
         sd.stop()
         with self._lock:

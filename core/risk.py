@@ -278,6 +278,12 @@ _TASK_WHAT = {"computer_control": "mouse and keyboard", "browser_control": "web 
 def _audit(tool: str, action: str, tier: str, decision: str, params: dict, note: str = "") -> None:
     """Record the decision in logs/audit.jsonl (core/audit_log.py). Never raises."""
     try:
+        from core import trace_log
+        trace_log.event("gate_decision", tool=tool, action=action, tier=tier,
+                        decision=decision, params=params, note=note or None)
+    except Exception:  # noqa: BLE001 - tracing must not break the gate
+        pass
+    try:
         from core import audit_log
         audit_log.record(tool, action, tier, decision, params, note=note, turn=_TURN_TEXT)
     except Exception:  # noqa: BLE001 - auditing must not break the gate

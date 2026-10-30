@@ -156,6 +156,7 @@ from memory.config_manager     import get_mark_config
 
 # ── Advanced modules ───────────────────────────────────────────────
 from core.observability        import get_obs
+from core                      import trace_log as _trace
 from core.goal_state           import GoalState, GOAL_TOOL_DECLARATIONS
 from memory.hybrid_memory      import HybridMemory
 from core.conversation_core    import ConversationCoreMixin
@@ -233,12 +234,20 @@ except ImportError:
 Path("logs").mkdir(exist_ok=True)
 from logging.handlers import RotatingFileHandler as _RFH
 _root_log = logging.getLogger()
-_root_log.setLevel(logging.INFO)
-_fh = _RFH("logs/aether.log", maxBytes=5*1024*1024, backupCount=7, encoding="utf-8")
-_fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(name)s — %(message)s"))
+# logs/aether.log records everything (DEBUG, with the emitting thread); the console
+# stays at INFO. The complete machine-readable record is logs/trace/ (core/trace_log.py).
+_fh = _RFH("logs/aether.log", maxBytes=10*1024*1024, backupCount=10, encoding="utf-8")
+_fh.setLevel(logging.DEBUG)
+_fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s [%(threadName)s] %(name)s — %(message)s"))
 _ch = logging.StreamHandler()
+_ch.setLevel(logging.INFO)
 _ch.setFormatter(logging.Formatter("%(levelname)-8s %(name)s — %(message)s"))
 if not _root_log.handlers:
+    _root_log.setLevel(logging.DEBUG)
+    for _noisy in ("urllib3", "httpx", "httpcore", "PIL", "asyncio", "matplotlib", "numba",
+                   "chromadb", "filelock", "fsspec", "huggingface_hub", "markdown_it",
+                   "comtypes", "multipart", "charset_normalizer", "hpack"):
+        logging.getLogger(_noisy).setLevel(logging.INFO)   # library chatter, not Aether detail
     _root_log.addHandler(_fh)
     _root_log.addHandler(_ch)
 logger = logging.getLogger("aether")
@@ -449,8 +458,11 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
                     with self._speaking_lock:
                         self._speaking = True
                     self.ui.set_state("SPEAKING")
+                    _trace.event("speak_start", text=text, still_queued=self._tts_queue.qsize())
                     self._tts.speak(text)
             except Exception as e:
+                _trace.event("speak_failed", text=text, error=f"{type(e).__name__}: {e}",
+                             traceback=traceback.format_exc())
                 self.ui.write_log(f"ERR: Speech synthesis failed: {e}")
             finally:
                 self._tts_queue.task_done()
@@ -476,11 +488,13 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         except Exception:
             pass
         # Drain the TTS queue so queued sentences are discarded
+        _discarded: list[str] = []
         while not self._tts_queue.empty():
             try:
-                self._tts_queue.get_nowait()
+                _discarded.append(self._tts_queue.get_nowait())
             except Exception:
                 break
+        _trace.event("speak_interrupted", reason=reason, discarded=_discarded)
         with self._speaking_lock:
             self._speaking = False
         self.ui.set_state("LISTENING")
@@ -491,6 +505,7 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             return
         with self._speaking_lock:
             self._speaking = True
+        _trace.event("speak_queued", text=text, queue_depth=self._tts_queue.qsize())
         self._tts_queue.put(text)
 
     def speak_error(self, tool_name: str, error) -> None:
@@ -1031,6 +1046,12 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    # Flight recorder: from here on everything is written to logs/trace/ (core/trace_log.py).
+    try:
+        _trace.start()
+    except Exception as _e:  # noqa: BLE001 - tracing is best-effort, never blocks startup
+        print(f"[Aether] trace log not started: {_e}")
+
     def _preload_torch():
         try:
             import torch  # noqa
@@ -1159,6 +1180,7 @@ def main() -> None:
                 print(f"[Aether] stdin closed — {n} line(s) sent. "
                       f"See logs/live_report.md for results.")
                 time.sleep(1)  # let any final live_report write land on disk
+                _trace.flush()  # _exit skips atexit, so get the trace onto disk first
                 _os._exit(0)
             threading.Thread(target=_stdin_test_driver, daemon=True).start()
 

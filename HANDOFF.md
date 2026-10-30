@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-30 03:23 UTC
+Generated: 2026-10-30 21:08 UTC
+
+## #126 — 2026-10-30 21:08 UTC — Claude Code (Sonnet 5.5)
+
+Logging upgrade: finished the flight recorder (core/trace_log.py -> logs/trace/*.jsonl). Every prompt/reply/tool call (args, full result, duration), gate decision, HTTP call, subprocess, STT segment (incl. dropped), TTS/speak event, UI log/state, stdlib log record, stdout/stderr, heartbeat/stall dump and crash is timestamped, ordered and tagged by turn; secrets redacted. This session added gate_decision (risk._audit), ui_log/ui_state hooks, tools/trace_view.py, logging.trace_* config keys, readme section, 12 tests (tests/test_trace_log.py). Fixed test_empty_model_response_retries_once_without_tools (source-inspection window). Full suite 1063 passed, 4 failed = same sandbox-only failures as baseline. Verified by running real headless main.py against a mock Ollama (2 turns, one tool call) and reading the trace with trace_view. NOT run on real hardware/mic/Qt UI. Work is UNCOMMITTED on master.
+
+**Touched:** `core/trace_log.py`, `tools/trace_view.py`, `tests/test_trace_log.py`, `core/risk.py`, `ui.py`, `core/headless_ui.py`, `core/conversation_core.py`, `core/llm_client.py`, `core/stt.py`, `core/tts.py`, `core/tool_dispatch.py`, `core/listen_loops.py`, `core/crash_logger.py`, `main.py`, `config/config.example.json`, `readme.md`
+
+**Next steps:** Commit/push (branch first). Run on the real box with voice and check trace for stt_transcribe/barge_in/speak_* timing; check trace size per hour and tune logging.trace_max_mb. Headless run leaves an empty fault-*.log because main uses os._exit.
+
+---
 
 ## #125 — 2026-10-30 03:23 UTC — Claude Code (Sonnet 5.5)
 

@@ -155,6 +155,22 @@ The FastAPI dashboard is optional and requires its listed server dependencies. T
 
 For a server without a desktop display, set `AETHER_HEADLESS=1`. Headless mode skips the Qt interface and microphone/audio by default; the dashboard provides remote interaction. Set `AETHER_HEADLESS_VOICE=1` only when the server has configured audio devices. For scripted text replay, see `tests/live_test_script.txt`.
 
+## Logging: the flight recorder
+
+Every run writes `logs/trace/trace-<session>.jsonl`, one JSON event per line, so you can see exactly what happened, when, and with what. Each event has a global order number, a wall-clock timestamp (ms, with UTC offset), seconds since start, the emitting thread, and the user request (`t0001`...) it belongs to.
+
+It records, in full and unsummarised: the route and tools chosen, the exact messages sent to the model, every streamed sentence, final text, tool calls and token/timing stats, every tool call with arguments, full result, duration and error, permission-gate decisions, every outgoing HTTP call and subprocess, Whisper transcripts including segments it dropped, what was queued and spoken, UI log/state changes, all Python `logging` records at every level, stdout/stderr, heartbeats, a thread-stack dump if a turn stalls, and any crash. Secrets (secret-named keys, API-key/token patterns, URL key params) are redacted.
+
+```
+python -m tools.trace_view list
+python -m tools.trace_view summary            # counts, tools used, slowest operations
+python -m tools.trace_view turn t0003 --full  # one request end to end
+python -m tools.trace_view show --kind tool --grep web_search
+python -m tools.trace_view errors
+```
+
+Tune with `logging.trace_*` keys in the config (see `config.example.json`), or turn it off with `logging.trace_enabled=false` or `AETHER_TRACE=0`. `logs/aether.log` now also records DEBUG with thread names.
+
 ## Evaluation and tests
 
 The fixed-prompt evaluation harness can replay the smoke suite, core suite, or both against an installed Ollama model. It temporarily isolates replay memory and redirects chat history to a disposable file, so existing memories and conversations neither affect nor receive benchmark turns. Results are written under `logs/eval/`.

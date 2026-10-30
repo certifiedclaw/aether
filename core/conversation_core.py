@@ -42,12 +42,18 @@ import re
 import time
 import traceback
 
+from core import trace_log as _trace
 from core.smart_context import compress_if_needed, estimate_tool_tokens
 from core.tier_router import classify as _classify_tier, Tier as _Tier, wants_gemini_for_tools as _wants_gemini_tools
 from core.tool_router import filter_tools as _filter_tools_for_turn
 from core.tool_router import filter_tools_hard as _filter_tools_hard
 
 _CLOUD_HISTORY_BUDGET = 8000   # message tokens for Gemini-routed turns (schema is extra)
+
+
+def _decision(what: str, **detail) -> None:
+    """Record WHY a turn took a particular path (retry, recovery, fallback, ...)."""
+    _trace.event("decision", what=what, **detail)
 
 
 _QUICK_HISTORY_DEFAULT = 2000
@@ -391,14 +397,25 @@ class ConversationCoreMixin:
                 _budget = max(500, min(_budget, _sys_tokens + _cap))
 
         from main import _LANGCHAIN_OK  # lazy: avoids circular import at module load time
+        _before_msgs = len(messages)
+        _before_chars = sum(len(str(m.get("content", ""))) for m in messages)
+        _compressor = "langchain" if _LANGCHAIN_OK else "smart_context"
         if _LANGCHAIN_OK:
             try:
                 from integrations.langchain_tools import lc_compress_history
                 messages = lc_compress_history(messages, max_tokens=_budget)
-            except Exception:
+            except Exception as _lc_err:
+                _compressor = f"smart_context (langchain failed: {_lc_err})"
                 messages = compress_if_needed(messages, token_budget=_budget)
         else:
             messages = compress_if_needed(messages, token_budget=_budget)
+
+        _trace.event("context_compress", compressor=_compressor, light=light,
+                     local_turn=_is_local_turn, budget_tokens=_budget, tool_tokens=_tool_tokens,
+                     messages_before=_before_msgs, messages_after=len(messages),
+                     chars_before=_before_chars,
+                     chars_after=sum(len(str(m.get("content", ""))) for m in messages),
+                     history_len=len(self._conversation), history_limit=MAX_HISTORY)
 
         return messages, _active_mem
 
@@ -426,6 +443,8 @@ class ConversationCoreMixin:
                     targs = {}
 
             tc_id = tc.get("id", "")
+            _trace.event("tool_request", tool=tname, args=targs, call_id=tc_id,
+                         raw_arguments=fn.get("arguments", {}))
             _arg_hint = ""
             if isinstance(targs, dict) and targs:
                 _first_k = next(iter(targs))
@@ -438,6 +457,8 @@ class ConversationCoreMixin:
                 verdict = self._loop_guard.check(tname, targs)
                 if verdict.blocked:
                     result = self._loop_guard.inject_break_message(tname)
+                    _trace.event("loop_guard_blocked", tool=tname, args=targs,
+                                 verdict=getattr(verdict, "__dict__", str(verdict)), replaced_with=result)
                     self.ui.write_log(f"WRN: LoopGuard blocked {tname}")
                     self._obs.count("loop_guard.blocked", tags={"tool": tname})
                 else:
@@ -510,14 +531,20 @@ class ConversationCoreMixin:
             return False
         _t0 = time.monotonic()
         replies: list[str] = []
+        _trace.event("quick_intent", user_text=user_text,
+                     plan=[{"tool": n, "args": a} for n, a, _ in plan])
         for name, args, friendly in plan:
             self.ui.write_log(f"SYS: quick intent -> {name} {args}")
             try:
                 result = self._execute_tool(name, args)
             except Exception as e:  # noqa: BLE001
+                _trace.event("quick_intent_failed", tool=name, args=args,
+                             error=f"{type(e).__name__}: {e}", traceback=traceback.format_exc())
                 result = f"That failed: {e}"
             replies.append(friendly(result) if friendly else str(result))
         reply = " ".join(r for r in replies if r).strip() or "Done."
+        _trace.event("reply", via="quick_intent", text=reply,
+                     dur_ms=round((time.monotonic() - _t0) * 1000, 1))
         try:
             from core.live_report import record_turn
             record_turn(user_text=user_text, reply=reply, tier="QUICK_INTENT",
@@ -558,6 +585,7 @@ class ConversationCoreMixin:
         self._obs.count("messages.received")
         # ── Handle built-in chat commands ────────────────────────
         if self._handle_chat_command(user_text):
+            _decision("chat_command_handled", user_text=user_text)
             return
 
         # ── Deterministic shortcuts for simple commands (volume, weather, ──
@@ -576,6 +604,8 @@ class ConversationCoreMixin:
         _has_active_task = bool(self._goals and self._goals.list_active())
         _route = _classify_tier(user_text, has_active_task=_has_active_task)
         _is_quick = _route.tier == _Tier.QUICK
+        _trace.event("route", tier=_route.tier.name, reason=_route.reason,
+                     has_active_task=_has_active_task, user_text=user_text)
 
         # ── HARD tier: escalate this turn to Gemini ─────────────────────
         # Only relevant when the *primary* configured provider is local
@@ -643,6 +673,10 @@ class ConversationCoreMixin:
         elif _stream_kwargs.get("provider_override") == "ollama":
             _prompt_model = _stream_kwargs.get("model_override", "")
 
+        _trace.event("route_resolved", tier=_route.tier.name, primary_provider=_primary_provider,
+                     cloud_allowed=_cloud_ok, stream_kwargs=_stream_kwargs,
+                     prompt_model=_prompt_model or None)
+
         # Tool exposure scales with tier: QUICK gets none (see above),
         # EVERYDAY gets only the category-relevant subset (core/tool_router)
         # instead of the full ~28-tool catalog on every ordinary turn, and
@@ -668,6 +702,13 @@ class ConversationCoreMixin:
             None if _is_quick else
             "[Relevant memory]" in (messages[0].get("content", "") if messages else "")
         )
+
+        _trace.event("tools_selected", tier=_route.tier.name, count=len(_turn_tools),
+                     names=_trace.tool_schema_once(_turn_tools))
+        _trace.event("context_built", n_messages=len(messages), light=_is_quick,
+                     memory_hit=_memory_hit, model=_prompt_model or None,
+                     system_prompt_chars=len(str(messages[0].get("content", ""))) if messages else 0,
+                     roles=[m.get("role") for m in messages])
 
         # _NEEDS_LLM_ROUND is defined at module level
 
@@ -700,8 +741,12 @@ class ConversationCoreMixin:
 
             _round_start = time.monotonic()
             _wait_done = False
+            _trace.event("round_start", round=_round, max_rounds=MAX_TOOL_ROUNDS,
+                         tools=len(tools) if tools else 0, n_messages=len(messages))
             for _attempt in range(_degrade.MAX_ATTEMPTS):
                 try:
+                    _trace.event("llm_attempt", round=_round, attempt=_attempt,
+                                 route=_stream_kwargs or "configured default")
                     for event in call_llm_stream(
                             messages, tools, cancel_event=self._cancel_current_turn,
                             **_stream_kwargs):
@@ -726,6 +771,8 @@ class ConversationCoreMixin:
                     if _stream_kwargs and _attempt == 0:
                         # Cloud route failed (bad key, quota, 400...): never leave the
                         # user with no answer -- retry this round on the local model.
+                        _decision("cloud_failed_retry_local", error=str(e), attempt=_attempt,
+                                  failed_route=_stream_kwargs)
                         self.ui.write_log(f"WRN: Gemini failed ({e}) - retrying this turn on the local model")
                         _stream_kwargs = {}
                         # local window is small: re-fit history to the local budget
@@ -745,6 +792,10 @@ class ConversationCoreMixin:
                         on_cloud=bool(_stream_kwargs) and _stream_kwargs.get("provider_override") == "gemini",
                         has_gemini_key=bool(_gkey))
                     if _act.kind != "give_up":
+                        _decision("llm_recovery", action=_act.kind, note=_act.note, error=str(e),
+                                  failure=getattr(_fail, "__dict__", str(_fail)), attempt=_attempt,
+                                  wait_s=getattr(_act, "wait_s", None),
+                                  model=getattr(_act, "model", None))
                         self.ui.write_log(f"WRN: LLM failed ({e}) - {_act.note}")
                         self._obs.count(f"llm.recover.{_act.kind}")
                         _streamed.clear()
@@ -764,6 +815,9 @@ class ConversationCoreMixin:
                             messages = compress_if_needed(
                                 messages, token_budget=max(500, _CLOUD_HISTORY_BUDGET - estimate_tool_tokens(tools)))
                         continue
+                    _decision("llm_give_up", error=str(e), attempt=_attempt,
+                              failure=getattr(_fail, "__dict__", str(_fail)),
+                              traceback=traceback.format_exc())
                     self.ui.write_log(f"ERR: LLM - {e}")
                     self.ui.write_log(f"Aether: {_fail.message}")
                     self.speak(_fail.message)
@@ -771,6 +825,12 @@ class ConversationCoreMixin:
                         self.ui.set_state("LISTENING")
                     return
             _round_elapsed = time.monotonic() - _round_start
+            _trace.event("round_result", round=_round, elapsed_ms=round(_round_elapsed * 1000, 1),
+                         content=final_content, streamed_sentences=len(_streamed),
+                         tool_calls=[{"tool": tc.get("function", {}).get("name"),
+                                      "args": tc.get("function", {}).get("arguments")}
+                                     for tc in final_tool_calls],
+                         stats=_llm_stats, cancelled=self._cancel_current_turn.is_set())
 
             if self._cancel_current_turn.is_set():
                 _turn_cancelled = True
@@ -781,6 +841,7 @@ class ConversationCoreMixin:
                     messages.append(partial_msg)
                     self._conversation.append(partial_msg)
                     self.ui.write_log(f"Aether: {partial_reply} *(stopped)*")
+                _decision("turn_cancelled", partial_reply=partial_reply, stage="during_llm")
                 self.ui.write_log("SYS: Response stopped.")
                 final_assistant_reply = partial_reply
                 break
@@ -795,6 +856,7 @@ class ConversationCoreMixin:
                 self.ui.write_log("WRN: model returned an empty response — retrying once without tools")
                 self._obs.count("llm.empty_response_retry")
                 tools = None
+                _decision("empty_response_retry", round=_round)
                 continue
 
             # done_reason=="length" means generation hit num_predict and was
@@ -803,6 +865,7 @@ class ConversationCoreMixin:
             _was_truncated = bool(_llm_stats.get("truncated"))
             if _was_truncated:
                 final_content = final_content.rstrip() + " …"
+                _decision("truncated_at_generation_limit", round=_round, stats=_llm_stats)
                 self.ui.write_log("WRN: response truncated at generation limit")
                 _any_truncated = True
 
@@ -820,6 +883,8 @@ class ConversationCoreMixin:
                             "WRN: model wrote <tool_call> as text instead of "
                             "calling it — executing it anyway"
                         )
+                        _decision("tagged_tool_call_recovered", raw_text=final_content,
+                                  calls=[{"tool": _n2, "args": _a2} for _n2, _a2 in _tagged])
                         for _n, _ in _tagged:
                             self._obs.count("llm.fake_tool_call_recovered", tags={"tool": _n})
                         final_tool_calls = [
@@ -833,6 +898,9 @@ class ConversationCoreMixin:
                             "WRN: model wrote <tool_call> for an unrecognized "
                             "tool — discarding"
                         )
+                        _decision("tagged_tool_call_discarded", raw_text=final_content,
+                                  calls=[{"tool": _n2, "args": _a2} for _n2, _a2 in _tagged],
+                                  reason="unrecognized tool name")
                         self._obs.count("llm.fake_tool_call_unrecoverable")
                         final_content = ""
                 if (not _tagged and final_content and
@@ -841,6 +909,7 @@ class ConversationCoreMixin:
                           and '"name"' in final_content
                           and ('"arguments"' in final_content or
                                '"parameters"' in final_content)))):
+                    _decision("call_like_text_unparsed", raw_text=final_content)
                     self.ui.write_log(
                         "WRN: reply looks like a tool call but could not be parsed: "
                         + final_content[:200].replace("\n", " ")
@@ -864,6 +933,8 @@ class ConversationCoreMixin:
                             f"WRN: model wrote '{_fname}' as text instead of "
                             f"calling it — executing it anyway"
                         )
+                        _decision("fake_tool_call_recovered", tool=_fname, args=_fargs,
+                                  raw_text=final_content)
                         self._obs.count("llm.fake_tool_call_recovered", tags={"tool": _fname})
                         final_tool_calls = [{"id": "", "function": {"name": _fname, "arguments": _fargs}}]
                         # Whole reply was the call expression -- don't echo it as text
@@ -880,6 +951,8 @@ class ConversationCoreMixin:
                             f"WRN: model produced call-like text for an "
                             f"unrecognized tool ('{_fname}') — discarding"
                         )
+                        _decision("fake_tool_call_discarded", tool=_fname, args=_fargs,
+                                  raw_text=final_content, reason="unrecognized tool name")
                         self._obs.count("llm.fake_tool_call_unrecoverable")
                         final_content = ""
 
@@ -896,6 +969,7 @@ class ConversationCoreMixin:
                     "WRN: model promised an action without calling a tool - retrying once: "
                     + final_content[:120].replace("\n", " ")
                 )
+                _decision("promise_without_action_retry", round=_round, promised_text=final_content)
                 self._obs.count("llm.promise_without_action_retry")
                 messages.append({"role": "assistant", "content": final_content})
                 messages.append({"role": "user", "content": _PROMISE_NUDGE})
@@ -903,6 +977,8 @@ class ConversationCoreMixin:
 
             if not final_tool_calls:
                 if _streamed:
+                    _trace.event("reply", via="llm_stream", text=final_content,
+                                 spoken_sentences=_streamed, truncated=_was_truncated)
                     for sentence in _streamed:
                         self.speak(sentence)
                     assistant_msg = {"role": "assistant", "content": final_content}
@@ -915,6 +991,7 @@ class ConversationCoreMixin:
                     _llm_synthesized = True
                     self._publish_message_stats(_llm_stats, _round_elapsed, _stream_kwargs)
                 elif final_content:
+                    _trace.event("reply", via="llm_text", text=final_content, truncated=_was_truncated)
                     assistant_msg = {"role": "assistant", "content": final_content}
                     messages.append(assistant_msg)
                     self._conversation.append(assistant_msg)
@@ -933,6 +1010,8 @@ class ConversationCoreMixin:
                     messages.append(partial_msg)
                     self._conversation.append(partial_msg)
                     self.ui.write_log(f"Aether: {partial_reply} *(stopped)*")
+                _decision("turn_cancelled", partial_reply=partial_reply, stage="before_tool_calls",
+                          skipped_calls=final_tool_calls)
                 self.ui.write_log("SYS: Response stopped before the requested action started.")
                 final_assistant_reply = partial_reply
                 break
@@ -949,6 +1028,8 @@ class ConversationCoreMixin:
                 tc.get("function", {}).get("name") == "save_memory"
                 for tc in final_tool_calls
             )
+            _trace.event("tool_calls_requested", round=_round, assistant_text=final_content,
+                         calls=final_tool_calls, only_save_memory=_only_memory)
             if _only_memory and final_content:
                 for tc in final_tool_calls:
                     fn    = tc.get("function", {})
@@ -969,9 +1050,12 @@ class ConversationCoreMixin:
                 break
 
             _tool_results, all_silent = self._execute_tool_calls(final_tool_calls, messages)
+            _trace.event("tool_round_done", round=_round, all_silent=all_silent,
+                         results=[{"tool": n, "result": r} for n, r in _tool_results])
 
             if self._cancel_current_turn.is_set():
                 _turn_cancelled = True
+                _decision("turn_cancelled", stage="after_tool_calls")
                 self.ui.write_log("SYS: Response stopped after the active action finished.")
                 break
 
@@ -1004,6 +1088,8 @@ class ConversationCoreMixin:
                             _saved_name = str(_a["value"])
                             break
                 _ack = f"Got it, {_saved_name}." if _saved_name else "Noted."
+                _decision("silent_tools_canned_ack", round=_round,
+                          silent_rounds=_consecutive_silent_rounds, ack=_ack)
                 _amsg = {"role": "assistant", "content": _ack}
                 messages.append(_amsg)
                 self._conversation.append(_amsg)
@@ -1017,6 +1103,8 @@ class ConversationCoreMixin:
             from main import _NEEDS_LLM_ROUND  # lazy: avoids circular import at module load time
             if _tool_results and not any(n in _NEEDS_LLM_ROUND for n, _ in _tool_results):
                 _, _reply = _tool_results[-1]
+                _decision("tool_result_spoken_directly", tool=_tool_results[-1][0],
+                          detail="tool is not in _NEEDS_LLM_ROUND, so no second model round")
                 _amsg = {"role": "assistant", "content": _reply}
                 messages.append(_amsg)
                 self._conversation.append(_amsg)
@@ -1042,9 +1130,19 @@ class ConversationCoreMixin:
             _exhausted_msg = {"role": "assistant", "content": final_assistant_reply}
             messages.append(_exhausted_msg)
             self._conversation.append(_exhausted_msg)
+            _decision("loop_exhausted", max_rounds=MAX_TOOL_ROUNDS,
+                      tools_run=[n for n, _ in _tool_results])
             self.ui.write_log(f"WRN: tool-call loop exhausted after {MAX_TOOL_ROUNDS} rounds without a reply")
             self.ui.write_log(f"Aether: {final_assistant_reply}")
             self.speak(final_assistant_reply)
+
+        _trace.event("turn_summary", tier=_route.tier.name, tier_reason=_route.reason,
+                     rounds_used=_round + 1, tools_offered=len(_turn_tools),
+                     tools_run=[n for n, _ in _tool_results], memory_hit=_memory_hit,
+                     routed_off_default=bool(_stream_kwargs), exhausted=_loop_exhausted,
+                     truncated=_any_truncated, cancelled=_turn_cancelled,
+                     llm_synthesized=_llm_synthesized, reply=final_assistant_reply,
+                     latency_ms=round((time.monotonic() - _turn_start) * 1000, 1))
 
         # ── Live usage dump — logs/live_turns.jsonl + logs/live_report.md ──
         # Best-effort, never raises; see core/live_report.py.
@@ -1075,11 +1173,21 @@ class ConversationCoreMixin:
         and, if applicable, run the self-evaluator on the LLM's reply."""
         # ── Store full exchange — only the active engine ───────────────
         from core.memory_hygiene import is_storable_exchange
+        _engine = type(_active_mem).__name__ if _active_mem else None
         if _active_mem and final_assistant_reply and is_storable_exchange(user_text, final_assistant_reply):
             try:
                 _active_mem.store(user_text, final_assistant_reply)
-            except Exception:
-                pass
+                _trace.event("memory_store", stored=True, engine=_engine,
+                             user_text=user_text, reply=final_assistant_reply)
+            except Exception as _mem_err:
+                _trace.event("memory_store", stored=False, engine=_engine,
+                             error=f"{type(_mem_err).__name__}: {_mem_err}",
+                             traceback=traceback.format_exc())
+        else:
+            _trace.event("memory_store", stored=False, engine=_engine,
+                         reason=("no memory engine" if not _active_mem else
+                                 "empty reply" if not final_assistant_reply else
+                                 "failed or empty exchange (core/memory_hygiene)"))
 
         # ── Self-evaluate the response ────────────────────────
         # Only evaluate when the LLM produced the final reply; skip when we
@@ -1090,11 +1198,14 @@ class ConversationCoreMixin:
                 # the response already looks like an obvious failure
                 if not self._evaluator.quick_check(final_assistant_reply):
                     self._obs.count("eval.quick_fail")
+                    _trace.event("self_eval", stage="quick_check", passed=False, reply=final_assistant_reply)
                     self.ui.write_log("WRN: Evaluator — quick check flagged response as likely failure")
                 else:
                     eval_result = self._evaluator.evaluate(
                         user_text, final_assistant_reply, _tool_results)
                     self._obs.count("eval.passed" if eval_result.passed else "eval.failed")
+                    _trace.event("self_eval", stage="llm_eval", passed=eval_result.passed,
+                                 score=eval_result.score, reason=eval_result.reason)
                     if not eval_result.passed:
                         self.ui.write_log(
                             f"WRN: Evaluator — {eval_result.reason} "
@@ -1122,10 +1233,14 @@ class ConversationCoreMixin:
                 return
             result = answer_check.run_check(user_text, reply)
             if result is None:
+                _trace.event("self_check", outcome="unusable_model_output", reply=reply)
                 self._obs.count("self_check.unusable")
                 return
             note = result.follow_up(answer_check.min_confidence(cfg),
                                     can_search=not answer_check.used_search(tool_results))
+            _trace.event("self_check", outcome="follow_up" if note else "ok", note=note or None,
+                         result=getattr(result, "__dict__", str(result)),
+                         min_confidence=answer_check.min_confidence(cfg), reply=reply)
             if not note:
                 self._obs.count("self_check.ok")
                 return
@@ -1185,17 +1300,21 @@ class ConversationCoreMixin:
 
     def _process_message(self, user_text: str) -> None:
         self._last_user_speech = time.monotonic()
+        _requested = time.monotonic()
         # Serialize full turns across threads (see _conversation_lock comment
         # in __init__). A blocking acquire here is intentional: a proactive
         # nudge or a system-monitor alert should queue up behind a message
         # that's mid-flight rather than race it.
         with self._conversation_lock:
-            self._process_message_locked(user_text)
+            self._process_message_locked(
+                user_text, _lock_wait_ms=round((time.monotonic() - _requested) * 1000, 1))
 
-    def _process_message_locked(self, user_text: str) -> None:
+    def _process_message_locked(self, user_text: str, _lock_wait_ms: float | None = None) -> None:
         self._cancel_current_turn.clear()
         try:
-            self._process_message_inner(user_text)
+            # One recorded turn: every event this thread emits until it ends carries its id.
+            with _trace.turn(user_text, lock_wait_ms=_lock_wait_ms):
+                self._process_message_inner(user_text)
         except Exception as e:
             from main import log_crash  # lazy: avoids circular import at module load time
             log_crash(e, user_message=user_text)

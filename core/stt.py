@@ -5,7 +5,12 @@ Whisper  – offline transcription via faster-whisper (VAD-buffered)
 Vosk     – offline streaming transcription (lighter)
 """
 import json
+import time
+import traceback
+
 import numpy as np
+
+from core import trace_log as _trace
 
 
 class WhisperSTT:
@@ -78,13 +83,40 @@ class WhisperSTT:
                     "speech_pad_ms": 400,
                 },
             )
+            _t0 = time.monotonic()
             try:
-                segments, _ = self._model.transcribe(audio, hotwords="Aether", **kwargs)
+                segments, info = self._model.transcribe(audio, hotwords="Aether", **kwargs)
             except TypeError:        # older faster-whisper without hotwords
-                segments, _ = self._model.transcribe(audio, **kwargs)
-            kept = [s.text for s in segments if self.keep_segment(s)]
-            return " ".join(kept).strip()
+                segments, info = self._model.transcribe(audio, **kwargs)
+            # Record EVERY segment with the numbers keep_segment() judged it on, so a
+            # dropped (or wrongly kept) phrase can be explained after the fact.
+            kept, seg_log = [], []
+            for s in segments:
+                ok = self.keep_segment(s)
+                if ok:
+                    kept.append(s.text)
+                seg_log.append({
+                    "text": s.text, "kept": ok,
+                    "start": round(getattr(s, "start", 0.0) or 0.0, 2),
+                    "end": round(getattr(s, "end", 0.0) or 0.0, 2),
+                    "avg_logprob": round(getattr(s, "avg_logprob", 0.0) or 0.0, 3),
+                    "no_speech_prob": round(getattr(s, "no_speech_prob", 0.0) or 0.0, 3),
+                    "compression_ratio": round(getattr(s, "compression_ratio", 0.0) or 0.0, 2),
+                })
+            text = " ".join(kept).strip()
+            _trace.event(
+                "stt_transcribe", engine="faster-whisper", audio_s=round(seconds, 2),
+                audio_rms=round(float(np.sqrt(np.mean(np.square(audio)))), 5) if len(audio) else 0.0,
+                audio_peak=round(float(np.max(np.abs(audio))), 4) if len(audio) else 0.0,
+                beam_size=beam, language=self._language,
+                detected_language=getattr(info, "language", None),
+                language_probability=round(getattr(info, "language_probability", 0.0) or 0.0, 3),
+                elapsed_ms=round((time.monotonic() - _t0) * 1000, 1),
+                segments=seg_log, dropped=sum(1 for x in seg_log if not x["kept"]), text=text)
+            return text
         except Exception as e:
+            _trace.event("stt_error", error=f"{type(e).__name__}: {e}",
+                         traceback=traceback.format_exc())
             print(f"[STT] Transcription error: {e}")
             raise
 

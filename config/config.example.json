@@ -105,6 +105,16 @@
 
   "_comment_logging": "── Logging / paths ──────────────────────────────────",
   "logging.log_dir":  "logs",
+  "_comment_trace":   "Flight recorder (logs/trace/*.jsonl): every prompt, reply, tool call, timing. View: python -m tools.trace_view. Secrets are redacted.",
+  "logging.trace_enabled":        true,
+  "logging.level":                "DEBUG",
+  "logging.trace_keep_sessions":  30,
+  "logging.trace_max_mb":         200,
+  "logging.trace_max_field_chars": 200000,
+  "logging.trace_capture_stdio":  true,
+  "logging.trace_patch_io":       true,
+  "logging.trace_heartbeat_s":    30,
+  "logging.trace_stall_s":        45,
   "rag.index_path":   "data/rag_index",
 
   "_comment_filewatcher": "── File watcher — auto-index new/modified files into RAG ──",

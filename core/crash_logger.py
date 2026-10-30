@@ -61,11 +61,26 @@ def _system_context() -> dict:
 def log_crash(exc: BaseException,
               user_message: str = "",
               tool: str = "",
-              extra: dict | None = None) -> str:
+              extra: dict | None = None,
+              context: str = "") -> str:
     """
     Write a crash report to logs/crashes/<timestamp>.json.
     Returns the path to the crash file (for display to the user).
+
+    `context` names where it happened (e.g. "STT-Whisper"). The STT loops always
+    passed it, but the parameter did not exist, so every mic failure raised a
+    TypeError here and the real error was lost.
     """
+    try:
+        from core import trace_log
+        trace_log.event("crash", exception=type(exc).__name__, message=str(exc),
+                        traceback=traceback.format_exc(), user_message=user_message,
+                        tool=tool, context=context, extra=extra or {})
+        trace_log.flush(2.0)
+    except Exception:  # noqa: BLE001 - the trace must never stop a crash report
+        pass
+    if context:
+        extra = {**(extra or {}), "context": context}
     try:
         _CRASH_DIR.mkdir(parents=True, exist_ok=True)
 

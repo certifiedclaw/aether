@@ -31,6 +31,8 @@ import traceback
 
 import numpy as np
 
+from core import trace_log as _trace
+
 SAMPLE_RATE_IN = 16_000
 BLOCK_SIZE     = 1_024
 CHANNELS       = 1
@@ -116,6 +118,8 @@ class ListenLoopsMixin:
         if self._barge_in_busy:
             return
         self._barge_in_busy = True
+        _trace.event("barge_in", detail="user speech detected while Aether was speaking",
+                     blocks_counted=getattr(self, "_barge_in_count", None))
 
         def _run():
             try:
@@ -161,6 +165,8 @@ class ListenLoopsMixin:
             cfg, wake_ready=_wake_ready(), ptt_available=_lm.keyboard_available())
         if mode_note:
             self.ui.write_log(f"WRN: {mode_note}")
+        _trace.event("listen_mode", mode=mode, note=mode_note, requested=cfg.get("listen_mode"),
+                     wake_ready=_wake_ready(), echo_guard=use_echo)
 
         gate = WakeGate(enabled=False)
         detector = None
@@ -271,9 +277,15 @@ class ListenLoopsMixin:
                             gate.touch()
                             gate.utterance_done()   # PTT: close now, so audio during STT/LLM isn't queued
                             self.ui.set_state("THINKING")
+                            _trace.event("utterance", samples=int(len(audio)), mode=mode,
+                                         gate_awake=getattr(gate, "awake", None))
                             text = self._stt.transcribe(audio)
                             if text.strip():
+                                _trace.event("utterance_to_turn", text=text)
                                 self._process_message(text)
+                            else:
+                                _trace.event("utterance_dropped", reason="empty transcript after "
+                                             "Whisper segment filtering (see stt_transcribe segments)")
                     except queue.Empty:
                         pass
         except Exception as e:
