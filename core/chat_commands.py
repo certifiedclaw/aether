@@ -249,6 +249,13 @@ class ChatCommandsMixin:
             except Exception as e:  # noqa: BLE001
                 self.ui.write_log(f"SYS: Rules unavailable: {type(e).__name__}: {e}")
             return True
+        if user_text.strip().lower() == "/memory" or user_text.strip().lower().startswith("/memory "):
+            try:
+                from core import memory_panel
+                self.ui.write_log("SYS: " + memory_panel.handle_command(user_text))
+            except Exception as e:  # noqa: BLE001
+                self.ui.write_log(f"SYS: Memory panel unavailable: {type(e).__name__}: {e}")
+            return True
         if user_text.strip().lower() in ("/resources", "/governor"):
             try:
                 from core.resource_governor import get_governor
@@ -336,6 +343,7 @@ class ChatCommandsMixin:
                 "/loganalyze [hours]  Group the warnings/errors in aether.log and show what repeats\n"
                 "/briefing, /report  Preview the daily briefing / weekly server report (scheduled via briefing_time, weekly_report_day)\n"
                 "/rules, /rule add <sentence>  Plain-language rules, e.g. /rule add when the disk is below 10% notify me (also /rule on|off|remove <id>)\n"
+                "/memory [words]   See what Aether remembers; /memory forget <id>, /memory edit <id> <text>, /memory add <category> <key> <value> (also at the dashboard's /memory page)\n"
                 "/remote            Show the web dashboard address and a one-time pairing code (phone or browser)\n"
                 "/resources         Show whether background jobs are paused because the machine is busy\n"
                 "/doctor            Find install problems and how to fix them (/doctor fix applies safe fixes)\n"

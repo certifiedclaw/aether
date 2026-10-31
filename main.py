@@ -745,6 +745,11 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         # ── Hybrid memory (BM25 + dense + reranker) ───────────────
         try:
             self._hybrid_mem = HybridMemory(cfg)
+            try:
+                from core import memory_panel
+                memory_panel.set_live(self._hybrid_mem)
+            except Exception:  # noqa: BLE001 - the panel falls back to the database file
+                pass
             stats = self._hybrid_mem.stats()
             self.ui.write_log(
                 f"SYS: Hybrid memory ready "

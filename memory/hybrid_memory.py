@@ -403,6 +403,34 @@ class HybridMemory:
         except Exception:
             return None
 
+    # ── memory panel support (core/memory_panel.py) ──────────────────────
+    def list_exchanges(self, query: str = "", limit: int = 100) -> list[dict]:
+        """Newest first. `query` is a case-insensitive substring match."""
+        q = f"%{query.strip()}%" if query and query.strip() else "%"
+        rows = self._conn.execute(
+            "SELECT id, role, content, timestamp FROM memories WHERE content LIKE ? "
+            "ORDER BY id DESC LIMIT ?", (q, max(1, min(int(limit), 1000)))).fetchall()
+        return [{"id": r[0], "role": r[1], "content": r[2], "ts": r[3]} for r in rows]
+
+    def delete_ids(self, ids) -> int:
+        ids = [int(i) for i in ids]
+        if not ids:
+            return 0
+        marks = ",".join("?" * len(ids))
+        cur = self._conn.execute(f"DELETE FROM memories WHERE id IN ({marks})", ids)
+        self._conn.commit()
+        self._rebuild_bm25()
+        return cur.rowcount
+
+    def update_content(self, row_id: int, content: str) -> bool:
+        emb = self._encode_one(content)
+        cur = self._conn.execute("UPDATE memories SET content=?, embedding=? WHERE id=?",
+                                 (content, emb, int(row_id)))
+        self._conn.commit()
+        if cur.rowcount:
+            self._rebuild_bm25()
+        return bool(cur.rowcount)
+
     def _rebuild_bm25(self) -> None:
         rows = self._conn.execute(
             "SELECT id, content, embedding FROM memories ORDER BY id ASC").fetchall()
@@ -414,3 +442,5 @@ class HybridMemory:
         ]
         if self._doc_texts:
             self._bm25.build(self._doc_texts)
+        else:
+            self._bm25.build([])      # every row deleted: drop the stale index too
