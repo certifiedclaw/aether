@@ -17,7 +17,7 @@ from version import APP_NAME, __version__, version_string
 import psutil
 
 from PyQt6.QtCore import (
-    QEasingCurve, QMimeData, QObject, QPointF, QRectF, QSize, Qt,
+    QEasingCurve, QEvent, QMimeData, QObject, QPointF, QRectF, QSize, Qt,
     QTimer, QUrl, pyqtSignal,
 )
 from PyQt6.QtGui import (
@@ -40,6 +40,7 @@ def _base_dir() -> Path:
 
 BASE_DIR   = _base_dir()
 from core import config_home as _config_home
+from core import ui_prefs as _ui_prefs
 API_FILE   = _config_home.config_path()
 CONFIG_DIR = API_FILE.parent
 
@@ -78,6 +79,18 @@ class C:
     DARK      = "#141b1e"
     BAR_BG    = "#283438"
 
+
+def _load_ui_prefs():
+    """ui.* settings (core/ui_prefs.py), safe defaults on any problem."""
+    try:
+        return _ui_prefs.load(_config_home.load_config())
+    except Exception:
+        return _ui_prefs.UiPrefs()
+
+
+if _load_ui_prefs().high_contrast:       # brighter text/borders; read once at start-up
+    for _k, _v in _ui_prefs.CONTRAST_OVERRIDES.items():
+        setattr(C, _k, _v)
 
 ROUTE_COLORS = {"local": C.PRI, "remote": C.SEC, "cloud": C.ACC}
 
@@ -125,6 +138,63 @@ def detect_system_theme() -> str:
 
 def qcol(h: str, a: int = 255) -> QColor:
     c = QColor(h); c.setAlpha(a); return c
+
+
+# ── Text size (ui.text_scale / ui.min_font_pt, see core/ui_prefs.py) ────
+_ACTIVE_PREFS = None
+_P_PT, _P_SS, _P_SSOUT, _P_H, _P_W = ("_aether_base_pt", "_aether_base_ss", "_aether_ss_out",
+                                      "_aether_base_h", "_aether_base_w")
+
+
+def _scale_one(w, prefs) -> None:
+    """Scale one widget's font, stylesheet font sizes and fixed button/field sizes from
+    its ORIGINAL values (remembered on first sight), so repeated calls never compound."""
+    scale, floor = prefs.text_scale, prefs.min_font_pt
+    # stylesheet: a widget that restyled itself since our last pass has a new original
+    cur = w.styleSheet()
+    out = w.property(_P_SSOUT)
+    base = w.property(_P_SS)
+    if base is None or (out is not None and cur != out):
+        base = cur
+        w.setProperty(_P_SS, base)
+    new_ss = _ui_prefs.scale_stylesheet(base, scale, floor)
+    if new_ss != cur:
+        w.setStyleSheet(new_ss)
+    w.setProperty(_P_SSOUT, new_ss)
+    # font
+    bpt = w.property(_P_PT)
+    if bpt is None:
+        bpt = w.font().pointSizeF()
+        w.setProperty(_P_PT, bpt)
+    if bpt and bpt > 0:
+        f = w.font()
+        f.setPointSizeF(_ui_prefs.scaled_pt(float(bpt), scale, floor))
+        w.setFont(f)
+        if isinstance(w, QTextEdit):
+            w.document().setDefaultFont(f)
+    # fixed-size controls grow with their text
+    if isinstance(w, (QPushButton, QLineEdit, QComboBox, QLabel)):
+        for prop, lo, hi, setter, cap in (
+                (_P_H, w.minimumHeight(), w.maximumHeight(), w.setFixedHeight, 200),
+                (_P_W, w.minimumWidth(), w.maximumWidth(), w.setFixedWidth, 400)):
+            base_v = w.property(prop)
+            if base_v is None and lo == hi and 0 < lo < cap:
+                base_v = lo
+                w.setProperty(prop, lo)
+            if base_v:
+                setter(_ui_prefs.scaled_height(int(base_v), scale))
+
+
+def apply_text_scale(root, prefs=None) -> None:
+    """Apply the text-size settings to `root` and every widget inside it."""
+    global _ACTIVE_PREFS
+    prefs = prefs or _load_ui_prefs()
+    _ACTIVE_PREFS = prefs
+    try:
+        for w in [root] + root.findChildren(QWidget):
+            _scale_one(w, prefs)
+    except Exception:
+        pass
 
 
 # ── Bundled fonts (Rajdhani for display, system sans for body) ──────────
@@ -1297,12 +1367,41 @@ class SetupOverlay(QWidget):
         scroll.setWidget(content)
         outer.addWidget(scroll)
 
-        layout = QVBoxLayout(content)
-        layout.setContentsMargins(22, 16, 22, 16)
+        outer_layout = QVBoxLayout(content)
+        outer_layout.setContentsMargins(22, 16, 22, 16)
+        outer_layout.setSpacing(6)
+
+        # First run shows a plain-language page; everything technical is one click away
+        # ("Advanced setup"). Config mode (the Settings button) goes straight to the
+        # full screen. Wording and defaults: core/ui_prefs.py.
+        self._prefs = _ui_prefs.load({**_init, **_config_home.load_config()}
+                                     if mode == "init" else _init)
+        self._simple_box = None
+        use_simple = mode == "init" and self._prefs.simple_setup
+        if use_simple:
+            self._build_simple_page(outer_layout)
+
+        self._advanced_box = QWidget()
+        self._advanced_box.setStyleSheet("background: transparent;")
+        layout = QVBoxLayout(self._advanced_box)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
+        outer_layout.addWidget(self._advanced_box)
 
         # ── Header ──────────────────────────────────────────────────── #
-        if mode == "config":
+        W = _ui_prefs.WORDING
+        if use_simple:
+            back = QPushButton(W["simple"])
+            back.setFlat(True)
+            back.setCursor(Qt.CursorShape.PointingHandCursor)
+            back.setFont(QFont(FONT_BODY, 10))
+            back.setStyleSheet(f"QPushButton {{ color: {C.PRI}; background: transparent; "
+                               f"border: none; text-align: left; padding: 4px 0; }}")
+            back.clicked.connect(self._show_simple)
+            layout.addWidget(back, 0, Qt.AlignmentFlag.AlignLeft)
+            layout.addWidget(self._lbl(W["adv_title"], 12, True))
+            layout.addWidget(self._lbl(W["adv_sub"], 9, col=C.PRI_DIM))
+        elif mode == "config":
             layout.addWidget(self._lbl("CONFIGURATION", 12, True))
             layout.addWidget(self._lbl("Update Aether\u2019s settings and click Apply.", 8, col=C.PRI_DIM))
         else:
@@ -1313,11 +1412,18 @@ class SetupOverlay(QWidget):
         self._build_stt_section(layout, _init)
         self._build_llm_section(layout, _init)
         self._build_tts_section(layout, _init)
+        self._build_comfort_section(layout)
 
         # Set correct initial state for TTS UI
         self._set_tts(self._sel_tts)
 
+        # First run: start from the model that suits this computer, not an empty box.
+        if mode == "init" and not self._llm_model_input.text().strip():
+            self._llm_model_input.setText(_ui_prefs.pick_model(self._model_recs))
+
         self._build_action_buttons(layout, mode)
+        if use_simple:
+            self._advanced_box.hide()
 
     # ------------------------------------------------------------------ #
     # Shared widget-builder helpers (formerly local closures in __init__)
@@ -1378,6 +1484,8 @@ class SetupOverlay(QWidget):
                 }}
                 QPushButton:hover {{ color: {C.TEXT}; border: 1px solid {C.BORDER_B}; }}
             """)
+        if _ACTIVE_PREFS is not None:
+            _scale_one(btn, _ACTIVE_PREFS)
 
     # ------------------------------------------------------------------ #
     # Section builders (formerly inline in __init__)
@@ -1716,6 +1824,188 @@ class SetupOverlay(QWidget):
 
         layout.addWidget(self._sep())
 
+    # ------------------------------------------------------------------ #
+    # Plain-language first run + comfort settings (wording: core/ui_prefs.py)
+    # ------------------------------------------------------------------ #
+
+    def _big_btn(self, text: str, height: int = 46, pt: int = 12) -> QPushButton:
+        b = QPushButton(text)
+        b.setFixedHeight(height)
+        b.setFont(QFont(FONT_BODY, pt, QFont.Weight.Bold))
+        b.setCursor(Qt.CursorShape.PointingHandCursor)
+        return b
+
+    def _build_simple_page(self, outer_layout) -> None:
+        W = _ui_prefs.WORDING
+        box = QWidget()
+        box.setStyleSheet("background: transparent;")
+        v = QVBoxLayout(box)
+        v.setContentsMargins(0, 6, 0, 0)
+        v.setSpacing(12)
+        self._simple_box = box
+
+        def wrapped(txt, sz, bold=False, col=C.TEXT):
+            w = self._lbl(txt, sz, bold, col)
+            w.setWordWrap(True)
+            return w
+
+        v.addWidget(wrapped(W["title"], 20, True, C.TEXT))
+        v.addWidget(wrapped(W["subtitle"], 12, False, C.TEXT_MED))
+
+        tag = _ui_prefs.pick_model(self._model_recs)
+        card = QFrame()
+        card.setStyleSheet(f"QFrame {{ background: {C.PANEL}; border: 1px solid {C.BORDER}; "
+                           f"border-radius: 8px; }} QLabel {{ border: none; }}")
+        cv = QVBoxLayout(card)
+        cv.setContentsMargins(14, 10, 14, 10)
+        cv.setSpacing(4)
+        cv.addWidget(wrapped(W["picked"], 11, True, C.TEXT))
+        cv.addWidget(wrapped(W["picked_model"].format(tag=tag), 10, False, C.TEXT_MED))
+        cv.addWidget(wrapped(W["picked_voice"], 10, False, C.TEXT_MED))
+        v.addWidget(card)
+
+        # Speak out loud?
+        self._simple_speak = self._prefs.tts_enabled
+        v.addWidget(wrapped(W["ask_speak"], 12, True, C.TEXT))
+        speak_row = QHBoxLayout(); speak_row.setSpacing(8)
+        self._simple_speak_btns = {}
+        for key, label in ((True, W["speak_yes"]), (False, W["speak_no"])):
+            b = self._big_btn(label, 46, 12)
+            b.clicked.connect(lambda _, k=key: self._pick_simple_speak(k))
+            speak_row.addWidget(b)
+            self._simple_speak_btns[key] = b
+        v.addLayout(speak_row)
+        self._pick_simple_speak(self._simple_speak)
+
+        # Text size (applies instantly so the user can see the result)
+        self._simple_scale = self._prefs.text_scale
+        v.addWidget(wrapped(W["ask_size"], 12, True, C.TEXT))
+        size_row = QHBoxLayout(); size_row.setSpacing(8)
+        self._simple_size_btns = {}
+        for sid, label, scale in _ui_prefs.TEXT_SIZES:
+            b = self._big_btn(label, 40, 11)
+            b.clicked.connect(lambda _, sc=scale: self._pick_simple_size(sc))
+            size_row.addWidget(b)
+            self._simple_size_btns[sid] = b
+        v.addLayout(size_row)
+        self._pick_simple_size(self._simple_scale, apply=False)
+
+        go = self._big_btn(W["go"], 54, 14)
+        go.setStyleSheet(f"""
+            QPushButton {{ background: {C.PRI}; color: #001a22; border: none; border-radius: 8px; }}
+            QPushButton:hover {{ background: {C.GREEN}; }}
+        """)
+        go.clicked.connect(self._simple_go)
+        v.addSpacing(6)
+        v.addWidget(go)
+
+        adv = QPushButton(W["advanced"])
+        adv.setFlat(True)
+        adv.setCursor(Qt.CursorShape.PointingHandCursor)
+        adv.setFont(QFont(FONT_BODY, 10))
+        adv.setStyleSheet(f"QPushButton {{ color: {C.TEXT_MED}; background: transparent; border: none; "
+                          f"text-decoration: underline; padding: 6px; }} "
+                          f"QPushButton:hover {{ color: {C.PRI}; }}")
+        adv.clicked.connect(self._show_advanced)
+        v.addWidget(adv, 0, Qt.AlignmentFlag.AlignHCenter)
+        outer_layout.addWidget(box)
+
+    def _style_choice(self, btn: QPushButton, active: bool) -> None:
+        self._style_btn(btn, active)
+
+    def _pick_simple_speak(self, key: bool) -> None:
+        self._simple_speak = bool(key)
+        for k, b in self._simple_speak_btns.items():
+            self._style_choice(b, k == self._simple_speak)
+
+    def _pick_simple_size(self, scale: float, apply: bool = True) -> None:
+        self._simple_scale = scale
+        active = _ui_prefs.size_id(scale)
+        for sid, b in self._simple_size_btns.items():
+            self._style_choice(b, sid == active)
+        if apply:
+            self._preview_scale(scale)
+
+    def _preview_scale(self, scale: float) -> None:
+        """Re-scale this dialog (and the window behind it) right away."""
+        import dataclasses
+        prefs = dataclasses.replace(self._prefs, text_scale=scale)
+        self._prefs = prefs
+        top = self.window()
+        apply_text_scale(top if top is not None else self, prefs)
+        self._recenter()
+
+    def eventFilter(self, obj, event):
+        """Keep the dialog centred when the window is resized or first shown."""
+        try:
+            if obj is self.parentWidget() and event.type() in (QEvent.Type.Resize, QEvent.Type.Show):
+                self._recenter()
+        except Exception:
+            pass
+        return False
+
+    def _recenter(self) -> None:
+        par = self.parentWidget()
+        if par is None:
+            return
+        if not getattr(self, "_filter_on", False):
+            par.installEventFilter(self)
+            self._filter_on = True
+        sc = self._prefs.text_scale
+        base_w = 560
+        if self._simple_box is not None and self._simple_box.isVisible():
+            want_h = self._simple_box.sizeHint().height() + 100
+        else:
+            want_h = 680
+        w = min(int(base_w * max(1.0, sc * 0.9)), max(par.width() - 20, 400))
+        h = min(max(want_h, 420), max(par.height() - 20, 420))
+        self.setGeometry((par.width() - w) // 2, (par.height() - h) // 2, w, h)
+
+    def _show_advanced(self) -> None:
+        if self._simple_box is not None:
+            self._simple_box.hide()
+        self._advanced_box.show()
+        self._recenter()
+
+    def _show_simple(self) -> None:
+        self._advanced_box.hide()
+        if self._simple_box is not None:
+            self._simple_box.show()
+        self._recenter()
+
+    def _simple_go(self) -> None:
+        """Finish setup with the settings Aether chose for this computer."""
+        cfg = _ui_prefs.simple_config(
+            model_tag=_ui_prefs.pick_model(self._model_recs),
+            speak=self._simple_speak, text_scale=self._simple_scale)
+        self.done.emit(json.dumps(cfg))
+
+    def _build_comfort_section(self, layout) -> None:
+        """Speak-aloud switch and text size, for the full settings screen."""
+        W = _ui_prefs.WORDING
+        layout.addWidget(self._sep())
+        layout.addWidget(self._lbl(W["speak_row"].upper(), 7, col=C.TEXT_DIM,
+                                   align=Qt.AlignmentFlag.AlignLeft))
+        self._sel_speak = "yes" if self._prefs.tts_enabled else "no"
+        row, self._speak_btns = self._toggle_row(
+            [("yes", W["speak_yes"]), ("no", W["speak_no"])],
+            lambda: self._sel_speak, lambda k: setattr(self, "_sel_speak", k))
+        layout.addLayout(row)
+        layout.addWidget(self._lbl(W["size_row"], 7, col=C.TEXT_DIM,
+                                   align=Qt.AlignmentFlag.AlignLeft))
+        self._sel_size = _ui_prefs.size_id(self._prefs.text_scale)
+        row, self._size_btns = self._toggle_row(
+            [(sid, label) for sid, label, _ in _ui_prefs.TEXT_SIZES],
+            lambda: self._sel_size, self._set_size_choice)
+        layout.addLayout(row)
+
+    def _set_size_choice(self, sid: str) -> None:
+        prev = getattr(self, "_sel_size", None)
+        self._sel_size = sid
+        if prev is not None and prev != sid and hasattr(self, "_size_btns"):
+            scale = next(sc for i, _, sc in _ui_prefs.TEXT_SIZES if i == sid)
+            self._preview_scale(scale)
+
     def _build_action_buttons(self, layout, mode) -> None:
         # ── Action buttons ─────────────────────────────────────────────── #
         btn_row = QHBoxLayout(); btn_row.setSpacing(8)
@@ -1962,6 +2252,9 @@ class SetupOverlay(QWidget):
         }
         if self._sel_stt == "vosk" and stt_model:
             cfg["vosk_model_path"] = stt_model
+        cfg["tts_enabled"] = getattr(self, "_sel_speak", "yes") != "no"
+        cfg["ui.text_scale"] = next((sc for i, _, sc in _ui_prefs.TEXT_SIZES
+                                     if i == getattr(self, "_sel_size", "normal")), 1.0)
         self.done.emit(json.dumps(cfg))
 
 
@@ -2165,6 +2458,7 @@ class MainWindow(QMainWindow):
         self._ready = self._check_config()
         if not self._ready:
             self._show_setup()
+        apply_text_scale(self)      # ui.text_scale / ui.min_font_pt (core/ui_prefs.py)
 
         sc_mute = QShortcut(QKeySequence("F4"), self)
         sc_mute.activated.connect(self._toggle_mute)
@@ -3448,6 +3742,7 @@ class MainWindow(QMainWindow):
         )
         ov.done.connect(self._on_setup_done)
         ov.show()
+        ov._recenter()
         self._overlay = ov
 
     def _on_setup_done(self, config_json: str):
@@ -3462,6 +3757,7 @@ class MainWindow(QMainWindow):
         if self._overlay:
             self._overlay.hide()
             self._overlay = None
+        apply_text_scale(self)
         self._apply_state("LISTENING")
         llm = cfg.get("llm_model", "")
         stt = cfg.get("stt_engine", "")
@@ -3488,6 +3784,8 @@ class MainWindow(QMainWindow):
         )
         ov.done.connect(self._on_config_done)
         ov.show()
+        apply_text_scale(ov)
+        ov._recenter()
         self._overlay = ov
 
     def _on_config_done(self, config_json: str):
@@ -3501,6 +3799,7 @@ class MainWindow(QMainWindow):
         if self._overlay:
             self._overlay.hide()
             self._overlay = None
+        apply_text_scale(self)
         llm = cfg.get("llm_model", "")
         stt = cfg.get("stt_engine", "")
         tts = cfg.get("tts_engine", "")

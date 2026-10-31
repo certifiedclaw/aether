@@ -345,6 +345,12 @@ def _load_system_prompt() -> str:
 # AetherLocal — main assistant class
 # ---------------------------------------------------------------------------
 
+def _tts_enabled(cfg: dict) -> bool:
+    """False when the user chose text only (config tts_enabled=false). Default true."""
+    from core.ui_prefs import load as _load_ui_prefs
+    return _load_ui_prefs(cfg).tts_enabled
+
+
 class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, ChatCommandsMixin, ListenLoopsMixin):
 
     def __init__(self, ui: AetherUI):
@@ -566,10 +572,17 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         except Exception as e:
             self.ui.write_log(f"ERR: Dependency install — {e}")
         try:
-            from core.tts import create_tts_player
-            self._tts = create_tts_player(new_config)
-            self._tts_ready.set()
-            self.ui.write_log("SYS: TTS reconfigured.")
+            if not _tts_enabled(new_config):
+                if self._tts and hasattr(self._tts, "stop"):
+                    self._tts.stop()
+                self._tts = None
+                self._tts_ready.set()
+                self.ui.write_log("SYS: Speech turned off - text only.")
+            else:
+                from core.tts import create_tts_player
+                self._tts = create_tts_player(new_config)
+                self._tts_ready.set()
+                self.ui.write_log("SYS: TTS reconfigured.")
         except Exception as e:
             self.ui.write_log(f"ERR: TTS reconfigure — {e}")
             self._tts_fallback_to_edge(new_config.get("tts_engine", "edgetts").lower(), new_config)
@@ -967,6 +980,15 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
                     _stt_done.set()
 
             def _do_tts():
+                if not _tts_enabled(self._config):
+                    # "No, text only": never create a voice; speak() is a no-op without one.
+                    self.ui.write_log("SYS: Speech is off (tts_enabled=false) - answers appear as text only.")
+                    self._tts = None
+                    self.ui.mark_startup_ready("tts")
+                    self.ui.set_startup_status("● All systems ready.")
+                    self.ui.hide_startup_panel()
+                    self._tts_ready.set()
+                    return
                 if _voice_off:
                     self.ui.write_log("SYS: Headless - TTS skipped (AETHER_HEADLESS_VOICE=1 to enable).")
                     self.ui.mark_startup_ready("tts")

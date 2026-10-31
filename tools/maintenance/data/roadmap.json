@@ -1,5 +1,5 @@
 {
-  "next_id": 100,
+  "next_id": 101,
   "items": [
     {
       "id": 1,
@@ -891,6 +891,15 @@
       "notes": "For the always-on deploy (#88). Health probes: Ollama /api/tags, Aether process, dashboard /api/llm-status, disk and memory thresholds. Bounded restarts with backoff (no restart loops), state written to the audit log, ntfy alert via core/notify.py after N failed recoveries. Should run headless inside the Docker setup.",
       "created": "2026-10-26",
       "updated": "2026-10-26"
+    },
+    {
+      "id": 100,
+      "title": "[F2] Easy mode for non-technical users: plain-language first run, text size, contrast, text-only",
+      "priority": "medium",
+      "status": "done",
+      "notes": "Done: simple first-run page (picks model for this PC, speak yes/no, text size, one Get started button; technical setup behind Advanced), ui.text_scale / ui.min_font_pt / ui.high_contrast / ui.simple_setup / tts_enabled settings, wording+palette in core/ui_prefs.py, real tts_enabled text-only mode in main.py. Verified by rendering at 3 text sizes and a real headless text-only run; 20 tests. NOT done: painted widgets (CPU/RAM bars, presence line, 'Ready when you are') still draw small text; high contrast needs a restart; a person has not tried it; install still needs Python+Ollama (a one-click installer is the next big step for non-technical users); wake word still a separate install.",
+      "created": "2026-10-31",
+      "updated": "2026-10-31"
     }
   ]
 }

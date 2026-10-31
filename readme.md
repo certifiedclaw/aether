@@ -104,6 +104,20 @@ Use the chat to ask Aether to index a PDF, Markdown notes folder, or Obsidian va
 
 Create a portable bundle of chats, memory, indexed documents, goals, and non-secret settings with `python -m core.portable_bundle export [path.zip]`. Restore one with `python -m core.portable_bundle import path.zip`; importing replaces current data after saving a recovery bundle under `data/backups/`. Close Aether before either operation to keep the snapshot consistent and ensure restored files are not overwritten by in-memory state. API credentials are never included; configure them separately on the destination machine.
 
+## Easy mode: simple setup, big text
+
+On first run Aether shows a plain-language page: it picks settings that suit your computer, asks only "speak out loud?" and "text size", and one big **Get started** button finishes setup. Everything technical (speech, AI and voice engines, API keys) is behind **Advanced setup**, and the **Settings** button opens the full screen at any time.
+
+| Setting (config) | Default | What it does |
+|---|---|---|
+| `ui.simple_setup` | `true` | `false` goes straight to the full technical setup on first run |
+| `ui.text_scale` | `1.0` | `1.25` large, `1.5` extra large (also set from the setup page or Settings) |
+| `ui.min_font_pt` | `9` | nothing is drawn smaller than this after scaling (`0` turns it off) |
+| `ui.high_contrast` | `false` | brighter text and borders; takes effect after a restart |
+| `tts_enabled` | `true` | `false` = text only, Aether never speaks |
+
+The first-run wording, the size presets and the high-contrast colours are all in one file, `core/ui_prefs.py`.
+
 ## Desktop controls
 
 The right side of the main window separates **Activity** from **Actions**. Quick actions provide common starting points; **Browse All Actions** searches the currently available tools. Availability depends on which integrations and dependencies are enabled.

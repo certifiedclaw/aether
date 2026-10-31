@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Do not hand-edit — rerun `python -m tools.maintenance.project_state` (or `run_all`) to refresh. This is meant to be the one file a new session (human or Claude) reads first to get oriented.
 
-Generated: 2026-10-30 22:19 UTC
+Generated: 2026-10-31 03:08 UTC
 Version: Aether v1.0.0
 
 ## Entry points
@@ -16,20 +16,20 @@ Version: Aether v1.0.0
 
 | Directory | .py files | Total lines |
 |---|---|---|
-| `./` | 3 | 4,894 |
+| `./` | 3 | 5,215 |
 | `actions/` | 23 | 11,860 |
 | `agent/` | 4 | 1,163 |
 | `config/` | 1 | 25 |
-| `core/` | 61 | 16,318 |
+| `core/` | 62 | 16,494 |
 | `dashboard/` | 5 | 1,637 |
 | `dev_tools/` | 1 | 78 |
 | `integrations/` | 4 | 1,144 |
 | `memory/` | 6 | 1,242 |
 | `plugins/` | 1 | 44 |
 | `security/` | 7 | 1,340 |
-| `tests/` | 68 | 13,123 |
+| `tests/` | 69 | 13,378 |
 | `tools/` | 20 | 3,370 |
-| **Total** | **204** | **56,238** |
+| **Total** | **206** | **56,990** |
 
 ## Modules with docstrings (top-level summary)
 
@@ -127,6 +127,7 @@ Version: Aether v1.0.0
 - `core/tool_router.py` (144 lines, 0 classes, 5 functions) — tool_router.py — per-turn tool subset selection for EVERYDAY-tier turns.
 - `core/trace_log.py` (1028 lines, 7 classes, 37 functions) — core/trace_log.py - the flight recorder: what Aether did, when, and with what.
 - `core/tts.py` (462 lines, 4 classes, 6 functions) — Text-to-Speech engines for Aether.
+- `core/ui_prefs.py` (176 lines, 1 classes, 10 functions) — core/ui_prefs.py - everything about making Aether's UI easy for non-technical people.
 - `core/undo.py` (103 lines, 2 classes, 4 functions) — core/undo.py — Aether Undo Stack
 - `core/wake_word.py` (269 lines, 2 classes, 3 functions) — Local wake-word detection for JARVIS ("Hey Jarvis").
 
@@ -230,6 +231,7 @@ Version: Aether v1.0.0
 - `tests/test_tool_call_recovery.py` (101 lines, 0 classes, 12 functions) — Recovery of raw <tool_call> text, held-back streaming, plain monitor alerts, HF offline restore.
 - `tests/test_trace_log.py` (174 lines, 0 classes, 15 functions) — Flight recorder (core/trace_log.py) and its viewer (tools/trace_view.py).
 - `tests/test_tts_elevenlabs.py` (74 lines, 0 classes, 6 functions)
+- `tests/test_ui_prefs.py` (255 lines, 0 classes, 23 functions) — Easy-to-use UI: plain-language first run, text size, contrast, text-only mode.
 - `tests/test_v12e_fixes.py` (113 lines, 0 classes, 8 functions) — Regression tests for the v12d review fixes (each fails against v12d).
 - `tests/test_v12f_fixes.py` (40 lines, 0 classes, 5 functions) — v12f: LangChain must not pretend to have researched; live log isolation.
 - `tests/test_v12g_fixes.py` (122 lines, 1 classes, 11 functions) — v12g: a missing Ollama model / missing config must fail loudly and early, not as 24 silent 404s.
@@ -259,6 +261,7 @@ Version: Aether v1.0.0
 - `tools/verify_local.py` (355 lines, 1 classes, 11 functions) — tools/verify_local.py -- one-shot health check for a real Aether install.
 
 ## Recent history (git log)
+- 77c79b4 2026-10-30 Roadmap #54: opt-in response cache; protect session ids from card redaction
 - 9fdeada 2026-10-30 Roadmap #49: sanitized, trace-linked crash reports
 - da2589d 2026-10-30 Add flight-recorder logging: full per-event trace of every run
 - af86867 2026-10-29 Roadmap #53/#55: opt-in self-check pass and confidence flagging

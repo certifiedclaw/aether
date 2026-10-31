@@ -1,5 +1,5 @@
 {
-  "next_id": 129,
+  "next_id": 130,
   "entries": [
     {
       "id": 1,
@@ -1819,6 +1819,22 @@
         "tools/maintenance/data/roadmap.json"
       ],
       "next_steps": "Turn on response_cache_enabled on the real box and watch cache_lookup/cache_store in the trace for hit rate and any wrong hits. Consider a /clearcache chat command. Note leak_guard's card regex will also redact other 13-19 digit Luhn-valid numbers (epoch ms etc.) in trace values. Rebase logging/flight-recorder on origin/master and merge. Next: #48 auto-update with rollback."
+    },
+    {
+      "id": 129,
+      "timestamp": "2026-10-31 03:09 UTC",
+      "by": "Claude Code (Sonnet 5.5)",
+      "summary": "Easy mode (roadmap #100, new): first run now shows a plain-language page (model auto-picked for the PC, 'speak out loud?', text size, one Get started button); the technical screen is behind 'Advanced setup' and Settings still opens it directly. New settings: ui.simple_setup, ui.text_scale (1.0/1.25/1.5), ui.min_font_pt (9), ui.high_contrast, tts_enabled (real text-only mode in main.py). All wording, size presets and the contrast palette live in core/ui_prefs.py. ui.py: apply_text_scale() rescales fonts, stylesheet font sizes and fixed control sizes from remembered originals (no compounding); dialog recentres on window resize; Advanced model box prefilled. 20 tests (tests/test_ui_prefs.py incl. real Qt dialog). Full suite 1128 passed, same 4 sandbox-only failures. Verified by rendering first run at 1.0/1.25/1.5 and the chat window at 1.5, and a real headless text-only run (0 speak events). NOT done: painted widgets (CPU/RAM bars, presence line) still use small text; high contrast needs restart; no real person has tried it; install still needs Python+Ollama. Branch ui/simple-setup, stacked on logging/flight-recorder.",
+      "files": [
+        "core/ui_prefs.py",
+        "ui.py",
+        "main.py",
+        "tests/test_ui_prefs.py",
+        "config/config.example.json",
+        "readme.md",
+        "tools/maintenance/data/roadmap.json"
+      ],
+      "next_steps": "Try on the real Windows box at 1080p with a non-technical user. Fix remaining small painted text. A one-click installer (Python+Ollama+model) is the next big step for non-technical users. Rebase on origin/master and merge both branches."
     }
   ]
 }

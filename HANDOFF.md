@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-30 22:19 UTC
+Generated: 2026-10-31 03:09 UTC
+
+## #129 — 2026-10-31 03:09 UTC — Claude Code (Sonnet 5.5)
+
+Easy mode (roadmap #100, new): first run now shows a plain-language page (model auto-picked for the PC, 'speak out loud?', text size, one Get started button); the technical screen is behind 'Advanced setup' and Settings still opens it directly. New settings: ui.simple_setup, ui.text_scale (1.0/1.25/1.5), ui.min_font_pt (9), ui.high_contrast, tts_enabled (real text-only mode in main.py). All wording, size presets and the contrast palette live in core/ui_prefs.py. ui.py: apply_text_scale() rescales fonts, stylesheet font sizes and fixed control sizes from remembered originals (no compounding); dialog recentres on window resize; Advanced model box prefilled. 20 tests (tests/test_ui_prefs.py incl. real Qt dialog). Full suite 1128 passed, same 4 sandbox-only failures. Verified by rendering first run at 1.0/1.25/1.5 and the chat window at 1.5, and a real headless text-only run (0 speak events). NOT done: painted widgets (CPU/RAM bars, presence line) still use small text; high contrast needs restart; no real person has tried it; install still needs Python+Ollama. Branch ui/simple-setup, stacked on logging/flight-recorder.
+
+**Touched:** `core/ui_prefs.py`, `ui.py`, `main.py`, `tests/test_ui_prefs.py`, `config/config.example.json`, `readme.md`, `tools/maintenance/data/roadmap.json`
+
+**Next steps:** Try on the real Windows box at 1080p with a non-technical user. Fix remaining small painted text. A one-click installer (Python+Ollama+model) is the next big step for non-technical users. Rebase on origin/master and merge both branches.
+
+---
 
 ## #128 — 2026-10-30 22:19 UTC — Claude Code (Sonnet 5.5)
 
