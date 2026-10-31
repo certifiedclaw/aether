@@ -122,10 +122,10 @@
       "id": 14,
       "title": "Route the 174 stray print() calls through core/observability.py",
       "priority": "low",
-      "status": "backlog",
+      "status": "done",
       "notes": "Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules \u2014 actions/ is intentionally exempt (CLI-facing tool output).",
       "created": "2026-07-15",
-      "updated": "2026-07-15"
+      "updated": "2026-10-31"
     },
     {
       "id": 15,

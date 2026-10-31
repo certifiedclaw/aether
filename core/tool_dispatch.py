@@ -55,6 +55,9 @@ from actions.computer_control  import computer_control
 from actions.game_updater      import game_updater
 
 from core import undo as undo_stack
+import logging
+
+logger = logging.getLogger("aether")
 
 
 class ToolDispatchMixin:
@@ -64,7 +67,7 @@ class ToolDispatchMixin:
     """
 
     def _execute_tool(self, name: str, args: dict) -> str:
-        print(f"[Aether] 🔧 {name}  {args}")
+        logger.info(f"[Aether] 🔧 {name}  {args}")
         self.ui.set_state("THINKING")
 
         if name == "save_memory":
@@ -123,7 +126,7 @@ class ToolDispatchMixin:
         if not self.ui.muted:
             self.ui.set_state("LISTENING")
 
-        print(f"[Aether] 📤 {name} → {str(result)[:80]}")
+        logger.info(f"[Aether] 📤 {name} → {str(result)[:80]}")
         return result
 
     def _tool_save_memory(self, args: dict) -> str:
@@ -133,7 +136,7 @@ class ToolDispatchMixin:
         if key and value:
             from main import update_memory  # lazy: avoids circular import at module load time
             update_memory({category: {key: {"value": value}}})
-            print(f"[Memory] 💾 {category}/{key} = {value}")
+            logger.info(f"[Memory] 💾 {category}/{key} = {value}")
         if not self.ui.muted:
             self.ui.set_state("LISTENING")
         return "__SILENT__"

@@ -15,6 +15,9 @@ from typing import Callable, Optional
 
 import numpy as np
 import sounddevice as sd
+import logging
+
+logger = logging.getLogger("aether")
 
 
 
@@ -178,7 +181,7 @@ def _import_kokoro_pipeline():
             ) from first_err
 
         # ── Version mismatch: upgrade kokoro silently and retry ──────────
-        print("[TTS] Kokoro/transformers version mismatch detected — upgrading kokoro…")
+        logger.warning("[TTS] Kokoro/transformers version mismatch detected — upgrading kokoro…")
         import subprocess
         result = subprocess.run(
             [sys.executable, "-m", "pip", "install", "kokoro>=0.9",
@@ -197,7 +200,7 @@ def _import_kokoro_pipeline():
         for key in stale:
             del sys.modules[key]
 
-        print("[TTS] Kokoro upgraded — retrying import…")
+        logger.info("[TTS] Kokoro upgraded — retrying import…")
         try:
             return _try_import()
         except Exception as retry_err:
@@ -265,14 +268,14 @@ class KokoroTTSEngine:
                     torch.set_num_interop_threads(2)
                 except RuntimeError:
                     pass
-                print(
+                logger.info(
                     f"[TTS] Kokoro on CPU — for faster speech install CUDA PyTorch:\n"
                     "      pip install torch --index-url https://download.pytorch.org/whl/cu118"
                 )
         except Exception:
             device = "cpu"
 
-        print(f"[TTS] Kokoro — loading (lang='{lang}', device='{device}')…")
+        logger.info(f"[TTS] Kokoro — loading (lang='{lang}', device='{device}')…")
 
         KPipeline = _import_kokoro_pipeline()
 
@@ -288,21 +291,21 @@ class KokoroTTSEngine:
             # Offline flag set but model not cached yet → download once
             _e = str(_first_err).lower()
             if any(k in _e for k in ("offline", "not found", "cache", "localentry", "does not exist")):
-                print("[TTS] Kokoro model not cached — downloading (internet required for first run)…")
+                logger.info("[TTS] Kokoro model not cached — downloading (internet required for first run)…")
                 from core.hf_offline import allow_online
                 with allow_online():
                     self._pipeline = _create_pipeline()
             else:
                 raise
 
-        print("[TTS] Kokoro compiling (first-time only)…")
+        logger.info("[TTS] Kokoro compiling (first-time only)…")
         # Warmup: compiles PyTorch JIT graph so first real speak() call is instant.
         try:
             for _ in self._pipeline("hello", voice=self.voice, speed=self.speed):
                 pass
-            print("[TTS] Kokoro ready.")
+            logger.info("[TTS] Kokoro ready.")
         except Exception as e:
-            print(f"[TTS] Kokoro warmup warning: {e}")
+            logger.warning(f"[TTS] Kokoro warmup warning: {e}")
 
     def speak(self, text: str) -> None:
         with self._lock:

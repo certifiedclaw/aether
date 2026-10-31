@@ -112,7 +112,7 @@ def ensure_migrated() -> list[str]:
             notes.append(f"Copied dashboard certificates to {dst_certs}.")
         for n in notes:
             logger.warning("[config] %s", n)
-            print(f"[Aether] {n}")
+            logger.info(f"[Aether] {n}")
     except Exception as e:  # noqa: BLE001 - migration is best-effort; the old location still works
         logger.warning("[config] could not move settings to the per-user folder: %s", e)
     return notes
@@ -195,7 +195,7 @@ def _warn_once(key: str, mtime, msg: str) -> None:
         return
     _warned.add(token)
     logger.error("[config] %s", msg)
-    print(f"[Aether] WARNING: {msg}")
+    logger.warning(f"[Aether] WARNING: {msg}")
 
 
 def reset_for_tests() -> None:
