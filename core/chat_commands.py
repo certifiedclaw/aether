@@ -242,6 +242,13 @@ class ChatCommandsMixin:
             import threading as _th    # probes the network; keep it off the command loop
             _th.Thread(target=_brief, daemon=True, name="aether-briefing").start()
             return True
+        if user_text.strip().lower() == "/rules" or user_text.strip().lower().startswith("/rule "):
+            try:
+                from core import rules
+                self.ui.write_log("SYS: " + (rules.handle_command(user_text) or ""))
+            except Exception as e:  # noqa: BLE001
+                self.ui.write_log(f"SYS: Rules unavailable: {type(e).__name__}: {e}")
+            return True
         if user_text.strip().lower() in ("/resources", "/governor"):
             try:
                 from core.resource_governor import get_governor
@@ -328,6 +335,7 @@ class ChatCommandsMixin:
                 "/stats [days]     Your usage: rounds per day, busiest hours, top tools (local only)\n"
                 "/loganalyze [hours]  Group the warnings/errors in aether.log and show what repeats\n"
                 "/briefing, /report  Preview the daily briefing / weekly server report (scheduled via briefing_time, weekly_report_day)\n"
+                "/rules, /rule add <sentence>  Plain-language rules, e.g. /rule add when the disk is below 10% notify me (also /rule on|off|remove <id>)\n"
                 "/remote            Show the web dashboard address and a one-time pairing code (phone or browser)\n"
                 "/resources         Show whether background jobs are paused because the machine is busy\n"
                 "/doctor            Find install problems and how to fix them (/doctor fix applies safe fixes)\n"

@@ -590,19 +590,19 @@
       "id": 66,
       "title": "[F2] Rule builder in plain language (triggers + actions)",
       "priority": "medium",
-      "status": "backlog",
-      "notes": "",
+      "status": "done",
+      "notes": "Done: core/rules.py. /rule add <sentence>, /rules, /rule on|off|remove <id>. Fixed-pattern parser (not an LLM): time ('weekdays at 7:30'), interval (>=5 min), condition (disk/RAM below X, ollama/server down) -> push notification, 'remind me to ...', or send the briefing/weekly report. Echoes the parsed when/do back; refuses what it cannot parse. Rules can only notify or send a report -- no tools/shell/prompts. Edge-triggered conditions with rule_cooldown_s (3600), missed times not replayed late, max 30 rules, state in the data dir. 15 tests. Not yet: LLM-assisted phrasing, rules that run tools.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-31"
     },
     {
       "id": 67,
       "title": "[F2] Chained approvals: approve a whole multi-step plan once",
       "priority": "medium",
-      "status": "backlog",
-      "notes": "",
+      "status": "done",
+      "notes": "Done (opt-in): config chained_approvals=true makes AgentExecutor show ONE dialog for the whole plan (risk.request_plan_approval). Approval grants exactly the ask/task-tier steps listed -- same tool, action AND parameters, single use, this request only, risk_plan_ttl (default 600s). A step whose params change at run time, any tool outside the plan, block tier and run_python still go through the normal gate; a blocked step refuses the whole plan with no dialog; refusal cancels the plan. Audited (tool=plan). 8 tests in tests/test_plan_approval.py incl. executor path. Default is OFF to keep per-step approvals unchanged; not exercised with a real UI dialog. Steps that take params from earlier results (_inject_context) won't match and will still ask individually.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-31"
     },
     {
       "id": 68,

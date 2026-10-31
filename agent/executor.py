@@ -330,6 +330,18 @@ class AgentExecutor:
                 if speak: speak(msg)
                 return msg
 
+            # Chained approvals (#67): one dialog for the whole plan instead of one per step.
+            try:
+                from core import risk as _risk
+                if _risk.chained_approvals_enabled():
+                    _ok, _n = _risk.request_plan_approval(goal, steps)
+                    if not _ok:
+                        msg = "Cancelled: the plan was not approved, so nothing was done."
+                        if speak: speak(msg)
+                        return msg
+            except Exception as _e:  # noqa: BLE001 - fall back to per-step approvals
+                logger.warning(f"[Executor] plan approval unavailable, asking per step: {_e}")
+
             success      = True
             failed_step  = None
             failed_error = ""

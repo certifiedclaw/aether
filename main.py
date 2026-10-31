@@ -778,6 +778,8 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
                 if register_reports(self._scheduler, load_api_keys(),
                                     (lambda: self._goals.list_active() if getattr(self, "_goals", None) else [])):
                     self.ui.write_log("SYS: Scheduled reports enabled (ntfy).")
+                from core.rules import register_rules
+                register_rules(self._scheduler)
             except Exception as e:  # noqa: BLE001
                 self.ui.write_log(f"WRN: Scheduled reports - {e}")
         except Exception as e:
