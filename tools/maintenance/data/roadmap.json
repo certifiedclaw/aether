@@ -563,10 +563,10 @@
       "id": 63,
       "title": "[F2] Daily briefing (weather, tasks, server status) via ntfy",
       "priority": "medium",
-      "status": "backlog",
-      "notes": "",
+      "status": "done",
+      "notes": "Done: core/reports.py. briefing_time/briefing_days/briefing_city in config -> daily ntfy briefing (weather via wttr.in, active goals, server probes). Sent once per day, catch-up window report_catchup_hours (default 6) if the PC was off, failed push retried after 30 min, state in the per-user data dir so restarts never repeat it. /briefing previews. Registered in main._init_plugins_and_scheduling as one 60 s scheduler task; no-op unless configured. 7 mocked tests. Never sent through a real ntfy server or run inside the live app.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-31"
     },
     {
       "id": 64,
@@ -581,10 +581,10 @@
       "id": 65,
       "title": "[F2] Scheduled reports (weekly server health etc.)",
       "priority": "medium",
-      "status": "backlog",
-      "notes": "",
+      "status": "done",
+      "notes": "Done with #63 (same module): weekly_report_day/weekly_report_time -> server health + 7-day usage (#50) + log problems (#85) via ntfy. /report previews. Per-section failures are reported inline instead of dropping the report. Not done: user-defined report sections (only weather/goals/server/usage/problems).",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-31"
     },
     {
       "id": 66,

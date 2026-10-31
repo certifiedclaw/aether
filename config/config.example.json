@@ -120,6 +120,16 @@
   "ntfy_topic":    "",
   "_comment_ntfy_remind": "A failed approval push is retried with backoff (5s, 15s, 45s), and if the request is still unanswered ntfy_remind_after_s seconds after the first push, one reminder is sent. Set to 0 to turn the reminder off.",
   "ntfy_remind_after_s": 60,
+  "_comment_reports": "── Scheduled reports via ntfy (needs ntfy_topic). Leave times empty to disable. briefing_days: daily | weekdays | mon,wed,fri. A report missed because the PC was off still goes out if Aether starts within report_catchup_hours.",
+  "briefing_time": "",
+  "briefing_days": "daily",
+  "briefing_city": "",
+  "weekly_report_day": "",
+  "weekly_report_time": "09:00",
+  "report_catchup_hours": 6,
+  "_comment_supervisor": "── Watchdog (python -m core.supervisor). Restart commands are optional; without them it only alerts. Run as an argv list or a plain string; no shell.",
+  "supervisor_ollama_restart_cmd": "",
+  "supervisor_aether_restart_cmd": "",
   "proactive_min_silence_secs": 900,
   "proactive_check_cooldown":   600
 }

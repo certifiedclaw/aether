@@ -772,6 +772,14 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             self._scheduler = TaskScheduler(config=cfg)
             self._scheduler.start()
             self.ui.write_log("SYS: Task scheduler running.")
+            try:
+                from core.reports import register_reports
+                from memory.config_manager import load_api_keys
+                if register_reports(self._scheduler, load_api_keys(),
+                                    (lambda: self._goals.list_active() if getattr(self, "_goals", None) else [])):
+                    self.ui.write_log("SYS: Scheduled reports enabled (ntfy).")
+            except Exception as e:  # noqa: BLE001
+                self.ui.write_log(f"WRN: Scheduled reports - {e}")
         except Exception as e:
             self.ui.write_log(f"WRN: Task scheduler — {e}")
 

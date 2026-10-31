@@ -229,6 +229,19 @@ class ChatCommandsMixin:
             except Exception as e:  # noqa: BLE001
                 self.ui.write_log(f"SYS: Log analysis unavailable: {type(e).__name__}: {e}")
             return True
+        if user_text.strip().lower() in ("/briefing", "/report"):
+            def _brief(kind=user_text.strip().lower().lstrip("/")):
+                try:
+                    from core import reports
+                    from memory.config_manager import load_api_keys
+                    goals = getattr(self, "_goals", None)
+                    ctx = {"goals": goals.list_active} if goals else {}
+                    self.ui.write_log("SYS: " + reports.preview(kind, load_api_keys(), ctx))
+                except Exception as e:  # noqa: BLE001
+                    self.ui.write_log(f"SYS: Report unavailable: {type(e).__name__}: {e}")
+            import threading as _th    # probes the network; keep it off the command loop
+            _th.Thread(target=_brief, daemon=True, name="aether-briefing").start()
+            return True
         if user_text.strip().lower() in ("/resources", "/governor"):
             try:
                 from core.resource_governor import get_governor
@@ -314,6 +327,7 @@ class ChatCommandsMixin:
                 "/perf [hours]      Speed per model (median/p95 time, tokens/s), memory use, cloud tokens today\n"
                 "/stats [days]     Your usage: rounds per day, busiest hours, top tools (local only)\n"
                 "/loganalyze [hours]  Group the warnings/errors in aether.log and show what repeats\n"
+                "/briefing, /report  Preview the daily briefing / weekly server report (scheduled via briefing_time, weekly_report_day)\n"
                 "/remote            Show the web dashboard address and a one-time pairing code (phone or browser)\n"
                 "/resources         Show whether background jobs are paused because the machine is busy\n"
                 "/doctor            Find install problems and how to fix them (/doctor fix applies safe fixes)\n"
