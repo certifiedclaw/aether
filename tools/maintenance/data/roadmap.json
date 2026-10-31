@@ -437,10 +437,10 @@
       "id": 49,
       "title": "[F0] Crash reporter: sanitized report saved locally",
       "priority": "low",
-      "status": "backlog",
+      "status": "done",
       "notes": "",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-10-31"
     },
     {
       "id": 50,
@@ -887,10 +887,10 @@
       "id": 99,
       "title": "[F0] Self-healing supervisor: watchdog that restarts hung Ollama/Aether, checks disk/RAM, alerts via ntfy only when it can't fix it",
       "priority": "medium",
-      "status": "backlog",
+      "status": "done",
       "notes": "For the always-on deploy (#88). Health probes: Ollama /api/tags, Aether process, dashboard /api/llm-status, disk and memory thresholds. Bounded restarts with backoff (no restart loops), state written to the audit log, ntfy alert via core/notify.py after N failed recoveries. Should run headless inside the Docker setup.",
       "created": "2026-10-26",
-      "updated": "2026-10-26"
+      "updated": "2026-10-31"
     }
   ]
 }

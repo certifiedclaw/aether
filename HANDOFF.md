@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-30 03:23 UTC
+Generated: 2026-10-31 18:10 UTC
+
+## #126 — 2026-10-31 18:10 UTC — Claude Code
+
+Roadmap pass: finished #99 (core/supervisor.py watchdog + compose service) and #49 (crash report sanitizing). Baseline before: 1098 pass, 1 sandbox-only failure (test_action_launcher needs PortAudio). Did NOT attempt the rest: #88/#93 need the real server/Ollama; #54 needs a hook in conversation_core (cache hit must also reach history/TTS) that cannot be verified without the UI; #97 needs a privacy design first; the rest are multi-day features.
+
+**Touched:** `core/supervisor.py`, `core/crash_logger.py`, `tests/test_supervisor.py`, `tests/test_crash_sanitize.py`, `docker-compose.yml`
+
+**Next steps:** Run python -m core.supervisor on iansserver and set supervisor_ollama_restart_cmd. Then #88 (needs free -h / ollama list), #93 TTFT comparison on real Ollama, then #57+#32 or #96 if you want a feature next.
+
+---
 
 ## #125 — 2026-10-30 03:23 UTC — Claude Code (Sonnet 5.5)
 

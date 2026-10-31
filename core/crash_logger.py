@@ -27,6 +27,7 @@ import json
 import logging
 import os
 import platform
+import re
 import sys
 import time
 import traceback
@@ -40,11 +41,43 @@ _CRASH_DIR = Path("logs/crashes")
 _MAX_CRASH_FILES = 50   # rotate when this many exist
 
 
+_SECRET_RE = re.compile(
+    r"(?i)((?:api[_-]?key|token|secret|password|passwd|authorization|bearer)"
+    r"[\"'\s:=]+)([^\s\"',}]{6,})")
+_KEY_SHAPES = re.compile(r"\b(?:sk-[A-Za-z0-9_-]{16,}|AIza[0-9A-Za-z_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}"
+                         r"|xox[baprs]-[A-Za-z0-9-]{10,}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})")
+
+
+def sanitize(text: str) -> str:
+    """Strip what must not sit in a shareable crash report: secrets, API-key shapes,
+    the user's home directory / account name, and e-mail addresses."""
+    if not text:
+        return text
+    text = _KEY_SHAPES.sub("[redacted-key]", str(text))
+    text = _SECRET_RE.sub(lambda m: m.group(1) + "[redacted]", text)
+    text = re.sub(r"[\w.+-]+@[\w-]+\.[\w.-]+", "[email]", text)
+    home = str(Path.home())
+    user = os.path.basename(home.rstrip("/\\"))
+    for h in {home, home.replace("/", "\\"), home.replace("\\", "/")}:
+        if h and len(h) > 3:
+            text = text.replace(h, "~")
+    if user and len(user) > 2:
+        text = re.sub(r"(?i)(?<=[\\/])" + re.escape(user) + r"(?=[\\/])", "<user>", text)
+    return text
+
+
+def _sanitize_extra(extra: dict | None) -> dict:
+    try:
+        return json.loads(sanitize(json.dumps(extra or {}, default=str)))
+    except Exception:  # noqa: BLE001 - redaction broke the JSON: keep nothing rather than leak
+        return {"note": "extra data dropped (could not be sanitized)"}
+
+
 def _system_context() -> dict:
     ctx: dict[str, Any] = {
         "python": sys.version,
         "platform": platform.platform(),
-        "cwd": str(Path.cwd()),
+        "cwd": sanitize(str(Path.cwd())),
     }
     try:
         import psutil
@@ -81,12 +114,12 @@ def log_crash(exc: BaseException,
             "timestamp":    time.time(),
             "date":         datetime.now().isoformat(),
             "exception":    type(exc).__name__,
-            "message":      str(exc),
-            "traceback":    traceback.format_exc(),
-            "user_message": user_message[:500] if user_message else "",
+            "message":      sanitize(str(exc)),
+            "traceback":    sanitize(traceback.format_exc()),
+            "user_message": sanitize(user_message[:500]) if user_message else "",
             "tool":         tool,
             "system":       _system_context(),
-            "extra":        extra or {},
+            "extra":        _sanitize_extra(extra),
         }
 
         path.write_text(json.dumps(report, indent=2, default=str),

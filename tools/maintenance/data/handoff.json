@@ -1,5 +1,5 @@
 {
-  "next_id": 126,
+  "next_id": 127,
   "entries": [
     {
       "id": 1,
@@ -1764,6 +1764,20 @@
         "tools/maintenance/data/handoff.json"
       ],
       "next_steps": "Push this onto consolidate/roadmap-cleanup (or its PR) from a checkout with write access. Try self_check_enabled on the real qwen3:8b box and watch the self_check.* counters and whether low-confidence offers are noisy; tune self_check_min_confidence. Remaining F1 items: #48 auto-update with rollback, #54 response caching, #56/#57 memory."
+    },
+    {
+      "id": 126,
+      "timestamp": "2026-10-31 18:10 UTC",
+      "by": "Claude Code",
+      "summary": "Roadmap pass: finished #99 (core/supervisor.py watchdog + compose service) and #49 (crash report sanitizing). Baseline before: 1098 pass, 1 sandbox-only failure (test_action_launcher needs PortAudio). Did NOT attempt the rest: #88/#93 need the real server/Ollama; #54 needs a hook in conversation_core (cache hit must also reach history/TTS) that cannot be verified without the UI; #97 needs a privacy design first; the rest are multi-day features.",
+      "files": [
+        "core/supervisor.py",
+        "core/crash_logger.py",
+        "tests/test_supervisor.py",
+        "tests/test_crash_sanitize.py",
+        "docker-compose.yml"
+      ],
+      "next_steps": "Run python -m core.supervisor on iansserver and set supervisor_ollama_restart_cmd. Then #88 (needs free -h / ollama list), #93 TTFT comparison on real Ollama, then #57+#32 or #96 if you want a feature next."
     }
   ]
 }

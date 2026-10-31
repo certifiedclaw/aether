@@ -25,6 +25,24 @@ services:
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
 
+  supervisor:
+    # Watchdog (#99): probes Ollama/dashboard/disk/RAM, ntfy only when it cannot fix it.
+    # Alert-only by default. To let it restart things, set supervisor_*_restart_cmd in
+    # config/api_keys.json (needs a way to reach them, e.g. a docker socket proxy).
+    image: aether:server
+    restart: unless-stopped
+    command: ["python", "-m", "core.supervisor"]
+    environment:
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+    network_mode: "service:aether"
+    volumes:
+      - aether_config:/app/config
+      - aether_logs:/app/logs
+    depends_on: [aether]
+    mem_limit: 128m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
   ollama:
     image: ollama/ollama
     restart: unless-stopped

@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-30 03:23 UTC
+Generated: 2026-10-31 18:11 UTC
 
 ## In progress
 
@@ -42,13 +42,10 @@ Generated: 2026-10-30 03:23 UTC
   - Not started: needs the 2026-10-17 live_turns.jsonl / events.jsonl / aether.log, which are not in the repo (logs/ is gitignored). Three separate symptoms; web_search.py itself has no Bing paging, so the 5-page cost likely lives in the langchain/research path.
 - [ ] **#96** [F1] Learn from corrections: turn 'no, not that' / 'stop doing X' into small editable rules applied to future prompts `medium`
   - Separate rules store (not the personal-facts memory). LLM drafts a one-line rule, Aether asks yes/no before saving, user can list/edit/delete (pairs with #57). Inject only the top few relevant rules per request, capped for small models. Never save personal/sensitive facts as rules. Verify with the eval harness (#39) that rules change behavior without regressing the 107-prompt baseline.
-- [ ] **#99** [F0] Self-healing supervisor: watchdog that restarts hung Ollama/Aether, checks disk/RAM, alerts via ntfy only when it can't fix it `medium`
-  - For the always-on deploy (#88). Health probes: Ollama /api/tags, Aether process, dashboard /api/llm-status, disk and memory thresholds. Bounded restarts with backoff (no restart loops), state written to the audit log, ntfy alert via core/notify.py after N failed recoveries. Should run headless inside the Docker setup.
 - [ ] **#14** Route the 174 stray print() calls through core/observability.py `low`
   - Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules — actions/ is intentionally exempt (CLI-facing tool output).
 - [ ] **#32** Investigate long_term.json identity entries missing value `low`
   - Cannot confirm the cause without the real long_term.json (user data, not in repo). Found and fixed one verifiable way to produce bad identity entries: memory_manager._recursive_update stored {'value': None} as the literal string 'None' and {'value': ''} as an empty-valued entry; both are now skipped (tests/test_memory_empty_values.py). If an actual long_term.json still has entries with no 'value' key at all, that came from another writer (older version or manual edit) -- send a redacted sample.
-- [ ] **#49** [F0] Crash reporter: sanitized report saved locally `low`
 - [ ] **#50** [F0] Telemetry that stays local: usage stats for the owner only `low`
 - [ ] **#54** [F1] Response caching for repeated questions `low`
   - ~300 lines.
@@ -161,6 +158,7 @@ Generated: 2026-10-30 03:23 UTC
   - Implemented portable ZIP export/import for named chats, long-term memory, SQLite memory, goals, basic RAG index, Chroma/LlamaIndex index, and non-secret settings. Import validates the manifest, archive size, member paths, JSON, and SQLite integrity; rejects symlinks/traversal; replaces non-secret settings while preserving destination credentials; and writes a recovery bundle before replacement. CLI usage and close-app requirement are documented in README. Round-trip and safety tests pass; 47 focused tests passed (1 skipped), changed Python files compile, diff check passes. Verified #45 was backlog on origin/master before starting.
 - [x] **#46** [F0] Resource governor: pause heavy jobs when other containers (Palworld) need CPU/RAM
 - [x] **#47** [F0] Cost and speed dashboard: tokens/s, memory use, latency per model
+- [x] **#49** [F0] Crash reporter: sanitized report saved locally
 - [x] **#51** [F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones
   - Completed: optional llm_quick_model, llm_everyday_model and llm_hard_model select per-tier models for Ollama conversations. Aether checks the currently selected Ollama host (including remote/local fallback); a missing or uncheckable tag falls back to that host's configured default and is logged. Gemini HARD escalation and opted-in Gemini tool routing retain precedence; OpenAI-compatible providers are unchanged. See core/llm_client.py, core/conversation_core.py and config/config.example.json.
 - [x] **#52** [F1] Prompt and tool-schema tuning per model, driven by benchmark results
@@ -183,3 +181,5 @@ Generated: 2026-10-30 03:23 UTC
   - Done: new core/listen_mode.py + wiring in core/listen_loops.py. listen_mode = auto (default) | always | wake | ptt. auto = wake word if ready, else push-to-talk (global hotkey ctrl+alt+space, config ptt_shortcut), else always-listening with a WRN. PTT opens the mic for one utterance, closes after ptt_idle_secs (6) without speech, never closes mid-sentence (VAD.in_speech). Any fallback (no keyboard pkg, hotkey registration fails) lands on always-listening with a warning, never deaf. Explicit legacy wake_word_enabled is honoured when listen_mode is unset, so existing setups are unchanged. 24 tests in tests/test_listen_mode.py incl. end-to-end runs of the real mic loop (background audio never transcribed in ptt; control proves it is transcribed in always). tests/test_mark_lv_ports.py made hermetic. Config key is ptt_shortcut, not ptt_hotkey: tests/test_invariants.py flags any config key containing 'key' as a possible secret. BEHAVIOR CHANGE: a config with neither listen_mode nor wake_word_enabled now resolves to auto, i.e. push-to-talk on machines with the keyboard package -- set listen_mode=always to restore the old always-open mic. Not tried with a real mic/hotkey on Windows yet.
 
 Other session (2026-10-29): Decision (Ian): wake word. wake_word_enabled now defaults to TRUE in core/listen_loops.py (was false), so background media (TikTok/TV) is not transcribed: the mic only feeds Whisper after 'Hey Jarvis', and the gate sleeps after 2 min of silence. Needs openwakeword + its model; if missing, Aether still falls back to always-awake but now logs a loud warning saying background audio WILL be transcribed. wake_word_enabled=false restores always-listening. config.example.json and docs/MARK_LV_PORTS.md updated; 3 new tests in tests/test_mark_lv_ports.py (default on + warning, explicit off, gate keeps background speech out). NOT validated on a real mic/openwakeword. Not done: push-to-talk, and a one-click 'install wake word' prompt on first run -- until openwakeword is installed on the machine, behavior is unchanged apart from the warning.
+- [x] **#99** [F0] Self-healing supervisor: watchdog that restarts hung Ollama/Aether, checks disk/RAM, alerts via ntfy only when it can't fix it
+  - For the always-on deploy (#88). Health probes: Ollama /api/tags, Aether process, dashboard /api/llm-status, disk and memory thresholds. Bounded restarts with backoff (no restart loops), state written to the audit log, ntfy alert via core/notify.py after N failed recoveries. Should run headless inside the Docker setup.
