@@ -213,6 +213,22 @@ class ChatCommandsMixin:
             import threading as _th    # probes Ollama /api/ps; keep it off the command loop
             _th.Thread(target=_perf, daemon=True, name="aether-perf").start()
             return True
+        if user_text.strip().lower().split(" ")[0] in ("/stats", "/usage"):
+            try:
+                from core import usage_stats
+                arg = user_text.strip().split(" ", 1)[1].strip() if " " in user_text.strip() else ""
+                self.ui.write_log("SYS: " + usage_stats.report(float(arg) if arg.replace(".", "", 1).isdigit() else 7.0))
+            except Exception as e:  # noqa: BLE001
+                self.ui.write_log(f"SYS: Usage stats unavailable: {type(e).__name__}: {e}")
+            return True
+        if user_text.strip().lower().split(" ")[0] in ("/loganalyze", "/logs"):
+            try:
+                from core import log_analyzer
+                arg = user_text.strip().split(" ", 1)[1].strip() if " " in user_text.strip() else ""
+                self.ui.write_log("SYS: " + log_analyzer.report(float(arg) if arg.replace(".", "", 1).isdigit() else 24.0))
+            except Exception as e:  # noqa: BLE001
+                self.ui.write_log(f"SYS: Log analysis unavailable: {type(e).__name__}: {e}")
+            return True
         if user_text.strip().lower() in ("/resources", "/governor"):
             try:
                 from core.resource_governor import get_governor
@@ -296,6 +312,8 @@ class ChatCommandsMixin:
                 "/status            Full system diagnostic\n"
                 "/audit [N] [tool=x] [decision=denied] [hours=24] [words]  Show recent tool calls and approvals; /audit verify checks the log hasn't been tampered with\n"
                 "/perf [hours]      Speed per model (median/p95 time, tokens/s), memory use, cloud tokens today\n"
+                "/stats [days]     Your usage: rounds per day, busiest hours, top tools (local only)\n"
+                "/loganalyze [hours]  Group the warnings/errors in aether.log and show what repeats\n"
                 "/remote            Show the web dashboard address and a one-time pairing code (phone or browser)\n"
                 "/resources         Show whether background jobs are paused because the machine is busy\n"
                 "/doctor            Find install problems and how to fix them (/doctor fix applies safe fixes)\n"
