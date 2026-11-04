@@ -76,6 +76,25 @@ _BASELINE = ["open_app", "web_search", "weather_report", "send_message", "save_m
 _ALWAYS_THROUGH = {"save_memory", "undo", "goal_manager",
                     "langchain", "open_interpreter", "llama_index"}
 
+# extra_tool (~600 tokens, the largest schema) belongs to no category above, so
+# it used to be unreachable: no routed turn ever advertised it. It is offered
+# only when the text names one of its utilities. Deliberately kept OUT of
+# _CATEGORIES: those also decide "is this an output-only request?", and a
+# prompt like "Reply only with the French translation" must still get no tools.
+_EXTRA_TOOL_HINT = re.compile(
+    r"\b(wikipedia|define|definition of|dictionary|battery|"
+    r"(?:save|write|read|list|delete|take) (?:a |the |my )?notes?|"
+    r"timer|password|qr ?code|convert .{1,40}? (?:to|into)|"
+    r"zip|unzip|checksum|hash (?:of|this)|file diff|diff (?:these|two)|"
+    r"large(?:st)? files|word count|batch rename|"
+    r"(?:running )?processes|kill (?:the )?process|(?:list|focus) (?:the )?windows?|"
+    r"clipboard|translate|calculate|ping|check (?:a |the )?port|wifi|"
+    r"local ip|ip address|"
+    r"what(?:'s| is) the (?:time|date)|current (?:time|date)|"
+    r"random fact|lint|format json)\b",
+    re.I,
+)
+
 _RESPONSE_ONLY = re.compile(r"\b(?:output|reply|respond|return)\s+only\b", re.I)
 
 
@@ -99,6 +118,8 @@ def select_tool_names(user_text: str) -> set[str]:
         if _is_clear_response_only(text):
             return set()
         matched.update(_BASELINE)
+    if _EXTRA_TOOL_HINT.search(text):
+        matched.add("extra_tool")
     return matched | _ALWAYS_THROUGH
 
 
