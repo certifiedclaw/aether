@@ -2,7 +2,27 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-10-31 18:10 UTC
+Generated: 2026-11-04 02:45 UTC
+
+## #128 — 2026-11-04 02:45 UTC — Claude (Sonnet 5.5)
+
+Roadmap #101: external eval harnesses against Aether's OpenAI-compatible API. Added tools/eval (python -m tools.eval.run check|promptfoo|inspect|lm-eval), 21 tests, readme + SERVER.md docs. Also added harness-adapter roadmap items #100-#103. Verified against the real openai_api router with a fake model; promptfoo and inspect results match the Python grader per case. Suite: 1184 pass, 1 PortAudio-only failure. PR #25 (roadmap-batch-2) now also carries this.
+
+**Touched:** `tools/eval/__init__.py`, `tools/eval/cases.py`, `tools/eval/inspect_task.py`, `tools/eval/run.py`, `tests/test_eval_adapters.py`, `readme.md`, `docs/SERVER.md`
+
+**Next steps:** On iansserver/PC: enable api_server_enabled + token, run 'python -m tools.eval.run check' then promptfoo/inspect with the real model (not yet run against Ollama). Then #98 model arena can reuse this, or #100 MCP both ways.
+
+---
+
+## #127 — 2026-11-04 02:22 UTC — Claude (Sonnet 5.5)
+
+Continued from roadmap-batch-2 (5 commits ahead of master: #14 #50 #85 #63 #65 #66 #67 + WIP #57). Finished #57: added 16 tests, fixed LIKE wildcard escaping in memory search, marked done. Suite: 1160 pass, 1 PortAudio-only failure (test_action_launcher). Master on GitHub does NOT contain batch-2 work; merge roadmap-batch-2 (now work/roadmap-57) to land it. Branches are many (37); several look stale.
+
+**Touched:** `core/memory_panel.py`, `memory/hybrid_memory.py`, `tests/test_memory_panel.py`, `tools/maintenance/data/roadmap.json`
+
+**Next steps:** Merge batch-2 into master; try /memory and dashboard /memory page in a browser. Then #32 (needs real long_term.json - run /memory to see flagged entries), #88/#93 on iansserver, #96 corrections-to-rules.
+
+---
 
 ## #126 — 2026-10-31 18:10 UTC — Claude Code
 

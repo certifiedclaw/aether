@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aether memory</title>
+<style>
+  :root { --bg:#0e1116; --fg:#e6edf3; --mut:#8b949e; --line:#262c36; --ok:#3fb950; --warn:#d29922; --bad:#f85149; --card:#161b22; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui,sans-serif; padding:16px; }
+  h1 { font-size:18px; margin:0 0 4px; } h2 { font-size:15px; margin:18px 0 8px; }
+  form { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  input, select, button, textarea { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:8px; font:inherit; }
+  button { cursor:pointer; } button.del { color:var(--bad); }
+  .row { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px; margin-bottom:8px; overflow-wrap:anywhere; }
+  .row.problem { border-color:var(--warn); }
+  .meta { color:var(--mut); font-size:12px; } .warn { color:var(--warn); }
+  .acts { margin-top:6px; display:flex; gap:8px; }
+  textarea { width:100%; min-height:60px; }
+  a { color:#58a6ff; } #msg { color:var(--mut); margin-bottom:8px; min-height:1.4em; }
+</style>
+</head>
+<body>
+<h1>What Aether remembers</h1>
+<div id="msg"></div>
+<form id="f"><input name="q" placeholder="search" aria-label="search"><button type="submit">Search</button><a href="/">Back to Aether</a></form>
+<form id="add">
+  <select name="category" aria-label="category"><option>notes</option><option>identity</option><option>preferences</option><option>projects</option><option>relationships</option><option>wishes</option></select>
+  <input name="key" placeholder="key (e.g. favorite_editor)" aria-label="key" size="22">
+  <input name="value" placeholder="value" aria-label="value" size="30">
+  <button type="submit">Add fact</button>
+</form>
+<h2>Facts</h2><div id="facts"></div>
+<h2>Past conversations</h2><div id="ex"></div>
+<script>
+  let token = null;
+  try { token = sessionStorage.getItem('aether_token'); } catch (e) {}
+  const msg = (t, bad) => { const m = document.getElementById('msg'); m.textContent = t; m.style.color = bad ? 'var(--bad)' : ''; };
+  const H = () => ({ Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' });
+
+  async function call(body) {
+    const r = await fetch('/api/memory', { method: 'POST', headers: H(), body: JSON.stringify(body) });
+    if (r.status === 401) { location.href = '/login'; return; }
+    const j = await r.json(); msg(j.message || j.error, !j.ok); load();
+  }
+  function card(it) {
+    const row = document.createElement('div'); row.className = 'row' + (it.problem ? ' problem' : '');
+    const head = document.createElement('div'); head.className = 'meta';
+    head.textContent = it.id + (it.updated ? ' - ' + it.updated : '');
+    const val = document.createElement('div'); val.textContent = it.value || '(empty)';
+    row.append(head, val);
+    if (it.problem) { const p = document.createElement('div'); p.className = 'warn'; p.textContent = it.problem; row.append(p); }
+    const acts = document.createElement('div'); acts.className = 'acts';
+    const ed = document.createElement('button'); ed.textContent = 'Edit';
+    ed.onclick = () => {
+      const ta = document.createElement('textarea'); ta.value = it.value;
+      const save = document.createElement('button'); save.textContent = 'Save';
+      save.onclick = () => call({ op: 'edit', id: it.id, text: ta.value });
+      row.replaceChildren(head, ta, save);
+    };
+    const del = document.createElement('button'); del.textContent = 'Forget'; del.className = 'del';
+    del.onclick = () => { if (confirm('Forget ' + it.id + '?')) call({ op: 'delete', id: it.id }); };
+    acts.append(ed, del); row.append(acts); return row;
+  }
+  async function load() {
+    if (!token) { location.href = '/login'; return; }
+    const q = new URLSearchParams(new FormData(document.getElementById('f')));
+    let r;
+    try { r = await fetch('/api/memory?' + q, { headers: H() }); } catch (e) { msg('Could not reach the server.', true); return; }
+    if (r.status === 401) { location.href = '/login'; return; }
+    const j = await r.json();
+    const facts = document.getElementById('facts'), ex = document.getElementById('ex');
+    facts.replaceChildren(...(j.facts.length ? j.facts.map(card) : [Object.assign(document.createElement('div'), { className: 'meta', textContent: 'No saved facts.' })]));
+    ex.replaceChildren(...(j.exchanges.length ? j.exchanges.map(card) : [Object.assign(document.createElement('div'), { className: 'meta', textContent: 'No past conversations.' })]));
+    if (j.problems) msg(j.problems + ' entr' + (j.problems > 1 ? 'ies have' : 'y has') + ' no value - repair or forget them.', true);
+  }
+  document.getElementById('f').addEventListener('submit', (e) => { e.preventDefault(); load(); });
+  document.getElementById('add').addEventListener('submit', (e) => {
+    e.preventDefault(); const d = Object.fromEntries(new FormData(e.target)); call({ op: 'add', ...d }); e.target.reset();
+  });
+  load();
+</script>
+</body>
+</html>

@@ -207,3 +207,31 @@ def test_window_appeared_false_without_match():
     with mock.patch.dict(sys.modules, {"pygetwindow": fake}):
         assert oa._window_appeared("Zorblax Quantum Editor", timeout=0.1) is False
         assert oa._window_appeared("Notepad", timeout=0.1) is True
+
+
+def test_extra_tool_is_reachable_but_only_when_asked_for():
+    """extra_tool used to be unreachable: no category/baseline ever offered it."""
+    for prompt in [
+        "Look up the Wikipedia article on Alan Turing.",
+        "Set a timer for ten minutes.",
+        "Generate a password for me.",
+        "Calculate 15% of 240.",
+        "Translate 'good morning' into German.",
+        "Save a note called groceries.",
+        "What's the local IP of this machine?",
+        "Make a QR code for my website.",
+    ]:
+        assert "extra_tool" in tool_router.select_tool_names(prompt), prompt
+        assert "extra_tool" in tool_router.select_tool_names_hard(prompt), prompt
+
+
+def test_extra_tool_not_offered_for_ordinary_turns():
+    for prompt in ["whats 2+2", "what a beautiful day", "open chrome",
+                   "Turn the volume down a little.", "List the files on my desktop."]:
+        assert "extra_tool" not in tool_router.select_tool_names(prompt), prompt
+
+
+def test_output_only_translation_still_gets_no_tools():
+    prompt = "Translate 'good morning' into French. Reply only with the translation."
+    assert tool_router.select_tool_names(prompt) == set()
+    assert tool_router.select_tool_names_hard(prompt) == set()

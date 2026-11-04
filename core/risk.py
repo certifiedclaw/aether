@@ -270,6 +270,7 @@ _TURN = 0                      # increments at every new user request
 _TURN_TEXT = ""                # what the user actually said, shown in the dialog
 _GRANTS: dict[str, dict] = {}  # tool -> {"turn", "expires", "left"}
 _DENIED: dict[str, int] = {}   # tool -> turn in which the user said no
+_PLAN_GRANTS: list[dict] = []  # exact steps the user approved as part of one plan (#67)
 _TOOL_LOCKS: dict[str, threading.Lock] = {}
 
 _TASK_WHAT = {"computer_control": "mouse and keyboard", "browser_control": "web browser"}
@@ -294,6 +295,7 @@ def begin_turn(user_text: str = "") -> None:
         _TURN_TEXT = one_line[:200]
         _GRANTS.clear()
         _DENIED.clear()
+        _PLAN_GRANTS.clear()
 
 
 def reset_state() -> None:
@@ -303,6 +305,7 @@ def reset_state() -> None:
         _TURN, _TURN_TEXT = 0, ""
         _GRANTS.clear()
         _DENIED.clear()
+        _PLAN_GRANTS.clear()
 
 
 def _cfg_int(key: str, default: int, lo: int, hi: int) -> int:
@@ -322,6 +325,99 @@ def task_ttl() -> int:
 def task_max_actions() -> int:
     """Actions one approval covers (config "risk_task_max_actions", 1-500)."""
     return _cfg_int("risk_task_max_actions", 60, 1, 500)
+
+
+# ── chained approvals: approve a whole multi-step plan once (roadmap #67) ───────────────
+# One dialog lists every step. Approving it grants exactly the gated steps shown there:
+# same tool, same action, same parameters, each usable once, only in the request that was
+# running, for `risk_plan_ttl` seconds. Nothing else is widened: a step whose parameters
+# differ at run time (e.g. filled in from an earlier step's result), a tool outside the
+# plan, `block` tier, and run_python all still go through their normal gate. A refusal
+# approves nothing. Off unless config "chained_approvals" is true.
+
+def chained_approvals_enabled() -> bool:
+    try:
+        from core.llm_client import _load_config
+        v = _load_config().get("chained_approvals", False)
+    except Exception:  # noqa: BLE001
+        return False
+    return (v.strip().lower() in ("1", "true", "yes", "on")) if isinstance(v, str) else bool(v)
+
+
+def _plan_key(tool: str, action: str, params: dict) -> str:
+    import json
+    try:
+        body = json.dumps(params or {}, sort_keys=True, default=str)
+    except (TypeError, ValueError):
+        body = repr(sorted((params or {}).items(), key=lambda kv: str(kv[0])))
+    return f"{tool}\x00{(action or '').strip().lower()}\x00{body}"
+
+
+def _plan_step_action(step_params: dict) -> str:
+    return str((step_params or {}).get("action", "") or "").strip().lower()
+
+
+def request_plan_approval(goal: str, steps: list, confirm=None) -> tuple[bool, int]:
+    """Ask once for a whole plan. Returns (approved, gated_steps_covered).
+
+    (True, 0): nothing in the plan needs approval, no dialog shown.
+    (False, n): the user refused, or the plan contains a blocked step, nothing granted.
+    """
+    gated: list[tuple[int, str, str, dict]] = []
+    lines: list[str] = []
+    for i, st in enumerate(steps or [], 1):
+        tool = str(st.get("tool", "") or "")
+        params = st.get("parameters") if isinstance(st.get("parameters"), dict) else {}
+        action = _plan_step_action(params)
+        tier = tier_for(tool, action)
+        if _escalates_to_ask(tool, params):
+            tier = strictest(tier, ASK)
+        desc = str(st.get("description", "") or "")[:120]
+        if tier == BLOCK or (tool == "extra_tool" and action == "run_python"):
+            _audit("plan", goal[:60], BLOCK, "blocked", {}, f"step {i} {tool}.{action} is blocked")
+            return False, 0
+        if tier in (ASK, TASK):
+            gated.append((i, tool, action, params))
+            lines.append(f"{i}. NEEDS APPROVAL  {tool}{'.' + action if action else ''}: {desc}\n"
+                         f"     {_detail(tool, action, params)}")
+        else:
+            lines.append(f"{i}. runs freely      {tool}{'.' + action if action else ''}: {desc}")
+    if not gated:
+        return True, 0
+
+    ttl = _cfg_int("risk_plan_ttl", 600, 30, 1800)
+    detail = (f"Goal: {goal[:200]}\n\nAether plans these steps. Approving covers exactly the "
+              f"{len(gated)} step(s) marked NEEDS APPROVAL, with the parameters shown, once each, "
+              f"for this request only ({ttl} s). Any step that changes will still ask.\n\n"
+              + "\n".join(lines))
+    if confirm is None:
+        from core.safety import confirm_action as confirm
+    with _STATE_LOCK:
+        turn = _TURN
+    approved = bool(confirm(f"Approve this {len(steps)}-step plan?", detail))
+    with _STATE_LOCK:
+        if _TURN != turn:
+            _audit("plan", goal[:60], ASK, "denied", {}, "new request started while waiting")
+            return False, len(gated)
+        if approved:
+            exp = time.monotonic() + ttl
+            for _i, tool, action, params in gated:
+                _PLAN_GRANTS.append({"turn": turn, "expires": exp, "key": _plan_key(tool, action, params)})
+    _audit("plan", goal[:60], ASK, "approved" if approved else "denied", {"steps": len(steps)},
+           f"{len(gated)} gated step(s)")
+    return approved, len(gated)
+
+
+def _consume_plan_grant(tool: str, action: str, params: dict) -> bool:
+    key = _plan_key(tool, action, params)
+    now = time.monotonic()
+    with _STATE_LOCK:
+        _PLAN_GRANTS[:] = [g for g in _PLAN_GRANTS if g["turn"] == _TURN and g["expires"] > now]
+        for g in _PLAN_GRANTS:
+            if g["key"] == key:
+                _PLAN_GRANTS.remove(g)
+                return True
+    return False
 
 
 def _tool_lock(tool: str) -> threading.Lock:
@@ -404,6 +500,10 @@ def check(tool: str, action: str, params: dict) -> str | None:
     if tier == BLOCK:
         _audit(tool, action, BLOCK, "blocked", params)
         return f"Blocked: {label} is not allowed."
+    if tier in (TASK, ASK) and _consume_plan_grant(tool, action, params or {}):
+        logger.info("RISK plan-grant %s params=%s", label, sorted((params or {}).keys()))
+        _audit(tool, action, tier, "approved", params, "covered by an approved plan")
+        return None
     if tier == TASK:
         return _check_task(tool, action, params or {}, label)
     from core.safety import confirm_action

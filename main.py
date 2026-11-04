@@ -745,6 +745,11 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         # ── Hybrid memory (BM25 + dense + reranker) ───────────────
         try:
             self._hybrid_mem = HybridMemory(cfg)
+            try:
+                from core import memory_panel
+                memory_panel.set_live(self._hybrid_mem)
+            except Exception:  # noqa: BLE001 - the panel falls back to the database file
+                pass
             stats = self._hybrid_mem.stats()
             self.ui.write_log(
                 f"SYS: Hybrid memory ready "
@@ -772,6 +777,16 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             self._scheduler = TaskScheduler(config=cfg)
             self._scheduler.start()
             self.ui.write_log("SYS: Task scheduler running.")
+            try:
+                from core.reports import register_reports
+                from memory.config_manager import load_api_keys
+                if register_reports(self._scheduler, load_api_keys(),
+                                    (lambda: self._goals.list_active() if getattr(self, "_goals", None) else [])):
+                    self.ui.write_log("SYS: Scheduled reports enabled (ntfy).")
+                from core.rules import register_rules
+                register_rules(self._scheduler)
+            except Exception as e:  # noqa: BLE001
+                self.ui.write_log(f"WRN: Scheduled reports - {e}")
         except Exception as e:
             self.ui.write_log(f"WRN: Task scheduler — {e}")
 

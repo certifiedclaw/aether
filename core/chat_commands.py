@@ -213,6 +213,49 @@ class ChatCommandsMixin:
             import threading as _th    # probes Ollama /api/ps; keep it off the command loop
             _th.Thread(target=_perf, daemon=True, name="aether-perf").start()
             return True
+        if user_text.strip().lower().split(" ")[0] in ("/stats", "/usage"):
+            try:
+                from core import usage_stats
+                arg = user_text.strip().split(" ", 1)[1].strip() if " " in user_text.strip() else ""
+                self.ui.write_log("SYS: " + usage_stats.report(float(arg) if arg.replace(".", "", 1).isdigit() else 7.0))
+            except Exception as e:  # noqa: BLE001
+                self.ui.write_log(f"SYS: Usage stats unavailable: {type(e).__name__}: {e}")
+            return True
+        if user_text.strip().lower().split(" ")[0] in ("/loganalyze", "/logs"):
+            try:
+                from core import log_analyzer
+                arg = user_text.strip().split(" ", 1)[1].strip() if " " in user_text.strip() else ""
+                self.ui.write_log("SYS: " + log_analyzer.report(float(arg) if arg.replace(".", "", 1).isdigit() else 24.0))
+            except Exception as e:  # noqa: BLE001
+                self.ui.write_log(f"SYS: Log analysis unavailable: {type(e).__name__}: {e}")
+            return True
+        if user_text.strip().lower() in ("/briefing", "/report"):
+            def _brief(kind=user_text.strip().lower().lstrip("/")):
+                try:
+                    from core import reports
+                    from memory.config_manager import load_api_keys
+                    goals = getattr(self, "_goals", None)
+                    ctx = {"goals": goals.list_active} if goals else {}
+                    self.ui.write_log("SYS: " + reports.preview(kind, load_api_keys(), ctx))
+                except Exception as e:  # noqa: BLE001
+                    self.ui.write_log(f"SYS: Report unavailable: {type(e).__name__}: {e}")
+            import threading as _th    # probes the network; keep it off the command loop
+            _th.Thread(target=_brief, daemon=True, name="aether-briefing").start()
+            return True
+        if user_text.strip().lower() == "/rules" or user_text.strip().lower().startswith("/rule "):
+            try:
+                from core import rules
+                self.ui.write_log("SYS: " + (rules.handle_command(user_text) or ""))
+            except Exception as e:  # noqa: BLE001
+                self.ui.write_log(f"SYS: Rules unavailable: {type(e).__name__}: {e}")
+            return True
+        if user_text.strip().lower() == "/memory" or user_text.strip().lower().startswith("/memory "):
+            try:
+                from core import memory_panel
+                self.ui.write_log("SYS: " + memory_panel.handle_command(user_text))
+            except Exception as e:  # noqa: BLE001
+                self.ui.write_log(f"SYS: Memory panel unavailable: {type(e).__name__}: {e}")
+            return True
         if user_text.strip().lower() in ("/resources", "/governor"):
             try:
                 from core.resource_governor import get_governor
@@ -296,6 +339,11 @@ class ChatCommandsMixin:
                 "/status            Full system diagnostic\n"
                 "/audit [N] [tool=x] [decision=denied] [hours=24] [words]  Show recent tool calls and approvals; /audit verify checks the log hasn't been tampered with\n"
                 "/perf [hours]      Speed per model (median/p95 time, tokens/s), memory use, cloud tokens today\n"
+                "/stats [days]     Your usage: rounds per day, busiest hours, top tools (local only)\n"
+                "/loganalyze [hours]  Group the warnings/errors in aether.log and show what repeats\n"
+                "/briefing, /report  Preview the daily briefing / weekly server report (scheduled via briefing_time, weekly_report_day)\n"
+                "/rules, /rule add <sentence>  Plain-language rules, e.g. /rule add when the disk is below 10% notify me (also /rule on|off|remove <id>)\n"
+                "/memory [words]   See what Aether remembers; /memory forget <id>, /memory edit <id> <text>, /memory add <category> <key> <value> (also at the dashboard's /memory page)\n"
                 "/remote            Show the web dashboard address and a one-time pairing code (phone or browser)\n"
                 "/resources         Show whether background jobs are paused because the machine is busy\n"
                 "/doctor            Find install problems and how to fix them (/doctor fix applies safe fixes)\n"

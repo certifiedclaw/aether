@@ -29,7 +29,13 @@ IGNORE_DIRS = {".git", "__pycache__", ".venv", "venv", "node_modules", "data", "
 FILE_LINE_LIMIT = 600
 FUNC_LINE_LIMIT = 80
 # Scripts where print() is expected/fine
-PRINT_OK_FILES = {"main.py", "self_test.py", "evaluator.py", "dump.py", "code_dump.txt"}
+PRINT_OK_FILES = {"main.py", "self_test.py", "evaluator.py", "dump.py", "code_dump.txt",
+                  # CLI entry points whose job is to print a report to the terminal
+                  "doctor.py", "diagnostics.py", "config_validator.py", "observability.py",
+                  "portable_bundle.py", "first_run.py", "__main__.py",
+                  # dashboard startup/firewall banner: console output the user reads, asserted by tests
+                  "server.py"}
+PRINT_OK_DIRS = {"tools", "tests"}   # command-line scripts and tests: print() is their output
 TODO_RE = re.compile(r"#\s*(TODO|FIXME|XXX)\b[:\-]?\s*(.*)", re.IGNORECASE)
 
 
@@ -77,7 +83,7 @@ def _check_file(path: Path, findings: dict):
         stripped = line.strip()
         if stripped == "except:" or stripped.startswith("except:  "):
             findings["bare_except"].append({"file": rel, "line": i})
-        if path.name not in PRINT_OK_FILES and re.match(r"^\s*print\(", line) and "actions" not in path.parts:
+        if path.name not in PRINT_OK_FILES and not (PRINT_OK_DIRS & set(path.parts)) and re.match(r"^\s*print\(", line) and "actions" not in path.parts:
             findings["print_calls"].append({"file": rel, "line": i})
 
     try:

@@ -88,7 +88,7 @@ class _HeadlessRootShim:
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
-            print("\n[Aether] Shutting down (headless)...")
+            logger.info("\n[Aether] Shutting down (headless)...")
 
     def protocol(self, *_args) -> None:
         pass

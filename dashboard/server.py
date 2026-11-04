@@ -636,6 +636,7 @@ class DashboardServer:
         self._register_llm_status_routes(app)
         self._register_audit_routes(app)
         self._register_perf_routes(app)
+        self._register_memory_routes(app)
         self._register_phone_audio_ws(app)
         self._register_file_routes(app)
         self._register_main_ws(app)
@@ -917,6 +918,55 @@ class DashboardServer:
                 hours = 24.0
             return JSONResponse(await asyncio.get_running_loop().run_in_executor(
                 None, perf_stats.full_report, hours))
+
+    # ── memory panel: view / edit / delete what Aether remembers (core/memory_panel.py) ──
+
+    def _register_memory_routes(self, app: "FastAPI") -> None:
+        @app.get("/memory", response_class=HTMLResponse)
+        async def memory_page():
+            return HTMLResponse(_read("memory.html"))
+
+        @app.get("/api/memory")
+        async def memory_list(req: Request):
+            if not self._auth(req):
+                return JSONResponse({"error": "Unauthorized"}, status_code=401)
+            from core import memory_panel
+            q = req.query_params.get("q", "")[:100]
+            try:
+                limit = int(req.query_params.get("limit", "100"))
+            except ValueError:
+                limit = 100
+            return JSONResponse(await asyncio.get_running_loop().run_in_executor(
+                None, memory_panel.list_all, q, limit))
+
+        @app.post("/api/memory")
+        async def memory_change(req: Request):
+            """Body: {"op": "edit"|"delete"|"add", ...}. Always needs the bearer token."""
+            if not self._auth(req):
+                return JSONResponse({"error": "Unauthorized"}, status_code=401)
+            from core import memory_panel
+            try:
+                body = await req.json()
+            except Exception:
+                return JSONResponse({"error": "Bad JSON"}, status_code=400)
+            op = str(body.get("op", ""))
+            if op == "edit":
+                call = lambda: memory_panel.edit(str(body.get("id", "")), str(body.get("text", "")))
+            elif op == "delete":
+                call = lambda: memory_panel.delete(str(body.get("id", "")))
+            elif op == "add":
+                call = lambda: memory_panel.add_fact(str(body.get("category", "")), str(body.get("key", "")),
+                                                     str(body.get("value", "")))
+            else:
+                return JSONResponse({"error": "op must be edit, delete or add"}, status_code=400)
+            ok, msg = await asyncio.get_running_loop().run_in_executor(None, call)
+            try:
+                from core import audit_log
+                audit_log.record("memory_panel", op, "ask", "approved" if ok else "denied",
+                                 {"id": str(body.get("id", body.get("key", "")))[:80]}, note="dashboard")
+            except Exception:  # noqa: BLE001
+                pass
+            return JSONResponse({"ok": ok, "message": msg}, status_code=200 if ok else 400)
 
     # ── voice command routes ─────────────────────────────────────────────
 

@@ -30,6 +30,9 @@ import time
 import traceback
 
 import numpy as np
+import logging
+
+logger = logging.getLogger("aether")
 
 SAMPLE_RATE_IN = 16_000
 BLOCK_SIZE     = 1_024
@@ -121,7 +124,7 @@ class ListenLoopsMixin:
             try:
                 self._interrupt_speaking()
             except Exception as e:      # noqa: BLE001 - an interrupt must never take the app down
-                print(f"[Barge-in] interrupt failed: {e}")
+                logger.warning(f"[Barge-in] interrupt failed: {e}")
             finally:
                 self._barge_in_busy = False
 
@@ -169,7 +172,7 @@ class ListenLoopsMixin:
             gate = WakeGate(enabled=True)
             detector = WakeWordDetector(
                 on_detect=lambda: gate.wake() and self.ui.write_log("SYS: Awake - wake word."),
-                logger=lambda m: print(f"[Wake] {m}"))
+                logger=lambda m: logger.info(f"[Wake] {m}"))
             if not detector.start():
                 detector = None
                 gate = WakeGate(enabled=False)
@@ -278,7 +281,7 @@ class ListenLoopsMixin:
                         pass
         except Exception as e:
             log_crash(e, context="STT-Whisper")
-            print(f"[STT-Whisper] Mic error: {e}")
+            logger.warning(f"[STT-Whisper] Mic error: {e}")
             traceback.print_exc()
         finally:
             if unregister_ptt is not None:
@@ -316,7 +319,7 @@ class ListenLoopsMixin:
                         pass
         except Exception as e:
             log_crash(e, context="STT-Vosk")
-            print(f"[STT-Vosk] Mic error: {e}")
+            logger.warning(f"[STT-Vosk] Mic error: {e}")
             traceback.print_exc()
 
     def _phone_audio_stt_loop(self) -> None:
