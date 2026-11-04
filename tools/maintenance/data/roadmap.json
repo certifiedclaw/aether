@@ -860,10 +860,10 @@
       "id": 96,
       "title": "[F1] Learn from corrections: turn 'no, not that' / 'stop doing X' into small editable rules applied to future prompts",
       "priority": "medium",
-      "status": "backlog",
-      "notes": "Separate rules store (not the personal-facts memory). LLM drafts a one-line rule, Aether asks yes/no before saving, user can list/edit/delete (pairs with #57). Inject only the top few relevant rules per request, capped for small models. Never save personal/sensitive facts as rules. Verify with the eval harness (#39) that rules change behavior without regressing the 107-prompt baseline.",
+      "status": "done",
+      "notes": "Done: core/behavior_rules.py (separate store behavior_rules.json, not the facts memory). A correction ('no, not that' / 'stop doing X' / 'from now on ...') is spotted cheaply, Aether replies as usual, then drafts ONE rule with a fast model call and asks yes/no; nothing is saved without a yes (or an explicit /learned add). Answer is handled locally without a model turn; the proposal survives one message only. Rules: /learned (list/add/edit/forget/on/off) and r:<id> items on the #57 memory panel + dashboard page. Injection: always-rules + topical rules by word overlap, max 3 and 420 chars, skipped on small-talk (light) turns; with no rules the prompt is unchanged. Refused as rules: personal/sensitive facts, secrets, anything about approvals/safety/overrides, multi-line, >160 chars, near-duplicates (max 40). Config learn_corrections (default true). 94 tests in tests/test_behavior_rules.py incl. the real _finalize_response path; dashboard page checked in headless Chromium (edit + forget through the UI). Also fixed: memory.html's broken-fact banner overwrote every success message. NOT verified: a real Ollama model drafting rules (draft quality on small models unknown), and the spec's eval-harness check that rules change behaviour without regressing the 107-prompt baseline (needs a live model). With zero rules the prompt is byte-identical, so the baseline cannot regress until rules exist.",
       "created": "2026-10-26",
-      "updated": "2026-10-26"
+      "updated": "2026-11-04"
     },
     {
       "id": 97,

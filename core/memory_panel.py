@@ -86,11 +86,24 @@ def _exchanges(query: str, limit: int) -> list[dict]:
              "problem": ""} for r in rows]
 
 
+# ── learned rules (core/behavior_rules.py, roadmap #96) ─────────────────
+def _rules(query: str = "") -> list[dict]:
+    from core import behavior_rules
+    q = query.lower().strip()
+    out = []
+    for r in behavior_rules.list_rules():
+        if q and q not in r["text"].lower():
+            continue
+        out.append({"id": f"r:{r['id']}", "kind": "rule", "value": r["text"], "updated": r["created"],
+                    "problem": "", "enabled": r["enabled"], "always": r["always"]})
+    return out
+
+
 # ── public API ──────────────────────────────────────────────────────────
 def list_all(query: str = "", limit: int = 100) -> dict:
     facts = _facts(query)
     exch = _exchanges(query, max(1, min(int(limit), 500)))
-    return {"facts": facts, "exchanges": exch,
+    return {"facts": facts, "exchanges": exch, "rules": _rules(query),
             "problems": sum(1 for f in facts if f["problem"])}
 
 
@@ -120,6 +133,10 @@ def edit(item_id: str, new_text: str) -> tuple[bool, str]:
                                 "updated": datetime.now().strftime("%Y-%m-%d")}
             mm.save_memory(memory)
             return True, f"Updated {cat}/{key}."
+        if item_id.startswith("r:"):
+            from core import behavior_rules
+            r = behavior_rules.edit_rule(int(item_id[2:]), new_text)
+            return True, f"Updated rule #{r['id']}."
         if item_id.startswith("e:"):
             rid = int(item_id[2:])
             if _live is not None:
@@ -135,7 +152,7 @@ def edit(item_id: str, new_text: str) -> tuple[bool, str]:
             return (True, f"Updated exchange {rid}.") if ok else (False, f"no such exchange {rid}")
     except (ValueError, sqlite3.Error) as e:
         return False, str(e)
-    return False, f"unknown id {item_id!r} (use f:<category>/<key> or e:<number>)"
+    return False, f"unknown id {item_id!r} (use f:<category>/<key>, r:<number> or e:<number>)"
 
 
 def delete(item_id: str) -> tuple[bool, str]:
@@ -149,6 +166,10 @@ def delete(item_id: str) -> tuple[bool, str]:
             del memory[cat][key]            # not mm.forget(): that one only sees well-formed entries' dicts
             mm.save_memory(memory)
             return True, f"Forgot {cat}/{key}."
+        if item_id.startswith("r:"):
+            from core import behavior_rules
+            rid = int(item_id[2:])
+            return (True, f"Forgot rule #{rid}.") if behavior_rules.remove_rule(rid) else (False, f"no such rule {rid}")
         if item_id.startswith("e:"):
             rid = int(item_id[2:])
             if _live is not None:
@@ -163,7 +184,7 @@ def delete(item_id: str) -> tuple[bool, str]:
             return (True, f"Forgot exchange {rid}.") if n else (False, f"no such exchange {rid}")
     except (ValueError, sqlite3.Error) as e:
         return False, str(e)
-    return False, f"unknown id {item_id!r} (use f:<category>/<key> or e:<number>)"
+    return False, f"unknown id {item_id!r} (use f:<category>/<key>, r:<number> or e:<number>)"
 
 
 def render(listing: dict, max_exchanges: int = 8) -> str:
@@ -174,6 +195,11 @@ def render(listing: dict, max_exchanges: int = 8) -> str:
     for f in facts:
         tail = f"  <-- {f['problem']}" if f["problem"] else ""
         lines.append(f"  {f['id']} = {f['value'][:80]}{tail}")
+    rules = listing.get("rules", [])
+    if rules:
+        lines.append("Learned rules (also /learned):")
+        for r in rules:
+            lines.append(f"  {r['id']} = {r['value'][:80]}" + ("" if r["enabled"] else "  (off)"))
     ex = listing["exchanges"]
     lines.append(f"Past conversations ({len(ex)} shown):")
     for e in ex[:max_exchanges]:

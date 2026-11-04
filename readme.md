@@ -98,6 +98,11 @@ Set `self_check_enabled` to `true` in your config and, after each reply, Aether 
 
 Set `"response_cache_enabled": true` to answer a repeated, self-contained factual question ("how does a transistor work") from a local cache instead of the model. It is deliberately narrow: it never caches anything that used a tool or injected memory, mentions you ("my", "I", "you"), points back into the conversation ("it", "that", "again"), or can change ("today", "latest", "price", "weather", "time"), and it skips creative or random requests. Entries are tied to the provider, model and system prompt, expire after `response_cache_ttl_s` (24 h), and are capped at `response_cache_max` (200). Stored in `response_cache.json` in the data folder; delete that file to clear it. Every lookup and store, including why something was not cached, appears in the trace (`cache_lookup`, `cache_store`).
 
+### Learning from corrections
+
+When you correct Aether ("no, not that", "stop adding emojis", "from now on use PowerShell commands") it replies as usual, then drafts one short rule and asks **yes/no**. Nothing is saved without a yes. Saved rules are applied to later prompts: style rules every time, topic rules only when your message mentions the topic, never more than three at once. See and change them with `/learned` (`add`, `edit <id>`, `forget <id>`, `off <id>`, `on <id>`) or on the dashboard's `/memory` page. Rules never hold personal facts, secrets, or anything about approvals and safety checks. They are a separate store from `/memory` facts, and not the same as `/rules` (trigger -> action automation). Turn it off with `"learn_corrections": false`.
+
+
 ### Ask questions about your documents
 
 Use the chat to ask Aether to index a PDF, Markdown notes folder, or Obsidian vault, then ask questions about the indexed material. For example: “Index `C:\Notes\Obsidian`” and then “What did I write about local backups?” Answers from the built-in RAG engine include numbered source references with filenames and PDF page numbers when available. LlamaIndex retrieval answers include inline citations and a matching source list; summaries include their source list. Markdown files are supported without a separate Obsidian export.

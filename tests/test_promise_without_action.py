@@ -119,6 +119,7 @@ def _run_turn(monkeypatch, script, user_text="research the Artemis program for m
     host = MagicMock()
     host._handle_chat_command.return_value = False
     host._try_quick_intent.return_value = False
+    host._answer_pending_rule.return_value = False     # roadmap #96: not a yes/no to a rule proposal
     host._cancel_current_turn = threading.Event()
     host._goals.list_active.return_value = []
     host._execute_tool_calls.return_value = ([], False)

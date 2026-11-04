@@ -588,6 +588,12 @@ class ConversationCoreMixin:
             _decision("chat_command_handled", user_text=user_text)
             return
 
+        # ── Answer to a pending "remember that as a rule?" (roadmap #96), and ──
+        # note whether THIS message is a correction worth proposing a rule for.
+        if self._answer_pending_rule(user_text):
+            return
+        self._correction_candidate = self._spot_correction(user_text)
+
         # ── Deterministic shortcuts for simple commands (volume, weather, ──
         # list files, open app). Small local models invent tool names/actions
         # or answer from imagination; these phrases need no model at all.
@@ -1310,6 +1316,61 @@ class ConversationCoreMixin:
 
         if final_assistant_reply and _llm_synthesized:
             self._self_check_follow_up(user_text, final_assistant_reply, _tool_results)
+            self._propose_rule_follow_up()
+
+    # ── learning from corrections (roadmap #96, core/behavior_rules.py) ──────
+    def _answer_pending_rule(self, user_text: str) -> bool:
+        """True if this message was the yes/no to a rule proposal (handled here, no model turn)."""
+        try:
+            from core import behavior_rules
+            reply = behavior_rules.answer_pending(user_text)
+        except Exception as e:  # noqa: BLE001 - never block a turn
+            logger.debug("pending rule answer skipped: %s", e)
+            return False
+        if reply is None:
+            return False
+        self._obs.count("rules.answered")
+        self._conversation.append({"role": "user", "content": user_text})
+        self._conversation.append({"role": "assistant", "content": reply})
+        self.ui.write_log(f"You: {user_text}")
+        self.ui.write_log(f"Aether: {reply}")
+        self.speak(reply)
+        return True
+
+    def _spot_correction(self, user_text: str):
+        """(user_text, previous reply) if this message corrects Aether, else None. Set every turn."""
+        try:
+            from core import behavior_rules
+            from core.llm_client import get_config_flag
+            if not get_config_flag("learn_corrections", True):
+                return None
+            prior = behavior_rules.last_assistant_text(self._conversation)
+            if behavior_rules.looks_like_correction(user_text, prior):
+                return (user_text, prior)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("correction check skipped: %s", e)
+        return None
+
+    def _propose_rule_follow_up(self) -> None:
+        """After the reply to a correction: draft one rule and ask yes/no. Saves nothing itself."""
+        cand = getattr(self, "_correction_candidate", None)
+        self._correction_candidate = None
+        if not cand:
+            return
+        try:
+            from core import behavior_rules
+            rule = behavior_rules.draft_rule(*cand)
+            if not rule:
+                self._obs.count("rules.no_draft")
+                return
+            behavior_rules.set_pending(rule)
+            question = behavior_rules.question_for(rule)
+            self._obs.count("rules.proposed")
+            self._conversation.append({"role": "assistant", "content": question})
+            self.ui.write_log(f"Aether: {question}")
+            self.speak(question)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("rule proposal skipped: %s", e)
 
     def _self_check_follow_up(self, user_text: str, reply: str, tool_results: list) -> None:
         """Self-check pass + confidence flag (roadmap #53/#55). Opt-in
