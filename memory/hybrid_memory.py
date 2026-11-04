@@ -406,9 +406,10 @@ class HybridMemory:
     # ── memory panel support (core/memory_panel.py) ──────────────────────
     def list_exchanges(self, query: str = "", limit: int = 100) -> list[dict]:
         """Newest first. `query` is a case-insensitive substring match."""
-        q = f"%{query.strip()}%" if query and query.strip() else "%"
+        q = ("%" + query.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+             if query and query.strip() else "%")
         rows = self._conn.execute(
-            "SELECT id, role, content, timestamp FROM memories WHERE content LIKE ? "
+            "SELECT id, role, content, timestamp FROM memories WHERE content LIKE ? ESCAPE '\\' "
             "ORDER BY id DESC LIMIT ?", (q, max(1, min(int(limit), 1000)))).fetchall()
         return [{"id": r[0], "role": r[1], "content": r[2], "ts": r[3]} for r in rows]
 

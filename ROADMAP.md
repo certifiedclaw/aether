@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-10-31 18:11 UTC
+Generated: 2026-11-04 02:22 UTC
 
 ## In progress
 
@@ -15,19 +15,13 @@ Generated: 2026-10-31 18:11 UTC
 
 - [ ] **#48** [F0] Auto-update with rollback: pull, run tests, roll back on failure `medium`
 - [ ] **#56** [F1] Structured memory: small knowledge graph with conflict handling `medium`
-- [ ] **#57** [F1] Long-term memory panel: view, edit, delete what Aether remembers `medium`
-  - Fix #32 first.
 - [ ] **#58** [F1] Task resumption after interruption or restart `medium`
   - Related to #19.
 - [ ] **#61** [F2] Personal search engine across files, notes, chats `medium`
   - Builds on memory/RAG.
 - [ ] **#62** [F2] Multi-chat folders and search `medium`
   - Builds on named chat sessions and /searchchats.
-- [ ] **#63** [F2] Daily briefing (weather, tasks, server status) via ntfy `medium`
 - [ ] **#64** [F2] Rich outputs: tables, charts, file previews inline `medium`
-- [ ] **#65** [F2] Scheduled reports (weekly server health etc.) `medium`
-- [ ] **#66** [F2] Rule builder in plain language (triggers + actions) `medium`
-- [ ] **#67** [F2] Chained approvals: approve a whole multi-step plan once `medium`
 - [ ] **#68** [F2] Hardware key or phone approval for high-risk actions `medium`
 - [ ] **#69** [F2] ntfy two-way: reply to Aether from a push notification `medium`
 - [ ] **#70** [F2] Grafana and Uptime Kuma reading ('why was X down last night?') `medium`
@@ -42,11 +36,8 @@ Generated: 2026-10-31 18:11 UTC
   - Not started: needs the 2026-10-17 live_turns.jsonl / events.jsonl / aether.log, which are not in the repo (logs/ is gitignored). Three separate symptoms; web_search.py itself has no Bing paging, so the 5-page cost likely lives in the langchain/research path.
 - [ ] **#96** [F1] Learn from corrections: turn 'no, not that' / 'stop doing X' into small editable rules applied to future prompts `medium`
   - Separate rules store (not the personal-facts memory). LLM drafts a one-line rule, Aether asks yes/no before saving, user can list/edit/delete (pairs with #57). Inject only the top few relevant rules per request, capped for small models. Never save personal/sensitive facts as rules. Verify with the eval harness (#39) that rules change behavior without regressing the 107-prompt baseline.
-- [ ] **#14** Route the 174 stray print() calls through core/observability.py `low`
-  - Flagged in HEALTH_REPORT.md's stray-print check. Concentrated in agent/executor.py, agent/task_queue.py, and other core/ modules — actions/ is intentionally exempt (CLI-facing tool output).
 - [ ] **#32** Investigate long_term.json identity entries missing value `low`
   - Cannot confirm the cause without the real long_term.json (user data, not in repo). Found and fixed one verifiable way to produce bad identity entries: memory_manager._recursive_update stored {'value': None} as the literal string 'None' and {'value': ''} as an empty-valued entry; both are now skipped (tests/test_memory_empty_values.py). If an actual long_term.json still has entries with no 'value' key at all, that came from another writer (older version or manual edit) -- send a redacted sample.
-- [ ] **#50** [F0] Telemetry that stays local: usage stats for the owner only `low`
 - [ ] **#54** [F1] Response caching for repeated questions `low`
   - ~300 lines.
 - [ ] **#72** [F2] Proactive suggestions (always ask first) `low`
@@ -60,7 +51,6 @@ Generated: 2026-10-31 18:11 UTC
 - [ ] **#83** [F4] Agent teams: planner, worker, reviewer `low`
   - Slow on CPU; needs GPU or a big model.
 - [ ] **#84** [F4] Issue triage assistant for GitHub issues and PRs `low`
-- [ ] **#85** [F4] Log analyzer `low`
 - [ ] **#86** [F4] Gaming helper (patch notes, mod updates, library summary) `low`
   - Builds on game_updater.
 - [ ] **#87** [F4] Learning tutor: quizzes from your own notes `low`
@@ -99,6 +89,8 @@ Generated: 2026-10-31 18:11 UTC
   - Second-largest oversized function per HEALTH_REPORT.md, close behind ui.py's __init__. Route-registration/setup function — likely splits cleanly by route group.
 - [x] **#13** Refactor main.py _init_new_subsystems() (158 lines)
   - One-shot startup wiring, not hot-path — lower priority than _execute_tool() (#7) and _build_app() above, but same shape of oversized-function debt.
+- [x] **#14** Route the 174 stray print() calls through core/observability.py
+  - Done: 77 print() calls in core/ + agent/ and 3 in memory/memory_manager.py now use logger (AST codemod, single-arg prints only; warning level when text says fail/error/warning, else info; main.py's root handler still shows them on the console). Kept on purpose: CLI report printers (doctor, diagnostics, config_validator, observability, portable_bundle, tools/*) and dashboard/server.py's startup/firewall banner, which a test asserts. health_check.py exempts these -> 0 stray. Plain logging, not the Observability object.
 - [x] **#15** Fix stress_test.py pytest collection failure + bare excepts + health_check.py TODO false-positive
   - pytest tests/ was aborting entirely (8 collection errors from stress_test.py's non-fixture test_* signatures) instead of running the real 34-test suite. Fixed via tests/conftest.py collect_ignore, both bare excepts changed to except Exception, and health_check.py's TODO_RE switched from a raw-line regex to real tokenize.COMMENT tokens (was matching a '#' inside this file's own markdown-heading string literal).
 - [x] **#16** Decide fate of the vestigial session_memory param across actions/
@@ -159,6 +151,8 @@ Generated: 2026-10-31 18:11 UTC
 - [x] **#46** [F0] Resource governor: pause heavy jobs when other containers (Palworld) need CPU/RAM
 - [x] **#47** [F0] Cost and speed dashboard: tokens/s, memory use, latency per model
 - [x] **#49** [F0] Crash reporter: sanitized report saved locally
+- [x] **#50** [F0] Telemetry that stays local: usage stats for the owner only
+  - Done: core/usage_stats.py + /stats [days]. Local-only summary of logs Aether already writes (perf.jsonl, audit.jsonl, crashes/): model rounds per day/route/model, busiest hours, top tools, approval-denied rate, crash count. No message text read, nothing sent, no new collection. 2 tests in tests/test_usage_and_logs.py.
 - [x] **#51** [F1] Automatic model router: 3B for quick turns, 8B or PC GPU for hard ones
   - Completed: optional llm_quick_model, llm_everyday_model and llm_hard_model select per-tier models for Ollama conversations. Aether checks the currently selected Ollama host (including remote/local fallback); a missing or uncheckable tag falls back to that host's configured default and is logged. Gemini HARD escalation and opted-in Gemini tool routing retain precedence; OpenAI-compatible providers are unchanged. See core/llm_client.py, core/conversation_core.py and config/config.example.json.
 - [x] **#52** [F1] Prompt and tool-schema tuning per model, driven by benchmark results
@@ -167,10 +161,22 @@ Generated: 2026-10-31 18:11 UTC
   - Done as core/answer_check.py + ConversationCoreMixin._self_check_follow_up. Opt-in (self_check_enabled, default false): after the reply is spoken the model re-reads it once; a clear mistake becomes a short 'Correction: ...' follow-up. Skips short replies, code and tool-grounded answers. 32 tests in tests/test_answer_check.py. Not exercised against a real Ollama model, so verdict quality on small models is unmeasured.
 - [x] **#55** [F1] Confidence and 'I don't know': flag uncertain answers, offer to search
   - Done in the same pass as #53: the check also returns a 0-1 confidence; below self_check_min_confidence (default 0.5) and with web_search not already used, Aether offers to search. Follow-up, not a rewrite, because replies stream and speak before the check runs. Real-model calibration still unmeasured.
+- [x] **#57** [F1] Long-term memory panel: view, edit, delete what Aether remembers
+  - Done: core/memory_panel.py lists/edits/deletes/adds long_term.json facts and memory.db exchanges. Surfaces: /memory chat command and dashboard /memory page (GET/POST /api/memory, bearer-token only, audit-logged). Entries with no value (the #32 symptom) are flagged and can be repaired or deleted. LIKE wildcards escaped in search. 16 tests in tests/test_memory_panel.py (panel, HybridMemory helpers, dashboard routes). Not done: the memory.html page was not exercised in a browser.
 - [x] **#59** [F2] Web search with sources
   - Implemented source-backed web search across Aether direct search, comparison, LangChain search, and multi-step LangChain research. Search summaries are instructed to cite supplied numbered results and now always include a deterministic Sources list with verified HTTP(S) URLs; results without valid links are excluded, and an empty usable set returns an explicit no-results message. Comparison sources are collected per item, and research carries deduplicated pages from its web-search observations into the final answer. Updated the tool description and README. Mocked regression coverage passed (163 related tests); Python compilation and diff checks pass. No live DuckDuckGo request was made during verification.
 - [x] **#60** [F2] Document Q&A over PDFs, notes, Obsidian, with citations
   - Completed source-cited document Q&A for PDFs, Markdown, and Obsidian folders. Basic RAG keeps PDF page boundaries, cites filenames/pages in prompts and replies, and PDF search returns page-numbered excerpts with blank/no-match handling. LlamaIndex vector/sub-query modes use CitationQueryEngine for inline references with a matching source list; summary results list source metadata. Added usage documentation and mocked regression tests; 31 focused tests passed (1 skipped), changed Python files compile, and git diff --check passes. The broader critical suite also exposed a repeatable unrelated TaskScheduler timing failure; scheduler code was not changed.
+- [x] **#63** [F2] Daily briefing (weather, tasks, server status) via ntfy
+  - Done: core/reports.py. briefing_time/briefing_days/briefing_city in config -> daily ntfy briefing (weather via wttr.in, active goals, server probes). Sent once per day, catch-up window report_catchup_hours (default 6) if the PC was off, failed push retried after 30 min, state in the per-user data dir so restarts never repeat it. /briefing previews. Registered in main._init_plugins_and_scheduling as one 60 s scheduler task; no-op unless configured. 7 mocked tests. Never sent through a real ntfy server or run inside the live app.
+- [x] **#65** [F2] Scheduled reports (weekly server health etc.)
+  - Done with #63 (same module): weekly_report_day/weekly_report_time -> server health + 7-day usage (#50) + log problems (#85) via ntfy. /report previews. Per-section failures are reported inline instead of dropping the report. Not done: user-defined report sections (only weather/goals/server/usage/problems).
+- [x] **#66** [F2] Rule builder in plain language (triggers + actions)
+  - Done: core/rules.py. /rule add <sentence>, /rules, /rule on|off|remove <id>. Fixed-pattern parser (not an LLM): time ('weekdays at 7:30'), interval (>=5 min), condition (disk/RAM below X, ollama/server down) -> push notification, 'remind me to ...', or send the briefing/weekly report. Echoes the parsed when/do back; refuses what it cannot parse. Rules can only notify or send a report -- no tools/shell/prompts. Edge-triggered conditions with rule_cooldown_s (3600), missed times not replayed late, max 30 rules, state in the data dir. 15 tests. Not yet: LLM-assisted phrasing, rules that run tools.
+- [x] **#67** [F2] Chained approvals: approve a whole multi-step plan once
+  - Done (opt-in): config chained_approvals=true makes AgentExecutor show ONE dialog for the whole plan (risk.request_plan_approval). Approval grants exactly the ask/task-tier steps listed -- same tool, action AND parameters, single use, this request only, risk_plan_ttl (default 600s). A step whose params change at run time, any tool outside the plan, block tier and run_python still go through the normal gate; a blocked step refuses the whole plan with no dialog; refusal cancels the plan. Audited (tool=plan). 8 tests in tests/test_plan_approval.py incl. executor path. Default is OFF to keep per-step approvals unchanged; not exercised with a real UI dialog. Steps that take params from earlier results (_inject_context) won't match and will still ask individually.
+- [x] **#85** [F4] Log analyzer
+  - Done: core/log_analyzer.py + /loganalyze [hours]. Groups WARNING/ERROR lines (and 'WRN:/ERR:' UI lines) in logs/aether.log + rotations by normalized message (numbers/ids/paths/quoted names stripped), count, first/last seen, traceback exception line, hourly peak; errors ranked first. Read-only. 2 tests. Tested on synthetic logs only, not a real aether.log.
 - [x] **#90** Config survives version upgrades (user-dir config, last-good fallback)
   - Config migration remains in core/config_home.py; the persistent user-data migration follow-up shipped as #91.
 - [x] **#91** Persistent user data survives version upgrades

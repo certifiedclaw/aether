@@ -74,9 +74,10 @@ def _exchanges(query: str, limit: int) -> list[dict]:
             return []
         con = sqlite3.connect(f"file:{p}?mode=ro", uri=True)
         try:
-            q = f"%{query.strip()}%" if query.strip() else "%"
+            q = ("%" + query.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+                 if query.strip() else "%")
             rows = [{"id": r[0], "role": r[1], "content": r[2], "ts": r[3]} for r in con.execute(
-                "SELECT id, role, content, timestamp FROM memories WHERE content LIKE ? "
+                "SELECT id, role, content, timestamp FROM memories WHERE content LIKE ? ESCAPE '\\' "
                 "ORDER BY id DESC LIMIT ?", (q, limit))]
         finally:
             con.close()
