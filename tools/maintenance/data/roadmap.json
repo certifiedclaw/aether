@@ -1,5 +1,5 @@
 {
-  "next_id": 100,
+  "next_id": 104,
   "items": [
     {
       "id": 1,
@@ -891,6 +891,42 @@
       "notes": "For the always-on deploy (#88). Health probes: Ollama /api/tags, Aether process, dashboard /api/llm-status, disk and memory thresholds. Bounded restarts with backoff (no restart loops), state written to the audit log, ntfy alert via core/notify.py after N failed recoveries. Should run headless inside the Docker setup.",
       "created": "2026-10-26",
       "updated": "2026-10-31"
+    },
+    {
+      "id": 100,
+      "title": "[F4] Harness adapters, step 1: MCP both ways - harden mcp_bridge (timeouts, restart, approval + leak-guard on every call) and expose Aether's tools as an MCP server",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Most external harnesses speak MCP, so this unlocks the rest. Bridge exists (core/mcp_bridge.py, stdio client). New: server side so Goose/Claude Code/Codex CLI can call Aether tools. Every call goes through core/safety confirmation + audit_log; nothing exposes protected_paths.",
+      "created": "2026-11-04",
+      "updated": "2026-11-04"
+    },
+    {
+      "id": 101,
+      "title": "[F4] Harness adapters, step 2: eval harnesses (promptfoo, inspect-ai, lm-evaluation-harness) pointed at Aether's OpenAI-compatible API (#41)",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Near-zero code: configs + a runner script under tools/eval/. Extends tools/eval_harness.py's 107 prompts and feeds #98 model arena. Model-only access today (#41 deliberately exposes no memory/tools); keep it that way. Runs as separate processes, no new deps in the main venv.",
+      "created": "2026-11-04",
+      "updated": "2026-11-04"
+    },
+    {
+      "id": 102,
+      "title": "[F4] Harness adapters, step 3: external coding agents as sandboxed subprocess adapters (Aider, Goose, Codex CLI, Claude Code headless, OpenHands)",
+      "priority": "medium",
+      "status": "backlog",
+      "notes": "Do after #81 sandbox. One adapter interface (start, send task, stream output, cancel, result), each agent runs in the container with a scratch repo checkout and git checkpoint. Default backend is Ollama; cloud-backed agents are opt-in per adapter, off by default, and the task text goes through core/leak_guard first. Approval before any write outside the scratch checkout.",
+      "created": "2026-11-04",
+      "updated": "2026-11-04"
+    },
+    {
+      "id": 103,
+      "title": "[F4] Harness adapters, step 4: more in-process agent frameworks (LangGraph, smolagents, PydanticAI) - only out-of-process or in a separate venv",
+      "priority": "low",
+      "status": "backlog",
+      "notes": "requirements-optional.txt already documents Open Interpreter conflicting with langchain/llama-index on shared pins and needing Python <=3.12. Do not add these to the main venv. Prefer a worker subprocess speaking JSON over stdio (same shape as the MCP bridge). Pick one framework first, measure on the eval set vs the native planner before adding more.",
+      "created": "2026-11-04",
+      "updated": "2026-11-04"
     }
   ]
 }

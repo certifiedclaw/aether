@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-11-04 02:22 UTC
+Generated: 2026-11-04 02:34 UTC
 
 ## In progress
 
@@ -36,6 +36,12 @@ Generated: 2026-11-04 02:22 UTC
   - Not started: needs the 2026-10-17 live_turns.jsonl / events.jsonl / aether.log, which are not in the repo (logs/ is gitignored). Three separate symptoms; web_search.py itself has no Bing paging, so the 5-page cost likely lives in the langchain/research path.
 - [ ] **#96** [F1] Learn from corrections: turn 'no, not that' / 'stop doing X' into small editable rules applied to future prompts `medium`
   - Separate rules store (not the personal-facts memory). LLM drafts a one-line rule, Aether asks yes/no before saving, user can list/edit/delete (pairs with #57). Inject only the top few relevant rules per request, capped for small models. Never save personal/sensitive facts as rules. Verify with the eval harness (#39) that rules change behavior without regressing the 107-prompt baseline.
+- [ ] **#100** [F4] Harness adapters, step 1: MCP both ways - harden mcp_bridge (timeouts, restart, approval + leak-guard on every call) and expose Aether's tools as an MCP server `medium`
+  - Most external harnesses speak MCP, so this unlocks the rest. Bridge exists (core/mcp_bridge.py, stdio client). New: server side so Goose/Claude Code/Codex CLI can call Aether tools. Every call goes through core/safety confirmation + audit_log; nothing exposes protected_paths.
+- [ ] **#101** [F4] Harness adapters, step 2: eval harnesses (promptfoo, inspect-ai, lm-evaluation-harness) pointed at Aether's OpenAI-compatible API (#41) `medium`
+  - Near-zero code: configs + a runner script under tools/eval/. Extends tools/eval_harness.py's 107 prompts and feeds #98 model arena. Model-only access today (#41 deliberately exposes no memory/tools); keep it that way. Runs as separate processes, no new deps in the main venv.
+- [ ] **#102** [F4] Harness adapters, step 3: external coding agents as sandboxed subprocess adapters (Aider, Goose, Codex CLI, Claude Code headless, OpenHands) `medium`
+  - Do after #81 sandbox. One adapter interface (start, send task, stream output, cancel, result), each agent runs in the container with a scratch repo checkout and git checkpoint. Default backend is Ollama; cloud-backed agents are opt-in per adapter, off by default, and the task text goes through core/leak_guard first. Approval before any write outside the scratch checkout.
 - [ ] **#32** Investigate long_term.json identity entries missing value `low`
   - Cannot confirm the cause without the real long_term.json (user data, not in repo). Found and fixed one verifiable way to produce bad identity entries: memory_manager._recursive_update stored {'value': None} as the literal string 'None' and {'value': ''} as an empty-valued entry; both are now skipped (tests/test_memory_empty_values.py). If an actual long_term.json still has entries with no 'value' key at all, that came from another writer (older version or manual edit) -- send a redacted sample.
 - [ ] **#54** [F1] Response caching for repeated questions `low`
@@ -60,6 +66,8 @@ Generated: 2026-11-04 02:22 UTC
   - Local-only, off by default. Needs: pause/resume hotkey, per-app and window-title exclusions, skip password fields/private windows, retention limit with auto-expiry, one-command wipe, and protected_paths/leak-guard coverage so nothing is sent to any cloud model. Builds on screen_process and memory/RAG. Real privacy implications -- design the controls before the capture loop.
 - [ ] **#98** [F1] Model arena: run one prompt through two Ollama models, compare or pick a winner, log results `low`
   - Feeds the model router (#51) and prompt/schema tuning (#52) with real evidence. Reuse tools/eval_harness.py scoring where possible; store results under logs/eval/. Keep both runs on the selected Ollama host (remote/local fallback aware) and respect the resource governor (#46).
+- [ ] **#103** [F4] Harness adapters, step 4: more in-process agent frameworks (LangGraph, smolagents, PydanticAI) - only out-of-process or in a separate venv `low`
+  - requirements-optional.txt already documents Open Interpreter conflicting with langchain/llama-index on shared pins and needing Python <=3.12. Do not add these to the main venv. Prefer a worker subprocess speaking JSON over stdio (same shape as the MCP bridge). Pick one framework first, measure on the eval set vs the native planner before adding more.
 
 ## Done
 
