@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-04 02:45 UTC
+Generated: 2026-11-04 23:33 UTC
+
+## #129 — 2026-11-04 23:33 UTC — Claude (Sonnet 5.5)
+
+Roadmap #96: learn from corrections. New core/behavior_rules.py + hooks in conversation_core (_answer_pending_rule, _spot_correction, _propose_rule_follow_up), prompt_builder (per-turn block), chat_commands (/learned), memory_panel + dashboard page (rules section). 94 new tests. Suite: 1278 pass, 1 PortAudio-only failure. Also: PR #25 merged earlier (master 3cce1a4); fixed memory.html success message being overwritten by the broken-fact banner; checked the page in headless Chromium. Two existing stand-in-host tests (test_promise_without_action, test_answer_check) needed the new hooks stubbed. Branch work/roadmap-96 (not merged).
+
+**Touched:** `core/behavior_rules.py`, `core/conversation_core.py`, `core/prompt_builder.py`, `core/chat_commands.py`, `core/memory_panel.py`, `dashboard/static/memory.html`, `tests/test_behavior_rules.py`, `tests/test_memory_panel.py`, `tests/test_promise_without_action.py`, `tests/test_answer_check.py`, `config/config.example.json`, `readme.md`
+
+**Next steps:** On the real machine: correct Aether a few times and look at what it proposes (/learned), especially with the 1.5B model whose JSON may be poor; if drafts are bad, tune _DRAFT_SYSTEM. Then run tools.eval_harness with a few rules saved to confirm no regression. Branches roadmap-batch-2 and work/roadmap-57 still need deleting by hand (proxy blocks deletes). Next: #100 MCP both ways, #98 model arena, or #54 caching.
+
+---
 
 ## #128 — 2026-11-04 02:45 UTC — Claude (Sonnet 5.5)
 

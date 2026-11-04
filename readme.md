@@ -94,6 +94,11 @@ Web search returns a concise answer with numbered, directly verifiable source li
 
 Set `self_check_enabled` to `true` in your config and, after each reply, Aether asks the model to re-read its own answer once. A clear mistake becomes a short spoken correction; an answer the model rates below `self_check_min_confidence` (default 0.5) gets an offer to search the web. Because the reply has already been spoken, this arrives as a follow-up, not a rewrite. It is off by default because it adds one extra fast model call per checked reply, and it skips short replies, code, and answers that came from a tool.
 
+### Learning from corrections
+
+When you correct Aether ("no, not that", "stop adding emojis", "from now on use PowerShell commands") it replies as usual, then drafts one short rule and asks **yes/no**. Nothing is saved without a yes. Saved rules are applied to later prompts: style rules every time, topic rules only when your message mentions the topic, never more than three at once. See and change them with `/learned` (`add`, `edit <id>`, `forget <id>`, `off <id>`, `on <id>`) or on the dashboard's `/memory` page. Rules never hold personal facts, secrets, or anything about approvals and safety checks. They are a separate store from `/memory` facts, and not the same as `/rules` (trigger -> action automation). Turn it off with `"learn_corrections": false`.
+
+
 ### Ask questions about your documents
 
 Use the chat to ask Aether to index a PDF, Markdown notes folder, or Obsidian vault, then ask questions about the indexed material. For example: “Index `C:\Notes\Obsidian`” and then “What did I write about local backups?” Answers from the built-in RAG engine include numbered source references with filenames and PDF page numbers when available. LlamaIndex retrieval answers include inline citations and a matching source list; summaries include their source list. Markdown files are supported without a separate Obsidian export.
