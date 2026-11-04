@@ -33,6 +33,7 @@ Lets editors/scripts use Aether's configured model (remote-GPU with local fallba
 Text completions only (roles system/user/assistant). Tools, memory, files and approvals are
 not reachable. Off until enabled; 10 bad tokens from an IP locks it out for 10 min.
 Known limits: `temperature`/`max_tokens` are ignored (Aether's own settings apply); token usage reports 0.
+Eval tools (promptfoo, inspect-ai, lm-evaluation-harness) can use this endpoint: see `python -m tools.eval.run` and the readme's evaluation section.
 
 ## When the model is down (graceful degradation)
 Aether classifies backend failures (Ollama down, model missing, timeout, out of memory, auth, rate limit)

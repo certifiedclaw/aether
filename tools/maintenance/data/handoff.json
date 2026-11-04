@@ -1,5 +1,5 @@
 {
-  "next_id": 128,
+  "next_id": 129,
   "entries": [
     {
       "id": 1,
@@ -1791,6 +1791,22 @@
         "tools/maintenance/data/roadmap.json"
       ],
       "next_steps": "Merge batch-2 into master; try /memory and dashboard /memory page in a browser. Then #32 (needs real long_term.json - run /memory to see flagged entries), #88/#93 on iansserver, #96 corrections-to-rules."
+    },
+    {
+      "id": 128,
+      "timestamp": "2026-11-04 02:45 UTC",
+      "by": "Claude (Sonnet 5.5)",
+      "summary": "Roadmap #101: external eval harnesses against Aether's OpenAI-compatible API. Added tools/eval (python -m tools.eval.run check|promptfoo|inspect|lm-eval), 21 tests, readme + SERVER.md docs. Also added harness-adapter roadmap items #100-#103. Verified against the real openai_api router with a fake model; promptfoo and inspect results match the Python grader per case. Suite: 1184 pass, 1 PortAudio-only failure. PR #25 (roadmap-batch-2) now also carries this.",
+      "files": [
+        "tools/eval/__init__.py",
+        "tools/eval/cases.py",
+        "tools/eval/inspect_task.py",
+        "tools/eval/run.py",
+        "tests/test_eval_adapters.py",
+        "readme.md",
+        "docs/SERVER.md"
+      ],
+      "next_steps": "On iansserver/PC: enable api_server_enabled + token, run 'python -m tools.eval.run check' then promptfoo/inspect with the real model (not yet run against Ollama). Then #98 model arena can reuse this, or #100 MCP both ways."
     }
   ]
 }

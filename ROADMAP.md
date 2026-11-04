@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-11-04 02:34 UTC
+Generated: 2026-11-04 02:45 UTC
 
 ## In progress
 
@@ -38,8 +38,6 @@ Generated: 2026-11-04 02:34 UTC
   - Separate rules store (not the personal-facts memory). LLM drafts a one-line rule, Aether asks yes/no before saving, user can list/edit/delete (pairs with #57). Inject only the top few relevant rules per request, capped for small models. Never save personal/sensitive facts as rules. Verify with the eval harness (#39) that rules change behavior without regressing the 107-prompt baseline.
 - [ ] **#100** [F4] Harness adapters, step 1: MCP both ways - harden mcp_bridge (timeouts, restart, approval + leak-guard on every call) and expose Aether's tools as an MCP server `medium`
   - Most external harnesses speak MCP, so this unlocks the rest. Bridge exists (core/mcp_bridge.py, stdio client). New: server side so Goose/Claude Code/Codex CLI can call Aether tools. Every call goes through core/safety confirmation + audit_log; nothing exposes protected_paths.
-- [ ] **#101** [F4] Harness adapters, step 2: eval harnesses (promptfoo, inspect-ai, lm-evaluation-harness) pointed at Aether's OpenAI-compatible API (#41) `medium`
-  - Near-zero code: configs + a runner script under tools/eval/. Extends tools/eval_harness.py's 107 prompts and feeds #98 model arena. Model-only access today (#41 deliberately exposes no memory/tools); keep it that way. Runs as separate processes, no new deps in the main venv.
 - [ ] **#102** [F4] Harness adapters, step 3: external coding agents as sandboxed subprocess adapters (Aider, Goose, Codex CLI, Claude Code headless, OpenHands) `medium`
   - Do after #81 sandbox. One adapter interface (start, send task, stream output, cancel, result), each agent runs in the container with a scratch repo checkout and git checkpoint. Default backend is Ollama; cloud-backed agents are opt-in per adapter, off by default, and the task text goes through core/leak_guard first. Approval before any write outside the scratch checkout.
 - [ ] **#32** Investigate long_term.json identity entries missing value `low`
@@ -197,3 +195,5 @@ Generated: 2026-11-04 02:34 UTC
 Other session (2026-10-29): Decision (Ian): wake word. wake_word_enabled now defaults to TRUE in core/listen_loops.py (was false), so background media (TikTok/TV) is not transcribed: the mic only feeds Whisper after 'Hey Jarvis', and the gate sleeps after 2 min of silence. Needs openwakeword + its model; if missing, Aether still falls back to always-awake but now logs a loud warning saying background audio WILL be transcribed. wake_word_enabled=false restores always-listening. config.example.json and docs/MARK_LV_PORTS.md updated; 3 new tests in tests/test_mark_lv_ports.py (default on + warning, explicit off, gate keeps background speech out). NOT validated on a real mic/openwakeword. Not done: push-to-talk, and a one-click 'install wake word' prompt on first run -- until openwakeword is installed on the machine, behavior is unchanged apart from the warning.
 - [x] **#99** [F0] Self-healing supervisor: watchdog that restarts hung Ollama/Aether, checks disk/RAM, alerts via ntfy only when it can't fix it
   - For the always-on deploy (#88). Health probes: Ollama /api/tags, Aether process, dashboard /api/llm-status, disk and memory thresholds. Bounded restarts with backoff (no restart loops), state written to the audit log, ntfy alert via core/notify.py after N failed recoveries. Should run headless inside the Docker setup.
+- [x] **#101** [F4] Harness adapters, step 2: eval harnesses (promptfoo, inspect-ai, lm-evaluation-harness) pointed at Aether's OpenAI-compatible API (#41)
+  - Done: tools/eval/ (cases.py, inspect_task.py, run.py). python -m tools.eval.run check|promptfoo|inspect|lm-eval against the #41 API; harnesses are separate installs (promptfoo pinned 0.125.1 via npx; inspect-ai 0.3.287 and lm_eval 0.4.13 in a venv), token via env only, telemetry off, no insecure-TLS switch (--ca-bundle). Suite = core minus memory cases (77 of 83). Verified end to end against the real dashboard/openai_api router with a fake model: promptfoo and inspect-ai give per-case results identical to the Python grader; lm-eval ran a local custom task and scored as expected. Caught and fixed: Python (?i) in 4 safety patterns is invalid JS and silently failed them; now folded into flags and other Python-only syntax is refused. NOT verified: a real Aether/Ollama model behind the API, Windows paths, lm-eval standard benchmarks (Hugging Face unreachable in the sandbox). Over the API there are no tools or memory, so this scores the model, not the assistant.

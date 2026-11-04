@@ -905,8 +905,8 @@
       "id": 101,
       "title": "[F4] Harness adapters, step 2: eval harnesses (promptfoo, inspect-ai, lm-evaluation-harness) pointed at Aether's OpenAI-compatible API (#41)",
       "priority": "medium",
-      "status": "backlog",
-      "notes": "Near-zero code: configs + a runner script under tools/eval/. Extends tools/eval_harness.py's 107 prompts and feeds #98 model arena. Model-only access today (#41 deliberately exposes no memory/tools); keep it that way. Runs as separate processes, no new deps in the main venv.",
+      "status": "done",
+      "notes": "Done: tools/eval/ (cases.py, inspect_task.py, run.py). python -m tools.eval.run check|promptfoo|inspect|lm-eval against the #41 API; harnesses are separate installs (promptfoo pinned 0.125.1 via npx; inspect-ai 0.3.287 and lm_eval 0.4.13 in a venv), token via env only, telemetry off, no insecure-TLS switch (--ca-bundle). Suite = core minus memory cases (77 of 83). Verified end to end against the real dashboard/openai_api router with a fake model: promptfoo and inspect-ai give per-case results identical to the Python grader; lm-eval ran a local custom task and scored as expected. Caught and fixed: Python (?i) in 4 safety patterns is invalid JS and silently failed them; now folded into flags and other Python-only syntax is refused. NOT verified: a real Aether/Ollama model behind the API, Windows paths, lm-eval standard benchmarks (Hugging Face unreachable in the sandbox). Over the API there are no tools or memory, so this scores the model, not the assistant.",
       "created": "2026-11-04",
       "updated": "2026-11-04"
     },

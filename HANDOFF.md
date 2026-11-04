@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-04 02:22 UTC
+Generated: 2026-11-04 02:45 UTC
+
+## #128 — 2026-11-04 02:45 UTC — Claude (Sonnet 5.5)
+
+Roadmap #101: external eval harnesses against Aether's OpenAI-compatible API. Added tools/eval (python -m tools.eval.run check|promptfoo|inspect|lm-eval), 21 tests, readme + SERVER.md docs. Also added harness-adapter roadmap items #100-#103. Verified against the real openai_api router with a fake model; promptfoo and inspect results match the Python grader per case. Suite: 1184 pass, 1 PortAudio-only failure. PR #25 (roadmap-batch-2) now also carries this.
+
+**Touched:** `tools/eval/__init__.py`, `tools/eval/cases.py`, `tools/eval/inspect_task.py`, `tools/eval/run.py`, `tests/test_eval_adapters.py`, `readme.md`, `docs/SERVER.md`
+
+**Next steps:** On iansserver/PC: enable api_server_enabled + token, run 'python -m tools.eval.run check' then promptfoo/inspect with the real model (not yet run against Ollama). Then #98 model arena can reuse this, or #100 MCP both ways.
+
+---
 
 ## #127 — 2026-11-04 02:22 UTC — Claude (Sonnet 5.5)
 

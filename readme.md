@@ -171,6 +171,20 @@ python -m tools.eval_harness show qwen
 
 `run-tools` sends eight prompts directly to Ollama with Aether's real everyday-routed tool schemas at temperature 0 for more repeatable comparisons. It records and grades the model's tool-call name and arguments but never executes a call, so the benchmark cannot launch apps, browse, or read/write files. Results are saved with the other evaluations and can be compared across models or schema revisions.
 
+### External eval harnesses (promptfoo, inspect-ai, lm-evaluation-harness)
+
+These run as separate programs against Aether's OpenAI-compatible API (turn it on first: `docs/SERVER.md`). Nothing is added to Aether's own environment; install each one on its own, ideally in a venv. Over the API the model gets text only (no tools, no memory), so they measure the configured model rather than the whole assistant; `tools.eval_harness` above stays the whole-assistant suite.
+
+```powershell
+$env:AETHER_API_TOKEN = "<api_server_token>"          # read from the environment only
+python -m tools.eval.run check                          # connection + token + how many cases apply
+python -m tools.eval.run promptfoo --label base         # needs Node.js; promptfoo version is pinned
+python -m tools.eval.run inspect   --label base --bin venv-eval\Scripts\inspect.exe     # pip install inspect-ai openai
+python -m tools.eval.run lm-eval   --tasks gsm8k --limit 20 --bin venv-eval\Scripts\lm_eval.exe   # pip install "lm_eval[api]"
+```
+
+promptfoo and inspect-ai run Aether's `core` suite minus the memory cases (those need Aether's memory, which the API does not expose), graded the same way as `tools.eval_harness`. lm-eval is for standard benchmarks and your own task files (`--include-path`); only generation tasks work over a chat API. Results go to `logs/eval/harness/`. For an https Aether with a self-signed certificate pass `--ca-bundle config/certs/aether.crt`; there is no switch to skip verification. Telemetry is turned off where the tool has a switch (lm-eval still downloads public benchmark datasets from Hugging Face). Aether ignores `temperature` and `max_tokens`, so repeat runs can differ.
+
 Run the automated test suite with:
 
 ```powershell
