@@ -278,6 +278,13 @@ class PromptBuilderMixin:
             if active_integrations:
                 parts.append("[ACTIVE INTEGRATIONS]\n" + "\n".join(active_integrations))
 
+            # ── per-turn: learned preferences (roadmap #96; "" when none apply) ──
+            if user_text:
+                from core import behavior_rules
+                rules_block = behavior_rules.prompt_block(user_text)
+                if rules_block:
+                    parts.append(rules_block)
+
             # ── per-turn: retrieved memory for THIS message, then active goals ──
             mem_engine = self._hybrid_mem or self._semantic_mem
             if mem_engine and user_text:

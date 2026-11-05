@@ -167,6 +167,8 @@ def _turn(monkeypatch, tmp_path, script, user_text, *, enabled=True, tool_result
 
     host = MagicMock()
     host._handle_chat_command.return_value = False
+    host._answer_pending_rule.return_value = False
+    host._spot_correction.return_value = None
     host._try_quick_intent.return_value = False
     host._cancel_current_turn = threading.Event()
     host._goals.list_active.return_value = []

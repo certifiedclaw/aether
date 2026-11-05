@@ -1,5 +1,5 @@
 {
-  "next_id": 131,
+  "next_id": 133,
   "entries": [
     {
       "id": 1,
@@ -1839,6 +1839,37 @@
         "tests/test_shell_safety.py"
       ],
       "next_steps": "No follow-up required for the Windows shell-safety test; retain cross-platform path fixtures in future tests."
+    },
+    {
+      "id": 131,
+      "timestamp": "2026-11-05 01:10 UTC",
+      "by": "GitHub Copilot App",
+      "summary": "Merged latest master into the roadmap #96 branch. Preserved the correction-learning feature alongside master's response cache docs and desktop-mate/runtime changes; retained both master handoffs and recorded the correction feature as a new entry after renumbering the colliding handoff IDs.",
+      "files": [
+        "readme.md",
+        "tools/maintenance/data/handoff.json",
+        "core/conversation_core.py",
+        "core/prompt_builder.py",
+        "config/config.example.json"
+      ],
+      "next_steps": "Run the focused correction, conversation, prompt, and memory tests plus py_compile; inspect and push the resolution commit if all pass."
+    },
+    {
+      "id": 132,
+      "timestamp": "2026-11-05 01:15 UTC",
+      "by": "GitHub Copilot App",
+      "summary": "Resolved PR #26 against the latest master. Kept the correction-learning feature and master's response-cache, tracing, and desktop-mate changes; combined both README sections, regenerated reports from merged maintenance data, and retained both master handoffs while assigning correction work a unique handoff ID. Updated the response-cache test host to explicitly stub the newly added correction hooks. Focused suite: 273 passed; full suite: 1579 passed, 2 skipped; py_compile: 53 changed Python files passed.",
+      "files": [
+        "HANDOFF.md",
+        "ROADMAP.md",
+        "readme.md",
+        "config/config.example.json",
+        "core/conversation_core.py",
+        "core/prompt_builder.py",
+        "tools/maintenance/data/handoff.json",
+        "tests/test_response_cache.py"
+      ],
+      "next_steps": "Review GitHub's updated mergeability after this branch is pushed; test correction-rule draft quality against a live Ollama model when available."
     }
   ]
 }

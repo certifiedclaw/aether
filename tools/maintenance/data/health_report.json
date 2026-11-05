@@ -47,7 +47,7 @@
     },
     {
       "file": "core\\conversation_core.py",
-      "lines": 1604
+      "lines": 1665
     },
     {
       "file": "core\\llm_client.py",
@@ -278,7 +278,7 @@
     {
       "file": "core\\chat_commands.py",
       "function": "_handle_chat_command",
-      "lines": 298,
+      "lines": 306,
       "at_line": 70
     },
     {
@@ -296,7 +296,7 @@
     {
       "file": "core\\conversation_core.py",
       "function": "_process_message_inner",
-      "lines": 684,
+      "lines": 690,
       "at_line": 669
     },
     {
@@ -350,7 +350,7 @@
     {
       "file": "core\\prompt_builder.py",
       "function": "_build_system_prompt",
-      "lines": 85,
+      "lines": 92,
       "at_line": 212
     },
     {
@@ -443,7 +443,7 @@
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-11-05T00:57:43.513785+00:00",
-    "files_scanned": 238
+    "generated": "2026-11-05T01:15:33.430511+00:00",
+    "files_scanned": 240
   }
 }

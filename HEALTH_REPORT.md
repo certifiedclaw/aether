@@ -2,8 +2,8 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.health_check` (or `run_all`) to refresh. Fix things here, don't edit this file directly.
 
-Generated: 2026-11-05T00:57:43.513785+00:00
-Files scanned: 238
+Generated: 2026-11-05T01:10:43.045587+00:00
+Files scanned: 240
 
 ## Summary
 
@@ -20,7 +20,7 @@ Files scanned: 238
 ## Files over 600 lines
 - `ui.py` — 3843 lines
 - `tests\test_all_critical.py` — 2165 lines
-- `core\conversation_core.py` — 1604 lines
+- `core\conversation_core.py` — 1665 lines
 - `core\llm_client.py` — 1574 lines
 - `actions\osint_tools.py` — 1355 lines
 - `dashboard\server.py` — 1333 lines
@@ -37,8 +37,8 @@ Files scanned: 238
 - `actions\file_controller.py` — 651 lines
 
 ## Functions over 80 lines
-- `core\conversation_core.py:669` — `_process_message_inner()` (684 lines)
-- `core\chat_commands.py:70` — `_handle_chat_command()` (298 lines)
+- `core\conversation_core.py:669` — `_process_message_inner()` (690 lines)
+- `core\chat_commands.py:70` — `_handle_chat_command()` (306 lines)
 - `ui.py:2554` — `_build_right_panel()` (278 lines)
 - `ui.py:2905` — `_open_action_catalog()` (205 lines)
 - `core\llm_client.py:1382` — `_call_llm_stream_impl()` (192 lines)
@@ -80,6 +80,7 @@ Files scanned: 238
 - `ui.py:1719` — `_build_tts_section()` (92 lines)
 - `ui.py:2191` — `__init__()` (92 lines)
 - `actions\code_helper.py:431` — `_screen_debug_action()` (92 lines)
+- `core\prompt_builder.py:212` — `_build_system_prompt()` (92 lines)
 - `dashboard\openai_api.py:94` — `build_router()` (92 lines)
 - `core\diagnostics.py:22` — `run_all()` (91 lines)
 - `actions\file_processor.py:81` — `_process_image()` (90 lines)
@@ -92,7 +93,6 @@ Files scanned: 238
 - `actions\desktop.py:569` — `desktop_control()` (86 lines)
 - `tools\live_grader.py:132` — `grade_overall()` (86 lines)
 - `ui.py:2065` — `__init__()` (85 lines)
-- `core\prompt_builder.py:212` — `_build_system_prompt()` (85 lines)
 - `memory\hybrid_memory.py:305` — `_retrieve()` (85 lines)
 - `tools\eval_harness.py:125` — `run_tool_call_suite()` (85 lines)
 - `agent\executor.py:41` — `_run_generated_code()` (83 lines)
