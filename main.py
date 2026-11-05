@@ -956,12 +956,20 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         try:
             self.ui.on_reconfigure = self.reconfigure
 
-            from core.llm_client import ensure_ollama_running, warmup_model
-            self.ui.write_log("SYS: Checking Ollama…")
-            if ensure_ollama_running():
-                self.ui.write_log("SYS: Ollama OK.")
+            from core.llm_client import (
+                ensure_ollama_running,
+                should_warmup_on_start,
+                warmup_model,
+            )
+            llm_warmup_on_start = should_warmup_on_start(self._config)
+            if llm_warmup_on_start:
+                self.ui.write_log("SYS: Checking Ollama…")
+                if ensure_ollama_running():
+                    self.ui.write_log("SYS: Ollama OK.")
+                else:
+                    self.ui.write_log("ERR: Ollama unavailable — run: ollama serve")
             else:
-                self.ui.write_log("ERR: Ollama unavailable — run: ollama serve")
+                self.ui.write_log("SYS: LLM service/model start deferred until first request.")
 
             stt_engine   = self._config.get("stt_engine",   "whisper").lower()
             stt_language = self._config.get("stt_language", "auto")
@@ -975,6 +983,9 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
 
             def _do_warmup():
                 try:
+                    if not llm_warmup_on_start:
+                        self.ui.mark_startup_ready("llm")
+                        return
                     static_prompt = _load_system_prompt()
                     warmup_model(system_prompt=static_prompt)
                     self.ui.write_log("SYS: LLM ready.")

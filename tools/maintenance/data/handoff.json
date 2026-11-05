@@ -1,5 +1,5 @@
 {
-  "next_id": 136,
+  "next_id": 137,
   "entries": [
     {
       "id": 1,
@@ -1912,6 +1912,20 @@
         "HANDOFF.md"
       ],
       "next_steps": "Push the merge commit and confirm PR #29 has been reevaluated for mergeability."
+    },
+    {
+      "id": 136,
+      "timestamp": "2026-11-05 03:19 UTC",
+      "by": "GitHub Copilot",
+      "summary": "Reduced idle Ollama resource use: startup no longer launches/warmups the LLM by default, and all Ollama requests now use a configurable five-minute keep-alive instead of retaining models forever. Added configuration docs and request/startup regression tests; targeted suite and py_compile passed.",
+      "files": [
+        "core/llm_client.py",
+        "main.py",
+        "config/config.example.json",
+        "docs/PERFORMANCE_NOTES.md",
+        "tests/test_ollama_resource_use.py"
+      ],
+      "next_steps": "Observe idle memory and first-response delay on the user's machine; adjust llm_keep_alive or enable llm_warmup_on_start if needed."
     }
   ]
 }

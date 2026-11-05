@@ -35,7 +35,7 @@ When auditing a new module, search it for: `.build(`, `for .* in os.walk`, `whil
 
 | Module | Status | Notes |
 |---|---|---|
-| `core/llm_client.py` | ✅ Fixed | `_load_config()` was re-reading disk every call; now cached + mtime-invalidated. `num_ctx` was never actually sent to Ollama — fixed. |
+| `core/llm_client.py` | ✅ Fixed | `_load_config()` was re-reading disk every call; now cached + mtime-invalidated. `num_ctx` was never actually sent to Ollama — fixed. Ollama models now unload after five idle minutes by default, and startup warmup is opt-in. |
 | `core/conversation_core.py` | ◐ Partial | Hosted Gemini/OpenAI API turns now use the larger cloud history budget instead of the local-model budget; full turn-processing path still needs live-model profiling. |
 | `main.py` | ✅ Fixed (partial) | Self-evaluator backgrounded off the UI return path. Cancel-phrase busy-guard was blocking cancel commands — fixed. `/selftest` handler now uses `run_self_test_async` instead of blocking the chat command loop. |
 | `ui.py` | ◐ Partial | Removed the 6 ms/character chat-log animation so complete messages display immediately; GPU metrics and orb rendering still need profiling under real UI load. |

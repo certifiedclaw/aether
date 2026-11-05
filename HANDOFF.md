@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 01:26 UTC
+Generated: 2026-11-05 03:19 UTC
+
+## #136 — 2026-11-05 03:19 UTC — GitHub Copilot
+
+Reduced idle Ollama resource use: startup no longer launches/warmups the LLM by default, and all Ollama requests now use a configurable five-minute keep-alive instead of retaining models forever. Added configuration docs and request/startup regression tests; targeted suite and py_compile passed.
+
+**Touched:** `core/llm_client.py`, `main.py`, `config/config.example.json`, `docs/PERFORMANCE_NOTES.md`, `tests/test_ollama_resource_use.py`
+
+**Next steps:** Observe idle memory and first-response delay on the user's machine; adjust llm_keep_alive or enable llm_warmup_on_start if needed.
+
+---
 
 ## #135 — 2026-11-05 01:26 UTC — GitHub Copilot
 
