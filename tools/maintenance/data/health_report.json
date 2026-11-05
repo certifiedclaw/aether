@@ -7,11 +7,11 @@
     },
     {
       "file": "main.py",
-      "lines": 1228
+      "lines": 1252
     },
     {
       "file": "ui.py",
-      "lines": 3843
+      "lines": 4142
     },
     {
       "file": "actions\\browser_control.py",
@@ -47,7 +47,7 @@
     },
     {
       "file": "core\\conversation_core.py",
-      "lines": 1604
+      "lines": 1665
     },
     {
       "file": "core\\llm_client.py",
@@ -87,67 +87,73 @@
       "file": "main.py",
       "function": "main",
       "lines": 145,
-      "at_line": 1080
+      "at_line": 1104
     },
     {
       "file": "main.py",
       "function": "run",
-      "lines": 133,
-      "at_line": 940
+      "lines": 142,
+      "at_line": 955
     },
     {
       "file": "main.py",
       "function": "runner",
       "lines": 87,
-      "at_line": 1135
+      "at_line": 1159
     },
     {
       "file": "ui.py",
       "function": "paintEvent",
       "lines": 140,
-      "at_line": 428
+      "at_line": 498
+    },
+    {
+      "file": "ui.py",
+      "function": "__init__",
+      "lines": 116,
+      "at_line": 1339
     },
     {
       "file": "ui.py",
       "function": "_build_llm_section",
       "lines": 180,
-      "at_line": 1537
+      "at_line": 1645
     },
     {
       "file": "ui.py",
       "function": "_build_tts_section",
       "lines": 92,
-      "at_line": 1719
+      "at_line": 1827
     },
     {
       "file": "ui.py",
       "function": "__init__",
       "lines": 85,
-      "at_line": 2065
+      "at_line": 2358
     },
     {
       "file": "ui.py",
       "function": "__init__",
-      "lines": 92,
-      "at_line": 2191
+      "lines": 93,
+      "at_line": 2484
     },
     {
       "file": "ui.py",
       "function": "_build_right_panel",
       "lines": 278,
-      "at_line": 2554
+      "at_line": 2848
     },
     {
       "file": "ui.py",
       "function": "_open_action_catalog",
       "lines": 205,
-      "at_line": 2905
+      "at_line": 3199
     },
     {
       "file": "ui.py",
       "function": "_open_action_form",
       "lines": 149,
-      "at_line": 3146
+      "at_line": 3440
     },
     {
       "file": "actions\\browser_control.py",
@@ -278,7 +284,7 @@
     {
       "file": "core\\chat_commands.py",
       "function": "_handle_chat_command",
-      "lines": 298,
+      "lines": 306,
       "at_line": 70
     },
     {
@@ -296,7 +302,7 @@
     {
       "file": "core\\conversation_core.py",
       "function": "_process_message_inner",
-      "lines": 684,
+      "lines": 690,
       "at_line": 669
     },
     {
@@ -350,7 +356,7 @@
     {
       "file": "core\\prompt_builder.py",
       "function": "_build_system_prompt",
-      "lines": 85,
+      "lines": 92,
       "at_line": 212
     },
     {
@@ -443,7 +449,7 @@
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-11-05T00:57:43.513785+00:00",
-    "files_scanned": 238
+    "generated": "2026-11-05T01:19:53.293462+00:00",
+    "files_scanned": 242
   }
 }

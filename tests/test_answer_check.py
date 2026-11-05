@@ -186,6 +186,7 @@ def test_finalize_calls_self_check_only_for_llm_replies():
     core, _, _ = _fake_core()
     calls = []
     core._self_check_follow_up = lambda *a: calls.append(a)
+    core._propose_rule_follow_up = lambda *a: None     # roadmap #96 hook; not under test here
     fin = cc.ConversationCoreMixin._finalize_response
     fin(core, "q", LONG, None, [], True)
     fin(core, "q", LONG, None, [], False)   # raw tool result, not model-written

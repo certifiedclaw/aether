@@ -9,6 +9,12 @@ from core import memory_panel as mp
 from memory import memory_manager as mm
 
 
+@pytest.fixture(autouse=True)
+def _isolated_rules(tmp_path, monkeypatch):
+    from core import behavior_rules
+    monkeypatch.setattr(behavior_rules, "_path", lambda: tmp_path / "behavior_rules.json")
+
+
 @pytest.fixture
 def stores(tmp_path, monkeypatch):
     """Point both stores at temp files and run with no live HybridMemory."""

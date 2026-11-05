@@ -2,15 +2,45 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 01:11 UTC
+Generated: 2026-11-05 01:19 UTC
 
-## #131 — 2026-11-05 01:11 UTC — GitHub Copilot (Copilot App)
+## #134 — 2026-11-05 01:19 UTC — GitHub Copilot (Copilot App)
 
-Merged latest origin/master into PR #30 and reconciled main.py reconfiguration: text-only mode still stops/disables TTS while master’s selective TTS/STT rebuild plan and STT restart behavior remain intact. Ran preference/setup/reconfiguration tests and Python compilation.
+Merged newly advanced master (including PR #26) into PR #30. Preserved learn-from-corrections behavior, master response-cache and other runtime changes, and easy-mode setup; resolved generated handoff/roadmap report conflicts while retaining both branches' history.
+
+**Touched:** `HANDOFF.md`, `ROADMAP.md`, `tools/maintenance/data/handoff.json`, `core/behavior_rules.py`, `core/conversation_core.py`, `core/prompt_builder.py`, `core/ui_prefs.py`
+
+**Next steps:** Push the merge commit and confirm PR #30 is mergeable; do not merge it.
+
+---
+
+## #133 — 2026-11-05 01:11 UTC — GitHub Copilot (Copilot App)
+
+Merged latest origin/master into PR #30 and reconciled main.py reconfiguration: text-only mode still stops/disables TTS while master's selective TTS/STT rebuild plan and STT restart behavior remain intact. Ran preference/setup/reconfiguration tests and Python compilation.
 
 **Touched:** `main.py`, `HANDOFF.md`, `tools/maintenance/data/handoff.json`
 
-**Next steps:** Push the merge commit to port/easy-mode and confirm GitHub recalculates PR #30 mergeability; do not merge the PR.
+**Next steps:** After the next master update, reconcile conflicts again and verify PR #30 mergeability; do not merge the PR.
+
+---
+
+## #132 — 2026-11-05 01:15 UTC — GitHub Copilot App
+
+Resolved PR #26 against the latest master. Kept the correction-learning feature and master's response-cache, tracing, and desktop-mate changes; combined both README sections, regenerated reports from merged maintenance data, and retained both master handoffs while assigning correction work a unique handoff ID. Updated the response-cache test host to explicitly stub the newly added correction hooks. Focused suite: 273 passed; full suite: 1579 passed, 2 skipped; py_compile: 53 changed Python files passed.
+
+**Touched:** `HANDOFF.md`, `ROADMAP.md`, `readme.md`, `config/config.example.json`, `core/conversation_core.py`, `core/prompt_builder.py`, `tools/maintenance/data/handoff.json`, `tests/test_response_cache.py`
+
+**Next steps:** Review GitHub's updated mergeability after this branch is pushed; test correction-rule draft quality against a live Ollama model when available.
+
+---
+
+## #131 — 2026-11-05 01:10 UTC — GitHub Copilot App
+
+Merged latest master into the roadmap #96 branch. Preserved the correction-learning feature alongside master's response cache docs and desktop-mate/runtime changes; retained both master handoffs and recorded the correction feature as a new entry after renumbering the colliding handoff IDs.
+
+**Touched:** `readme.md`, `tools/maintenance/data/handoff.json`, `core/conversation_core.py`, `core/prompt_builder.py`, `config/config.example.json`
+
+**Next steps:** Run the focused correction, conversation, prompt, and memory tests plus py_compile; inspect and push the resolution commit if all pass.
 
 ---
 
