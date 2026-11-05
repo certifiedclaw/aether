@@ -130,6 +130,70 @@ def test_tech_stack_does_not_follow_redirects(monkeypatch):
     assert len(_FakeConnection.instances) == 1
 
 
+@pytest.mark.parametrize(
+    "subnet",
+    ["8.8.8.0/24", "172.15.0.0/24", "192.168.1.0/23", "2001:db8::/64", "not-a-subnet"],
+)
+def test_lan_audit_rejects_non_private_or_oversized_subnets(monkeypatch, subnet):
+    monkeypatch.setattr(
+        ot.socket,
+        "create_connection",
+        lambda *args, **kwargs: pytest.fail("invalid subnet must not be scanned"),
+    )
+
+    result = ot.lan_audit(subnet)
+
+    assert result.startswith(("LAN audit is limited", "Subnet too large", "Invalid subnet"))
+
+
+def test_lan_audit_scans_only_hosts_and_requested_ports(monkeypatch):
+    attempts = []
+
+    class FakeSocket:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+    def connect(address, timeout):
+        attempts.append((address, timeout))
+        if address == ("192.168.1.2", 80):
+            return FakeSocket()
+        raise OSError("closed")
+
+    monkeypatch.setattr(ot.socket, "create_connection", connect)
+
+    result = ot.lan_audit("192.168.1.0/30", "80,443")
+
+    assert set(attempts) == {
+        (("192.168.1.1", 80), ot._LAN_AUDIT_TIMEOUT),
+        (("192.168.1.1", 443), ot._LAN_AUDIT_TIMEOUT),
+        (("192.168.1.2", 80), ot._LAN_AUDIT_TIMEOUT),
+        (("192.168.1.2", 443), ot._LAN_AUDIT_TIMEOUT),
+    }
+    assert "192.168.1.2: 80 (HTTP)" in result
+    assert "not a vulnerability assessment" in result
+    assert "not, by themselves, confirmed vulnerabilities" in result
+    assert "does not show that they are reachable from the internet" in result
+    assert "OPSEC triage before changing settings" in result
+    assert "What device or data are you protecting" in result
+    assert "choose a proportionate step" in result
+
+
+def test_lan_audit_rejects_invalid_or_excessive_port_lists(monkeypatch):
+    monkeypatch.setattr(
+        ot.socket,
+        "create_connection",
+        lambda *args, **kwargs: pytest.fail("invalid port list must not be scanned"),
+    )
+
+    assert ot.lan_audit("192.168.1.0/30", "bad").startswith("Invalid ports")
+    assert ot.lan_audit("192.168.1.0/30", ",".join(map(str, range(1, 34)))).startswith(
+        "Too many ports"
+    )
+
+
 def test_pinned_https_connection_uses_pinned_ip_and_hostname_sni(monkeypatch):
     connected_to = []
     server_names = []

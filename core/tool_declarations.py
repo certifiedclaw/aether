@@ -329,17 +329,48 @@ TOOL_DECLARATIONS = [
         "name": "file_processor",
         "description": (
             "Processes any file that the user has uploaded or dropped onto the interface. "
-            "Supports: images, PDFs, Word docs, CSV/Excel, JSON, code files, audio, video, archives."
+            "Supports: images, PDFs, Word docs, CSV/Excel, JSON, code files, audio, video, archives. "
+            "For image privacy, use action=metadata to check metadata locally without exposing "
+            "values, or action=strip_metadata to create a cleaned sibling copy; the original "
+            "is preserved, only static JPEG/PNG/WebP are supported, and removal requires approval."
         ),
         "parameters": {
             "type": "OBJECT",
             "properties": {
                 "file_path":   {"type": "STRING",  "description": "Full path to the uploaded file"},
-                "action":      {"type": "STRING",  "description": "What to do with the file"},
+                "action":      {"type": "STRING",  "description": "For images: describe | ocr | metadata | strip_metadata | resize | convert | compress. Metadata removal creates a new copy and requires approval."},
                 "instruction": {"type": "STRING",  "description": "Free-form instruction"},
             },
             "required": []
         }
+    },
+    {
+        "name": "antivirus",
+        "description": (
+            "Checks antivirus registrations and performs on-demand checks. action=status reports "
+            "Windows Security Center registrations and supported scanner availability; it does not "
+            "verify protection health. action=scan scans one file locally with Microsoft Defender "
+            "or ClamAV when supported. Defender may quarantine/remediate according to its policy. "
+            "Other installed products may be detected without a compatible scan adapter. "
+            "action=hash_reputation queries an existing VirusTotal report by SHA-256 only: the hash "
+            "is sent to VirusTotal, file contents are NEVER uploaded. Scanning and hash lookup "
+            "require user approval."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "action": {
+                    "type": "STRING",
+                    "description": "status | scan | hash_reputation. Scan/hash operations require user approval.",
+                },
+                "path": {"type": "STRING", "description": "Local file path for scan or hash_reputation."},
+                "provider": {
+                    "type": "STRING",
+                    "description": "For scan: auto (default), defender, or clamav.",
+                },
+            },
+            "required": ["action"],
+        },
     },
     {
         "name": "save_memory",
@@ -374,8 +405,11 @@ TOOL_DECLARATIONS = [
         "name": "osint_lookup",
         "description": (
             "OSINT investigation tools: WHOIS lookup, DNS records, subdomain enumeration, "
-            "email breach check, port scan, Google dork search, IP geolocation. "
-            "Use for: 'check if email was breached', 'who owns domain X', 'open ports on Y'. "
+            "email breach check, single-host port scan, bounded private-LAN service audit, "
+            "CVE threat-intelligence briefs from OSV and CISA KEV, Google dork search, "
+            "IP geolocation. "
+            "Use for: 'check if email was breached', 'who owns domain X', 'open ports on Y', "
+            "or 'audit my private subnet'. "
             "Use only against your own systems/accounts or targets you have explicit "
             "authorization to investigate — port_scan against systems you don't own or "
             "control may violate the law (e.g. the US Computer Fraud and Abuse Act) even "
@@ -387,15 +421,23 @@ TOOL_DECLARATIONS = [
             "type": "OBJECT",
             "properties": {
                 "action": {"type": "STRING", "description": (
-                    "whois | dns | subdomains | breach_check | port_scan | dork | geoip. "
+                    "whois | dns | subdomains | breach_check | port_scan | lan_audit | "
+                    "threat_intel | dork | geoip. "
                     "port_scan: only scan hosts you own or are explicitly authorized to "
                     "test — treat as equivalent to running nmap against a target. "
+                    "lan_audit: scans only an explicitly supplied RFC1918 private IPv4 "
+                    "subnet, limited to /24 or smaller and common TCP ports; requires "
+                    "authorization and confirmation. It reports reachable services, "
+                    "not verified vulnerabilities, and may miss firewalled hosts. "
+                    "threat_intel: accepts a CVE ID and queries public OSV and CISA KEV "
+                    "records, with source links and explicit limits; it does not scan "
+                    "devices or determine whether a product/version is installed or affected. "
                     "breach_check: returns whether an email appears in known public "
                     "breach datasets, not the leaked data itself — still sensitive, "
                     "handle results as you would any other person's private information."
                 )},
-                "target": {"type": "STRING", "description": "Domain, IP, email, or search query"},
-                "ports":  {"type": "STRING", "description": "Port range for port_scan, e.g. '1-1000'"},
+                "target": {"type": "STRING", "description": "Domain, IP, email, search query, or private CIDR subnet (for lan_audit)"},
+                "ports":  {"type": "STRING", "description": "Port range for port_scan; optional comma-separated TCP ports for lan_audit (default common ports)"},
             },
             "required": ["action", "target"]
         }

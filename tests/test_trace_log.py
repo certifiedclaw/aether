@@ -129,6 +129,47 @@ def test_hooks_capture_logging_stdio_and_subprocess(tmp_path):
     assert not isinstance(sys.stdout, type(sys.stdout)) or sys.stdout.__class__.__name__ != "_Tee"
 
 
+def test_http_trace_captures_redacted_text_bodies(tmp_path, monkeypatch):
+    import requests.sessions
+    from requests import Response
+    from core import log_redaction
+
+    secret = "http-body-secret-should-not-leak"
+    monkeypatch.setattr(log_redaction, "_SECRETS", {secret})
+    response = Response()
+    response.status_code = 200
+    response.reason = "OK"
+    response.headers["Content-Type"] = "application/json"
+    response._content = f'{{"result":"{secret}","api_key":"{secret}"}}'.encode()
+    response._content_consumed = True
+
+    def fake_request(self, method, url, *args, **kwargs):
+        return response
+
+    monkeypatch.setattr(requests.sessions.Session, "request", fake_request)
+    trace_log.shutdown()
+    assert trace_log.start({}, trace_dir=tmp_path)
+    try:
+        requests.sessions.Session().request(
+            "POST",
+            f"https://example.test/ask?key={secret}&mode=full",
+            json={"prompt": "keep the full prompt", "api_key": secret},
+            headers={"Authorization": f"Bearer {secret}"},
+        )
+        events = _events(tmp_path)
+    finally:
+        trace_log.shutdown()
+
+    request = next(e for e in events if e["kind"] == "http_request")
+    assert request["request_body"]["prompt"] == "keep the full prompt"
+    assert request["request_body"]["api_key"] == "(hidden)"
+    assert request["headers"]["Authorization"] == "(hidden)"
+    assert secret not in request["url"]
+    body = next(e for e in events if e["kind"] == "http_response_body")
+    assert body["complete"] is True and "result" in body["body"]
+    assert secret not in body["body"]
+
+
 def test_gate_decision_is_recorded(trace):
     from core import risk
     risk._audit("files", "delete", "ask", "denied", {"path": "/x", "api_key": "k"}, "test")

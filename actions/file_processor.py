@@ -78,6 +78,87 @@ def _output_path(src: Path, suffix: str, new_ext: str = None) -> Path:
     name = f"{src.stem}_{suffix}{ext}"
     return src.parent / name
 
+
+def _image_metadata_report(path: Path) -> str:
+    try:
+        from PIL import Image
+        from PIL.ExifTags import TAGS
+        with Image.open(path) as image:
+            found = []
+            for tag_id in image.getexif():
+                name = TAGS.get(tag_id, str(tag_id))
+                found.append("GPS location data" if name == "GPSInfo" else name)
+            found.extend(f"image info: {key}" for key in image.info)
+            if not found:
+                return f"No common EXIF, XMP, ICC-profile, or comment metadata found in {path.name}."
+            return "Metadata found (values hidden in this privacy check):\n" + "\n".join(
+                f"  - {name}" for name in sorted(set(found))
+            )
+    except Exception as exc:
+        return f"Metadata inspection failed: {exc}"
+
+
+def _privacy_metadata_keys(info: dict) -> set[str]:
+    sensitive_names = {
+        "exif", "xmp", "xml:com.adobe.xmp", "icc_profile", "comment", "artist",
+        "author", "description", "title", "software", "timestamp", "creation_time",
+        "make", "model", "copyright", "date", "gps", "location", "serial",
+        "camera", "usercomment",
+    }
+    return {
+        str(key) for key, value in info.items()
+        if value and str(key).strip().lower() in sensitive_names
+    }
+
+
+def _strip_image_metadata(path: Path) -> str:
+    formats = {".jpg": "JPEG", ".jpeg": "JPEG", ".png": "PNG", ".webp": "WEBP"}
+    image_format = formats.get(path.suffix.lower())
+    if image_format is None:
+        return "Metadata removal supports static JPEG, PNG, and WebP images only."
+    try:
+        from PIL import Image, ImageOps
+        output = _output_path(path, "metadata_removed")
+        fd = os.open(output, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        os.close(fd)
+        try:
+            with Image.open(path) as source:
+                if getattr(source, "n_frames", 1) != 1:
+                    raise ValueError("animated images are not supported")
+                oriented = ImageOps.exif_transpose(source)
+                oriented.load()
+                clean = Image.frombytes(oriented.mode, oriented.size, oriented.tobytes())
+                if image_format == "JPEG" and clean.mode not in ("RGB", "L"):
+                    clean = clean.convert("RGB")
+                if image_format == "JPEG":
+                    clean.save(output, image_format, quality=95, exif=b"", icc_profile=None)
+                elif image_format == "WEBP":
+                    clean.save(output, image_format, lossless=True, exif=b"", xmp=b"")
+                else:
+                    clean.save(output, image_format)
+            with Image.open(output) as check:
+                residual = check.getexif()
+                residual_info = _privacy_metadata_keys(check.info)
+                if residual or residual_info:
+                    raise ValueError("metadata verification found remaining metadata")
+        except Exception:
+            output.unlink(missing_ok=True)
+            raise
+        quality_note = (
+            " JPEG was re-encoded at quality 95 and may have slight image-quality changes."
+            if image_format == "JPEG" else ""
+        )
+        return (
+            f"Created {output.name} without common EXIF, XMP, ICC-profile, or comment metadata. "
+            f"The original was not changed.{quality_note} Review the result before sharing; "
+            "this cannot remove identifying details visible in the image."
+        )
+    except FileExistsError:
+        return f"Output already exists; refusing to overwrite: {_output_path(path, 'metadata_removed').name}"
+    except Exception as exc:
+        return f"Metadata removal failed: {exc}"
+
+
 def _process_image(path: Path, action: str, params: dict, speak=None) -> str:
     try:
         from PIL import Image
@@ -85,6 +166,11 @@ def _process_image(path: Path, action: str, params: dict, speak=None) -> str:
         return "Pillow is not installed. Run: pip install Pillow"
 
     action = action or "describe"
+
+    if action in ("metadata", "privacy_check"):
+        return _image_metadata_report(path)
+    if action == "strip_metadata":
+        return _strip_image_metadata(path)
 
     if action in ("describe", "ocr", "analyze", "read", "extract_text"):
         try:

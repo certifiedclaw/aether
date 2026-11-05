@@ -69,9 +69,6 @@ _MAX_FILES_LOGGED = 50
 
 _FAILED_RE = re.compile(r"^(?:FAILED|ERROR)\s+(\S+)")
 _SUMMARY_RE = re.compile(r"^=*\s*(.*\b\d+\s+(?:passed|failed|errors?)\b.*\bin\s+[\d.]+s.*?)\s*=*$")
-_URL_CREDS_RE = re.compile(r"(//)[^/@\s]+@")
-
-
 @dataclass
 class UpdateResult:
     status: str                  # up_to_date | available | updated | rolled_back | refused | error
@@ -98,7 +95,8 @@ class UpdateResult:
 
 def _redact(text: str) -> str:
     """Mask credentials in URLs (https://user:token@host) before they reach a log."""
-    return _URL_CREDS_RE.sub(r"\1***@", text or "")
+    from core.log_redaction import redact_text
+    return redact_text(text)
 
 
 def _git(root: Path, *args: str, timeout: int = GIT_TIMEOUT) -> subprocess.CompletedProcess:
@@ -170,7 +168,7 @@ class RunLog:
         self.action = action
         self.index_path = Path(index_path) if index_path else default_log_path()
         self.runs_dir = self.index_path.parent / RUNS_DIRNAME
-        self.run_id = f"{time.strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(2)}"
+        self.run_id = f"{time.strftime('%Y%m%dT%H%M%S')}-{secrets.token_hex(2)}"
         self.events: list[dict] = []
         self.timings: dict[str, int] = {}
         self._echo = echo
@@ -192,17 +190,18 @@ class RunLog:
     def say(self, message: str) -> None:
         if self._echo:
             try:
-                self._echo(f"[{self.elapsed():6.1f}s] {message}")
+                self._echo(f"[{self.elapsed():6.1f}s] {_redact(message)}")
             except Exception:
                 pass
 
     def event(self, name: str, say: str | None = None, **fields) -> None:
         rec = {"ts": _now_iso(), "t_ms": int(self.elapsed() * 1000), "event": name, **fields}
+        from core.log_redaction import open_private_text, sanitize_for_logs
+        rec = sanitize_for_logs(rec)
         self.events.append(rec)
         if self._fh is None and not self._open_failed:
             try:
-                self.runs_dir.mkdir(parents=True, exist_ok=True)
-                self._fh = self.events_path.open("a", encoding="utf-8")
+                self._fh = open_private_text(self.events_path, "a")
             except OSError:
                 self._open_failed = True
         if self._fh is not None:
@@ -253,11 +252,12 @@ def _summary_row(log: RunLog, r: UpdateResult) -> dict:
 
 def _append_index(path: Path, row: dict) -> None:
     try:
+        from core.log_redaction import open_private_text, sanitize_for_logs
         path.parent.mkdir(parents=True, exist_ok=True)
         if path.exists() and path.stat().st_size > INDEX_MAX_BYTES:
             os.replace(path, Path(str(path) + ".1"))
-        with path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(row, default=str) + "\n")
+        with open_private_text(path, "a") as f:
+            f.write(json.dumps(sanitize_for_logs(row), default=str) + "\n")
     except OSError:
         pass
 
@@ -376,6 +376,8 @@ def _inspect(root: Path, remote: str, log: RunLog):
 def check(root: Path = REPO_ROOT, remote: str = "origin", log_path: Path | None = None,
           echo=None) -> UpdateResult:
     """Fetch and report. Does not modify the working tree."""
+    from core.log_redaction import configure_log_redaction
+    configure_log_redaction()
     root = Path(root)
     log = RunLog("check", log_path, echo)
     result = None
@@ -404,6 +406,8 @@ def check(root: Path = REPO_ROOT, remote: str = "origin", log_path: Path | None 
 def apply(root: Path = REPO_ROOT, remote: str = "origin", test_cmd: list | None = None,
           test_timeout: int = DEFAULT_TEST_TIMEOUT, log_path: Path | None = None,
           echo=None, stream_tests: bool = False) -> UpdateResult:
+    from core.log_redaction import configure_log_redaction
+    configure_log_redaction()
     root = Path(root)
     cmd = test_cmd or DEFAULT_TEST_CMD
     log = RunLog("apply", log_path, echo)
@@ -512,13 +516,15 @@ def _run_tests(root: Path, cmd: list, timeout: int, log: RunLog, stream: bool) -
     state = {"bytes": 0, "truncated": False}
     out_fh = None
     try:
-        log.runs_dir.mkdir(parents=True, exist_ok=True)
-        out_fh = log.test_log_path.open("w", encoding="utf-8")
+        from core.log_redaction import open_private_text
+        out_fh = open_private_text(log.test_log_path, "w")
         tr.logged = True
     except OSError:
         out_fh = None
 
-    log.event("tests_start", cmd=shlex.join(cmd), timeout_s=timeout, say=f"Running tests: {shlex.join(cmd)} (timeout {timeout}s)")
+    command_text = _redact(shlex.join(cmd))
+    log.event("tests_start", cmd=command_text, timeout_s=timeout,
+              say=f"Running tests: {command_text} (timeout {timeout}s)")
     kwargs = {"start_new_session": True} if os.name == "posix" else {}
     try:
         proc = subprocess.Popen(cmd, cwd=str(root), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -532,21 +538,22 @@ def _run_tests(root: Path, cmd: list, timeout: int, log: RunLog, stream: bool) -
 
     def pump():
         for line in proc.stdout:
-            text = line.rstrip("\n")
+            text = _redact(line.rstrip("\n"))
             tail.append(text)
             m = _FAILED_RE.match(text)
             if m and len(tr.failed) < _MAX_FAILED_LISTED:
                 tr.failed.append(m.group(1))
             s = _SUMMARY_RE.match(text.strip())
             if s:
-                tr.summary = s.group(1).strip()
+                tr.summary = _redact(s.group(1).strip())
             if out_fh and not state["truncated"]:
-                state["bytes"] += len(line)
+                safe_line = _redact(line)
+                state["bytes"] += len(safe_line.encode("utf-8"))
                 if state["bytes"] > TEST_LOG_MAX_BYTES:
                     state["truncated"] = True
                     out_fh.write("\n[output truncated: test log size limit reached]\n")
                 else:
-                    out_fh.write(line)
+                    out_fh.write(safe_line)
                 out_fh.flush()
             if stream:
                 log.say("  | " + text)

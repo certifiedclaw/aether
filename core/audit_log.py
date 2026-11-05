@@ -33,7 +33,10 @@ GENESIS = "genesis"
 _VALUE_LIMIT = 300
 _CODE_LIMIT = 600
 _CODE_KEYS = frozenset({"code", "command", "script"})
-_SECRETISH = re.compile(r"pass(word|phrase)?|secret|token|api_?key|credential|^pin$", re.I)
+_SECRETISH = re.compile(
+    r"pass(word|phrase)?|secret|token|api_?key|credential|authorization|cookie|bearer|private_?key|^pin$",
+    re.I,
+)
 
 _lock = threading.Lock()
 _last_hash: dict[str, str] = {}      # per log path
@@ -63,12 +66,11 @@ def _scrub(value, key: str = ""):
         return [_scrub(v) for v in list(value)[:20]]
     if isinstance(value, (int, float, bool)) or value is None:
         return value
-    text = str(value)
     try:
-        from core.leak_guard import redact_text
-        text, _ = redact_text(text)
+        from core.log_redaction import redact_text
+        text = redact_text(value)
     except Exception:  # noqa: BLE001
-        pass
+        text = str(value)
     limit = _CODE_LIMIT if key in _CODE_KEYS else _VALUE_LIMIT
     if len(text) > limit:
         text = text[:limit] + f"... [{len(text)} chars]"

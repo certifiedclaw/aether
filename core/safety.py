@@ -24,7 +24,9 @@ _UNCONDITIONAL_HIGH_RISK = frozenset({"run_shell", "shell", "rm", "rmdir"})
 
 # These are high-risk by default but CAN be removed from confirm_on in config
 # if the operator explicitly wants headless operation for them.
-_DEFAULT_HIGH_RISK = frozenset({"delete", "write_file", "osint_port_scan", "osint_breach_check"})
+_DEFAULT_HIGH_RISK = frozenset({
+    "delete", "write_file", "osint_port_scan", "osint_lan_audit", "osint_breach_check",
+})
 
 
 @dataclass
