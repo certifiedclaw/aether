@@ -157,6 +157,21 @@ class ToolDispatchMixin:
             self.ui.set_state("LISTENING")
         return "__SILENT__"
 
+    def _tool_save_relation(self, args: dict) -> str:
+        from memory import knowledge_graph
+        result = knowledge_graph.add_fact(
+            args.get("subject", ""),
+            args.get("predicate", ""),
+            args.get("object", ""),
+        )
+        if result["status"] == "conflict":
+            choices = ", ".join(
+                f"g:{fact['id']} = {fact['object']}" for fact in result["facts"]
+            )
+            return ("Conflicting memory claims were preserved without choosing one. "
+                    f"Ask the user which is current: {choices}")
+        return "__SILENT__"
+
     def _tool_open_app(self, args: dict) -> str:
         r = open_app(parameters=args, response=None, player=self.ui)
         return r or f"Opened {args.get('app_name')}."
@@ -216,6 +231,51 @@ class ToolDispatchMixin:
 
     def _tool_agent_task(self, args: dict) -> str:
         from agent.task_queue import get_queue, TaskPriority
+        queue = get_queue()
+        action = str(args.get("action", "submit")).strip().lower()
+        task_id = str(args.get("task_id", "")).strip()
+        if action == "list":
+            tasks = queue.get_all_statuses()
+            if not tasks:
+                return "No saved agent tasks."
+            lines = []
+            for task in tasks:
+                goal = queue.get_status(task["task_id"]) or {}
+                status = task["status"]
+                note = " — interrupted; review the goal, then explicitly resume it" \
+                    if status == "interrupted" else ""
+                lines.append(f"{task['task_id']} [{status}] {goal.get('goal', task['goal'])}{note}")
+            return "\n".join(lines)
+        if action == "status":
+            task = queue.get_status(task_id)
+            if task is None:
+                return f"Task {task_id or '(missing ID)'} not found."
+            return (f"{task['task_id']} [{task['status']}]: {task['goal']}"
+                    + (f"\nResult: {task['result']}" if task.get("result") else "")
+                    + (f"\nDetails: {task['error']}" if task.get("error") else ""))
+        if action == "resume":
+            if not task_id:
+                return "A task_id is required to resume a task."
+            task = queue.get_status(task_id)
+            if task is None or task["status"] != "interrupted":
+                return f"Task {task_id} is not available to resume; only interrupted tasks can be resumed."
+            return (f"Task {task_id} will restart from its original goal: {task['goal']}. "
+                    "Completed steps may repeat and cause duplicate side effects. "
+                    f"Ask the user to confirm, then call action=confirm_resume for {task_id}.")
+        if action == "confirm_resume":
+            if not task_id:
+                return "A task_id is required to resume a task."
+            if queue.resume(task_id, speak=self.speak):
+                return f"Resumed task {task_id} from its original goal. Completed steps may run again."
+            return f"Task {task_id} is not available to resume; only interrupted tasks can be resumed."
+        if action == "cancel":
+            if not task_id:
+                return "A task_id is required to cancel a task."
+            return f"Cancelled task {task_id}." if queue.cancel(task_id) \
+                else f"Task {task_id} was not found or is already finished."
+        if action != "submit":
+            return "Unknown task action. Use submit, list, status, resume, confirm_resume, or cancel."
+
         priority_map = {
             "low": TaskPriority.LOW,
             "normal": TaskPriority.NORMAL,
@@ -224,8 +284,11 @@ class ToolDispatchMixin:
         priority = priority_map.get(
             args.get("priority", "normal").lower(), TaskPriority.NORMAL
         )
-        task_id = get_queue().submit(
-            goal=args.get("goal", ""), priority=priority, speak=self.speak
+        goal = str(args.get("goal", "")).strip()
+        if not goal:
+            return "A goal is required to submit a task."
+        task_id = queue.submit(
+            goal=goal, priority=priority, speak=self.speak
         )
         return f"Task started (ID: {task_id})."
 
@@ -489,6 +552,7 @@ class ToolDispatchMixin:
     # handled explicitly instead.
     _TOOL_DISPATCH = {
         "open_app": _tool_open_app,
+        "save_relation": _tool_save_relation,
         "weather_report": _tool_weather_report,
         "browser_control": _tool_browser_control,
         "file_controller": _tool_file_controller,

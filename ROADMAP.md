@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-11-05 01:21 UTC
+Generated: 2026-11-05 03:32 UTC
 
 ## In progress
 
@@ -13,9 +13,6 @@ Generated: 2026-11-05 01:21 UTC
 
 ## Backlog
 
-- [ ] **#56** [F1] Structured memory: small knowledge graph with conflict handling `medium`
-- [ ] **#58** [F1] Task resumption after interruption or restart `medium`
-  - Related to #19.
 - [ ] **#61** [F2] Personal search engine across files, notes, chats `medium`
   - Builds on memory/RAG.
 - [ ] **#62** [F2] Multi-chat folders and search `medium`
@@ -166,8 +163,12 @@ Generated: 2026-11-05 01:21 UTC
   - Opt-in (response_cache_enabled, default false). core/response_cache.py + wiring in conversation_core (lookup right after routing, store at turn end). Only self-contained factual questions with no tool, no injected memory, no HARD tier, no active goal; refuses personal, back-referencing, time-sensitive and creative questions. Scope = provider+model+prompt.txt hash; TTL 24h; LRU 200; persisted in data dir. 38 tests incl. through the real turn loop; verified in a real headless run against a mock Ollama (rephrased repeat served with no model call). NOT measured on real Ollama; exact-match on normalized text only (no semantic matching); no /clearcache command yet (delete response_cache.json). Also fixed: trace/crash session ids were randomly redacted as card numbers (Luhn).
 - [x] **#55** [F1] Confidence and 'I don't know': flag uncertain answers, offer to search
   - Done in the same pass as #53: the check also returns a 0-1 confidence; below self_check_min_confidence (default 0.5) and with web_search not already used, Aether offers to search. Follow-up, not a rewrite, because replies stream and speak before the check runs. Real-model calibration still unmeasured.
+- [x] **#56** [F1] Structured memory: small knowledge graph with conflict handling
+  - Added a local subject-predicate-object graph in memory.db with normalized duplicate detection, unresolved conflict preservation, explicit resolution, prompt context, save_relation tool routing, /memory and dashboard controls, and export/import support. Conflicts are never silently resolved. Added focused regression coverage.
 - [x] **#57** [F1] Long-term memory panel: view, edit, delete what Aether remembers
   - Done: core/memory_panel.py lists/edits/deletes/adds long_term.json facts and memory.db exchanges. Surfaces: /memory chat command and dashboard /memory page (GET/POST /api/memory, bearer-token only, audit-logged). Entries with no value (the #32 symptom) are flagged and can be repaired or deleted. LIKE wildcards escaped in search. 16 tests in tests/test_memory_panel.py (panel, HybridMemory helpers, dashboard routes). Not done: the memory.html page was not exercised in a browser.
+- [x] **#58** [F1] Task resumption after interruption or restart
+  - Implemented durable task queue persistence, startup conversion of running work to interrupted, and list/status/cancel controls. Resuming requires explicit confirmation and reruns the original goal because executor progress is not durable; retry may repeat completed side effects. Initial task state must persist before it can enter the queue.
 - [x] **#59** [F2] Web search with sources
   - Implemented source-backed web search across Aether direct search, comparison, LangChain search, and multi-step LangChain research. Search summaries are instructed to cite supplied numbered results and now always include a deterministic Sources list with verified HTTP(S) URLs; results without valid links are excluded, and an empty usable set returns an explicit no-results message. Comparison sources are collected per item, and research carries deduplicated pages from its web-search observations into the final answer. Updated the tool description and README. Mocked regression coverage passed (163 related tests); Python compilation and diff checks pass. No live DuckDuckGo request was made during verification.
 - [x] **#60** [F2] Document Q&A over PDFs, notes, Obsidian, with citations

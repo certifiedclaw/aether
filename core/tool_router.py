@@ -75,7 +75,12 @@ _CATEGORIES: list[tuple[re.Pattern, list[str]]] = [
                 r"prune (?:my )?memor(?:y|ies)|import (?:my )?memor(?:y|ies)|"
                 r"restore (?:my )?memor(?:y|ies))\b", re.I),
      ["memory_tool", "save_memory"]),
-    (re.compile(r"\b(multi-?step|several steps|plan out|agent)\b", re.I),
+    (re.compile(r"\b(relationship|wife|husband|spouse|partner|daughter|son|sister|brother|"
+                r"mother|father|parent|child|friend|colleague|coworker|"
+                r"works? at|lives? in|reports? to)\b", re.I),
+     ["save_relation"]),
+    (re.compile(r"\b(multi-?step|several steps|plan out|agent|resume (?:the )?task|"
+                r"task (?:status|list)|list (?:my )?tasks|cancel (?:the )?task)\b", re.I),
      ["agent_task"]),
     (re.compile(r"\b(shut ?down|turn off aether|exit aether)\b", re.I),
      ["shutdown_aether"]),
@@ -89,8 +94,9 @@ _BASELINE = ["open_app", "web_search", "weather_report", "send_message", "save_m
 # turn regardless of category match — narrowing these wouldn't save much
 # and they're either already gated by their own availability checks
 # (langchain/open_interpreter/llama_index) or needed unpredictably
-# (save_memory, undo, goal_manager).
-_ALWAYS_THROUGH = {"save_memory", "undo", "goal_manager",
+# (save_memory, undo, goal_manager, agent_task). agent_task also needs to
+# survive short follow-ups such as "yes" after asking whether to resume work.
+_ALWAYS_THROUGH = {"save_memory", "undo", "goal_manager", "agent_task",
                     "langchain", "open_interpreter", "llama_index"}
 
 # extra_tool (~600 tokens, the largest schema) belongs to no category above, so

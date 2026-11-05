@@ -132,6 +132,34 @@ def test_add_fact_validates_category_and_key(stores):
     assert not mp.add_fact("identity", "k", "  ")[0]
 
 
+def test_structured_relations_are_listed_and_resolved_explicitly(stores):
+    assert mp.add_relation("Ian", "lives in", "Boston")[0]
+    ok, message = mp.add_relation("Ian", "lives in", "Atlanta")
+    assert ok and "Conflict saved" in message
+    claims = mp.list_all()["relations"]
+    assert [r["status"] for r in claims] == ["contested", "contested"]
+    selected = claims[0]["id"]
+
+    assert mp.resolve_relation(selected)[0]
+    claims = mp.list_all()["relations"]
+    assert [(r["object"], r["status"]) for r in claims] == [
+        ("Atlanta", "active"), ("Boston", "superseded"),
+    ]
+    assert mp.delete("g:not-a-number")[0] is False
+    assert mp.delete(selected)[0]
+    assert len(mp.list_all()["relations"]) == 1
+
+
+def test_relation_command_lists_conflicts_for_manual_choice(stores):
+    mp.add_relation("Ian", "lives in", "Boston")
+    result = mp.add_relation("Ian", "lives in", "Atlanta")[1]
+    candidate_id = result.split("g:", 1)[1].split(" ", 1)[0]
+    rendered = mp.handle_command("/memory")
+    assert "conflict - choose explicitly" in rendered
+    assert "g:" in rendered
+    assert "Kept g:" in mp.handle_command(f"/memory resolve g:{candidate_id}")
+
+
 def test_chat_command_roundtrip(stores):
     assert "f:identity/name" in mp.handle_command("/memory")
     assert "Updated" in mp.handle_command("/memory edit f:identity/name Ian K")
@@ -219,6 +247,17 @@ def test_dashboard_memory_api_list_edit_delete_add(stores, monkeypatch):
     assert listing["problems"] == 1 and len(listing["exchanges"]) == 2
     assert c.get("/api/memory?q=concise", headers=h).json()["facts"][0]["id"] == "f:preferences/tone"
     r = c.post("/api/memory", headers=h, json={"op": "edit", "id": "f:identity/name", "text": "Ian K"})
+    assert r.status_code == 200 and r.json()["ok"]
+    r = c.post("/api/memory", headers=h, json={"op": "add_relation", "subject": "Ian",
+                                               "predicate": "lives in", "object": "Boston"})
+    assert r.status_code == 200 and r.json()["ok"]
+    relations = c.get("/api/memory", headers=h).json()["relations"]
+    assert relations[0]["value"] == "Ian — lives in — Boston"
+    r = c.post("/api/memory", headers=h, json={"op": "add_relation", "subject": "Ian",
+                                               "predicate": "lives in", "object": "Atlanta"})
+    assert r.status_code == 200 and r.json()["ok"] and "Conflict saved" in r.json()["message"]
+    candidate = c.get("/api/memory", headers=h).json()["relations"][0]["id"]
+    r = c.post("/api/memory", headers=h, json={"op": "resolve_relation", "id": candidate})
     assert r.status_code == 200 and r.json()["ok"]
     r = c.post("/api/memory", headers=h, json={"op": "delete", "id": "f:identity/broken"})
     assert r.status_code == 200

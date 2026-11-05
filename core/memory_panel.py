@@ -1,10 +1,11 @@
-"""core/memory_panel.py - view, edit and delete what Aether remembers (roadmap #57, #32).
+"""core/memory_panel.py - view, edit and delete what Aether remembers (roadmap #57, #56, #32).
 
 Two stores:
   facts      long_term.json   - identity / preferences / projects / ... key -> value
   exchanges  memory.db        - past conversations Aether retrieves from (hybrid memory)
+  relations  memory.db        - structured subject / predicate / object claims
 
-Item ids:  "f:<category>/<key>"  and  "e:<row id>".
+Item ids:  "f:<category>/<key>", "e:<row id>" and "g:<row id>".
 
 Entries in long_term.json that have no usable "value" (the #32 symptom) are listed too,
 flagged `problem`, so they can be repaired or deleted instead of sitting there invisibly;
@@ -86,6 +87,18 @@ def _exchanges(query: str, limit: int) -> list[dict]:
              "problem": ""} for r in rows]
 
 
+def _relations(query: str = "", limit: int = 100) -> list[dict]:
+    from memory import knowledge_graph
+    return [
+        {"id": f"g:{r['id']}", "kind": "relation", "subject": r["subject"],
+         "predicate": r["predicate"], "object": r["object"], "source": r["source"],
+         "status": r["status"], "value": f"{r['subject']} — {r['predicate']} — {r['object']}",
+         "updated": datetime.fromtimestamp(r["created_at"]).strftime("%Y-%m-%d %H:%M"),
+         "problem": "unresolved conflict" if r["status"] == "contested" else ""}
+        for r in knowledge_graph.list_facts(query, limit, db_path=_db_path())
+    ]
+
+
 # ── learned rules (core/behavior_rules.py, roadmap #96) ─────────────────
 def _rules(query: str = "") -> list[dict]:
     from core import behavior_rules
@@ -103,7 +116,8 @@ def _rules(query: str = "") -> list[dict]:
 def list_all(query: str = "", limit: int = 100) -> dict:
     facts = _facts(query)
     exch = _exchanges(query, max(1, min(int(limit), 500)))
-    return {"facts": facts, "exchanges": exch, "rules": _rules(query),
+    relations = _relations(query, max(1, min(int(limit), 500)))
+    return {"facts": facts, "exchanges": exch, "relations": relations, "rules": _rules(query),
             "problems": sum(1 for f in facts if f["problem"])}
 
 
@@ -116,6 +130,34 @@ def add_fact(category: str, key: str, value: str) -> tuple[bool, str]:
     from memory import memory_manager as mm
     mm.remember(key, value, category)
     return True, f"Saved {category}/{key}."
+
+
+def add_relation(subject: str, predicate: str, object: str) -> tuple[bool, str]:
+    from memory import knowledge_graph
+    try:
+        result = knowledge_graph.add_fact(subject, predicate, object, db_path=_db_path())
+    except (ValueError, sqlite3.Error) as e:
+        return False, str(e)
+    if result["status"] == "conflict":
+        choices = ", ".join(
+            f"g:{fact['id']} = {fact['object']}" for fact in result["facts"]
+        )
+        return True, f"Conflict saved without replacing either claim. Choose one with /memory resolve <id>: {choices}"
+    if result["status"] == "contested":
+        return True, f"That claim is already contested. Resolve it with /memory resolve g:{result['id']}."
+    return True, "Relation already saved." if result["status"] == "duplicate" else "Saved relation."
+
+
+def resolve_relation(item_id: str) -> tuple[bool, str]:
+    try:
+        if not item_id.startswith("g:") or not item_id[2:].isdigit():
+            return False, "use a relation id like g:12"
+        from memory import knowledge_graph
+        if knowledge_graph.resolve_fact(int(item_id[2:]), db_path=_db_path()):
+            return True, f"Kept {item_id}; other conflicting claims are retained as history."
+        return False, f"{item_id} is not a selectable unresolved conflict."
+    except (ValueError, sqlite3.Error) as e:
+        return False, str(e)
 
 
 def edit(item_id: str, new_text: str) -> tuple[bool, str]:
@@ -150,6 +192,8 @@ def edit(item_id: str, new_text: str) -> tuple[bool, str]:
                 finally:
                     con.close()
             return (True, f"Updated exchange {rid}.") if ok else (False, f"no such exchange {rid}")
+        if item_id.startswith("g:"):
+            return False, "Relations are append-only; add a new claim and resolve the conflict explicitly."
     except (ValueError, sqlite3.Error) as e:
         return False, str(e)
     return False, f"unknown id {item_id!r} (use f:<category>/<key>, r:<number> or e:<number>)"
@@ -182,6 +226,12 @@ def delete(item_id: str) -> tuple[bool, str]:
                 finally:
                     con.close()
             return (True, f"Forgot exchange {rid}.") if n else (False, f"no such exchange {rid}")
+        if item_id.startswith("g:"):
+            if not item_id[2:].isdigit():
+                return False, f"invalid relation id {item_id!r}"
+            from memory import knowledge_graph
+            deleted = knowledge_graph.delete_fact(int(item_id[2:]), db_path=_db_path())
+            return (True, f"Forgot relation {item_id}.") if deleted else (False, f"no such relation {item_id}")
     except (ValueError, sqlite3.Error) as e:
         return False, str(e)
     return False, f"unknown id {item_id!r} (use f:<category>/<key>, r:<number> or e:<number>)"
@@ -195,6 +245,13 @@ def render(listing: dict, max_exchanges: int = 8) -> str:
     for f in facts:
         tail = f"  <-- {f['problem']}" if f["problem"] else ""
         lines.append(f"  {f['id']} = {f['value'][:80]}{tail}")
+    relations = listing.get("relations", [])
+    if relations:
+        lines.append("Structured relations:")
+        for relation in relations:
+            state = "  [conflict - choose explicitly]" if relation["status"] == "contested" else \
+                    "  [superseded]" if relation["status"] == "superseded" else ""
+            lines.append(f"  {relation['id']} = {relation['value']}{state}")
     rules = listing.get("rules", [])
     if rules:
         lines.append("Learned rules (also /learned):")
@@ -205,6 +262,7 @@ def render(listing: dict, max_exchanges: int = 8) -> str:
     for e in ex[:max_exchanges]:
         lines.append(f"  {e['id']} [{e['updated']}] " + " ".join(e["value"].split())[:90])
     lines.append("Change: /memory forget <id> | /memory edit <id> <new text> | /memory add <category> <key> <value>"
+                 " | /memory relation <subject> <predicate> <object> | /memory resolve <g:id>"
                  "  |  /memory <words> to search")
     return "\n".join(lines)
 
@@ -215,6 +273,8 @@ def handle_command(text: str) -> str:
     verb, arg = verb.lower(), arg.strip()
     if verb in ("forget", "delete", "rm") and arg:
         return delete(arg.split()[0])[1]
+    if verb == "resolve" and arg:
+        return resolve_relation(arg.split()[0])[1]
     if verb == "edit" and arg:
         item, _, new = arg.partition(" ")
         return edit(item, new)[1]
@@ -223,4 +283,9 @@ def handle_command(text: str) -> str:
         if len(parts) == 3:
             return add_fact(parts[0].lower(), parts[1], parts[2])[1]
         return "Usage: /memory add <category> <key> <value>"
+    if verb in ("relation", "rel") and arg:
+        parts = arg.split(None, 2)
+        if len(parts) == 3:
+            return add_relation(*parts)[1]
+        return "Usage: /memory relation <subject> <predicate> <object>"
     return render(list_all(rest))

@@ -448,13 +448,13 @@ def test_task_equality_is_identity_not_priority():
     assert [t.task_id for t in lst] == ["aaa"]
 
 
-def test_task_queue_cancel_evicts_correct_pending_task():
+def test_task_queue_cancel_evicts_correct_pending_task(tmp_path):
     """cancel() must remove the actually-cancelled task from self._queue --
     not leave it there forever, and not accidentally remove a different
     still-pending task that happens to share its priority."""
     from agent.task_queue import TaskQueue
 
-    q = TaskQueue(max_concurrent=1)
+    q = TaskQueue(max_concurrent=1, persist_path=tmp_path / "tasks.json")
     id1 = q.submit("goal one")
     id2 = q.submit("goal two")
     id3 = q.submit("goal three")
@@ -473,13 +473,13 @@ def test_task_queue_cancel_evicts_correct_pending_task():
     assert q.pending_count() == 1
 
 
-def test_task_queue_history_pruning_bounded():
+def test_task_queue_history_pruning_bounded(tmp_path):
     """self._tasks must not grow without bound over a long-running session --
     finished (terminal-status) tasks beyond _MAX_TASK_HISTORY get pruned,
     oldest first, while pending/running tasks are never touched."""
     from agent.task_queue import TaskQueue
 
-    q = TaskQueue(max_concurrent=1)
+    q = TaskQueue(max_concurrent=1, persist_path=tmp_path / "tasks.json")
     q._MAX_TASK_HISTORY = 5
     ids = [q.submit(f"goal {i}") for i in range(10)]
     for tid in ids[:8]:
