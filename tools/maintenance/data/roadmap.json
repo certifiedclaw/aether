@@ -500,10 +500,10 @@
       "id": 56,
       "title": "[F1] Structured memory: small knowledge graph with conflict handling",
       "priority": "medium",
-      "status": "backlog",
-      "notes": "",
+      "status": "done",
+      "notes": "Added a local subject-predicate-object graph in memory.db with normalized duplicate detection, unresolved conflict preservation, explicit resolution, prompt context, save_relation tool routing, /memory and dashboard controls, and export/import support. Conflicts are never silently resolved. Added focused regression coverage.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-11-05"
     },
     {
       "id": 57,
@@ -518,10 +518,10 @@
       "id": 58,
       "title": "[F1] Task resumption after interruption or restart",
       "priority": "medium",
-      "status": "backlog",
-      "notes": "Related to #19.",
+      "status": "done",
+      "notes": "Implemented durable task queue persistence, startup conversion of running work to interrupted, and list/status/cancel controls. Resuming requires explicit confirmation and reruns the original goal because executor progress is not durable; retry may repeat completed side effects. Initial task state must persist before it can enter the queue.",
       "created": "2026-10-14",
-      "updated": "2026-10-14"
+      "updated": "2026-11-05"
     },
     {
       "id": 59,

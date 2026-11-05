@@ -54,12 +54,20 @@
       "lines": 1574
     },
     {
+      "file": "core\\tool_declarations.py",
+      "lines": 614
+    },
+    {
       "file": "core\\trace_log.py",
       "lines": 1027
     },
     {
+      "file": "core\\updater.py",
+      "lines": 731
+    },
+    {
       "file": "dashboard\\server.py",
-      "lines": 1333
+      "lines": 1342
     },
     {
       "file": "tests\\test_all_critical.py",
@@ -366,6 +374,12 @@
       "at_line": 55
     },
     {
+      "file": "core\\updater.py",
+      "function": "_run_tests",
+      "lines": 81,
+      "at_line": 506
+    },
+    {
       "file": "dashboard\\openai_api.py",
       "function": "build_router",
       "lines": 92,
@@ -387,7 +401,7 @@
       "file": "dashboard\\server.py",
       "function": "_register_file_routes",
       "lines": 104,
-      "at_line": 1039
+      "at_line": 1048
     },
     {
       "file": "integrations\\langchain_tools.py",
@@ -400,6 +414,12 @@
       "function": "_retrieve",
       "lines": 85,
       "at_line": 305
+    },
+    {
+      "file": "memory\\memory_manager.py",
+      "function": "format_memory_for_prompt",
+      "lines": 88,
+      "at_line": 130
     },
     {
       "file": "tests\\test_action_launcher.py",
@@ -445,11 +465,48 @@
     }
   ],
   "bare_except": [],
-  "print_calls": [],
+  "print_calls": [
+    {
+      "file": "core\\updater.py",
+      "line": 698
+    },
+    {
+      "file": "core\\updater.py",
+      "line": 701
+    },
+    {
+      "file": "core\\updater.py",
+      "line": 704
+    },
+    {
+      "file": "core\\updater.py",
+      "line": 714
+    },
+    {
+      "file": "core\\updater.py",
+      "line": 717
+    },
+    {
+      "file": "core\\updater.py",
+      "line": 719
+    },
+    {
+      "file": "core\\updater.py",
+      "line": 722
+    },
+    {
+      "file": "core\\updater.py",
+      "line": 724
+    },
+    {
+      "file": "core\\updater.py",
+      "line": 726
+    }
+  ],
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-11-05T01:19:53.293462+00:00",
-    "files_scanned": 242
+    "generated": "2026-11-05T03:32:34.711118+00:00",
+    "files_scanned": 248
   }
 }

@@ -941,7 +941,7 @@ class DashboardServer:
 
         @app.post("/api/memory")
         async def memory_change(req: Request):
-            """Body: {"op": "edit"|"delete"|"add", ...}. Always needs the bearer token."""
+            """Body: {"op": "edit"|"delete"|"add"|"add_relation"|"resolve_relation", ...}."""
             if not self._auth(req):
                 return JSONResponse({"error": "Unauthorized"}, status_code=401)
             from core import memory_panel
@@ -957,8 +957,17 @@ class DashboardServer:
             elif op == "add":
                 call = lambda: memory_panel.add_fact(str(body.get("category", "")), str(body.get("key", "")),
                                                      str(body.get("value", "")))
+            elif op == "add_relation":
+                call = lambda: memory_panel.add_relation(
+                    str(body.get("subject", "")), str(body.get("predicate", "")),
+                    str(body.get("object", "")))
+            elif op == "resolve_relation":
+                call = lambda: memory_panel.resolve_relation(str(body.get("id", "")))
             else:
-                return JSONResponse({"error": "op must be edit, delete or add"}, status_code=400)
+                return JSONResponse(
+                    {"error": "op must be edit, delete, add, add_relation or resolve_relation"},
+                    status_code=400,
+                )
             ok, msg = await asyncio.get_running_loop().run_in_executor(None, call)
             try:
                 from core import audit_log

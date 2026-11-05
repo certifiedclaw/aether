@@ -2,7 +2,27 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 01:26 UTC
+Generated: 2026-11-05 03:32 UTC
+
+## #137 — 2026-11-05 03:32 UTC — GitHub Copilot (Copilot App)
+
+Completed roadmap #58: task queue state persists atomically; queued tasks restore after restart; running tasks become interrupted and require explicit confirmation to rerun the original goal. Added list/status/cancel and resume controls plus persistence/routing regressions. Preserved existing #56 work.
+
+**Touched:** `agent/task_queue.py`, `core/tool_dispatch.py`, `core/tool_declarations.py`, `core/tool_router.py`, `core/tier_router.py`, `tests/test_task_queue_persistence.py`, `tests/test_all_critical.py`, `tools/maintenance/data/roadmap.json`, `ROADMAP.md`
+
+**Next steps:** Continue with the next actionable roadmap backlog item.
+
+---
+
+## #136 — 2026-11-05 03:17 UTC — GitHub Copilot (Copilot App)
+
+Implemented roadmap #56: local structured knowledge graph with conflict preservation and explicit resolution, prompt/tool integration, memory panel and dashboard controls, and export/import support. Verified compilation and 173 targeted regression tests.
+
+**Touched:** `memory/knowledge_graph.py`, `memory/memory_manager.py`, `core/memory_panel.py`, `core/memory_tools.py`, `core/tool_declarations.py`, `core/tool_dispatch.py`, `core/tool_router.py`, `core/chat_commands.py`, `core/prompt.txt`, `dashboard/server.py`, `dashboard/static/memory.html`, `tests/test_knowledge_graph.py`, `tests/test_memory_panel.py`, `tools/maintenance/data/roadmap.json`
+
+**Next steps:** Choose the next actionable item from the roadmap backlog; #88 and #93 still need machine-specific inputs or live measurements.
+
+---
 
 ## #135 — 2026-11-05 01:26 UTC — GitHub Copilot
 

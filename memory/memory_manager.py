@@ -128,8 +128,7 @@ def update_memory(memory_update: dict) -> dict:
     return memory
 
 def format_memory_for_prompt(memory: dict | None) -> str:
-    if not memory:
-        return ""
+    memory = memory or {}
 
     lines = []
 
@@ -193,13 +192,28 @@ def format_memory_for_prompt(memory: dict | None) -> str:
             if val:
                 lines.append(f"  - {key}: {val}")
 
-    if not lines:
-        return ""
+    result = ""
+    if lines:
+        header = "[WHAT YOU KNOW ABOUT THIS PERSON — use naturally, never recite like a list]\n"
+        result = header + "\n".join(lines)
+        if len(result) > 2000:
+            result = result[:1997] + "…"
 
-    header = "[WHAT YOU KNOW ABOUT THIS PERSON — use naturally, never recite like a list]\n"
-    result = header + "\n".join(lines)
-    if len(result) > 2000:
-        result = result[:1997] + "…"
+    import sqlite3
+    from memory import knowledge_graph
+    try:
+        graph_context = knowledge_graph.format_for_prompt()
+    except sqlite3.Error as e:
+        logger.warning("[Memory] Structured-memory read failed: %s", e)
+        graph_context = ""
+    if graph_context:
+        if len(result) > 900:
+            result = result[:897] + "…"
+        result = f"{result}\n{graph_context}" if result else graph_context
+    if not result:
+        return ""
+    if len(result) > 2600:
+        result = result[:2597] + "…"
 
     return result + "\n"
 

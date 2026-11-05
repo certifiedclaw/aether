@@ -97,6 +97,7 @@ def export_memory(output_path: str = "") -> str:
             "version": "aether_v1",
             "long_term": {},
             "episodic": [],
+            "relations": [],
         }
 
         # Long-term JSON
@@ -123,10 +124,14 @@ def export_memory(output_path: str = "") -> str:
                 ]
             finally:
                 conn.close()
+            from memory import knowledge_graph
+            export["relations"] = knowledge_graph.list_facts(
+                include_history=False, db_path=_MEMORY_DB)
 
         out.write_text(json.dumps(export, indent=2, ensure_ascii=False),
                        encoding="utf-8")
-        return (f"✅ Exported {len(export['episodic'])} memories to: {out}\n"
+        return (f"✅ Exported {len(export['episodic'])} memories and "
+                f"{len(export['relations'])} structured relations to: {out}\n"
                 f"   Long-term keys: "
                 f"{sum(len(v) for v in export['long_term'].values() if isinstance(v, dict))}")
     except Exception as e:
@@ -148,6 +153,7 @@ def import_memory(source_path: str) -> str:
         data = json.loads(src.read_text(encoding="utf-8"))
         imported_episodic = 0
         imported_lt = 0
+        imported_relations = 0
 
         # Merge long-term
         lt = data.get("long_term", {})
@@ -191,9 +197,24 @@ def import_memory(source_path: str) -> str:
             finally:
                 conn.close()
 
+        for relation in data.get("relations", []):
+            if not isinstance(relation, dict):
+                continue
+            from memory import knowledge_graph
+            result = knowledge_graph.add_fact(
+                relation.get("subject", ""),
+                relation.get("predicate", ""),
+                relation.get("object", ""),
+                source=relation.get("source", "import"),
+                db_path=_MEMORY_DB,
+            )
+            if result["status"] in ("added", "conflict"):
+                imported_relations += 1
+
         return (f"✅ Import complete.\n"
                 f"   Episodic memories added: {imported_episodic}\n"
-                f"   Long-term entries added: {imported_lt}")
+                f"   Long-term entries added: {imported_lt}\n"
+                f"   Structured relations added: {imported_relations}")
     except Exception as e:
         return f"Import failed: {e}"
 
@@ -324,6 +345,16 @@ def memory_stats() -> str:
             lines.append("\n**Backups:** none — run backup_memory to create one")
     except Exception:
         pass
+
+    try:
+        from memory import knowledge_graph
+        relations = knowledge_graph.list_facts(
+            include_history=False, db_path=_MEMORY_DB)
+        active = sum(r["status"] == "active" for r in relations)
+        contested = sum(r["status"] == "contested" for r in relations)
+        lines.append(f"\n**Structured relations:** {active} active, {contested} contested")
+    except sqlite3.Error as e:
+        lines.append(f"\nStructured relations: error — {e}")
 
     return "\n".join(lines)
 

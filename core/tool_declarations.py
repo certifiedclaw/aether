@@ -4,7 +4,7 @@ Pure data + pure conversion helpers, extracted out of main.py (part of the
 same mechanical-extraction pass as core/conversation_core.py,
 core/tool_dispatch.py, core/chat_commands.py, and core/prompt_builder.py --
 main.py was the single largest oversized file per HEALTH_REPORT.md, and
-this ~550-line block (the 27 built-in tool declarations plus the Google/
+this ~550-line block (the built-in tool declarations plus the Google/
 Ollama schema-shape converters) was the single largest and lowest-risk cut
 available: static data and pure functions, no state, no side effects.
 
@@ -249,15 +249,20 @@ TOOL_DECLARATIONS = [
         "description": (
             "Executes complex multi-step tasks requiring multiple different tools. "
             "Examples: 'research X and save to file', 'find and organize files'. "
-            "DO NOT use for single commands."
+            "DO NOT use for single commands. Also list or inspect saved tasks, cancel them, "
+            "or resume an interrupted task by its ID. For resume, first explain that the original "
+            "goal restarts and completed steps may repeat; only after the user confirms, call "
+            "confirm_resume with that ID."
         ),
         "parameters": {
             "type": "OBJECT",
             "properties": {
+                "action":   {"type": "STRING", "description": "submit (default) | list | status | resume (explain and ask first) | confirm_resume (after user confirms) | cancel"},
                 "goal":     {"type": "STRING", "description": "Complete description of what to accomplish"},
-                "priority": {"type": "STRING", "description": "low | normal | high"}
+                "priority": {"type": "STRING", "description": "low | normal | high"},
+                "task_id":  {"type": "STRING", "description": "Saved task ID for status, resume, or cancel"},
             },
-            "required": ["goal"]
+            "required": []
         }
     },
     {
@@ -344,9 +349,10 @@ TOOL_DECLARATIONS = [
     {
         "name": "save_memory",
         "description": (
-            "Save a personal fact about the user to permanent long-term memory. "
+            "Save a personal key-value fact about the user to permanent long-term memory. "
             "MANDATORY: call this IMMEDIATELY whenever the user states or corrects: "
-            "their name, age, city, job, school, language, nationality, a preference, a goal, or a relationship. "
+            "their name, age, city, job, school, language, nationality, a preference, or a goal. "
+            "Use save_relation instead for a subject-predicate-object relationship between entities. "
             "Call SILENTLY alongside your verbal reply — never announce that you are saving."
         ),
         "parameters": {
@@ -367,6 +373,23 @@ TOOL_DECLARATIONS = [
                 "value": {"type": "STRING", "description": "Concise value in English"},
             },
             "required": ["category", "key", "value"]
+        }
+    },
+    {
+        "name": "save_relation",
+        "description": (
+            "Store an explicit relationship as a subject-predicate-object fact in local memory. "
+            "Use only facts the user stated or corrected. If it conflicts with an existing fact, "
+            "preserve both and ask the user which one is current; never choose silently."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "subject": {"type": "STRING", "description": "Entity the fact is about"},
+                "predicate": {"type": "STRING", "description": "Relationship or attribute"},
+                "object": {"type": "STRING", "description": "The related entity or value"},
+            },
+            "required": ["subject", "predicate", "object"]
         }
     },
     # ── Additional tools ─────────────────────────────────────────
