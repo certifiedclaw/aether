@@ -169,7 +169,7 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
 # Tools whose function asks for itself, with a dialog that shows the actual plan/code.
 SELF_GATED = frozenset({
     "computer_settings", "desktop_control", "code_helper", "dev_agent", "osint_lookup",
-    "mcp.call",
+    "mcp.call", "shutdown_aether",   # shutdown: risk.check() inline in tool_dispatch
 })
 
 DYNAMIC_TOOLS = frozenset({"mcp.call"})

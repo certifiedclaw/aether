@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 05:15 UTC
+Generated: 2026-11-05 05:21 UTC
+
+## #146 — 2026-11-05 05:21 UTC — Claude Code
+
+A failed or rejected tool call now skips the remaining calls in its batch (each still gets a tool message), so dependent steps wait for a new model decision. Fixed two stale tests from the earlier hardening patch (unknown tool now fails closed; shutdown_aether added to SELF_GATED). Full suite: 1693 passed, 6 failed - same 6 fail on the pre-patch baseline (ModuleNotFound in test_all_critical, test_action_launcher queue tests, test_risk::every_declared_tool_is_classified).
+
+**Touched:** `core/conversation_core.py`, `core/risk.py`, `tests/test_runtime_hardening.py`, `tests/test_execution_gates.py`
+
+**Next steps:** Sandbox generated-code execution; fix the 6 pre-existing failures; schema validation of tool args.
+
+---
 
 ## #145 — 2026-11-05 05:15 UTC — Claude Code
 

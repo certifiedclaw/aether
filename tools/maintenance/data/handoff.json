@@ -1,5 +1,5 @@
 {
-  "next_id": 146,
+  "next_id": 147,
   "entries": [
     {
       "id": 1,
@@ -2086,6 +2086,19 @@
         "tests/test_runtime_hardening.py"
       ],
       "next_steps": "Run the full test suite on the user's machine; consider setting logging.trace_content=metadata if trace privacy matters."
+    },
+    {
+      "id": 146,
+      "timestamp": "2026-11-05 05:21 UTC",
+      "by": "Claude Code",
+      "summary": "A failed or rejected tool call now skips the remaining calls in its batch (each still gets a tool message), so dependent steps wait for a new model decision. Fixed two stale tests from the earlier hardening patch (unknown tool now fails closed; shutdown_aether added to SELF_GATED). Full suite: 1693 passed, 6 failed - same 6 fail on the pre-patch baseline (ModuleNotFound in test_all_critical, test_action_launcher queue tests, test_risk::every_declared_tool_is_classified).",
+      "files": [
+        "core/conversation_core.py",
+        "core/risk.py",
+        "tests/test_runtime_hardening.py",
+        "tests/test_execution_gates.py"
+      ],
+      "next_steps": "Sandbox generated-code execution; fix the 6 pre-existing failures; schema validation of tool args."
     }
   ]
 }

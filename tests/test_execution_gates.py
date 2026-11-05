@@ -34,7 +34,7 @@ def test_confirm_action_denies_with_no_ui_callback_registered():
     assert layer.request_confirmation("anything", "d") is False
 
 
-@pytest.mark.parametrize("tool", ["generated_code", "unknown_tool"])
+@pytest.mark.parametrize("tool", ["generated_code"])
 def test_agent_generated_code_requires_approval_before_temp_file_or_execution(
         monkeypatch, tool):
     code = "print('review this exact code')"
@@ -57,6 +57,15 @@ def test_agent_generated_code_requires_approval_before_temp_file_or_execution(
     assert "inspect files" in seen[0][1]
     assert code in seen[0][1]
     assert temp_calls == []
+
+
+def test_unknown_tool_fails_closed_instead_of_generating_code(monkeypatch):
+    monkeypatch.setattr(agent_executor, "call_llm_text",
+                        lambda *a, **k: pytest.fail("unknown tool must not reach the model"))
+    monkeypatch.setattr(agent_executor.subprocess, "run",
+                        lambda *a, **k: pytest.fail("unknown tool must not execute anything"))
+    with pytest.raises(ValueError, match="Unknown tool"):
+        agent_executor._call_tool("unknown_tool", {"description": "inspect files"}, None)
 
 
 def test_agent_generated_code_runs_only_after_approval_of_exact_code(monkeypatch):

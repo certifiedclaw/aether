@@ -278,3 +278,42 @@ def test_metadata_mode_drops_long_strings_but_keeps_structure():
     assert out["args"]["path"] == "a.txt"
     assert secret not in str(out)
     assert out["msgs"][1] == "hi"
+
+
+# ── 7. a failed call stops the rest of its batch ─────────────────────────
+
+@pytest.mark.parametrize("bad", [
+    "Error: something broke",
+    "Denied: not approved.",
+    "Tool 'a' failed: boom",
+    "[LOOP GUARD] Repeated call to 'a' blocked.",
+])
+def test_failed_call_skips_remaining_calls_in_batch(bad):
+    c, messages = _Conv(), []
+
+    def run(name, args):
+        c.executed.append(name)
+        return bad if name == "a" else "ok"
+
+    c._execute_tool = run
+    calls = [_call("a", {}, "1"), _call("b", {}, "2"), _call("c", {}, "3")]
+    c._execute_tool_calls(calls, messages, allowed_tools={"a", "b", "c"})
+
+    assert c.executed == ["a"]
+    tm = _tool_msgs(messages)
+    assert [m["tool_call_id"] for m in tm] == ["1", "2", "3"]      # pairing intact
+    assert all("skipped" in m["content"].lower() for m in tm[1:])
+
+
+def test_successful_batch_still_runs_every_call():
+    c, messages = _Conv(), []
+    calls = [_call("a", {}, "1"), _call("b", {}, "2")]
+    c._execute_tool_calls(calls, messages, allowed_tools={"a", "b"})
+    assert [n for n, _ in c.executed] == ["a", "b"]
+
+
+def test_rejected_call_also_stops_the_batch():
+    c, messages = _Conv(), []
+    calls = [_call("nope", {}, "1"), _call("a", {}, "2")]
+    c._execute_tool_calls(calls, messages, allowed_tools={"a"})
+    assert c.executed == []
