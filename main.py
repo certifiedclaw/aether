@@ -556,9 +556,18 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             return False
 
     def _do_reconfigure(self, new_config: dict) -> None:
+        from core.reconfigure_plan import plan_reconfigure
+        old_config     = dict(self._config)
         old_stt_engine = self._config.get("stt_engine", "whisper").lower()
         old_llm_model  = self._config.get("llm_model", "")
         new_stt_engine = new_config.get("stt_engine", "whisper").lower()
+        # Only rebuild what the changed settings actually affect: Whisper in
+        # particular is a CPU model load plus a Hugging Face request.
+        plan = plan_reconfigure(
+            old_config, new_config,
+            have_tts=getattr(self, "_tts", None) is not None,
+            have_stt=getattr(self, "_stt", None) is not None,
+        )
         self._config = new_config
         # Invalidate the config_manager singleton so subsystems get fresh values
         try:
@@ -571,22 +580,27 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             install_for_config(new_config, log=self.ui.write_log)
         except Exception as e:
             self.ui.write_log(f"ERR: Dependency install — {e}")
-        try:
-            if not _tts_enabled(new_config):
-                if self._tts and hasattr(self._tts, "stop"):
+        if not _tts_enabled(new_config):
+            if self._tts and hasattr(self._tts, "stop"):
+                try:
                     self._tts.stop()
-                self._tts = None
-                self._tts_ready.set()
-                self.ui.write_log("SYS: Speech turned off - text only.")
-            else:
+                except Exception as e:
+                    self.ui.write_log(f"ERR: TTS stop — {e}")
+            self._tts = None
+            self._tts_ready.set()
+            self.ui.write_log("SYS: Speech turned off - text only.")
+        elif plan.rebuild_tts:
+            try:
                 from core.tts import create_tts_player
                 self._tts = create_tts_player(new_config)
                 self._tts_ready.set()
                 self.ui.write_log("SYS: TTS reconfigured.")
-        except Exception as e:
-            self.ui.write_log(f"ERR: TTS reconfigure — {e}")
-            self._tts_fallback_to_edge(new_config.get("tts_engine", "edgetts").lower(), new_config)
-        if old_stt_engine == new_stt_engine:
+            except Exception as e:
+                self.ui.write_log(f"ERR: TTS reconfigure — {e}")
+                self._tts_fallback_to_edge(new_config.get("tts_engine", "edgetts").lower(), new_config)
+        if old_stt_engine != new_stt_engine:
+            self.ui.write_log("SYS: STT engine changed — restart required.")
+        elif plan.rebuild_stt:
             try:
                 stt_language = new_config.get("stt_language", "auto")
                 if new_stt_engine == "vosk":
@@ -598,8 +612,6 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
                 self.ui.write_log("SYS: STT reconfigured.")
             except Exception as e:
                 self.ui.write_log(f"ERR: STT reconfigure — {e}")
-        else:
-            self.ui.write_log("SYS: STT engine changed — restart required.")
         if new_config.get("llm_model", "") != old_llm_model:
             self.ui.write_log("SYS: Warming up new LLM model…")
             from core.llm_client import warmup_model
@@ -616,6 +628,13 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
     # ------------------------------------------------------------------
 
     def _on_text_command(self, text: str) -> None:
+        # A typed follow-up is an implicit request to stop the current spoken
+        # reply. Do not cancel the turn itself: the queued prompt will run as
+        # soon as the current conversation lock is released.
+        with self._speaking_lock:
+            is_speaking = self._speaking
+        if is_speaking:
+            self._interrupt_speaking(reason="new text prompt")
         self._text_queue.put(text)
 
     def _on_action_command(self, name: str, args: dict) -> None:

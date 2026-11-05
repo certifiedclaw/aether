@@ -314,7 +314,16 @@ def lc_research_agent(task: str, extra_context: str = "") -> str:
             max_iterations=_max_iter, verbose=False,
             handle_parsing_errors=True, return_intermediate_steps=True,
         )
-        full_task = f"{extra_context}\n\n{task}".strip() if extra_context else task
+        if extra_context:
+            full_task = (
+                "Research the CURRENT USER REQUEST below. The prior conversation is "
+                "only background for resolving references such as 'that' or 'it'. "
+                "If it mentions a different subject, do not research that older subject.\n\n"
+                f"Prior conversation (reference only):\n{extra_context}\n\n"
+                f"CURRENT USER REQUEST (authoritative):\n{task}"
+            )
+        else:
+            full_task = task
         result    = executor.invoke({"input": full_task})
         output = result.get("output", str(result))
         source_rows = _research_source_rows(result.get("intermediate_steps", []))
@@ -473,9 +482,8 @@ LANGCHAIN_TOOL_DECLARATION = {
     "name": "langchain",
     "description": (
         "Advanced AI tools powered by LangChain: web search, Wikipedia lookup, "
-        "long document summarisation (map-reduce), multi-hop research agent "
-        "(ReAct), and document loading. Use 'research' for complex multi-step "
-        "information gathering tasks that need several search iterations."
+        "long document summarisation (map-reduce), and document loading. Use 'research' "
+        "for complex multi-step information gathering and a detailed cited report."
     ),
     "parameters": {
         "type": "OBJECT",

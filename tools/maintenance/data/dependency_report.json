@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-10-29T18:35:35.981883+00:00",
+    "generated": "2026-11-05T00:57:53.908229+00:00",
     "pip_packages": 46
   },
   "pip": [
@@ -21,7 +21,7 @@
     },
     {
       "package": "python-multipart",
-      "latest": "0.0.32",
+      "latest": "0.0.33",
       "note": null
     },
     {
@@ -156,7 +156,7 @@
     },
     {
       "package": "PyMuPDF",
-      "latest": "2.0",
+      "latest": "2.1",
       "note": null
     },
     {
@@ -166,12 +166,12 @@
     },
     {
       "package": "dnspython",
-      "latest": "2.9.1",
+      "latest": "2.9.2",
       "note": null
     },
     {
       "package": "watchdog",
-      "latest": "6.0.0",
+      "latest": "7.0.0",
       "note": null
     },
     {
@@ -186,7 +186,7 @@
     },
     {
       "package": "langchain",
-      "latest": "1.4.7",
+      "latest": "1.4.9",
       "note": "Fast-moving API; pin a version once Aether's LangChain tool wiring is stable."
     },
     {
@@ -240,15 +240,15 @@
       "repo": "ollama/ollama",
       "label": "Ollama",
       "why": "local LLM runtime \u2014 core/llm_client.py talks to it",
-      "latest": "unknown (lookup failed: API releases: HTTP 403 (rate-limited or blocked); web: HTTP 403 (rate-limited or blocked); API tags: HTTP 403 (rate-limited or blocked))",
-      "source": null
+      "latest": "v0.40.14",
+      "source": "GitHub release"
     },
     {
       "repo": "SYSTRAN/faster-whisper",
       "label": "faster-whisper (engine)",
       "why": "default STT engine per requirements.txt",
-      "latest": "1.2.1",
-      "source": "PyPI faster-whisper"
+      "latest": "v1.2.1",
+      "source": "GitHub release"
     },
     {
       "repo": "hexgrad/kokoro",
