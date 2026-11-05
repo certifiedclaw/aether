@@ -1,5 +1,5 @@
 {
-  "next_id": 152,
+  "next_id": 153,
   "entries": [
     {
       "id": 1,
@@ -2171,6 +2171,21 @@
         "tests/test_review_fixes.py"
       ],
       "next_steps": "STILL OPEN from the review, verified real at HEAD e1a5385 unless noted: (a) core/risk.py file_controller create_file/create_folder/write/copy/move/rename/delete are MONITOR (no approval); consider ASK or a per-task workspace grant. (b) actions/file_controller.py:324 shutil.copytree without symlinks=True follows nested symlinks out of the allowed root. (c) dashboard/server.py ~235 Windows setup runs Set-NetConnectionProfile Public->Private and adds unscoped inbound rules; make opt-in, scope to profile+remote address. (d) core/risk.py grants (_TURN/_GRANTS/_PLAN_GRANTS) are module-global, not request-scoped; concurrent turns can consume each other's grants. (e) Plugin tools: tool_dispatch plugin branch calls no risk.check; risk.py docstring says @gated covers plugins but core/plugins.py has no gate; UNCONFIRMED, check whether plugin entry functions are wrapped at load. (f) One bearer token can both send commands and approve high-risk actions (/api/command, /ws, approvals); require a separate step for remote approvals. (g) _ensure_crypto_js downloads JS from a CDN with no integrity hash; vendor or pin. (h) security/middleware.py require_approval(approval_id) may not bind approval to device/capability/endpoint; NOT CHECKED. (i) agent/executor.py: error_handler max_retries ignored vs hardcoded retry loop; recovery appends original step not fixed_step; planner has no schema validation (tool registered, 5-step cap, params). NOT RE-VERIFIED. (j) agent: generated-fix passes code= to code_helper run which needs file_path; NOT RE-VERIFIED. (k) TaskQueue cancel() reports CANCELLED before the active tool stops; stop() does not join workers. (l) mcp_bridge: stdin write happens before the deadline; stderr=DEVNULL hides crashes; unpinned npx in docs; tool names unsanitised in prompt; _boot_servers serial. (m) conversation_core: _wrap_untrusted should also escape an opening <tool_result; log previews of args reach remote dashboard clients unredacted. (n) /ws/phone-audio sockets are not in _ws_tokens so a revoke does not close them. (o) Behaviour note: short prompts containing plan/design/debug/analyze now route HARD, which costs latency on casual 'what is the plan' style messages; tune COMPLEX_HINTS if noisy. Suggested order: (a) (b) (d) (e) (f) (c)."
+    },
+    {
+      "id": 152,
+      "timestamp": "2026-11-05 22:37 UTC",
+      "by": "Claude Code",
+      "summary": "Second batch from the external review (stacked on PR #36). (a) core/risk.py: file_controller create_file/create_folder/write/copy/move/rename/delete are now ASK (were MONITOR); undo coverage was partial. Plan approval (#67) still covers whole plans. (b) actions/file_controller.py copy_file: shutil.copytree(symlinks=True) so nested symlinks are not followed out of the allowed roots. (e) CONFIRMED and fixed: plugin tools had no approval gate (risk.py docstring claimed @gated covered plugins; no plugin or PluginSystem.execute_tool applied it). PluginSystem.execute_tool now calls risk.check('plugin.<name>') which fails closed to ASK. Behaviour change: every plugin tool call asks once per turn/params; if that is too noisy add per-plugin entries to RISK_TABLE or a trusted-plugin tier. Tests in tests/test_review_fixes.py section 6 (9 tests, all fail on old code); test_all_critical plugin reload test now approves. Full suite 1804 passed, 2 skipped.",
+      "files": [
+        "core/risk.py",
+        "core/plugins.py",
+        "actions/file_controller.py",
+        "tests/test_review_fixes.py",
+        "tests/test_risk.py",
+        "tests/test_all_critical.py"
+      ],
+      "next_steps": "STILL OPEN: (d) core/risk.py grants (_TURN/_GRANTS/_PLAN_GRANTS) are module-global, not request-scoped; (f) one bearer token can both send commands and approve high-risk actions from a remote client; (c) Windows setup Set-NetConnectionProfile Public->Private + unscoped inbound rules (dashboard/server.py ~235); (g) _ensure_crypto_js CDN download without integrity hash; (h) security/middleware.py require_approval not bound to device/capability/endpoint (NOT CHECKED); (i) executor max_retries vs hardcoded loop, recovery records original step, planner has no schema validation (NOT RE-VERIFIED); (j) generated-fix code= vs code_helper file_path (NOT RE-VERIFIED); (k) TaskQueue cancel() reports CANCELLED before the tool stops, stop() does not join; (l) mcp_bridge stdin write before deadline, stderr=DEVNULL, unpinned npx, serial boot, unsanitised tool names; (m) _wrap_untrusted should escape an opening <tool_result, arg previews reach remote dashboard unredacted; (n) /ws/phone-audio sockets are not closed on revoke; (o) COMPLEX_HINTS now routes short plan/design/debug prompts HARD; tune if noisy. Suggested next: (d), (f), (c)."
     }
   ]
 }

@@ -490,7 +490,7 @@ def test_task_queue_history_pruning_bounded(tmp_path):
         assert tid in q._tasks, "a still-pending task was incorrectly pruned"
 
 # ------------------------------- 17. PLUGIN HOT-RELOAD -------------------------------
-def test_plugin_system_reload_exists_and_works():
+def test_plugin_system_reload_exists_and_works(monkeypatch):
     """Roadmap #5: plugin_watcher.py calls plugin_loader.reload() on every
     filesystem change, but PluginSystem never defined that method -- hot-
     reload silently failed 100% of the time (caught by plugin_watcher's own
@@ -521,6 +521,8 @@ def test_plugin_system_reload_exists_and_works():
             "PLUGIN_NAME = \"greet\"\nPLUGIN_TOOLS = {\"say_hi\": lambda: \"hi!\"}\n")
         approve("greet.py")
         assert p.reload() == 1
+        from core import safety as _safety
+        monkeypatch.setattr(_safety, "confirm_action", lambda op, detail="": True)  # plugin calls now ask first
         assert p.execute_tool("say_hi") == "hi!"
 
         # editing an existing plugin must take effect, not serve a stale cached module

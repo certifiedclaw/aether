@@ -321,7 +321,9 @@ def copy_file(path: str, name: str = "", destination: str = "") -> str:
         dst.parent.mkdir(parents=True, exist_ok=True)
 
         if src.is_dir():
-            shutil.copytree(str(src), str(dst))
+            # symlinks=True copies links as links; the default follows them, which would pull
+            # files from outside the allowed roots into the destination.
+            shutil.copytree(str(src), str(dst), symlinks=True)
         else:
             shutil.copy2(str(src), str(dst))
 
