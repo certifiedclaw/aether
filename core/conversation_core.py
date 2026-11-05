@@ -349,6 +349,17 @@ def _parse_tagged_tool_calls(text: str) -> list[tuple[str, dict]] | None:
     return None
 
 
+def _wrap_untrusted(tool: str, result) -> str:
+    """Frame tool output as DATA before the model sees it. Web pages, files, plugin and MCP
+    text can contain instructions aimed at the model; the wrapper marks where the data ends
+    (a closing tag inside it is defused so it cannot fake the end), and prompt.txt says the
+    contents never carry authority. This is a hint to the model, not a boundary: the
+    enforcement that matters is the per-turn tool allowlist and the risk gates."""
+    text = str(result).replace("</tool_result", "<\\/tool_result")
+    name = re.sub(r"[^A-Za-z0-9_.:-]", "_", str(tool))[:64]
+    return f'<tool_result tool="{name}" trust="untrusted">\n{text}\n</tool_result>'
+
+
 _FAILURE_PREFIXES = ("error", "denied", "cancelled", "skipped", "blocked", "[loop guard]")
 
 
@@ -589,6 +600,7 @@ class ConversationCoreMixin:
             self.ui.write_log(f"SYS: ▶ {tname}{_arg_hint}")
             _tool_started = time.monotonic()
 
+            _ran_tool = False        # True only when a real tool produced `result`
             if _rejection is not None:
                 result = _rejection
                 _trace.event("tool_rejected", tool=tname, call_id=tc_id, reason=_rejection)
@@ -605,12 +617,14 @@ class ConversationCoreMixin:
                 else:
                     with self._obs.span("tool_call", tool=tname) as span:
                         result = self._execute_tool(tname, targs)
+                        _ran_tool = True
                         span.set("result_len", len(str(result)))
                     self._loop_guard.record(tname, targs)
                     self._obs.count("tool.calls", tags={"tool": tname})
             else:
                 with self._obs.span("tool_call", tool=tname):
                     result = self._execute_tool(tname, targs)
+                    _ran_tool = True
                     self._obs.count("tool.calls", tags={"tool": tname})
 
             if _is_failed_result(result):
@@ -626,7 +640,9 @@ class ConversationCoreMixin:
 
             tool_msg: dict = {
                 "role":    "tool",
-                "content": "Done." if result == "__SILENT__" else str(result),
+                "content": ("Done." if result == "__SILENT__"
+                            else _wrap_untrusted(tname, result) if _ran_tool
+                            else str(result)),
             }
             if tc_id:
                 tool_msg["tool_call_id"] = tc_id

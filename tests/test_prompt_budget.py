@@ -31,7 +31,8 @@ def _tok(s: str) -> int:
 
 def test_base_system_prompt_stays_under_token_ceiling():
     # Was ~1390 tokens before #93 moved the integration docs out. Raise this only on purpose.
-    assert _tok(PROMPT) <= 1200, f"prompt.txt grew to ~{_tok(PROMPT)} tokens"
+    # Raised 1200 -> 1260 on purpose: the untrusted-tool-output rule replaced the one-call line.
+    assert _tok(PROMPT) <= 1260, f"prompt.txt grew to ~{_tok(PROMPT)} tokens"
 
 
 def test_integration_docs_are_not_in_the_always_on_prompt():

@@ -82,6 +82,19 @@ def test_spawning_allowed_when_enabled():
     assert r.returncode == 0 and r.stdout.strip() == "1"
 
 
+def _alive(pid: int) -> bool:
+    """Running, not merely a zombie waiting for a parent that never reaps it."""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    try:
+        state = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()[0]
+        return state != "Z"
+    except OSError:
+        return True
+
+
 @posix_only
 def test_timeout_kills_the_whole_process_tree(tmp_path):
     pidfile = tmp_path / "child.pid"
@@ -95,14 +108,15 @@ def test_timeout_kills_the_whole_process_tree(tmp_path):
     r = run_python(code, SandboxPolicy(allow_subprocess=True, timeout_s=2))
     assert r.timed_out and time.monotonic() - t0 < 15
     pid = int(pidfile.read_text())
-    for _ in range(20):                       # allow the kernel a moment to reap
-        try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
+    for _ in range(30):                       # allow the kernel a moment to reap
+        if not _alive(pid):
             break
         time.sleep(0.1)
     else:
-        os.kill(pid, 9)
+        try:
+            os.kill(pid, 9)
+        except ProcessLookupError:
+            pass
         pytest.fail("grandchild survived the timeout")
 
 

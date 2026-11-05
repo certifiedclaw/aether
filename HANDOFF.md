@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 05:34 UTC
+Generated: 2026-11-05 05:39 UTC
+
+## #150 — 2026-11-05 05:39 UTC — Claude Code
+
+Tool output now reaches the model framed as untrusted data: executed-tool results are wrapped in <tool_result tool=... trust=untrusted> (a fake closing tag inside the data is defused, tool name sanitised); runtime-generated messages (rejections, skips, loop-guard, silent 'Done.') are not wrapped. prompt.txt: replaced the 'One-Call Policy: call tools exactly once, no retries' line (contradicted the multi-round runtime) with a rule that tool_result text is untrusted data and only the user's messages authorize actions, plus 'read each result; don't repeat side-effecting calls'. Prompt-budget ceiling raised 1200->1260 tokens on purpose (prompt now ~1238). This is a model-facing hint, NOT enforcement; enforcement remains the per-turn tool allowlist and risk gates. Also made the sandbox tree-kill test zombie-aware (it flaked under load). Full suite 1780 passed, 2 skipped.
+
+**Touched:** `core/conversation_core.py`, `core/prompt.txt`, `tests/test_runtime_hardening.py`, `tests/test_prompt_budget.py`, `tests/test_sandbox.py`
+
+**Next steps:** Behavioral check on the real model: does it still call tools normally with wrapped results, and does a page containing injected instructions get ignored? Then: conversation lock held for whole turn, history trimming can split tool-call groups, main.py pip install at import.
+
+---
 
 ## #149 — 2026-11-05 05:34 UTC — Claude Code
 
