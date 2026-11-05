@@ -121,9 +121,19 @@ class HeadlessUI:
     def set_state(self, state: str) -> None:
         self.state = state
         logger.debug(f"[state] {state}")
+        try:
+            from core import trace_log
+            trace_log.event("ui_state", state=state)
+        except Exception:  # noqa: BLE001
+            pass
 
     def write_log(self, text: str) -> None:
         logger.info(text)
+        try:
+            from core import trace_log
+            trace_log.event("ui_log", text=text)
+        except Exception:  # noqa: BLE001
+            pass
 
     # ── Confirmation gate (core.safety.SafetyLayer callback) ───────
     def confirm_blocking(self, message: str, timeout: float = 120.0) -> bool:

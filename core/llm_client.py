@@ -40,7 +40,10 @@ from pathlib import Path
 from typing import Generator
 
 import logging
+import traceback
 import requests
+
+from core import trace_log as _trace
 
 logger = logging.getLogger("aether")
 
@@ -610,7 +613,48 @@ def get_context_window(model: str | None = None) -> int:
     return ctx
 
 
+def _trace_target(provider: str | None = None, url: str | None = None,
+                  model: str | None = None) -> dict:
+    """Which backend/model a call is about to hit, for the trace. Mirrors the
+    selection the real call makes; never raises."""
+    out: dict = {}
+    if not _trace.is_enabled():
+        return out
+    try:
+        out["provider"] = provider or get_llm_provider()
+        if not (url and model):
+            d_url, d_model = get_llm_settings()
+            url, model = url or d_url, model or d_model
+        out["url"], out["model"] = url, model
+    except Exception as e:  # noqa: BLE001 - the real call reports its own failure
+        out["target_error"] = f"{type(e).__name__}: {e}"
+    return out
+
+
 def call_llm(
+    messages: list,
+    tools:    list | None = None,
+    timeout:  int = 120,
+) -> dict:
+    """Non-streaming chat request (see _call_llm_impl). Every call is recorded in
+    full in logs/trace/: exact messages sent, the reply, tool calls, timing."""
+    cid = _trace.new_call_id()
+    t0 = time.monotonic()
+    _trace.event("llm_request", call=cid, api="chat", **_trace_target(), timeout=timeout,
+                 n_messages=len(messages), messages=messages,
+                 tools=_trace.tool_schema_once(tools))
+    try:
+        out = _call_llm_impl(messages, tools, timeout)
+    except BaseException as e:  # noqa: BLE001 - re-raised
+        _trace.event("llm_error", call=cid, dur_ms=round((time.monotonic() - t0) * 1000, 1),
+                     error=f"{type(e).__name__}: {e}", traceback=traceback.format_exc())
+        raise
+    _trace.event("llm_response", call=cid, dur_ms=round((time.monotonic() - t0) * 1000, 1),
+                 content=out.get("content"), tool_calls=out.get("tool_calls"))
+    return out
+
+
+def _call_llm_impl(
     messages: list,
     tools:    list | None = None,
     timeout:  int = 120,
@@ -726,6 +770,35 @@ def call_llm(
 
 
 def call_llm_text(
+    prompt:  str,
+    system:  str | None = None,
+    model:   str | None = None,
+    timeout: int = 120,
+    tier:    str = "default",
+    url:     str | None = None,
+    *,
+    provider_override: str | None = None,
+    model_override:    str | None = None,
+) -> str:
+    """Text-only generation (see _call_llm_text_impl). Every call is recorded in
+    full in logs/trace/: prompt, system prompt, tier, model, reply, timing."""
+    cid = _trace.new_call_id()
+    t0 = time.monotonic()
+    _trace.event("llm_request", call=cid, api="text", tier=tier, timeout=timeout,
+                 system=system, prompt=prompt,
+                 **_trace_target(provider_override, url, model_override or model))
+    try:
+        out = _call_llm_text_impl(prompt, system, model, timeout, tier, url,
+                                  provider_override=provider_override, model_override=model_override)
+    except BaseException as e:  # noqa: BLE001 - re-raised
+        _trace.event("llm_error", call=cid, dur_ms=round((time.monotonic() - t0) * 1000, 1),
+                     error=f"{type(e).__name__}: {e}", traceback=traceback.format_exc())
+        raise
+    _trace.event("llm_response", call=cid, dur_ms=round((time.monotonic() - t0) * 1000, 1), content=out)
+    return out
+
+
+def _call_llm_text_impl(
     prompt:  str,
     system:  str | None = None,
     model:   str | None = None,
@@ -1254,6 +1327,57 @@ def gemini_timeout() -> int:
 
 
 def call_llm_stream(
+    messages: list,
+    tools:    list | None = None,
+    timeout:  int = 120,
+    *,
+    provider_override: str | None = None,
+    url_override:      str | None = None,
+    model_override:    str | None = None,
+    cancel_event=None,
+) -> Generator[dict, None, None]:
+    """Streaming chat request (see _call_llm_stream_impl for the event format).
+
+    Every call is recorded in full in logs/trace/: the exact messages sent, each
+    streamed sentence with its arrival time, the final text, tool calls, token
+    counts and timings, and any error. Events pass through unchanged."""
+    cid = _trace.new_call_id()
+    t0 = time.monotonic()
+    _trace.event("llm_request", call=cid, api="chat.stream", timeout=timeout,
+                 **_trace_target(provider_override, url_override, model_override),
+                 n_messages=len(messages), messages=messages,
+                 tools=_trace.tool_schema_once(tools), cancellable=cancel_event is not None)
+    sentences, first_ms, finished = 0, None, False
+    try:
+        for ev in _call_llm_stream_impl(
+                messages, tools, timeout, provider_override=provider_override,
+                url_override=url_override, model_override=model_override,
+                cancel_event=cancel_event):
+            kind = ev.get("type")
+            at_ms = round((time.monotonic() - t0) * 1000, 1)
+            if kind == "sentence":
+                sentences += 1
+                first_ms = at_ms if first_ms is None else first_ms
+                _trace.event("llm_sentence", call=cid, idx=sentences, at_ms=at_ms, text=ev.get("text"))
+            elif kind in ("done", "cancelled"):
+                finished = True
+                _trace.event("llm_done" if kind == "done" else "llm_cancelled", call=cid,
+                             dur_ms=at_ms, first_sentence_ms=first_ms, sentences=sentences,
+                             content=ev.get("content"), tool_calls=ev.get("tool_calls"),
+                             stats=ev.get("stats"))
+            yield ev
+    except GeneratorExit:
+        _trace.event("llm_abandoned", call=cid, dur_ms=round((time.monotonic() - t0) * 1000, 1),
+                     sentences=sentences, finished=finished,
+                     detail="the consumer stopped reading before the stream ended")
+        raise
+    except BaseException as e:  # noqa: BLE001 - re-raised
+        _trace.event("llm_error", call=cid, dur_ms=round((time.monotonic() - t0) * 1000, 1),
+                     error=f"{type(e).__name__}: {e}", traceback=traceback.format_exc())
+        raise
+
+
+def _call_llm_stream_impl(
     messages: list,
     tools:    list | None = None,
     timeout:  int = 120,
