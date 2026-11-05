@@ -1,5 +1,5 @@
 {
-  "next_id": 130,
+  "next_id": 131,
   "entries": [
     {
       "id": 1,
@@ -1829,6 +1829,16 @@
         "ui.py"
       ],
       "next_steps": "Review port/desktop-mate and decide whether to open its PR; test the Linux-path case in tests/test_shell_safety.py on Linux."
+    },
+    {
+      "id": 130,
+      "timestamp": "2026-11-05 01:03 UTC",
+      "by": "GitHub Copilot App",
+      "summary": "Fixed the Windows shell-safety test to use pytest's platform-native tmp_path instead of a hard-coded POSIX /tmp path; full suite passes (1485 passed, 2 skipped).",
+      "files": [
+        "tests/test_shell_safety.py"
+      ],
+      "next_steps": "No follow-up required for the Windows shell-safety test; retain cross-platform path fixtures in future tests."
     }
   ]
 }

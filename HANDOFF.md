@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 00:57 UTC
+Generated: 2026-11-05 01:03 UTC
+
+## #130 — 2026-11-05 01:03 UTC — GitHub Copilot App
+
+Fixed the Windows shell-safety test to use pytest's platform-native tmp_path instead of a hard-coded POSIX /tmp path; full suite passes (1485 passed, 2 skipped).
+
+**Touched:** `tests/test_shell_safety.py`
+
+**Next steps:** No follow-up required for the Windows shell-safety test; retain cross-platform path fixtures in future tests.
+
+---
 
 ## #129 — 2026-11-05 00:57 UTC — GitHub Copilot App
 
