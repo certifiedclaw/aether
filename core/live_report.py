@@ -100,6 +100,9 @@ def record_turn(
             "user_preview": user_text[:200],
             "reply_preview": reply[:300],
         }
+        from core.log_redaction import redact_text
+        record["user_preview"] = redact_text(record["user_preview"])
+        record["reply_preview"] = redact_text(record["reply_preview"])
         with _lock:
             _append_jsonl(record)
             _recent.append(record)
@@ -110,6 +113,7 @@ def record_turn(
 
 
 def _append_jsonl(record: dict) -> None:
+    from core.log_redaction import open_private_text
     _LOG_DIR.mkdir(parents=True, exist_ok=True)
     line = json.dumps(record, default=str)
     if _JSONL_PATH.exists() and _JSONL_PATH.stat().st_size >= _MAX_JSONL_BYTES:
@@ -119,7 +123,7 @@ def _append_jsonl(record: dict) -> None:
             _JSONL_PATH.write_text("\n".join(kept) + "\n", encoding="utf-8")
         except Exception:
             pass
-    with open(_JSONL_PATH, "a", encoding="utf-8") as f:
+    with open_private_text(_JSONL_PATH, "a") as f:
         f.write(line + "\n")
 
 
@@ -204,7 +208,9 @@ def _rewrite_report() -> None:
         )
 
     try:
+        from core.log_redaction import open_private_text
         _LOG_DIR.mkdir(parents=True, exist_ok=True)
-        _REPORT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        with open_private_text(_REPORT_PATH, "w") as f:
+            f.write("\n".join(lines) + "\n")
     except Exception:
         pass

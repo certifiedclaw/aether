@@ -28,6 +28,7 @@ _os.environ.setdefault("HF_HUB_OFFLINE",      "1")
 _os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 _os.environ.setdefault("HF_DATASETS_OFFLINE",  "1")
 import warnings as _warnings
+import os
 _warnings.filterwarnings("ignore", category=UserWarning)
 _warnings.filterwarnings("ignore", category=DeprecationWarning)
 _warnings.filterwarnings("ignore", category=FutureWarning)
@@ -232,16 +233,26 @@ except ImportError:
 
 # ── Logging setup ──────────────────────────────────────────────────────────
 Path("logs").mkdir(exist_ok=True)
+if os.name != "nt":
+    os.chmod("logs", 0o700)
 from logging.handlers import RotatingFileHandler as _RFH
+from core.log_redaction import RedactingLogFilter as _RedactingLogFilter
+from core.log_redaction import configure_log_redaction as _configure_log_redaction
+_configure_log_redaction()
+_redaction_filter = _RedactingLogFilter()
 _root_log = logging.getLogger()
 # logs/aether.log records everything (DEBUG, with the emitting thread); the console
 # stays at INFO. The complete machine-readable record is logs/trace/ (core/trace_log.py).
 _fh = _RFH("logs/aether.log", maxBytes=10*1024*1024, backupCount=10, encoding="utf-8")
+if os.name != "nt":
+    os.chmod("logs/aether.log", 0o600)
 _fh.setLevel(logging.DEBUG)
 _fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s [%(threadName)s] %(name)s — %(message)s"))
+_fh.addFilter(_redaction_filter)
 _ch = logging.StreamHandler()
 _ch.setLevel(logging.INFO)
 _ch.setFormatter(logging.Formatter("%(levelname)-8s %(name)s — %(message)s"))
+_ch.addFilter(_redaction_filter)
 if not _root_log.handlers:
     _root_log.setLevel(logging.DEBUG)
     for _noisy in ("urllib3", "httpx", "httpcore", "PIL", "asyncio", "matplotlib", "numba",
@@ -250,6 +261,9 @@ if not _root_log.handlers:
         logging.getLogger(_noisy).setLevel(logging.INFO)   # library chatter, not Aether detail
     _root_log.addHandler(_fh)
     _root_log.addHandler(_ch)
+for _handler in _root_log.handlers:
+    if _redaction_filter not in _handler.filters:
+        _handler.addFilter(_redaction_filter)
 logger = logging.getLogger("aether")
 # ───────────────────────────────────────────────────────────────────────────
 

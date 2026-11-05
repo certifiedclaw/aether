@@ -151,12 +151,14 @@ class StructuredLogger:
             "kind":    kind,
             **kwargs,
         }
+        from core.log_redaction import open_private_text, sanitize_for_logs
+        record = sanitize_for_logs(record)
         line = json.dumps(record, default=str)
         with self._lock:
             self._maybe_rotate()
-            with open(self._jsonl, "a", encoding="utf-8") as f:
+            with open_private_text(self._jsonl, "a") as f:
                 f.write(line + "\n")
-        logger.debug("[obs] %s %s", kind, kwargs)
+        logger.debug("[obs] %s %s", kind, record)
 
     def _maybe_rotate(self) -> None:
         """Keep events.jsonl from growing without bound over a long-running
