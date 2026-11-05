@@ -96,10 +96,11 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
     "file_controller": {
         "": SAFE, "list": SAFE, "find": SAFE, "info": SAFE, "read": SAFE,
         "disk_usage": SAFE, "largest": SAFE,
-        # Mutations here remain reversible through undo or the Recycle Bin.
-        "create_file": MONITOR, "create_folder": MONITOR, "write": MONITOR,
-        "copy": MONITOR, "move": MONITOR, "rename": MONITOR,
-        "delete": MONITOR,
+        # Undo/Recycle Bin coverage is partial (no undo for folder creation, copies, overwriting
+        # moves, or large/binary writes), so mutations ask. Plan approval (#67) covers a whole plan.
+        "create_file": ASK, "create_folder": ASK, "write": ASK,
+        "copy": ASK, "move": ASK, "rename": ASK,
+        "delete": ASK,
         "organize_desktop": ASK,  # batch-moves desktop files; show an approval prompt
     },
     "computer_control": {

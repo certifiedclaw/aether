@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 22:28 UTC
+Generated: 2026-11-05 22:37 UTC
+
+## #152 — 2026-11-05 22:37 UTC — Claude Code
+
+Second batch from the external review (stacked on PR #36). (a) core/risk.py: file_controller create_file/create_folder/write/copy/move/rename/delete are now ASK (were MONITOR); undo coverage was partial. Plan approval (#67) still covers whole plans. (b) actions/file_controller.py copy_file: shutil.copytree(symlinks=True) so nested symlinks are not followed out of the allowed roots. (e) CONFIRMED and fixed: plugin tools had no approval gate (risk.py docstring claimed @gated covered plugins; no plugin or PluginSystem.execute_tool applied it). PluginSystem.execute_tool now calls risk.check('plugin.<name>') which fails closed to ASK. Behaviour change: every plugin tool call asks once per turn/params; if that is too noisy add per-plugin entries to RISK_TABLE or a trusted-plugin tier. Tests in tests/test_review_fixes.py section 6 (9 tests, all fail on old code); test_all_critical plugin reload test now approves. Full suite 1804 passed, 2 skipped.
+
+**Touched:** `core/risk.py`, `core/plugins.py`, `actions/file_controller.py`, `tests/test_review_fixes.py`, `tests/test_risk.py`, `tests/test_all_critical.py`
+
+**Next steps:** STILL OPEN: (d) core/risk.py grants (_TURN/_GRANTS/_PLAN_GRANTS) are module-global, not request-scoped; (f) one bearer token can both send commands and approve high-risk actions from a remote client; (c) Windows setup Set-NetConnectionProfile Public->Private + unscoped inbound rules (dashboard/server.py ~235); (g) _ensure_crypto_js CDN download without integrity hash; (h) security/middleware.py require_approval not bound to device/capability/endpoint (NOT CHECKED); (i) executor max_retries vs hardcoded loop, recovery records original step, planner has no schema validation (NOT RE-VERIFIED); (j) generated-fix code= vs code_helper file_path (NOT RE-VERIFIED); (k) TaskQueue cancel() reports CANCELLED before the tool stops, stop() does not join; (l) mcp_bridge stdin write before deadline, stderr=DEVNULL, unpinned npx, serial boot, unsanitised tool names; (m) _wrap_untrusted should escape an opening <tool_result, arg previews reach remote dashboard unredacted; (n) /ws/phone-audio sockets are not closed on revoke; (o) COMPLEX_HINTS now routes short plan/design/debug prompts HARD; tune if noisy. Suggested next: (d), (f), (c).
+
+---
 
 ## #151 — 2026-11-05 22:28 UTC — Claude Code
 

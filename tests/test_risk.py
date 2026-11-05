@@ -51,7 +51,7 @@ def test_unknown_tool_and_unlisted_action_mean_ask():
     ("file_processor", "run", ASK), ("file_processor", "extract", MONITOR),
     ("file_processor", "describe the picture", MONITOR),
     ("memory_tool", "prune", ASK), ("memory_tool", "import", ASK), ("memory_tool", "stats", SAFE),
-    ("send_message", "", ASK), ("file_controller", "delete", MONITOR),
+    ("send_message", "", ASK), ("file_controller", "delete", ASK),
     ("mcp.call", "", ASK),
     ("file_controller", "organize_desktop", ASK),
     ("file_controller", "list", SAFE), ("computer_control", "click", TASK),
