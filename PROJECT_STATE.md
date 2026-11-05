@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Do not hand-edit — rerun `python -m tools.maintenance.project_state` (or `run_all`) to refresh. This is meant to be the one file a new session (human or Claude) reads first to get oriented.
 
-Generated: 2026-11-05 03:15 UTC
+Generated: 2026-11-05 03:38 UTC
 Version: Aether v1.0.0
 
 ## Entry points
@@ -16,20 +16,20 @@ Version: Aether v1.0.0
 
 | Directory | .py files | Total lines |
 |---|---|---|
-| `./` | 5 | 6,419 |
+| `./` | 5 | 6,430 |
 | `actions/` | 26 | 13,161 |
-| `agent/` | 4 | 1,187 |
+| `agent/` | 4 | 1,345 |
 | `config/` | 1 | 25 |
-| `core/` | 74 | 20,252 |
-| `dashboard/` | 5 | 1,698 |
+| `core/` | 74 | 20,455 |
+| `dashboard/` | 5 | 1,707 |
 | `dev_tools/` | 1 | 78 |
 | `integrations/` | 4 | 1,152 |
-| `memory/` | 6 | 1,276 |
+| `memory/` | 7 | 1,612 |
 | `plugins/` | 1 | 44 |
 | `security/` | 7 | 1,340 |
-| `tests/` | 94 | 17,777 |
+| `tests/` | 98 | 18,169 |
 | `tools/` | 24 | 3,759 |
-| **Total** | **252** | **68,168** |
+| **Total** | **257** | **69,277** |
 
 ## Modules with docstrings (top-level summary)
 
@@ -65,7 +65,7 @@ Version: Aether v1.0.0
 - `agent\error_handler.py` (153 lines, 1 classes, 3 functions) — Aether — Error Handler
 - `agent\executor.py` (472 lines, 2 classes, 6 functions) — Aether — Agent Executor
 - `agent\planner.py` (308 lines, 0 classes, 5 functions) — Aether — Task Planner
-- `agent\task_queue.py` (254 lines, 4 classes, 1 functions)
+- `agent\task_queue.py` (412 lines, 4 classes, 1 functions)
 
 ### `config/`
 - `config\__init__.py` (25 lines, 0 classes, 5 functions)
@@ -76,7 +76,7 @@ Version: Aether v1.0.0
 - `core\archive_safety.py` (21 lines, 0 classes, 1 functions)
 - `core\audit_log.py` (268 lines, 0 classes, 15 functions) — core/audit_log.py - searchable record of every gated tool call and decision (roadmap #44).
 - `core\behavior_rules.py` (427 lines, 1 classes, 26 functions) — core/behavior_rules.py - learn from corrections (roadmap #96).
-- `core\chat_commands.py` (378 lines, 1 classes, 0 functions) — core/chat_commands.py — Aether Built-in Chat Commands
+- `core\chat_commands.py` (377 lines, 1 classes, 0 functions) — core/chat_commands.py — Aether Built-in Chat Commands
 - `core\chat_history.py` (290 lines, 1 classes, 9 functions) — Bounded, atomic local storage for named chat transcripts.
 - `core\config_home.py` (206 lines, 0 classes, 14 functions) — core/config_home.py - where Aether's settings live, and loading them safely.
 - `core\config_io.py` (100 lines, 0 classes, 4 functions) — core/config_io.py -- save the settings dialog's values WITHOUT destroying the rest.
@@ -103,14 +103,14 @@ Version: Aether v1.0.0
 - `core\listen_loops.py` (379 lines, 2 classes, 0 functions) — core/listen_loops.py — AetherLocal's microphone/STT background loops.
 - `core\listen_mode.py` (166 lines, 1 classes, 4 functions) — core/listen_mode.py - which gate sits in front of speech-to-text (roadmap #95).
 - `core\live_report.py` (217 lines, 0 classes, 6 functions) — core/live_report.py — Live per-turn usage dump.
-- `core\llm_client.py` (1575 lines, 0 classes, 41 functions) — Local LLM client for Aether.
+- `core\llm_client.py` (1590 lines, 0 classes, 43 functions) — Local LLM client for Aether.
 - `core\log_analyzer.py` (99 lines, 0 classes, 5 functions) — core/log_analyzer.py - turn logs/aether.log into "what keeps going wrong" (roadmap #85).
 - `core\log_redaction.py` (150 lines, 1 classes, 6 functions) — Shared secret redaction and private-file helpers for local logs.
 - `core\loop_guard.py` (85 lines, 2 classes, 0 functions) — core/loop_guard.py — Aether Loop Guard
 - `core\mcp_bridge.py` (317 lines, 2 classes, 1 functions) — mcp_bridge.py — Aether v4.1 MCP (Model Context Protocol) Bridge
 - `core\memory_hygiene.py` (48 lines, 0 classes, 4 functions) — core/memory_hygiene.py -- keep failed turns out of long-term memory.
-- `core\memory_panel.py` (227 lines, 0 classes, 12 functions) — core/memory_panel.py - view, edit and delete what Aether remembers (roadmap #57, #32).
-- `core\memory_tools.py` (383 lines, 0 classes, 5 functions) — memory/memory_tools.py — Aether Memory Backup, Export, Import & Pruning
+- `core\memory_panel.py` (292 lines, 0 classes, 15 functions) — core/memory_panel.py - view, edit and delete what Aether remembers (roadmap #57, #56, #32).
+- `core\memory_tools.py` (414 lines, 0 classes, 5 functions) — memory/memory_tools.py — Aether Memory Backup, Export, Import & Pruning
 - `core\notify.py` (129 lines, 0 classes, 3 functions) — notify.py — Push notifications (ntfy.sh, or a self-hosted ntfy instance)
 - `core\observability.py` (326 lines, 5 classes, 1 functions) — core/observability.py — Aether Observability Layer
 - `core\pending_approvals.py` (129 lines, 2 classes, 1 functions) — pending_approvals.py — In-memory store for headless remote-approval requests.
@@ -135,9 +135,9 @@ Version: Aether v1.0.0
 - `core\supervisor.py` (252 lines, 3 classes, 9 functions) — core/supervisor.py - self-healing watchdog for the always-on deploy (roadmap #99).
 - `core\task_scheduler.py` (125 lines, 2 classes, 0 functions) — task_scheduler.py — Aether v3 Task Scheduler (stub / minimal implementation)
 - `core\tier_router.py` (218 lines, 2 classes, 6 functions) — Tier-based LLM routing for Aether.
-- `core\tool_declarations.py` (634 lines, 0 classes, 3 functions) — core/tool_declarations.py — Aether's built-in tool schema.
-- `core\tool_dispatch.py` (525 lines, 1 classes, 0 functions) — core/tool_dispatch.py — Aether Tool Dispatch
-- `core\tool_router.py` (182 lines, 0 classes, 5 functions) — tool_router.py — per-turn tool subset selection for EVERYDAY-tier turns.
+- `core\tool_declarations.py` (657 lines, 0 classes, 3 functions) — core/tool_declarations.py — Aether's built-in tool schema.
+- `core\tool_dispatch.py` (589 lines, 1 classes, 0 functions) — core/tool_dispatch.py — Aether Tool Dispatch
+- `core\tool_router.py` (188 lines, 0 classes, 5 functions) — tool_router.py — per-turn tool subset selection for EVERYDAY-tier turns.
 - `core\trace_log.py` (1084 lines, 7 classes, 39 functions) — core/trace_log.py - the flight recorder: what Aether did, when, and with what.
 - `core\tts.py` (465 lines, 4 classes, 6 functions) — Text-to-Speech engines for Aether.
 - `core\ui_prefs.py` (176 lines, 1 classes, 10 functions) — core/ui_prefs.py - everything about making Aether's UI easy for non-technical people.
@@ -151,7 +151,7 @@ Version: Aether v1.0.0
 - `dashboard\__main__.py` (50 lines, 0 classes, 2 functions) — Standalone dashboard: ``python -m dashboard``.
 - `dashboard\api_secure.py` (126 lines, 2 classes, 4 functions) — dashboard/api_secure.py — Stage 2 of the remote-access build (see HANDOFF.md #3).
 - `dashboard\openai_api.py` (187 lines, 1 classes, 4 functions) — dashboard/openai_api.py - OpenAI-compatible endpoint for Aether's models (roadmap #41).
-- `dashboard\server.py` (1334 lines, 2 classes, 15 functions) — dashboard/server.py — AETHER Local Dashboard
+- `dashboard\server.py` (1343 lines, 2 classes, 15 functions) — dashboard/server.py — AETHER Local Dashboard
 
 ### `dev_tools/`
 - `dev_tools\dump.py` (78 lines, 0 classes, 1 functions) — dump.py — MARK XL Codebase Exporter
@@ -165,8 +165,9 @@ Version: Aether v1.0.0
 ### `memory/`
 - `memory\__init__.py` (1 lines, 0 classes, 0 functions)
 - `memory\config_manager.py` (171 lines, 1 classes, 8 functions)
-- `memory\hybrid_memory.py` (448 lines, 3 classes, 1 functions) — memory/hybrid_memory.py — Aether Hybrid Memory
-- `memory\memory_manager.py` (225 lines, 0 classes, 12 functions)
+- `memory\hybrid_memory.py` (462 lines, 3 classes, 1 functions) — memory/hybrid_memory.py — Aether Hybrid Memory
+- `memory\knowledge_graph.py` (308 lines, 0 classes, 13 functions) — Small local knowledge graph with explicit handling of conflicting facts.
+- `memory\memory_manager.py` (239 lines, 0 classes, 12 functions)
 - `memory\rag.py` (221 lines, 2 classes, 0 functions) — memory/rag.py — Aether Hybrid RAG Engine
 - `memory\semantic_memory.py` (210 lines, 2 classes, 0 functions) — memory_engine.py — Aether v3 Memory Engine
 
@@ -187,7 +188,7 @@ Version: Aether v1.0.0
 - `tests\stress_test.py` (369 lines, 0 classes, 15 functions) — stress_test.py — Aether Comprehensive Stress Test
 - `tests\test_action_launcher.py` (336 lines, 0 classes, 6 functions)
 - `tests\test_action_signatures.py` (44 lines, 0 classes, 4 functions) — Roadmap #16: the dead `session_memory` parameter is gone from actions/,
-- `tests\test_all_critical.py` (2186 lines, 0 classes, 90 functions)
+- `tests\test_all_critical.py` (2159 lines, 0 classes, 90 functions)
 - `tests\test_answer_check.py` (195 lines, 1 classes, 25 functions) — Roadmap #53 (self-check pass) and #55 (confidence / 'I don't know' flagging).
 - `tests\test_antivirus.py` (252 lines, 1 classes, 10 functions)
 - `tests\test_apply_handoff.py` (66 lines, 0 classes, 6 functions) — tools/apply_handoff_v12.py records the session once, through the handoff module.
@@ -222,8 +223,10 @@ Version: Aether v1.0.0
 - `tests\test_file_processor_privacy.py` (81 lines, 0 classes, 4 functions)
 - `tests\test_followup_routing.py` (82 lines, 0 classes, 10 functions) — Short follow-ups ("yes", "retry", "view") must keep their tools.
 - `tests\test_gemini_models.py` (288 lines, 1 classes, 31 functions) — The Gemini model dropdown asks Google which models the key can use.
+- `tests\test_hybrid_memory_lazy_models.py` (72 lines, 0 classes, 4 functions)
 - `tests\test_installer.py` (48 lines, 0 classes, 3 functions) — Focused tests for dependency-install batching and failure recovery.
 - `tests\test_invariants.py` (675 lines, 1 classes, 51 functions) — Whole-codebase invariants: properties that must hold across ALL tools / ALL inputs.
+- `tests\test_knowledge_graph.py` (128 lines, 0 classes, 9 functions)
 - `tests\test_leak_guard.py` (110 lines, 0 classes, 13 functions)
 - `tests\test_listen_mode.py` (355 lines, 2 classes, 29 functions) — Roadmap #95: listen modes / push-to-talk so background media is never transcribed.
 - `tests\test_live_grader.py` (151 lines, 0 classes, 19 functions) — The grader must FAIL on the real bad replies seen in logs and PASS on the good ones.
@@ -232,8 +235,9 @@ Version: Aether v1.0.0
 - `tests\test_mark_lv_ports.py` (336 lines, 2 classes, 26 functions) — Tests for the MARK LV ports: EchoGuard/OutputTap, WakeGate, Gemini opt-in route.
 - `tests\test_mcp_bridge.py` (234 lines, 0 classes, 11 functions)
 - `tests\test_memory_empty_values.py` (23 lines, 0 classes, 2 functions) — Roadmap #32: empty/None values wrapped in {"value": ...} must not be stored.
-- `tests\test_memory_panel.py` (238 lines, 0 classes, 20 functions) — Roadmap #57 / #32: memory panel lists, edits and deletes facts and past exchanges.
+- `tests\test_memory_panel.py` (277 lines, 0 classes, 22 functions) — Roadmap #57 / #32: memory panel lists, edits and deletes facts and past exchanges.
 - `tests\test_notify_followup.py` (227 lines, 0 classes, 18 functions) — Roadmap #19 / #20: ntfy follow-through for approvals and the audit trail
+- `tests\test_ollama_resource_use.py` (56 lines, 0 classes, 3 functions)
 - `tests\test_open_app_shortcuts.py` (232 lines, 1 classes, 29 functions) — open_app: find Desktop/Start Menu shortcuts, honour config app_paths, and only say
 - `tests\test_openai_api.py` (123 lines, 0 classes, 11 functions)
 - `tests\test_osint_tools.py` (273 lines, 2 classes, 11 functions)
@@ -263,6 +267,7 @@ Version: Aether v1.0.0
 - `tests\test_shell_safety.py` (167 lines, 0 classes, 15 functions) — Regression tests for roadmap #29: no shell=True call sites remain.
 - `tests\test_stream_cancellation.py` (154 lines, 0 classes, 4 functions)
 - `tests\test_supervisor.py` (118 lines, 1 classes, 10 functions) — Tests for core/supervisor.py (roadmap #99): bounded restarts, quiet success, one alert.
+- `tests\test_task_queue_persistence.py` (124 lines, 0 classes, 7 functions)
 - `tests\test_threat_intel.py` (102 lines, 1 classes, 4 functions)
 - `tests\test_tool_call_recovery.py` (101 lines, 0 classes, 12 functions) — Recovery of raw <tool_call> text, held-back streaming, plain monitor alerts, HF offline restore.
 - `tests\test_tool_dispatch_console_safety.py` (30 lines, 2 classes, 1 functions) — Tool dispatch must not depend on the Windows console encoding.
@@ -305,14 +310,14 @@ Version: Aether v1.0.0
 - `tools\verify_local.py` (355 lines, 1 classes, 11 functions) — tools/verify_local.py -- one-shot health check for a real Aether install.
 
 ## Recent history (git log)
+- f854162 2026-11-04 Merge remote-tracking branch 'origin/master' into certifiedclaw-roadmap-backlog
+- 05bba31 2026-11-04 Complete structured memory and task resumption
+- 9089654 2026-11-04 Merge pull request #32 from certifiedclaw/certifiedclaw-reduce-resource-use
+- 0f973a3 2026-11-04 Merge remote-tracking branch 'origin/master' into certifiedclaw-reduce-resource-use
+- e891477 2026-11-04 Reduce idle Ollama resource use
+- bea7b16 2026-11-04 Merge pull request #31 from certifiedclaw/port/desktop-mate
+- 080c55b 2026-11-04 Add antivirus scanning and privacy tools
 - 15aa85b 2026-11-04 Merge pull request #29 from certifiedclaw/port/updater-48
-- 3bbc1c6 2026-11-04 Merge latest master into updater branch
-- 0d9f9d2 2026-11-04 Merge pull request #30 from certifiedclaw/port/easy-mode
-- 8f4af71 2026-11-04 Merge master into easy mode PR
-- 457204f 2026-11-04 Merge pull request #26 from certifiedclaw/work/roadmap-96
-- 82e05e1 2026-11-04 Merge master into work/roadmap-96
-- 9c95dfb 2026-11-04 Merge master into easy mode PR
-- 5c17875 2026-11-04 Merge pull request #28 from certifiedclaw/port/desktop-mate
 
 ## See also
 - `HEALTH_REPORT.md` — automated code health scan

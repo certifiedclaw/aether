@@ -7,7 +7,7 @@
     },
     {
       "file": "main.py",
-      "lines": 1266
+      "lines": 1277
     },
     {
       "file": "ui.py",
@@ -51,11 +51,11 @@
     },
     {
       "file": "core\\llm_client.py",
-      "lines": 1574
+      "lines": 1589
     },
     {
       "file": "core\\tool_declarations.py",
-      "lines": 633
+      "lines": 656
     },
     {
       "file": "core\\trace_log.py",
@@ -67,11 +67,11 @@
     },
     {
       "file": "dashboard\\server.py",
-      "lines": 1333
+      "lines": 1342
     },
     {
       "file": "tests\\test_all_critical.py",
-      "lines": 2185
+      "lines": 2158
     },
     {
       "file": "tests\\test_invariants.py",
@@ -95,19 +95,19 @@
       "file": "main.py",
       "function": "main",
       "lines": 145,
-      "at_line": 1118
+      "at_line": 1129
     },
     {
       "file": "main.py",
       "function": "run",
-      "lines": 142,
+      "lines": 153,
       "at_line": 969
     },
     {
       "file": "main.py",
       "function": "runner",
       "lines": 87,
-      "at_line": 1173
+      "at_line": 1184
     },
     {
       "file": "ui.py",
@@ -341,25 +341,25 @@
       "file": "core\\llm_client.py",
       "function": "_call_llm_impl",
       "lines": 112,
-      "at_line": 657
+      "at_line": 672
     },
     {
       "file": "core\\llm_client.py",
       "function": "_stream_openai_once",
       "lines": 188,
-      "at_line": 960
+      "at_line": 975
     },
     {
       "file": "core\\llm_client.py",
       "function": "_call_llm_stream_impl",
       "lines": 192,
-      "at_line": 1382
+      "at_line": 1397
     },
     {
       "file": "core\\llm_client.py",
       "function": "_do_stream",
       "lines": 95,
-      "at_line": 1449
+      "at_line": 1464
     },
     {
       "file": "core\\portable_bundle.py",
@@ -407,7 +407,7 @@
       "file": "dashboard\\server.py",
       "function": "_register_file_routes",
       "lines": 104,
-      "at_line": 1039
+      "at_line": 1048
     },
     {
       "file": "integrations\\langchain_tools.py",
@@ -418,8 +418,14 @@
     {
       "file": "memory\\hybrid_memory.py",
       "function": "_retrieve",
-      "lines": 85,
-      "at_line": 305
+      "lines": 86,
+      "at_line": 318
+    },
+    {
+      "file": "memory\\memory_manager.py",
+      "function": "format_memory_for_prompt",
+      "lines": 88,
+      "at_line": 130
     },
     {
       "file": "tests\\test_action_launcher.py",
@@ -437,13 +443,13 @@
       "file": "tests\\test_all_critical.py",
       "function": "test_setup_overlay_refactor_preserves_behavior",
       "lines": 115,
-      "at_line": 760
+      "at_line": 762
     },
     {
       "file": "tests\\test_all_critical.py",
       "function": "test_confirm_blocking_dialog_thread_safety",
       "lines": 102,
-      "at_line": 1187
+      "at_line": 1189
     },
     {
       "file": "tests\\test_listen_mode.py",
@@ -506,7 +512,7 @@
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-11-05T03:16:23.988934+00:00",
-    "files_scanned": 252
+    "generated": "2026-11-05T03:38:51.696304+00:00",
+    "files_scanned": 257
   }
 }

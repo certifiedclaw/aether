@@ -1,11 +1,11 @@
 {
-  "next_id": 143,
+  "next_id": 145,
   "entries": [
     {
       "id": 1,
       "timestamp": "2026-07-13 17:48 UTC",
       "by": "Claude (claude.ai chat)",
-      "summary": "Fixed the handoff system itself: handoff.py (plus newer versions of run_all.py and publish.py that wire it in) had been written to the project root instead of into tools/maintenance/, so 'from tools.maintenance import ... handoff ...' threw ImportError and the whole maintenance run was broken \u2014 HANDOFF.md, the one continuity file this project depends on, was never actually being generated. Moved handoff.py into tools/maintenance/, replaced the stale in-package run_all.py/publish.py with the versions that include handoff rendering + HANDOFF.md/handoff.json in the tracked-files list, deleted the redundant root copies, and wired handoff.cmd_render() into main.py's launch-time maintenance snapshot so HANDOFF.md can't silently drift out of sync with handoff.json again. Verified the import resolves and a full run_all --skip-deps produces HANDOFF.md correctly.",
+      "summary": "Fixed the handoff system itself: handoff.py (plus newer versions of run_all.py and publish.py that wire it in) had been written to the project root instead of into tools/maintenance/, so 'from tools.maintenance import ... handoff ...' threw ImportError and the whole maintenance run was broken — HANDOFF.md, the one continuity file this project depends on, was never actually being generated. Moved handoff.py into tools/maintenance/, replaced the stale in-package run_all.py/publish.py with the versions that include handoff rendering + HANDOFF.md/handoff.json in the tracked-files list, deleted the redundant root copies, and wired handoff.cmd_render() into main.py's launch-time maintenance snapshot so HANDOFF.md can't silently drift out of sync with handoff.json again. Verified the import resolves and a full run_all --skip-deps produces HANDOFF.md correctly.",
       "files": [
         "tools/maintenance/handoff.py",
         "tools/maintenance/run_all.py",
@@ -13,7 +13,7 @@
         "main.py",
         "CLAUDE.md"
       ],
-      "next_steps": "Nothing blocking \u2014 system is verified working end to end. If you add entries by hand rather than via this CLI, run 'python -m tools.maintenance.handoff render' afterward so HANDOFF.md stays in sync with handoff.json."
+      "next_steps": "Nothing blocking — system is verified working end to end. If you add entries by hand rather than via this CLI, run 'python -m tools.maintenance.handoff render' afterward so HANDOFF.md stays in sync with handoff.json."
     },
     {
       "id": 2,
@@ -41,7 +41,7 @@
         "security/middleware.py",
         ".gitignore"
       ],
-      "next_steps": "Wait for user approval to start Stage 2: dashboard/api_secure.py (new router) + 1 opt-in include_router line in dashboard/server.py. After Stage 2: Stage 3 PWA, Stage 4 tunnel scripts, Stage 5 React Native Expo source. No edits to existing Aether source in any stage \u2014 all new files."
+      "next_steps": "Wait for user approval to start Stage 2: dashboard/api_secure.py (new router) + 1 opt-in include_router line in dashboard/server.py. After Stage 2: Stage 3 PWA, Stage 4 tunnel scripts, Stage 5 React Native Expo source. No edits to existing Aether source in any stage — all new files."
     },
     {
       "id": 4,
@@ -65,7 +65,7 @@
       "id": 5,
       "timestamp": "2026-07-14 01:01 UTC",
       "by": "Claude (claude.ai chat, Sonnet 5)",
-      "summary": "Implemented comprehensive stress_test.py covering Config, HybridMemory, RAG, Security, ToolDispatch, LLM, FileOps, and Concurrency. Ran 50 iterations each \u2013 all passed. Identified meta-tensor warnings from PyTorch/sentence-transformers (non-fatal). Performance: LLM is slowest (~0.8 ops/s) due to real Ollama inference; all other subsystems are fast. Provided optimization suggestions.",
+      "summary": "Implemented comprehensive stress_test.py covering Config, HybridMemory, RAG, Security, ToolDispatch, LLM, FileOps, and Concurrency. Ran 50 iterations each – all passed. Identified meta-tensor warnings from PyTorch/sentence-transformers (non-fatal). Performance: LLM is slowest (~0.8 ops/s) due to real Ollama inference; all other subsystems are fast. Provided optimization suggestions.",
       "files": [
         "tests/stress_test.py"
       ],
@@ -1681,7 +1681,7 @@
       "id": 120,
       "timestamp": "2026-10-29 11:51 UTC",
       "by": "Claude Code",
-      "summary": "Repo-presentation cleanup: removed root duplicate files, moved historical docs to docs/archive/, stripped '# \u2500\u2500 NEW vN' divider comments (31) in main.py/core, dropped emoji header from core/prompt.txt, replaced 'Tony Stark' fallback prompt in main.py, fixed doc/tool references. No logic changes. Full suite: 950 passed, same 5 pre-existing failures (PortAudio/ModuleNotFound in sandbox).",
+      "summary": "Repo-presentation cleanup: removed root duplicate files, moved historical docs to docs/archive/, stripped '# ── NEW vN' divider comments (31) in main.py/core, dropped emoji header from core/prompt.txt, replaced 'Tony Stark' fallback prompt in main.py, fixed doc/tool references. No logic changes. Full suite: 950 passed, same 5 pre-existing failures (PortAudio/ModuleNotFound in sandbox).",
       "files": [
         "main.py",
         "core/prompt.txt",
@@ -2027,6 +2027,47 @@
         "tests/test_all_critical.py"
       ],
       "next_steps": "Observe idle RAM and first relevant memory retrieval on the user's machine; keep model preload disabled unless first-retrieval latency matters more than idle memory."
+    },
+    {
+      "id": 143,
+      "timestamp": "2026-11-05 03:17 UTC",
+      "by": "GitHub Copilot (Copilot App)",
+      "summary": "Implemented roadmap #56: local structured knowledge graph with conflict preservation and explicit resolution, prompt/tool integration, memory panel and dashboard controls, and export/import support. Verified compilation and 173 targeted regression tests.",
+      "files": [
+        "memory/knowledge_graph.py",
+        "memory/memory_manager.py",
+        "core/memory_panel.py",
+        "core/memory_tools.py",
+        "core/tool_declarations.py",
+        "core/tool_dispatch.py",
+        "core/tool_router.py",
+        "core/chat_commands.py",
+        "core/prompt.txt",
+        "dashboard/server.py",
+        "dashboard/static/memory.html",
+        "tests/test_knowledge_graph.py",
+        "tests/test_memory_panel.py",
+        "tools/maintenance/data/roadmap.json"
+      ],
+      "next_steps": "Choose the next actionable item from the roadmap backlog; #88 and #93 still need machine-specific inputs or live measurements."
+    },
+    {
+      "id": 144,
+      "timestamp": "2026-11-05 03:32 UTC",
+      "by": "GitHub Copilot (Copilot App)",
+      "summary": "Completed roadmap #58: task queue state persists atomically; queued tasks restore after restart; running tasks become interrupted and require explicit confirmation to rerun the original goal. Added list/status/cancel and resume controls plus persistence/routing regressions. Preserved existing #56 work.",
+      "files": [
+        "agent/task_queue.py",
+        "core/tool_dispatch.py",
+        "core/tool_declarations.py",
+        "core/tool_router.py",
+        "core/tier_router.py",
+        "tests/test_task_queue_persistence.py",
+        "tests/test_all_critical.py",
+        "tools/maintenance/data/roadmap.json",
+        "ROADMAP.md"
+      ],
+      "next_steps": "Continue with the next actionable roadmap backlog item."
     }
   ]
 }

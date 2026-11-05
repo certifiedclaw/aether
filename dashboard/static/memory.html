@@ -30,8 +30,15 @@
   <input name="value" placeholder="value" aria-label="value" size="30">
   <button type="submit">Add fact</button>
 </form>
+<form id="add-relation">
+  <input name="subject" placeholder="subject (e.g. Maya)" aria-label="relation subject" size="18">
+  <input name="predicate" placeholder="relationship (e.g. is my sister)" aria-label="relation predicate" size="24">
+  <input name="object" placeholder="object (e.g. Ian)" aria-label="relation object" size="18">
+  <button type="submit">Add relation</button>
+</form>
 <h2>Learned rules</h2><div id="rules"></div>
 <h2>Facts</h2><div id="facts"></div>
+<h2>Structured relations</h2><div id="relations"></div>
 <h2>Past conversations</h2><div id="ex"></div>
 <script>
   let token = null;
@@ -63,6 +70,22 @@
     del.onclick = () => { if (confirm('Forget ' + it.id + '?')) call({ op: 'delete', id: it.id }); };
     acts.append(ed, del); row.append(acts); return row;
   }
+  function relationCard(it) {
+    const row = document.createElement('div'); row.className = 'row' + (it.problem ? ' problem' : '');
+    const head = document.createElement('div'); head.className = 'meta';
+    head.textContent = it.id + (it.updated ? ' - ' + it.updated : '') + ' - ' + it.status;
+    const val = document.createElement('div'); val.textContent = it.value;
+    row.append(head, val);
+    if (it.problem) { const p = document.createElement('div'); p.className = 'warn'; p.textContent = it.problem; row.append(p); }
+    const acts = document.createElement('div'); acts.className = 'acts';
+    if (it.status === 'contested') {
+      const keep = document.createElement('button'); keep.textContent = 'Keep this claim';
+      keep.onclick = () => call({ op: 'resolve_relation', id: it.id }); acts.append(keep);
+    }
+    const del = document.createElement('button'); del.textContent = 'Forget'; del.className = 'del';
+    del.onclick = () => { if (confirm('Forget ' + it.id + '?')) call({ op: 'delete', id: it.id }); };
+    acts.append(del); row.append(acts); return row;
+  }
   async function load(keepMsg) {
     if (!token) { location.href = '/login'; return; }
     const q = new URLSearchParams(new FormData(document.getElementById('f')));
@@ -70,16 +93,22 @@
     try { r = await fetch('/api/memory?' + q, { headers: H() }); } catch (e) { msg('Could not reach the server.', true); return; }
     if (r.status === 401) { location.href = '/login'; return; }
     const j = await r.json();
-    const facts = document.getElementById('facts'), ex = document.getElementById('ex'), rules = document.getElementById('rules');
+    const facts = document.getElementById('facts'), ex = document.getElementById('ex'),
+      rules = document.getElementById('rules'), relations = document.getElementById('relations');
     const rl = j.rules || [];
     rules.replaceChildren(...(rl.length ? rl.map(card) : [Object.assign(document.createElement('div'), { className: 'meta', textContent: 'Nothing learned yet. When you correct Aether it offers to save a rule.' })]));
     facts.replaceChildren(...(j.facts.length ? j.facts.map(card) : [Object.assign(document.createElement('div'), { className: 'meta', textContent: 'No saved facts.' })]));
+    const graph = j.relations || [];
+    relations.replaceChildren(...(graph.length ? graph.map(relationCard) : [Object.assign(document.createElement('div'), { className: 'meta', textContent: 'No structured relations.' })]));
     ex.replaceChildren(...(j.exchanges.length ? j.exchanges.map(card) : [Object.assign(document.createElement('div'), { className: 'meta', textContent: 'No past conversations.' })]));
     if (j.problems && !keepMsg) msg(j.problems + ' entr' + (j.problems > 1 ? 'ies have' : 'y has') + ' no value - repair or forget them.', true);
   }
   document.getElementById('f').addEventListener('submit', (e) => { e.preventDefault(); load(); });
   document.getElementById('add').addEventListener('submit', (e) => {
     e.preventDefault(); const d = Object.fromEntries(new FormData(e.target)); call({ op: 'add', ...d }); e.target.reset();
+  });
+  document.getElementById('add-relation').addEventListener('submit', (e) => {
+    e.preventDefault(); const d = Object.fromEntries(new FormData(e.target)); call({ op: 'add_relation', ...d }); e.target.reset();
   });
   load();
 </script>

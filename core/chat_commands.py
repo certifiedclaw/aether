@@ -351,7 +351,7 @@ class ChatCommandsMixin:
                 "/briefing, /report  Preview the daily briefing / weekly server report (scheduled via briefing_time, weekly_report_day)\n"
                 "/learned         What Aether learned from your corrections (rules it offered to save); /learned add|edit|forget|off|on\n"
                 "/rules, /rule add <sentence>  Plain-language rules, e.g. /rule add when the disk is below 10% notify me (also /rule on|off|remove <id>)\n"
-                "/memory [words]   See what Aether remembers; /memory forget <id>, /memory edit <id> <text>, /memory add <category> <key> <value> (also at the dashboard's /memory page)\n"
+                "/memory [words]   See what Aether remembers; /memory forget <id>, /memory edit <id> <text>, /memory add <category> <key> <value>, /memory relation <subject> <predicate> <object>, /memory resolve <g:id> (also at the dashboard's /memory page)\n"
                 "/remote            Show the web dashboard address and a one-time pairing code (phone or browser)\n"
                 "/resources         Show whether background jobs are paused because the machine is busy\n"
                 "/doctor            Find install problems and how to fix them (/doctor fix applies safe fixes)\n"
@@ -374,4 +374,3 @@ class ChatCommandsMixin:
             self.ui.write_log(help_text)
             return True
         return False
-

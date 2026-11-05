@@ -1,10 +1,16 @@
+import json
+import os
+import tempfile
 import threading
 import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Callable, Any
 import logging
+
+from core.data_home import resolve_data_path
 
 logger = logging.getLogger("aether")
 
@@ -15,6 +21,7 @@ class TaskStatus(Enum):
     COMPLETED  = "completed"
     FAILED     = "failed"
     CANCELLED  = "cancelled"
+    INTERRUPTED = "interrupted"
 
 
 class TaskPriority(Enum):
@@ -40,7 +47,7 @@ class Task:
 class TaskQueue:
     _MAX_TASK_HISTORY = 200  # cap on finished (terminal-status) tasks retained in self._tasks
 
-    def __init__(self, max_concurrent: int = 1):
+    def __init__(self, max_concurrent: int = 1, persist_path: Path | None = None):
         self._queue:        list[Task]       = []
         self._lock:         threading.Lock   = threading.Lock()
         self._condition:    threading.Condition = threading.Condition(self._lock)
@@ -50,6 +57,96 @@ class TaskQueue:
         self._max_concurrent = max_concurrent
         self._active_count   = 0
         self._executor       = None  
+        self._persist_path = Path(persist_path) if persist_path is not None else \
+            resolve_data_path(None, "task_queue.json")
+        self._load_persisted()
+
+    @staticmethod
+    def _finished(status: TaskStatus) -> bool:
+        return status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED)
+
+    def _load_persisted(self) -> None:
+        """Restore queued work, but never replay work that may have side effects."""
+        try:
+            payload = json.loads(self._persist_path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return
+        except (OSError, UnicodeError, json.JSONDecodeError) as e:
+            logger.warning("[TaskQueue] Could not load persisted tasks from %s: %s",
+                           self._persist_path, e)
+            return
+        if not isinstance(payload, dict) or payload.get("version") != 1 \
+                or not isinstance(payload.get("tasks"), list):
+            logger.warning("[TaskQueue] Ignoring invalid persisted task data in %s",
+                           self._persist_path)
+            return
+
+        for item in payload["tasks"][-self._MAX_TASK_HISTORY:]:
+            if not isinstance(item, dict):
+                continue
+            task_id, goal = item.get("task_id"), item.get("goal")
+            if (not isinstance(task_id, str) or not task_id or task_id in self._tasks
+                    or not isinstance(goal, str) or not goal or len(goal) > 4000):
+                continue
+            try:
+                status = TaskStatus(item.get("status"))
+                priority = int(item.get("priority", TaskPriority.NORMAL.value))
+                created_at = float(item.get("created_at", 0))
+            except (TypeError, ValueError):
+                continue
+            if status == TaskStatus.RUNNING:
+                status = TaskStatus.INTERRUPTED
+                error = "App stopped while this task was running; resume explicitly after reviewing its goal."
+            else:
+                error = str(item.get("error", ""))[:1000]
+            task = Task(
+                priority=priority,
+                created_at=created_at,
+                task_id=task_id,
+                goal=goal[:4000],
+                status=status,
+                result=item.get("result"),
+                error=error,
+            )
+            self._tasks[task_id] = task
+            if status == TaskStatus.PENDING:
+                self._queue.append(task)
+        self._queue.sort(key=lambda t: (t.priority, t.created_at))
+        if any(task.status == TaskStatus.INTERRUPTED for task in self._tasks.values()):
+            try:
+                self._persist_locked()
+            except OSError as e:
+                logger.error("[TaskQueue] Could not record interrupted tasks: %s", e)
+
+    def _persist_locked(self) -> None:
+        """Atomically persist task state. Caller must hold self._lock."""
+        payload = {
+            "version": 1,
+            "tasks": [
+                {"task_id": task.task_id, "goal": task.goal,
+                 "priority": task.priority, "created_at": task.created_at,
+                 "status": task.status.value,
+                 "result": str(task.result)[:4000] if task.result is not None else None,
+                 "error": task.error}
+                for task in sorted(self._tasks.values(), key=lambda item: item.created_at)
+            ],
+        }
+        encoded = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+        self._persist_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="wb", dir=self._persist_path.parent, prefix="task_queue_",
+                suffix=".tmp", delete=False
+            ) as temporary:
+                temporary_path = Path(temporary.name)
+                temporary.write(encoded)
+                temporary.flush()
+                os.fsync(temporary.fileno())
+            temporary_path.replace(self._persist_path)
+        finally:
+            if temporary_path is not None:
+                temporary_path.unlink(missing_ok=True)
 
     def _get_executor(self):
         if self._executor is None:
@@ -83,20 +180,33 @@ class TaskQueue:
         on_complete: Callable | None = None,
     ) -> str:
 
-        task_id = str(uuid.uuid4())[:8]
-        task    = Task(
-            priority    = priority.value,
-            created_at  = time.time(),
-            task_id     = task_id,
-            goal        = goal,
-            speak       = speak,
-            on_complete = on_complete,
-        )
-
+        goal = str(goal).strip()
+        if not goal:
+            raise ValueError("A task goal is required.")
+        if len(goal) > 4000:
+            raise ValueError("Task goals are limited to 4000 characters so they can be safely resumed.")
         with self._condition:
+            task_id = str(uuid.uuid4())[:8]
+            while task_id in self._tasks:
+                task_id = str(uuid.uuid4())[:8]
+            task = Task(
+                priority=priority.value,
+                created_at=time.time(),
+                task_id=task_id,
+                goal=goal,
+                speak=speak,
+                on_complete=on_complete,
+            )
             self._queue.append(task)
             self._queue.sort(key=lambda t: (t.priority, t.created_at))
             self._tasks[task_id] = task
+            self._prune_task_history()
+            try:
+                self._persist_locked()
+            except OSError:
+                self._queue.remove(task)
+                self._tasks.pop(task_id, None)
+                raise
             self._condition.notify()
 
         logger.info(f"[TaskQueue] 📥 Task queued: [{task_id}] {goal[:60]}")
@@ -122,7 +232,36 @@ class TaskQueue:
             except ValueError:
                 pass  # already picked up by the worker (now running) — fine
             self._prune_task_history()
+            self._persist_locked()
             logger.info(f"[TaskQueue] 🚫 Task cancelled: [{task_id}]")
+            return True
+
+    def resume(self, task_id: str, speak: Callable | None = None,
+               on_complete: Callable | None = None) -> bool:
+        """Explicitly requeue an interrupted task using its original goal."""
+        with self._condition:
+            task = self._tasks.get(task_id)
+            if task is None or task.status != TaskStatus.INTERRUPTED:
+                return False
+            task.status = TaskStatus.PENDING
+            task.result = None
+            task.error = ""
+            task.cancel_flag = threading.Event()
+            task.speak = speak
+            task.on_complete = on_complete
+            self._queue.append(task)
+            self._queue.sort(key=lambda t: (t.priority, t.created_at))
+            try:
+                self._persist_locked()
+            except OSError:
+                self._queue.remove(task)
+                task.status = TaskStatus.INTERRUPTED
+                task.error = "Could not persist resumed task; it was not started."
+                task.speak = None
+                task.on_complete = None
+                raise
+            self._condition.notify()
+            logger.info("[TaskQueue] Explicitly resumed interrupted task [%s]", task_id)
             return True
 
     def get_status(self, task_id: str) -> dict | None:
@@ -136,6 +275,7 @@ class TaskQueue:
                 "status":  task.status.value,
                 "result":  task.result,
                 "error":   task.error,
+                "created_at": task.created_at,
             }
 
     def get_all_statuses(self) -> list[dict]:
@@ -145,6 +285,7 @@ class TaskQueue:
                     "task_id": t.task_id,
                     "goal":    t.goal[:50],
                     "status":  t.status.value,
+                    "error":   t.error,
                 }
                 for t in self._tasks.values()
             ]
@@ -163,7 +304,7 @@ class TaskQueue:
             return
         finished = sorted(
             (t for t in self._tasks.values()
-             if t.status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED)),
+             if self._finished(t.status)),
             key=lambda t: t.created_at,
         )
         overflow = len(self._tasks) - self._MAX_TASK_HISTORY
@@ -185,6 +326,14 @@ class TaskQueue:
                         self._queue.remove(task)
                     except ValueError:
                         pass
+                    try:
+                        self._persist_locked()
+                    except OSError as e:
+                        task.status = TaskStatus.FAILED
+                        task.error = f"Could not persist running state; task was not started: {e}"
+                        self._active_count -= 1
+                        self._prune_task_history()
+                        task = None
 
             if task:
                 threading.Thread(
@@ -220,6 +369,11 @@ class TaskQueue:
                     task.result = result
                 self._active_count -= 1
                 self._prune_task_history()
+                try:
+                    self._persist_locked()
+                except OSError as e:
+                    logger.error("[TaskQueue] Could not persist completed task [%s]: %s",
+                                 task.task_id, e)
 
             if task.on_complete and not task.cancel_flag.is_set():
                 try:
@@ -235,20 +389,24 @@ class TaskQueue:
                 task.error  = str(e)
                 self._active_count -= 1
                 self._prune_task_history()
+                try:
+                    self._persist_locked()
+                except OSError as persist_error:
+                    logger.error("[TaskQueue] Could not persist failed task [%s]: %s",
+                                 task.task_id, persist_error)
             logger.warning(f"[TaskQueue] ❌ Failed: [{task.task_id}] {e}")
 
         with self._condition:
             self._condition.notify()
 
-_queue        = TaskQueue()
-_queue_started = False
-_queue_lock    = threading.Lock()
+_queue: TaskQueue | None = None
+_queue_lock = threading.Lock()
 
 
 def get_queue() -> TaskQueue:
-    global _queue_started
+    global _queue
     with _queue_lock:
-        if not _queue_started:
+        if _queue is None:
+            _queue = TaskQueue()
             _queue.start()
-            _queue_started = True
-    return _queue
+        return _queue
