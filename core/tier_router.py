@@ -126,6 +126,8 @@ def classify(message: str, *, has_active_task: bool = False,
         if (follows_turn and word_count <= FOLLOWUP_MAX_WORDS
                 and FOLLOWUP_PATTERNS.match(stripped)):
             return RouteDecision(Tier.EVERYDAY, TIER_MODELS[Tier.EVERYDAY], "follow-up")
+        if COMPLEX_HINTS.search(stripped):
+            return RouteDecision(Tier.HARD, TIER_MODELS[Tier.HARD], "complex reasoning hint")
         if (word_count <= QUICK_MAX_WORDS
                 and not TOOL_INTENT_PATTERNS.search(stripped)
                 and not PERSONAL_CONTEXT_PATTERNS.search(stripped)

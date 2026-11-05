@@ -54,6 +54,7 @@ STATIC_DIR  = Path(__file__).parent / "static"
 PORT        = 8000
 MAX_UPLOAD_MB = 500
 WS_TICKET_TTL = 30
+TOKEN_TTL = 12 * 3600          # bearer session lifetime; paired devices re-mint via /api/reconnect
 MAX_WS_TICKETS = 1000
 
 
@@ -459,6 +460,9 @@ class DashboardServer:
         self._ip                          = self._advertised_ip()
         self._tokens: set[str]            = set()
         self._token_keys: dict[str, str]  = {}   # auth_token → session_key
+        self._token_expiry: dict[str, float] = {}   # auth_token → time.monotonic() deadline
+        self._token_device: dict[str, str]   = {}   # auth_token → device_token it was minted from
+        self._ws_tokens: dict = {}                  # live WebSocket → auth_token (closed on revoke)
         self._ws_tickets: dict[str, tuple[str, str, float]] = {}
         self._aes_cache:  dict[str, tuple]= {}   # session_key → (AES key, MAC key)
         self._limiter = _LoginLimiter()
@@ -579,12 +583,47 @@ class DashboardServer:
 
     # ── FastAPI app ───────────────────────────────────────────────────────
 
+    def _add_token(self, tok: str, session_key: str, device: str | None = None) -> None:
+        self._tokens.add(tok)
+        self._token_keys[tok] = session_key
+        self._token_expiry[tok] = time.monotonic() + TOKEN_TTL
+        if device:
+            self._token_device[tok] = device
+
+    def _drop_token(self, tok: str) -> None:
+        self._tokens.discard(tok)
+        self._token_keys.pop(tok, None)
+        self._token_expiry.pop(tok, None)
+        self._token_device.pop(tok, None)
+
+    def _token_valid(self, tok: str) -> bool:
+        """True if tok is live. Expired tokens are dropped on sight. A token with no
+        expiry record (added directly, e.g. by tests) does not expire."""
+        if not tok or tok not in self._tokens:
+            return False
+        deadline = self._token_expiry.get(tok)
+        if deadline is not None and deadline <= time.monotonic():
+            self._drop_token(tok)
+            return False
+        return True
+
+    def _revoke_device_sessions(self) -> tuple[int, list]:
+        """Forget every paired device AND every bearer token minted from one.
+        Returns (device count, websockets to close)."""
+        count = len(self._device_sessions)
+        self._device_sessions.clear()
+        dead = {t for t, d in self._token_device.items()}
+        for tok in dead:
+            self._drop_token(tok)
+        sockets = [ws for ws, t in self._ws_tokens.items() if t in dead or not self._token_valid(t)]
+        return count, sockets
+
     def _auth(self, req: Request) -> bool:
         tok = req.headers.get("authorization", "").removeprefix("Bearer ").strip()
-        return bool(tok) and tok in self._tokens
+        return self._token_valid(tok)
 
     def _issue_ws_ticket(self, token: str, purpose: str) -> str | None:
-        if (token not in self._tokens or not isinstance(purpose, str)
+        if (not self._token_valid(token) or not isinstance(purpose, str)
                 or purpose not in {"main", "phone-audio"}):
             return None
         now = time.monotonic()
@@ -603,7 +642,7 @@ class DashboardServer:
         if not item:
             return None
         token, expected_purpose, expires = item
-        if expires <= time.monotonic() or expected_purpose != purpose or token not in self._tokens:
+        if expires <= time.monotonic() or expected_purpose != purpose or not self._token_valid(token):
             return None
         return token
 
@@ -718,8 +757,7 @@ class DashboardServer:
                 self._limiter.ok(ip)
                 skey = _new_session_key()                # random; NOT the pairing code
                 tok = secrets.token_urlsafe(32)
-                self._tokens.add(tok)
-                self._token_keys[tok] = skey
+                self._add_token(tok, skey)
                 self._keys(skey)                         # pre-derive & cache
                 if self._connect_callback:
                     self._connect_callback()
@@ -757,8 +795,7 @@ class DashboardServer:
             skey    = _new_session_key()
             tok     = secrets.token_urlsafe(32)
             dev_tok = secrets.token_urlsafe(32)
-            self._tokens.add(tok)
-            self._token_keys[tok] = skey
+            self._add_token(tok, skey, device=dev_tok)
             self._keys(skey)
             self._device_sessions[dev_tok] = {"session_key": skey}
 
@@ -797,8 +834,7 @@ class DashboardServer:
                 return JSONResponse({"ok": False}, status_code=401)
             session_key = self._device_sessions[dev_tok]["session_key"]
             tok = secrets.token_urlsafe(32)
-            self._tokens.add(tok)
-            self._token_keys[tok] = session_key
+            self._add_token(tok, session_key, device=dev_tok)
             self._keys(session_key)
             if self._connect_callback:
                 self._connect_callback()
@@ -812,8 +848,12 @@ class DashboardServer:
             """Invalidate all persistent device tokens (admin action)."""
             if not self._auth(req):
                 return JSONResponse({"error": "Unauthorized"}, status_code=401)
-            count = len(self._device_sessions)
-            self._device_sessions.clear()
+            count, sockets = self._revoke_device_sessions()
+            for ws in sockets:
+                try:
+                    await ws.close(code=4001)
+                except Exception:
+                    pass
             return JSONResponse({"ok": True, "revoked": count})
 
     # ── pending approvals (headless remote-approval flow) ──────────────────
@@ -1165,6 +1205,7 @@ class DashboardServer:
                 return
             await websocket.accept()
             self._clients.add(websocket)
+            self._ws_tokens[websocket] = tok
             for entry in self._history[-50:]:
                 try:
                     await websocket.send_json(entry)
@@ -1188,6 +1229,7 @@ class DashboardServer:
                 pass
             finally:
                 self._clients.discard(websocket)
+                self._ws_tokens.pop(websocket, None)
 
 
     # ── serve ─────────────────────────────────────────────────────────────

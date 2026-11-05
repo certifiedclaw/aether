@@ -362,8 +362,12 @@ class TaskQueue:
             )
 
             with self._lock:
-                if task.cancel_flag.is_set():
+                _st = getattr(result, "status", "succeeded")
+                if task.cancel_flag.is_set() or _st == "cancelled":
                     task.status = TaskStatus.CANCELLED
+                elif _st == "failed":
+                    task.status = TaskStatus.FAILED
+                    task.error  = str(result)
                 else:
                     task.status = TaskStatus.COMPLETED
                     task.result = result
@@ -381,7 +385,7 @@ class TaskQueue:
                 except Exception as e:
                     logger.warning(f"[TaskQueue] ⚠️ on_complete callback error: {e}")
 
-            logger.info(f"[TaskQueue] ✅ Completed: [{task.task_id}]")
+            logger.info(f"[TaskQueue] {task.status.value}: [{task.task_id}]")
 
         except Exception as e:
             with self._lock:

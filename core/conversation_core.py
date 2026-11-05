@@ -360,7 +360,8 @@ def _wrap_untrusted(tool: str, result) -> str:
     return f'<tool_result tool="{name}" trust="untrusted">\n{text}\n</tool_result>'
 
 
-_FAILURE_PREFIXES = ("error", "denied", "cancelled", "skipped", "blocked", "[loop guard]")
+_FAILURE_PREFIXES = ("error", "denied", "cancelled", "skipped", "blocked", "[loop guard]",
+                     "[mcp] error", "[mcp] unknown", "[mcp] server", "[mcp] tool")
 
 
 def _is_failed_result(result) -> bool:

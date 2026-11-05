@@ -279,8 +279,8 @@ def prune_memory(max_age_days: int = 90, min_length: int = 20,
                 f"DELETE FROM memories WHERE id IN "
                 f"({','.join('?' * len(to_delete))})",
                 list(to_delete))
+            conn.commit()                 # VACUUM cannot run inside an open transaction
             conn.execute("VACUUM")
-            conn.commit()
 
         total_after = conn.execute(
             "SELECT COUNT(*) FROM memories").fetchone()[0]
