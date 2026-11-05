@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Do not hand-edit — rerun `python -m tools.maintenance.project_state` (or `run_all`) to refresh. This is meant to be the one file a new session (human or Claude) reads first to get oriented.
 
-Generated: 2026-11-05 01:15 UTC
+Generated: 2026-11-05 01:19 UTC
 Version: Aether v1.0.0
 
 ## Entry points
@@ -16,20 +16,20 @@ Version: Aether v1.0.0
 
 | Directory | .py files | Total lines |
 |---|---|---|
-| `./` | 5 | 6,082 |
+| `./` | 5 | 6,405 |
 | `actions/` | 24 | 12,504 |
 | `agent/` | 4 | 1,187 |
 | `config/` | 1 | 25 |
-| `core/` | 71 | 19,031 |
+| `core/` | 72 | 19,207 |
 | `dashboard/` | 5 | 1,698 |
 | `dev_tools/` | 1 | 78 |
 | `integrations/` | 4 | 1,152 |
 | `memory/` | 6 | 1,276 |
 | `plugins/` | 1 | 44 |
 | `security/` | 7 | 1,340 |
-| `tests/` | 87 | 16,189 |
+| `tests/` | 88 | 16,444 |
 | `tools/` | 24 | 3,759 |
-| **Total** | **240** | **64,365** |
+| **Total** | **242** | **65,119** |
 
 ## Modules with docstrings (top-level summary)
 
@@ -137,6 +137,7 @@ Version: Aether v1.0.0
 - `core\tool_router.py` (182 lines, 0 classes, 5 functions) — tool_router.py — per-turn tool subset selection for EVERYDAY-tier turns.
 - `core\trace_log.py` (1028 lines, 7 classes, 37 functions) — core/trace_log.py - the flight recorder: what Aether did, when, and with what.
 - `core\tts.py` (465 lines, 4 classes, 6 functions) — Text-to-Speech engines for Aether.
+- `core\ui_prefs.py` (176 lines, 1 classes, 10 functions) — core/ui_prefs.py - everything about making Aether's UI easy for non-technical people.
 - `core\undo.py` (103 lines, 2 classes, 4 functions) — core/undo.py — Aether Undo Stack
 - `core\usage_stats.py` (82 lines, 0 classes, 3 functions) — core/usage_stats.py - owner-only usage statistics, computed locally (roadmap #50).
 - `core\wake_word.py` (269 lines, 2 classes, 3 functions) — Local wake-word detection for JARVIS ("Hey Jarvis").
@@ -259,6 +260,7 @@ Version: Aether v1.0.0
 - `tests\test_tool_dispatch_console_safety.py` (30 lines, 2 classes, 1 functions) — Tool dispatch must not depend on the Windows console encoding.
 - `tests\test_trace_log.py` (174 lines, 0 classes, 15 functions) — Flight recorder (core/trace_log.py) and its viewer (tools/trace_view.py).
 - `tests\test_tts_elevenlabs.py` (74 lines, 0 classes, 6 functions)
+- `tests\test_ui_prefs.py` (255 lines, 0 classes, 23 functions) — Easy-to-use UI: plain-language first run, text size, contrast, text-only mode.
 - `tests\test_usage_and_logs.py` (70 lines, 0 classes, 5 functions) — core/usage_stats.py (#50) and core/log_analyzer.py (#85).
 - `tests\test_v12e_fixes.py` (113 lines, 0 classes, 8 functions) — Regression tests for the v12d review fixes (each fails against v12d).
 - `tests\test_v12f_fixes.py` (40 lines, 0 classes, 5 functions) — v12f: LangChain must not pretend to have researched; live log isolation.
@@ -293,14 +295,14 @@ Version: Aether v1.0.0
 - `tools\verify_local.py` (355 lines, 1 classes, 11 functions) — tools/verify_local.py -- one-shot health check for a real Aether install.
 
 ## Recent history (git log)
-- 385b4a6 2026-11-04 Learn from corrections (#96): editable behavior rules proposed after a correction, yes/no before saving
-- 3cce1a4 2026-11-03 Merge PR #25: roadmap batch 2 (#14 #50 #57 #63 #65 #66 #67 #85 #101, extra_tool routing)
-- 172511d 2026-11-03 External eval harness adapters (#101): promptfoo, inspect-ai, lm-eval over the OpenAI-compatible API
-- 5ea26b3 2026-11-03 Roadmap: harness adapter plan (#100-#103)
-- 37f0753 2026-11-03 Make extra_tool reachable via keyword hint in tool router (+3 tests)
-- 43d6313 2026-11-03 Finish memory panel (#57): tests, LIKE-wildcard escaping, roadmap + handoff
-- 6f7c4ae 2026-10-31 WIP: memory panel (#57) - core/memory_panel.py, /memory command, dashboard page
-- 1e94956 2026-10-31 Add chained plan approvals (#67) and plain-language rules (#66)
+- 9c95dfb 2026-11-04 Merge master into easy mode PR
+- 5c17875 2026-11-04 Merge pull request #28 from certifiedclaw/port/desktop-mate
+- c288e9f 2026-11-04 Fix shell safety test path on Windows
+- d9400fb 2026-11-04 Integrate desktop mate port with master behavior
+- bdf1fd4 2026-10-25 feat(ui): Gemini model dropdown shows only models the API key can use
+- 502ffd1 2026-10-25 feat(persona): compact night-cat rules plus rotating style examples
+- b3588d4 2026-10-25 fix(open_app): find Desktop/Start Menu shortcuts and verify the app actually opened
+- cdb5509 2026-10-25 fix: keep tools on short follow-ups; stop reloading Whisper on unrelated settings changes
 
 ## See also
 - `HEALTH_REPORT.md` — automated code health scan

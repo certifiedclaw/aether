@@ -2,7 +2,27 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 01:15 UTC
+Generated: 2026-11-05 01:19 UTC
+
+## #134 — 2026-11-05 01:19 UTC — GitHub Copilot (Copilot App)
+
+Merged newly advanced master (including PR #26) into PR #30. Preserved learn-from-corrections behavior, master response-cache and other runtime changes, and easy-mode setup; resolved generated handoff/roadmap report conflicts while retaining both branches' history.
+
+**Touched:** `HANDOFF.md`, `ROADMAP.md`, `tools/maintenance/data/handoff.json`, `core/behavior_rules.py`, `core/conversation_core.py`, `core/prompt_builder.py`, `core/ui_prefs.py`
+
+**Next steps:** Push the merge commit and confirm PR #30 is mergeable; do not merge it.
+
+---
+
+## #133 — 2026-11-05 01:11 UTC — GitHub Copilot (Copilot App)
+
+Merged latest origin/master into PR #30 and reconciled main.py reconfiguration: text-only mode still stops/disables TTS while master's selective TTS/STT rebuild plan and STT restart behavior remain intact. Ran preference/setup/reconfiguration tests and Python compilation.
+
+**Touched:** `main.py`, `HANDOFF.md`, `tools/maintenance/data/handoff.json`
+
+**Next steps:** After the next master update, reconcile conflicts again and verify PR #30 mergeability; do not merge the PR.
+
+---
 
 ## #132 — 2026-11-05 01:15 UTC — GitHub Copilot App
 

@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-11-05 01:10 UTC
+Generated: 2026-11-05 01:19 UTC
 
 ## In progress
 
@@ -197,3 +197,5 @@ Other session (2026-10-29): Decision (Ian): wake word. wake_word_enabled now def
   - For the always-on deploy (#88). Health probes: Ollama /api/tags, Aether process, dashboard /api/llm-status, disk and memory thresholds. Bounded restarts with backoff (no restart loops), state written to the audit log, ntfy alert via core/notify.py after N failed recoveries. Should run headless inside the Docker setup.
 - [x] **#101** [F4] Harness adapters, step 2: eval harnesses (promptfoo, inspect-ai, lm-evaluation-harness) pointed at Aether's OpenAI-compatible API (#41)
   - Done: tools/eval/ (cases.py, inspect_task.py, run.py). python -m tools.eval.run check|promptfoo|inspect|lm-eval against the #41 API; harnesses are separate installs (promptfoo pinned 0.125.1 via npx; inspect-ai 0.3.287 and lm_eval 0.4.13 in a venv), token via env only, telemetry off, no insecure-TLS switch (--ca-bundle). Suite = core minus memory cases (77 of 83). Verified end to end against the real dashboard/openai_api router with a fake model: promptfoo and inspect-ai give per-case results identical to the Python grader; lm-eval ran a local custom task and scored as expected. Caught and fixed: Python (?i) in 4 safety patterns is invalid JS and silently failed them; now folded into flags and other Python-only syntax is refused. NOT verified: a real Aether/Ollama model behind the API, Windows paths, lm-eval standard benchmarks (Hugging Face unreachable in the sandbox). Over the API there are no tools or memory, so this scores the model, not the assistant.
+- [x] **#104** [F2] Easy mode for non-technical users: plain-language first run, text size, contrast, text-only
+  - Done: simple first-run page (picks model for this PC, speak yes/no, text size, one Get started button; technical setup behind Advanced), ui.simple_setup / ui.text_scale / ui.min_font_pt / ui.high_contrast / tts_enabled settings in core/ui_prefs.py; tts_enabled=false is a real text-only mode. Ported from ui/simple-setup, where it was numbered #100 (collided with the harness-adapter item).

@@ -1,5 +1,5 @@
 {
-  "next_id": 104,
+  "next_id": 105,
   "items": [
     {
       "id": 1,
@@ -927,6 +927,15 @@
       "notes": "requirements-optional.txt already documents Open Interpreter conflicting with langchain/llama-index on shared pins and needing Python <=3.12. Do not add these to the main venv. Prefer a worker subprocess speaking JSON over stdio (same shape as the MCP bridge). Pick one framework first, measure on the eval set vs the native planner before adding more.",
       "created": "2026-11-04",
       "updated": "2026-11-04"
+    },
+    {
+      "id": 104,
+      "title": "[F2] Easy mode for non-technical users: plain-language first run, text size, contrast, text-only",
+      "priority": "low",
+      "status": "done",
+      "notes": "Done: simple first-run page (picks model for this PC, speak yes/no, text size, one Get started button; technical setup behind Advanced), ui.simple_setup / ui.text_scale / ui.min_font_pt / ui.high_contrast / tts_enabled settings in core/ui_prefs.py; tts_enabled=false is a real text-only mode. Ported from ui/simple-setup, where it was numbered #100 (collided with the harness-adapter item).",
+      "created": "2026-11-05",
+      "updated": "2026-11-05"
     }
   ]
 }
