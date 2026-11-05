@@ -141,3 +141,148 @@ def test_describe_states_what_is_and_is_not_restricted():
     text = SandboxPolicy().describe()
     assert "network blocked" in text and "still reachable" in text
     assert "OFF" in SandboxPolicy(enabled=False).describe()
+
+
+# ── Docker backend (command construction and fail-closed logic need no daemon) ─
+from core import sandbox as _sb
+
+
+def _docker(**kw):
+    return SandboxPolicy(backend="docker", **kw)
+
+
+def test_docker_command_is_locked_down_by_default(tmp_path):
+    cmd = _sb.docker_command(_docker(), "aether-sbx-x", str(tmp_path))
+    joined = " ".join(cmd)
+    assert cmd[:3] == ["docker", "run", "--rm"]
+    assert "--network none" in joined
+    assert "--cap-drop ALL" in joined and "no-new-privileges" in joined
+    assert "--read-only" in cmd and "--pids-limit 128" in joined
+    assert "--memory 1024m" in joined and "--memory-swap 1024m" in joined
+    assert f"source={tmp_path},target=/work" in joined
+    assert "target=/mnt" not in joined                    # nothing else from the host
+    assert cmd[-9] == "python:3.12-slim"
+    assert cmd[-8:-3] == ["python", "-I", "/work/runner.py", "/work/task.py", "1024"]
+
+
+def test_docker_network_only_when_allowed(tmp_path):
+    cmd = _sb.docker_command(_docker(allow_network=True), "n", str(tmp_path))
+    assert "--network bridge" in " ".join(cmd) and "--network none" not in " ".join(cmd)
+
+
+def test_docker_mounts_are_explicit_readonly_or_rw(tmp_path):
+    ro, rw = tmp_path / "Documents", tmp_path / "Out"
+    ro.mkdir(); rw.mkdir()
+    p = _docker(docker_mounts_ro=(str(ro),), docker_mounts_rw=(str(rw),))
+    cmd = _sb.docker_command(p, "n", str(tmp_path))
+    assert f"type=bind,source={ro},target=/mnt/Documents,readonly" in cmd
+    assert f"type=bind,source={rw},target=/mnt/Out" in cmd           # no readonly flag
+    assert "readonly" not in [c for c in cmd if c.endswith("/mnt/Out")][0]
+
+
+def test_mount_names_do_not_collide(tmp_path):
+    a, b = tmp_path / "a" / "Docs", tmp_path / "b" / "Docs"
+    p = _docker(docker_mounts_ro=(str(a), str(b)))
+    assert [c for _h, c, _m in p.mount_map()] == ["/mnt/Docs", "/mnt/Docs2"]
+
+
+def _no_host_python(monkeypatch):
+    monkeypatch.setattr(_sb.subprocess, "Popen",
+                        lambda *a, **k: pytest.fail("nothing may be launched"))
+
+
+def test_docker_backend_fails_closed_when_docker_is_unavailable(monkeypatch):
+    monkeypatch.setattr(_sb, "docker_available", lambda *a, **k: (False, "the Docker daemon is not running"))
+    _no_host_python(monkeypatch)
+    r = run_python("print('must not run')", _docker())
+    assert r.returncode == -2 and "was not run" in r.stderr and "daemon" in r.stderr
+    assert r.stdout == ""                                  # and it did NOT fall back to the process backend
+
+
+def test_docker_backend_refuses_a_missing_shared_folder(monkeypatch, tmp_path):
+    monkeypatch.setattr(_sb, "docker_available", lambda *a, **k: (True, "29"))
+    _no_host_python(monkeypatch)
+    r = run_python("print(1)", _docker(docker_mounts_ro=(str(tmp_path / "nope"),)))
+    assert r.returncode == -2 and "does not exist" in r.stderr
+
+
+class _FakeProc:
+    def __init__(self, out="42\n", err="", rc=0, hang=False):
+        self.returncode, self._out, self._err, self._hang, self.pid = rc, out, err, hang, 4242
+
+    def communicate(self, timeout=None):
+        if self._hang and not getattr(self, "_killed", False):
+            self._killed = True
+            raise _sb.subprocess.TimeoutExpired("docker", timeout)
+        return self._out, self._err
+
+    def kill(self):
+        pass
+
+
+def test_docker_backend_runs_and_returns_output(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(_sb, "docker_available", lambda *a, **k: (True, "29"))
+    monkeypatch.setattr(_sb.subprocess, "Popen",
+                        lambda cmd, **k: seen.setdefault("cmd", cmd) and _FakeProc())
+    r = run_python("print(6*7)", _docker())
+    assert (r.returncode, r.stdout.strip()) == (0, "42")
+    assert "--network" in seen["cmd"] and "none" in seen["cmd"]
+
+
+def test_docker_timeout_kills_the_container_by_name(monkeypatch):
+    calls = []
+    monkeypatch.setattr(_sb, "docker_available", lambda *a, **k: (True, "29"))
+    monkeypatch.setattr(_sb.subprocess, "Popen", lambda cmd, **k: _FakeProc(hang=True))
+    monkeypatch.setattr(_sb.subprocess, "run",
+                        lambda cmd, **k: calls.append(cmd) or _sb.subprocess.CompletedProcess(cmd, 0, "", ""))
+    monkeypatch.setattr(_sb, "_kill_tree", lambda proc: None)
+    r = run_python("import time; time.sleep(99)", _docker(timeout_s=1))
+    assert r.timed_out
+    kill = [c for c in calls if len(c) >= 3 and c[1] == "kill"]
+    assert kill and kill[0][2].startswith("aether-sbx-")
+
+
+def test_unknown_backend_means_docker_not_weaker():
+    assert SandboxPolicy.from_config({"sandbox.backend": "dokcer"}).backend == "docker"
+    assert SandboxPolicy.from_config({}).backend == "process"
+    assert SandboxPolicy.from_config({"sandbox.backend": " Docker "}).backend == "docker"
+
+
+def test_docker_describe_says_what_is_shared(tmp_path):
+    text = _docker(docker_mounts_ro=(str(tmp_path),)).describe()
+    assert "Docker" in text and "network blocked" in text and str(tmp_path) in text
+    assert "no access to other files" in text
+
+
+def test_generation_prompt_describes_the_container_not_host_paths(monkeypatch, tmp_path):
+    import agent.executor as ex
+    seen = {}
+    pol = _docker(docker_mounts_ro=(str(tmp_path),))
+    monkeypatch.setattr(ex, "_sandbox_policy", lambda: pol)
+    monkeypatch.setattr(ex, "call_llm_text",
+                        lambda prompt, system="", **k: seen.setdefault("system", system) and "print(1)")
+    import core.safety as safety
+    monkeypatch.setattr(safety, "confirm_action", lambda *a, **k: False)
+    with pytest.raises(ex.GeneratedCodeNotRun):
+        ex._run_generated_code("task")
+    assert "container" in seen["system"].lower() and "/work" in seen["system"]
+    assert "Desktop" not in seen["system"]
+
+
+_docker_ok = _sb.docker_available()[0]
+
+
+@pytest.mark.skipif(not _docker_ok, reason="no reachable Docker daemon")
+def test_real_container_isolation(tmp_path):
+    secret = tmp_path / "host-secret.txt"
+    secret.write_text("top secret")
+    code = ("import os, socket\n"
+            f"print(os.path.exists(r'{secret}'))\n"
+            "try:\n"
+            "    socket.create_connection(('1.1.1.1', 53), timeout=2); print('net')\n"
+            "except OSError:\n"
+            "    print('nonet')\n")
+    r = run_python(code, _docker(timeout_s=120))
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.split() == ["False", "nonet"]

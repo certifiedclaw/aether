@@ -78,17 +78,26 @@ def _run_generated_code(description: str, speak: Callable | None = None) -> str:
     else:
         net_rule = "The network is blocked; do not make web requests. "
 
+    if policy.enabled and policy.backend == "docker":
+        shared = "".join(f"  {inside} = {host} ({mode})\n"
+                         for host, inside, mode in policy.mount_map())
+        paths_block = ("ENVIRONMENT: a Linux container. Working directory is /work (temporary, "
+                       "deleted afterwards). Your PC's files are NOT visible except these "
+                       "shared folders:\n" + (shared or "  (none)\n"))
+    else:
+        paths_block = (f"SYSTEM PATHS:\n"
+                       f"  Desktop   = r'{desktop}'\n"
+                       f"  Downloads = r'{downloads}'\n"
+                       f"  Documents = r'{documents}'\n"
+                       f"  Home      = r'{home}'\n")
+
     system = (
         "You are an expert Python developer. "
         "Write clean, complete, working Python code. "
         "Use standard library + common packages. "
         f"{pkg_rule}{net_rule}"
         "Return ONLY the Python code. No explanation, no markdown, no backticks.\n\n"
-        f"SYSTEM PATHS:\n"
-        f"  Desktop   = r'{desktop}'\n"
-        f"  Downloads = r'{downloads}'\n"
-        f"  Documents = r'{documents}'\n"
-        f"  Home      = r'{home}'\n"
+        f"{paths_block}"
     )
     prompt = f"Write Python code to accomplish this task:\n\n{description}"
 

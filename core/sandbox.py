@@ -30,6 +30,15 @@ Config (flat keys, config/config.json):
     sandbox.timeout_s          120
     sandbox.max_output_chars   20000
     sandbox.env_passthrough    []      extra environment variable names to keep
+    sandbox.backend            "process"  or "docker" (real filesystem isolation)
+    sandbox.docker_image       "python:3.12-slim"
+    sandbox.docker_mounts_ro   []      host folders exposed read-only at /mnt/<name>
+    sandbox.docker_mounts_rw   []      host folders exposed read-write at /mnt/<name>
+
+DOCKER BACKEND: the code runs in a throwaway container: no network unless allowed, all
+capabilities dropped, read-only root filesystem, pid/memory/cpu limits, and it sees only
+/work (the scratch dir) plus the folders you list. It fails CLOSED: if Docker is not
+available the run is refused, never silently downgraded to the process backend.
 """
 from __future__ import annotations
 
@@ -39,6 +48,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -63,6 +73,24 @@ class SandboxPolicy:
     timeout_s: int = 120
     max_output_chars: int = 20_000
     env_passthrough: tuple = field(default_factory=tuple)
+    backend: str = "process"
+    docker_image: str = "python:3.12-slim"
+    docker_mounts_ro: tuple = field(default_factory=tuple)
+    docker_mounts_rw: tuple = field(default_factory=tuple)
+
+    def mount_map(self) -> list[tuple[str, str, str]]:
+        """(host path, container path, 'ro'|'rw'); names de-duplicated so two folders
+        called 'Documents' do not collide."""
+        out, used = [], set()
+        for mode, paths in (("ro", self.docker_mounts_ro), ("rw", self.docker_mounts_rw)):
+            for host in paths:
+                base = (Path(host).name or "mount").replace(" ", "_")
+                name, n = base, 2
+                while name in used:
+                    name, n = f"{base}{n}", n + 1
+                used.add(name)
+                out.append((str(host), f"/mnt/{name}", mode))
+        return out
 
     @classmethod
     def from_config(cls, cfg: dict | None) -> "SandboxPolicy":
@@ -89,10 +117,23 @@ class SandboxPolicy:
             except (TypeError, ValueError):
                 return default
 
+        def strs(name):
+            v = get(name, [])
+            return tuple(str(x) for x in v) if isinstance(v, (list, tuple)) else ()
+
+        backend = str(get("backend", d.backend)).strip().lower()
+        if backend not in ("process", "docker"):
+            # A typo must not quietly weaken isolation: unknown means the strict one.
+            logger.warning("[Sandbox] unknown sandbox.backend %r; using 'docker'", backend)
+            backend = "docker"
+        image = str(get("docker_image", d.docker_image)).strip() or d.docker_image
+
         extra = get("env_passthrough", [])
         if not isinstance(extra, (list, tuple)):
             extra = []
         return cls(
+            backend=backend, docker_image=image,
+            docker_mounts_ro=strs("docker_mounts_ro"), docker_mounts_rw=strs("docker_mounts_rw"),
             enabled=flag("enabled", d.enabled),
             allow_network=flag("allow_network", d.allow_network),
             allow_subprocess=flag("allow_subprocess", d.allow_subprocess),
@@ -107,6 +148,12 @@ class SandboxPolicy:
         """One line for the approval dialog / generation prompt."""
         if not self.enabled:
             return "Sandbox OFF: runs with your full user permissions."
+        if self.backend == "docker":
+            mounts = ", ".join(f"{h} ({m})" for h, _c, m in self.mount_map()) or "none"
+            return ("Container run (Docker): network "
+                    + ("allowed" if self.allow_network else "blocked")
+                    + f", {self.memory_mb} MB memory, {self.timeout_s}s limit, "
+                      f"no access to other files on this PC. Folders shared: {mounts}.")
         parts = [
             "network " + ("allowed" if self.allow_network else "blocked"),
             "process spawning " + ("allowed" if self.allow_subprocess else "blocked"),
@@ -265,6 +312,75 @@ def _kill_tree(proc: "subprocess.Popen") -> None:
         pass
 
 
+def docker_available(timeout: float = 8.0) -> tuple[bool, str]:
+    """True only when the docker CLI exists AND its daemon answers."""
+    exe = shutil.which("docker")
+    if not exe:
+        return False, "the docker command was not found"
+    try:
+        r = subprocess.run([exe, "version", "--format", "{{.Server.Version}}"],
+                           capture_output=True, text=True, timeout=timeout)
+    except Exception as e:
+        return False, f"could not query Docker ({type(e).__name__})"
+    if r.returncode != 0 or not r.stdout.strip():
+        return False, "the Docker daemon is not running"
+    return True, r.stdout.strip()
+
+
+def docker_command(policy: SandboxPolicy, name: str, scratch: str, exe: str = "docker") -> list[str]:
+    """argv for `docker run`. Pure, so it can be unit-tested without a daemon."""
+    cmd = [exe, "run", "--rm", "--name", name,
+           "--network", "bridge" if policy.allow_network else "none",
+           "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
+           "--read-only", "--tmpfs", "/tmp:rw,size=64m",
+           "--memory", f"{policy.memory_mb}m", "--memory-swap", f"{policy.memory_mb}m",
+           "--cpus", "1", "--pids-limit", "128",
+           "--workdir", "/work",
+           "--mount", f"type=bind,source={scratch},target=/work"]
+    if hasattr(os, "getuid"):
+        cmd += ["--user", f"{os.getuid()}:{os.getgid()}"]   # scratch is 0700 owned by us
+    for host, inside, mode in policy.mount_map():
+        cmd += ["--mount", f"type=bind,source={host},target={inside}"
+                           + (",readonly" if mode == "ro" else "")]
+    cmd += [policy.docker_image, "python", "-I", "/work/runner.py", "/work/task.py",
+            str(policy.memory_mb), str(policy.cpu_seconds),
+            "1" if policy.allow_network else "0", "1" if policy.allow_subprocess else "0"]
+    return cmd
+
+
+def _run_in_docker(policy: SandboxPolicy, scratch: str) -> SandboxResult:
+    ok, info = docker_available()
+    if not ok:
+        return SandboxResult(-2, "", "Docker sandbox unavailable: " + info +
+                             ". The code was not run. Start Docker, or set "
+                             "sandbox.backend to \"process\" to use the weaker sandbox.")
+    for host, _inside, _mode in policy.mount_map():
+        if not Path(host).is_dir():
+            return SandboxResult(-2, "", f"Docker sandbox: shared folder does not exist: {host}. "
+                                         "The code was not run.")
+    name = f"aether-sbx-{uuid.uuid4().hex[:12]}"
+    cmd = docker_command(policy, name, scratch, exe=shutil.which("docker") or "docker")
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                            encoding="utf-8", errors="replace")
+    try:
+        out, err = proc.communicate(timeout=policy.timeout_s)
+    except subprocess.TimeoutExpired:
+        # Killing the CLI does not stop the container; kill it by name.
+        try:
+            subprocess.run([shutil.which("docker") or "docker", "kill", name],
+                           capture_output=True, timeout=15)
+        except Exception:
+            pass
+        _kill_tree(proc)
+        try:
+            proc.communicate(timeout=5)
+        except Exception:
+            pass
+        return SandboxResult(-1, "", "", timed_out=True)
+    return SandboxResult(proc.returncode, _clip(out, policy.max_output_chars),
+                         _clip(err, policy.max_output_chars))
+
+
 def run_python(code: str, policy: SandboxPolicy | None = None) -> SandboxResult:
     """Run `code` under `policy`. Callers must have obtained approval first."""
     policy = policy or SandboxPolicy()
@@ -298,6 +414,9 @@ def run_python(code: str, policy: SandboxPolicy | None = None) -> SandboxResult:
             f.write(code)
         with open(runner, "w", encoding="utf-8") as f:
             f.write(_RUNNER)
+
+        if policy.backend == "docker":
+            return _run_in_docker(policy, scratch)
 
         cmd = [sys.executable, "-I", runner, script, str(policy.memory_mb),
                str(policy.cpu_seconds), "1" if policy.allow_network else "0",

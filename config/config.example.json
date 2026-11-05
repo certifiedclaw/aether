@@ -142,6 +142,11 @@
   "sandbox.timeout_s":        120,
   "sandbox.max_output_chars": 20000,
   "sandbox.env_passthrough":  [],
+  "_comment_sandbox_docker": "backend \"docker\" = real filesystem isolation: throwaway container, no network unless allowed, sees only /work plus the folders listed below (mounted at /mnt/<name>). Fails closed: if Docker is not running the code is NOT run. Needs Docker Desktop (Windows/Mac) or Docker Engine. Default stays \"process\" (weaker, no Docker needed).",
+  "sandbox.backend":            "process",
+  "sandbox.docker_image":       "python:3.12-slim",
+  "sandbox.docker_mounts_ro":   [],
+  "sandbox.docker_mounts_rw":   [],
   "rag.index_path":   "data/rag_index",
 
   "_comment_filewatcher": "── File watcher — auto-index new/modified files into RAG ──",

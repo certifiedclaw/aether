@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 05:30 UTC
+Generated: 2026-11-05 05:34 UTC
+
+## #149 — 2026-11-05 05:34 UTC — Claude Code
+
+Added an optional Docker backend to core/sandbox.py (sandbox.backend=docker): throwaway container, --network none unless allowed, cap-drop ALL, read-only root, pid/mem/cpu limits, sees only /work plus explicit sandbox.docker_mounts_ro/rw folders at /mnt/<name>. Fails closed (Docker down => code not run, never downgraded to the process backend; unknown backend value => docker). Timeout kills the container by name. Generation prompt describes the container layout instead of host paths. Default backend remains 'process'. NOT VERIFIED END TO END: this machine had a docker CLI but no daemon, so only command construction and fail-closed logic are tested (11 tests); tests/test_sandbox.py::test_real_container_isolation runs only where a daemon is reachable and has NOT been run. Full suite 1775 passed, 2 skipped.
+
+**Touched:** `core/sandbox.py`, `agent/executor.py`, `config/config.example.json`, `docs/PLUGIN_SECURITY.md`, `tests/test_sandbox.py`
+
+**Next steps:** On a machine with Docker running: set sandbox.backend=docker, run pytest tests/test_sandbox.py -k real_container, then try a real generated-code task (check the scratch bind mount works on Windows paths). Remaining: untrusted tool output, conversation lock, history trimming, bootstrap pip install.
+
+---
 
 ## #148 — 2026-11-05 05:30 UTC — Claude Code
 
