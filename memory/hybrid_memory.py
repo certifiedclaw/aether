@@ -158,17 +158,13 @@ class HybridMemory:
 
         self._rebuild_bm25()
 
-        # Warm the dense encoder + reranker in the background rather than
-        # on the first real retrieval call. Without this, whichever user
-        # message triggers the first _retrieve() pays the full multi-second
-        # model-load cost inline, stalling that turn. _retrieve() itself
-        # uses non-blocking loads (see _load_encoder/_load_reranker below)
-        # and just skips the dense/rerank stage for any call that lands
-        # before this finishes, so correctness never depends on timing —
-        # only how much of the pipeline is available yet.
-        threading.Thread(
-            target=self._preload_models, daemon=True, name="hybrid-mem-preload"
-        ).start()
+        preload = cfg.get("memory.preload_models", False)
+        if isinstance(preload, str):
+            preload = preload.strip().lower() in ("1", "true", "yes", "on")
+        if preload:
+            threading.Thread(
+                target=self._preload_models, daemon=True, name="hybrid-mem-preload"
+            ).start()
 
     # ── DB ────────────────────────────────────────────────────────────────
 
@@ -187,12 +183,9 @@ class HybridMemory:
 
     # ── Lazy loaders ──────────────────────────────────────────────────────
     #
-    # `blocking=True` (used by the background preload thread started in
-    # __init__) waits for the load to finish. `blocking=False` (used by
-    # _retrieve on the hot path) returns immediately if another thread is
-    # already loading — a live conversation turn should never stall on a
-    # multi-second model load; it just runs BM25-only for that one call and
-    # gets the full pipeline on the next one, once loading finishes.
+    # `blocking=True` (used by the opt-in background preload thread) waits
+    # for the load to finish. `blocking=False` starts a background load on
+    # demand so a live conversation turn never waits for a model download.
 
     def _preload_models(self) -> None:
         self._load_encoder(blocking=True)
@@ -208,16 +201,26 @@ class HybridMemory:
             if self._enc_tried:  # re-check: may have finished while we waited
                 return
             self._enc_tried = True
-            try:
-                from sentence_transformers import SentenceTransformer
-                self._encoder = _load_cached_first(SentenceTransformer, self._embed_model)
-                logger.info("HybridMemory: dense encoder ready (%s)", self._embed_model)
-            except ImportError:
-                logger.info("HybridMemory: sentence-transformers not installed — BM25 only")
-            except Exception as e:
-                logger.warning("HybridMemory encoder: %s", e)
+            if not blocking:
+                threading.Thread(
+                    target=self._load_encoder_model,
+                    daemon=True,
+                    name="hybrid-mem-encoder",
+                ).start()
+                return
+            self._load_encoder_model()
         finally:
             self._enc_lock.release()
+
+    def _load_encoder_model(self) -> None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            self._encoder = _load_cached_first(SentenceTransformer, self._embed_model)
+            logger.info("HybridMemory: dense encoder ready (%s)", self._embed_model)
+        except ImportError:
+            logger.info("HybridMemory: sentence-transformers not installed — BM25 only")
+        except Exception as e:
+            logger.warning("HybridMemory encoder: %s", e)
 
     def _load_reranker(self, blocking: bool = True) -> None:
         if self._re_tried:
@@ -229,16 +232,26 @@ class HybridMemory:
             if self._re_tried:
                 return
             self._re_tried = True
-            try:
-                from sentence_transformers import CrossEncoder
-                self._reranker = _load_cached_first(CrossEncoder, self._rerank_model)
-                logger.info("HybridMemory: cross-encoder reranker ready")
-            except ImportError:
-                logger.debug("HybridMemory: CrossEncoder not available — skipping rerank")
-            except Exception as e:
-                logger.debug("HybridMemory reranker: %s", e)
+            if not blocking:
+                threading.Thread(
+                    target=self._load_reranker_model,
+                    daemon=True,
+                    name="hybrid-mem-reranker",
+                ).start()
+                return
+            self._load_reranker_model()
         finally:
             self._re_lock.release()
+
+    def _load_reranker_model(self) -> None:
+        try:
+            from sentence_transformers import CrossEncoder
+            self._reranker = _load_cached_first(CrossEncoder, self._rerank_model)
+            logger.info("HybridMemory: cross-encoder reranker ready")
+        except ImportError:
+            logger.debug("HybridMemory: CrossEncoder not available — skipping rerank")
+        except Exception as e:
+            logger.debug("HybridMemory reranker: %s", e)
 
     # ── Write ─────────────────────────────────────────────────────────────
 
@@ -366,21 +379,22 @@ class HybridMemory:
 
         # Stage 3 — Cross-encoder reranking (if available)
         top_candidates = candidates[:top_k * 2]
-        # Non-blocking for the same reason as the encoder above.
-        self._load_reranker(blocking=False)
-        if self._reranker and len(top_candidates) > 1:
-            try:
-                pairs  = [(query, c[1]) for c in top_candidates]
-                scores = self._reranker.predict(pairs)
-                top_candidates = [
-                    (c[0], c[1], float(s))
-                    for c, s in sorted(
-                        zip(top_candidates, scores),
-                        key=lambda x: x[1], reverse=True
-                    )
-                ]
-            except Exception as e:
-                logger.debug("Reranker error: %s", e)
+        if len(top_candidates) > 1:
+            # Non-blocking for the same reason as the encoder above.
+            self._load_reranker(blocking=False)
+            if self._reranker:
+                try:
+                    pairs  = [(query, c[1]) for c in top_candidates]
+                    scores = self._reranker.predict(pairs)
+                    top_candidates = [
+                        (c[0], c[1], float(s))
+                        for c, s in sorted(
+                            zip(top_candidates, scores),
+                            key=lambda x: x[1], reverse=True
+                        )
+                    ]
+                except Exception as e:
+                    logger.debug("Reranker error: %s", e)
 
         # Return top-k as MemoryEntry
         result = []

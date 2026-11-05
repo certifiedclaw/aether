@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 03:23 UTC
+Generated: 2026-11-05 03:30 UTC
+
+## #142 — 2026-11-05 03:30 UTC — GitHub Copilot
+
+Reduced additional idle memory use by stopping unconditional startup loads of hybrid memory's dense encoder and cross-encoder. Memory models now load asynchronously only after a retrieval or write needs them; one-candidate retrieval skips unnecessary reranker loading. Startup preloading remains opt-in via memory.preload_models=true. Focused memory suite: 26 passed; py_compile and config validation passed.
+
+**Touched:** `memory/hybrid_memory.py`, `config/config.example.json`, `docs/PERFORMANCE_NOTES.md`, `tests/test_hybrid_memory_lazy_models.py`, `tests/test_all_critical.py`
+
+**Next steps:** Observe idle RAM and first relevant memory retrieval on the user's machine; keep model preload disabled unless first-retrieval latency matters more than idle memory.
+
+---
 
 ## #141 — 2026-11-05 03:23 UTC — GitHub Copilot
 
