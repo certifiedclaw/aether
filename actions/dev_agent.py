@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+from subprocess import Popen as _Popen
 import sys
 import json
 import re
@@ -265,7 +266,7 @@ def _open_vscode(project_dir: Path) -> bool:
                   f"cmd.exe would interpret: {target!r}")
             continue
         try:
-            subprocess.Popen(
+            _Popen(
                 [exe, target],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL

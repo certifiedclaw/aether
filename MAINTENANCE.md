@@ -3,7 +3,7 @@
 > **Auto-generated.** Rerun `python -m tools.maintenance.run_all` to refresh
 > everything. This is the front door — start here.
 
-Last full run: 2026-11-05 03:32 UTC
+Last full run: 2026-11-05 03:37 UTC
 Dependency check: ok
 
 | Report | What it tells you |

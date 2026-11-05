@@ -7,7 +7,7 @@
     },
     {
       "file": "main.py",
-      "lines": 1252
+      "lines": 1277
     },
     {
       "file": "ui.py",
@@ -35,7 +35,7 @@
     },
     {
       "file": "actions\\file_processor.py",
-      "lines": 950
+      "lines": 1036
     },
     {
       "file": "actions\\game_updater.py",
@@ -43,7 +43,7 @@
     },
     {
       "file": "actions\\osint_tools.py",
-      "lines": 1355
+      "lines": 1441
     },
     {
       "file": "core\\conversation_core.py",
@@ -51,19 +51,19 @@
     },
     {
       "file": "core\\llm_client.py",
-      "lines": 1574
+      "lines": 1589
     },
     {
       "file": "core\\tool_declarations.py",
-      "lines": 614
+      "lines": 656
     },
     {
       "file": "core\\trace_log.py",
-      "lines": 1027
+      "lines": 1083
     },
     {
       "file": "core\\updater.py",
-      "lines": 731
+      "lines": 738
     },
     {
       "file": "dashboard\\server.py",
@@ -71,7 +71,7 @@
     },
     {
       "file": "tests\\test_all_critical.py",
-      "lines": 2165
+      "lines": 2185
     },
     {
       "file": "tests\\test_invariants.py",
@@ -95,19 +95,19 @@
       "file": "main.py",
       "function": "main",
       "lines": 145,
-      "at_line": 1104
+      "at_line": 1129
     },
     {
       "file": "main.py",
       "function": "run",
-      "lines": 142,
-      "at_line": 955
+      "lines": 153,
+      "at_line": 969
     },
     {
       "file": "main.py",
       "function": "runner",
       "lines": 87,
-      "at_line": 1159
+      "at_line": 1184
     },
     {
       "file": "ui.py",
@@ -215,7 +215,7 @@
       "file": "actions\\dev_agent.py",
       "function": "_build_project",
       "lines": 154,
-      "at_line": 401
+      "at_line": 402
     },
     {
       "file": "actions\\extra_tools.py",
@@ -226,26 +226,26 @@
     {
       "file": "actions\\file_processor.py",
       "function": "_process_image",
-      "lines": 90,
-      "at_line": 81
+      "lines": 95,
+      "at_line": 162
     },
     {
       "file": "actions\\file_processor.py",
       "function": "_process_data",
       "lines": 95,
-      "at_line": 313
+      "at_line": 399
     },
     {
       "file": "actions\\file_processor.py",
       "function": "_process_video",
       "lines": 127,
-      "at_line": 582
+      "at_line": 668
     },
     {
       "file": "actions\\file_processor.py",
       "function": "_process_archive",
       "lines": 97,
-      "at_line": 711
+      "at_line": 797
     },
     {
       "file": "actions\\game_updater.py",
@@ -257,25 +257,31 @@
       "file": "actions\\osint_tools.py",
       "function": "tech_stack",
       "lines": 127,
-      "at_line": 564
+      "at_line": 565
     },
     {
       "file": "actions\\osint_tools.py",
       "function": "github_user_osint",
       "lines": 81,
-      "at_line": 952
+      "at_line": 1033
     },
     {
       "file": "actions\\osint_tools.py",
       "function": "extract_metadata",
       "lines": 88,
-      "at_line": 1058
+      "at_line": 1139
     },
     {
       "file": "actions\\reminder.py",
       "function": "_write_notify_script",
       "lines": 98,
       "at_line": 40
+    },
+    {
+      "file": "actions\\threat_intel.py",
+      "function": "threat_intel_brief",
+      "lines": 97,
+      "at_line": 54
     },
     {
       "file": "agent\\executor.py",
@@ -335,25 +341,25 @@
       "file": "core\\llm_client.py",
       "function": "_call_llm_impl",
       "lines": 112,
-      "at_line": 657
+      "at_line": 672
     },
     {
       "file": "core\\llm_client.py",
       "function": "_stream_openai_once",
       "lines": 188,
-      "at_line": 960
+      "at_line": 975
     },
     {
       "file": "core\\llm_client.py",
       "function": "_call_llm_stream_impl",
       "lines": 192,
-      "at_line": 1382
+      "at_line": 1397
     },
     {
       "file": "core\\llm_client.py",
       "function": "_do_stream",
       "lines": 95,
-      "at_line": 1449
+      "at_line": 1464
     },
     {
       "file": "core\\portable_bundle.py",
@@ -376,8 +382,8 @@
     {
       "file": "core\\updater.py",
       "function": "_run_tests",
-      "lines": 81,
-      "at_line": 506
+      "lines": 84,
+      "at_line": 510
     },
     {
       "file": "dashboard\\openai_api.py",
@@ -443,7 +449,7 @@
       "file": "tests\\test_all_critical.py",
       "function": "test_confirm_blocking_dialog_thread_safety",
       "lines": 102,
-      "at_line": 1178
+      "at_line": 1187
     },
     {
       "file": "tests\\test_listen_mode.py",
@@ -468,31 +474,19 @@
   "print_calls": [
     {
       "file": "core\\updater.py",
-      "line": 698
+      "line": 705
     },
     {
       "file": "core\\updater.py",
-      "line": 701
+      "line": 708
     },
     {
       "file": "core\\updater.py",
-      "line": 704
+      "line": 711
     },
     {
       "file": "core\\updater.py",
-      "line": 714
-    },
-    {
-      "file": "core\\updater.py",
-      "line": 717
-    },
-    {
-      "file": "core\\updater.py",
-      "line": 719
-    },
-    {
-      "file": "core\\updater.py",
-      "line": 722
+      "line": 721
     },
     {
       "file": "core\\updater.py",
@@ -501,12 +495,24 @@
     {
       "file": "core\\updater.py",
       "line": 726
+    },
+    {
+      "file": "core\\updater.py",
+      "line": 729
+    },
+    {
+      "file": "core\\updater.py",
+      "line": 731
+    },
+    {
+      "file": "core\\updater.py",
+      "line": 733
     }
   ],
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-11-05T03:32:34.711118+00:00",
-    "files_scanned": 248
+    "generated": "2026-11-05T03:36:56.003301+00:00",
+    "files_scanned": 256
   }
 }

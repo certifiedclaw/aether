@@ -264,6 +264,22 @@ def test_redact_helper():
     assert up._redact("") == "" and up._redact(None) == ""
 
 
+def test_test_output_and_command_are_redacted_before_persistence(repos, monkeypatch):
+    from core import log_redaction
+
+    secret = "updater-private-secret-42"
+    monkeypatch.setattr(log_redaction, "_SECRETS", {secret})
+    publish(repos.dev)
+    command = py(f"print({secret!r})")
+    r = up.apply(repos.user, test_cmd=command, log_path=repos.log)
+
+    logged = repos.log.read_text(encoding="utf-8")
+    logged += "".join(p.read_text(encoding="utf-8") for p in repos.runs.iterdir())
+    logged += r.test_output_tail
+    assert secret not in logged
+    assert "[REDACTED:secret]" in logged
+
+
 # ---------------- live progress ----------------
 
 def test_progress_lines_are_echoed_with_elapsed_time(repos):

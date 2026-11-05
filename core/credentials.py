@@ -98,6 +98,8 @@ def get_secret(name: str, cfg: dict | None = None) -> str:
     """The secret for `name` ("" if none): environment, then keyring, then `cfg`/file."""
     v = _from_env(name) or _keyring_get(name)
     if v:
+        from core.log_redaction import register_secret
+        register_secret(v)
         return v
     if cfg is None:
         try:
@@ -105,7 +107,11 @@ def get_secret(name: str, cfg: dict | None = None) -> str:
             cfg = _load_config()
         except Exception:  # noqa: BLE001
             cfg = {}
-    return str((cfg or {}).get(name) or "").strip()
+    value = str((cfg or {}).get(name) or "").strip()
+    if value:
+        from core.log_redaction import register_secret
+        register_secret(value)
+    return value
 
 
 def source_of(name: str, cfg: dict | None = None) -> str | None:

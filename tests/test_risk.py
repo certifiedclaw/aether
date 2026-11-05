@@ -158,6 +158,26 @@ def _declared():
 def test_every_declared_tool_is_classified():
     missing = [t for t in _declared() if t not in risk.RISK_TABLE]
     assert missing == [], f"declared but not in RISK_TABLE (unknown means ask): {missing}"
+    assert risk.tier_for("file_processor", "strip_metadata") == ASK
+
+
+def test_image_metadata_removal_requires_approval(tmp_path, ui):
+    from PIL import Image
+    from actions.file_processor import file_processor
+
+    source = tmp_path / "private.png"
+    Image.new("RGB", (4, 4), "red").save(source)
+    output = tmp_path / "private_metadata_removed.png"
+
+    ui.answer = False
+    denied = file_processor({"file_path": str(source), "action": "strip_metadata"})
+    assert "cancel" in denied.lower()
+    assert not output.exists()
+
+    ui.answer = True
+    allowed = file_processor({"file_path": str(source), "action": "strip_metadata"})
+    assert "original was not changed" in allowed
+    assert output.exists()
 
 
 def test_every_table_entry_is_a_real_tool():

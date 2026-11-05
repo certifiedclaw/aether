@@ -144,6 +144,21 @@ def _num_ctx() -> int:
     return max(2048, min(v, 131072))
 
 
+def _ollama_keep_alive():
+    """How long Ollama should retain an idle model (config: llm_keep_alive)."""
+    return _load_config().get("llm_keep_alive", "5m")
+
+
+def should_warmup_on_start(config: dict | None = None) -> bool:
+    """Whether startup should load the model before the first user request."""
+    value = (config if config is not None else _load_config()).get(
+        "llm_warmup_on_start", False
+    )
+    if isinstance(value, str):
+        return value.strip().lower() in ("1", "true", "yes", "on")
+    return bool(value)
+
+
 def get_config_flag(name: str, default: bool = False) -> bool:
     """Boolean config flag from config/api_keys.json (accepts true/1/yes/on)."""
     v = _load_config().get(name, default)
@@ -393,7 +408,7 @@ def warmup_model(system_prompt: str | None = None) -> bool:
         "model":      model,
         "messages":   messages,
         "stream":     False,
-        "keep_alive": -1,
+        "keep_alive": _ollama_keep_alive(),
         "think":      False,  # reasoning models (qwen3, deepseek-r1, …) skip <think> — see call_llm
         # num_gpu:99 → push ALL transformer layers to GPU (Ollama caps at available)
         # This is safe even without a GPU — Ollama silently ignores if n_gpu_layers=0
@@ -674,7 +689,7 @@ def _call_llm_impl(
             "model":      model,
             "messages":   messages,
             "stream":     False,
-            "keep_alive": -1,
+            "keep_alive": _ollama_keep_alive(),
             "think":      False,  # reasoning models (qwen3, deepseek-r1, …) otherwise burn
                                    # the whole num_predict budget on a hidden <think> block
                                    # and never reach the actual answer/tool call.
@@ -857,7 +872,7 @@ def _call_llm_text_impl(
             raise RuntimeError(f"LLM text call failed ({provider}): {e}")
 
     endpoint = f"{url}/api/chat"
-    payload = {"model": m, "messages": messages, "stream": False, "keep_alive": -1, "think": False, "options": {"num_predict": num_predict, "num_ctx": _num_ctx()}}
+    payload = {"model": m, "messages": messages, "stream": False, "keep_alive": _ollama_keep_alive(), "think": False, "options": {"num_predict": num_predict, "num_ctx": _num_ctx()}}
 
     try:
         resp = requests.post(endpoint, json=payload, timeout=timeout)
@@ -1431,7 +1446,7 @@ def _call_llm_stream_impl(
         "model":      model,
         "messages":   messages,
         "stream":     True,
-        "keep_alive": -1,
+        "keep_alive": _ollama_keep_alive(),
         "think":      False,  # reasoning models (qwen3, deepseek-r1, …) otherwise burn
                                # the whole num_predict budget on a hidden <think> block,
                                # so the generator finishes with no content/tool_calls

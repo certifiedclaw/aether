@@ -2,9 +2,9 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 03:32 UTC
+Generated: 2026-11-05 03:37 UTC
 
-## #137 — 2026-11-05 03:32 UTC — GitHub Copilot (Copilot App)
+## #143 — 2026-11-05 03:32 UTC — GitHub Copilot (Copilot App)
 
 Completed roadmap #58: task queue state persists atomically; queued tasks restore after restart; running tasks become interrupted and require explicit confirmation to rerun the original goal. Added list/status/cancel and resume controls plus persistence/routing regressions. Preserved existing #56 work.
 
@@ -14,13 +14,73 @@ Completed roadmap #58: task queue state persists atomically; queued tasks restor
 
 ---
 
-## #136 — 2026-11-05 03:17 UTC — GitHub Copilot (Copilot App)
+## #142 — 2026-11-05 03:17 UTC — GitHub Copilot (Copilot App)
 
 Implemented roadmap #56: local structured knowledge graph with conflict preservation and explicit resolution, prompt/tool integration, memory panel and dashboard controls, and export/import support. Verified compilation and 173 targeted regression tests.
 
 **Touched:** `memory/knowledge_graph.py`, `memory/memory_manager.py`, `core/memory_panel.py`, `core/memory_tools.py`, `core/tool_declarations.py`, `core/tool_dispatch.py`, `core/tool_router.py`, `core/chat_commands.py`, `core/prompt.txt`, `dashboard/server.py`, `dashboard/static/memory.html`, `tests/test_knowledge_graph.py`, `tests/test_memory_panel.py`, `tools/maintenance/data/roadmap.json`
 
 **Next steps:** Choose the next actionable item from the roadmap backlog; #88 and #93 still need machine-specific inputs or live measurements.
+
+---
+
+## #141 — 2026-11-05 03:23 UTC — GitHub Copilot
+
+Reduced idle Ollama resource use: startup no longer launches/warmups the LLM by default, and all Ollama requests now use a configurable five-minute keep-alive instead of retaining models forever. Added configuration docs and request/startup regression tests; targeted suite and py_compile passed.
+
+**Touched:** `core/llm_client.py`, `main.py`, `config/config.example.json`, `docs/PERFORMANCE_NOTES.md`, `tests/test_ollama_resource_use.py`
+
+**Next steps:** Observe idle memory and first-response delay on the user's machine; adjust llm_keep_alive or enable llm_warmup_on_start if needed.
+
+---
+
+## #140 — 2026-11-05 03:16 UTC — GitHub Copilot (Auto)
+
+Added an approved antivirus tool: local file scanning via Microsoft Defender or ClamAV when the supported CLI is available, Windows Security Center product discovery, and optional VirusTotal SHA-256 reputation checks that never upload file contents. Added tool schema, dispatch, risk gates, docs, and regression tests. Full suite: 1681 passed, 3 skipped.
+
+**Touched:** `actions/antivirus.py`, `core/risk.py`, `core/tool_declarations.py`, `core/tool_dispatch.py`, `readme.md`, `tests/test_antivirus.py`
+
+**Next steps:** Test supported scans on a Windows machine with Defender enabled; add vendor-specific adapters if Malwarebytes/ThreatDown, Kaspersky, Bitdefender, HitmanPro, or CrowdStrike scan APIs are needed. No live scan was run.
+
+---
+
+## #139 — 2026-11-05 02:52 UTC — GitHub Copilot (Auto)
+
+Implemented both user-selected OPSEC-inspired features: a local image metadata privacy check and approved metadata-stripping copy for static JPEG/PNG/WebP; plus CVE briefs cross-checking OSV and CISA KEV with source links, explicit unavailable/not-listed distinctions, size limits, and no device scanning. Added regression tests and README/tool-schema documentation. Full suite: 1670 passed, 3 skipped.
+
+**Touched:** `actions/file_processor.py`, `actions/threat_intel.py`, `actions/osint_tools.py`, `core/risk.py`, `core/tool_declarations.py`, `tests/test_file_processor_privacy.py`, `tests/test_threat_intel.py`, `tests/test_risk.py`, `tests/test_all_critical.py`, `readme.md`
+
+**Next steps:** Review the uncommitted implementation before committing. Metadata removal supports static JPEG/PNG/WebP only; threat-intel currently accepts CVE IDs and does not determine whether installed software is affected.
+
+---
+
+## #138 — 2026-11-05 02:25 UTC — GitHub Copilot (Auto)
+
+Reviewed OPSEC references and updated the private-LAN audit to follow a threat-first assessment flow. Reports distinguish LAN-reachable services from internet exposure and confirmed vulnerabilities, then prompt users to consider assets, reachability, service expectations, impact, and proportionate mitigations. Added README attribution to OPSEC 101. opsecprofessionals.org returned 403 and Reddit was blocked by a JavaScript challenge. Focused suite: 193 passed, 1 skipped.
+
+**Touched:** `actions/osint_tools.py`, `tests/test_osint_tools.py`, `readme.md`
+
+**Next steps:** Continue using only explicitly confirmed RFC1918 private subnet scans; do not claim vulnerability verification from open-port observations.
+
+---
+
+## #137 — 2026-11-05 02:21 UTC — GitHub Copilot (Auto)
+
+Added an explicitly scoped LAN service audit: discovers private IPv4 hosts responding on common TCP ports within at most one /24, reports exposed services without claiming vulnerability verification, and requires confirmation. Added schema warnings and regression coverage for subnet restrictions, port limits, results, and approval gating. Focused suite: 193 passed, 1 skipped.
+
+**Touched:** `actions/osint_tools.py`, `core/tool_declarations.py`, `core/tool_dispatch.py`, `core/risk.py`, `core/safety.py`, `tests/test_osint_tools.py`, `tests/test_all_critical.py`
+
+**Next steps:** To use the LAN audit, provide the RFC1918 subnet CIDR (for example 192.168.1.0/24) and confirm the scan; broader vulnerability verification is not included.
+
+---
+
+## #136 — 2026-11-05 02:16 UTC — GitHub Copilot (Auto)
+
+Expanded detailed local logging across runtime, HTTP traces, updater, crash, audit, and observability sinks with shared credential redaction and private POSIX log files. Fixed short-placeholder redaction collisions, updater timestamp IDs being mistaken for card numbers, crash extra-field JSON preservation, missing main.py os import, and shell-safety test isolation. Full suite: 1654 passed, 3 skipped.
+
+**Touched:** `core/log_redaction.py`, `core/credentials.py`, `main.py`, `core/trace_log.py`, `core/updater.py`, `core/observability.py`, `core/live_report.py`, `core/audit_log.py`, `core/crash_logger.py`, `actions/dev_agent.py`, `tests/test_log_redaction.py`, `tests/test_trace_log.py`, `tests/test_updater_logging.py`, `tests/test_shell_safety.py`, `readme.md`, `config/config.example.json`
+
+**Next steps:** Review the uncommitted diff and commit when ready; no code or test follow-up is currently pending.
 
 ---
 

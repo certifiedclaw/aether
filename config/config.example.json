@@ -5,6 +5,9 @@
   "llm_model":    "qwen3:8b",
   "ollama_url":   "http://localhost:11434",
   "llm_provider": "ollama",
+  "_comment_llm_resources": "Ollama only: idle model retention. '5m' frees model RAM/VRAM after five idle minutes; '0' unloads immediately; '-1' keeps it loaded indefinitely. Startup warmup/server startup is off by default until the first request; enable it to reduce first-response delay.",
+  "llm_keep_alive": "5m",
+  "llm_warmup_on_start": false,
 
   "_comment_llm_provider": "Set llm_provider to 'ollama', 'openai' (local OpenAI-compatible server), 'openai_api' (OpenAI API; billed separately from ChatGPT), or 'gemini' (Google AI)",
   "_comment_llm_url":      "For OpenAI-compatible: set llm_url to e.g. 'http://localhost:1234'",
@@ -118,7 +121,7 @@
   "response_cache_enabled": false,
   "response_cache_ttl_s":   86400,
   "response_cache_max":     200,
-  "_comment_trace":   "Flight recorder (logs/trace/*.jsonl): every prompt, reply, tool call, timing. View: python -m tools.trace_view. Secrets are redacted.",
+  "_comment_trace":   "Flight recorder (logs/trace/*.jsonl): full prompts/replies, tool data, stdio, subprocesses and text HTTP bodies; binary HTTP bodies are byte counts. Credentials are redacted. Logs contain private conversation data. View: python -m tools.trace_view.",
   "logging.trace_enabled":        true,
   "logging.level":                "DEBUG",
   "logging.trace_keep_sessions":  30,

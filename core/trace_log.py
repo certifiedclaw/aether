@@ -75,9 +75,6 @@ _FALLBACK_SECRETS = [
     re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}"),
     re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._\-]{16,}"),
 ]
-_URL_SECRET_PARAM = re.compile(
-    r"([?&](?:key|api_?key|apikey|token|access_token|auth|password|secret)=)[^&#]*", re.I)
-
 _NOISY_LIBS = ("urllib3", "httpx", "httpcore", "PIL", "asyncio", "matplotlib", "numba",
                "chromadb", "filelock", "fsspec", "huggingface_hub", "markdown_it",
                "comtypes", "multipart", "charset_normalizer", "hpack")
@@ -196,9 +193,6 @@ def trace_path() -> Path | None:
 
 # ── value conversion: JSON-safe, secrets removed, clipped ─────────────────
 
-_redactor = None
-
-
 # Our own session ids (20261030-181741) are 14 digits, and ~1 in 10 pass the card-number
 # Luhn check in leak_guard, so they would be randomly replaced by [REDACTED:card_number].
 _SESSION_ID = re.compile(r"(?<!\d)\d{8}-\d{6}(?:-\d+)?(?!\d)")
@@ -219,24 +213,14 @@ def _redact(text: str) -> str:
 
 
 def _redact_raw(text: str) -> str:
-    global _redactor
-    if not text:
-        return text
-    if _redactor is None:
-        try:
-            from core.leak_guard import redact_text
-            _redactor = redact_text
-        except Exception:  # noqa: BLE001
-            _redactor = False
     S = _S
-    if _redactor:
-        try:
-            return _redactor(text, S.secrets if S else None)[0]
-        except Exception:  # noqa: BLE001
-            pass
-    for pat in _FALLBACK_SECRETS:
-        text = pat.sub("[REDACTED:secret]", text)
-    return text
+    try:
+        from core.log_redaction import redact_text
+        return redact_text(text, S.secrets if S else None)
+    except Exception:  # noqa: BLE001 - retain the original shape-based fallback
+        for pat in _FALLBACK_SECRETS:
+            text = pat.sub("[REDACTED:secret]", text)
+        return text
 
 
 def _clip(text: str, limit: int) -> str:
@@ -273,9 +257,9 @@ def _jsonable(v: Any, key: str = "", depth: int = 0, limit: int = 200_000) -> An
     if isinstance(v, (bytes, bytearray)):
         return f"<{len(v)} bytes>"
     if isinstance(v, Path):
-        return str(v)
+        return _redact(str(v))
     if isinstance(v, BaseException):
-        return f"{type(v).__name__}: {v}"
+        return _redact(f"{type(v).__name__}: {v}")
     shape = getattr(v, "shape", None)
     if shape is not None and hasattr(v, "dtype"):
         return f"<array shape={tuple(shape)} dtype={v.dtype}>"
@@ -478,7 +462,8 @@ class _Writer(threading.Thread):
 
     def _open(self) -> None:
         p = self._path()
-        self.f = open(p, "a", encoding="utf-8", errors="backslashreplace", buffering=1 << 16)
+        from core.log_redaction import open_private_text
+        self.f = open_private_text(p, "a")
         self.size = p.stat().st_size if p.exists() else 0
         if self.part == 1:
             self.S.trace_path = p
@@ -569,6 +554,8 @@ class _LogBridge(logging.Handler):
             }
             if record.exc_info:
                 f["exc"] = "".join(traceback.format_exception(*record.exc_info))
+            elif record.exc_text:
+                f["exc"] = record.exc_text
             event("log", **f)
         except Exception:  # noqa: BLE001
             pass
@@ -697,7 +684,8 @@ def _install_faulthandler(S: _State) -> None:
     writes every thread's stack to fault-<session>.log. Empty files are deleted."""
     try:
         S.fault_path = S.st.dir / f"fault-{S.session}.log"
-        S.fault_fh = open(S.fault_path, "a", encoding="utf-8")
+        from core.log_redaction import open_private_text
+        S.fault_fh = open_private_text(S.fault_path, "a")
         faulthandler.enable(file=S.fault_fh, all_threads=True)
     except Exception:  # noqa: BLE001
         S.fault_fh = None
@@ -715,7 +703,7 @@ def _install_faulthandler(S: _State) -> None:
 
 
 def _safe_url(url: Any) -> str:
-    return _URL_SECRET_PARAM.sub(r"\1(hidden)", str(url))
+    return _redact(str(url))
 
 
 def _install_http(S: _State) -> None:
@@ -730,18 +718,28 @@ def _install_http(S: _State) -> None:
     @functools.wraps(orig)
     def request(self, method, url, *a, **kw):
         t0 = time.monotonic()
+        headers = kw.get("headers") or {}
         meta = {"method": str(method).upper(), "url": _safe_url(url),
                 "timeout": kw.get("timeout"), "stream": bool(kw.get("stream")),
-                "header_names": sorted((kw.get("headers") or {}).keys())}
+                "headers": dict(headers)}
         body = kw.get("json")
         if body is not None:
             try:
-                meta["body_chars"] = len(json.dumps(body, default=str))
+                meta["request_body"] = body
             except Exception:  # noqa: BLE001
                 pass
-        elif kw.get("data") is not None:
+        else:
+            data = kw.get("data")
+            content_type = next((str(v) for k, v in headers.items()
+                                 if str(k).lower() == "content-type"), "").lower()
             try:
-                meta["body_chars"] = len(kw["data"])
+                if isinstance(data, (str, dict, list, tuple)):
+                    meta["request_body"] = data
+                elif isinstance(data, bytes) and any(
+                        kind in content_type for kind in ("text/", "json", "xml", "urlencoded")):
+                    meta["request_body"] = data.decode("utf-8", errors="replace")
+                elif data is not None:
+                    meta["request_body"] = f"<non-text request body: {len(data)} bytes>"
             except Exception:  # noqa: BLE001
                 pass
         cid = next(S.call_ids)
@@ -756,7 +754,9 @@ def _install_http(S: _State) -> None:
             event("http_response", call=f"h{cid}", url=meta["url"], status=resp.status_code,
                   reason=resp.reason, headers_ms=round((time.monotonic() - t0) * 1000, 1),
                   content_type=resp.headers.get("Content-Type"),
-                  content_length=resp.headers.get("Content-Length"))
+                  content_length=resp.headers.get("Content-Length"),
+                  headers=dict(resp.headers))
+            _capture_http_response(resp, cid, meta["url"], S)
         except Exception:  # noqa: BLE001
             pass
         return resp
@@ -768,6 +768,58 @@ def _install_http(S: _State) -> None:
         if rs.Session.request is request:
             rs.Session.request = orig
     S.undo.append(undo)
+
+
+def _capture_http_response(resp: Any, call_id: int, url: str, S: _State) -> None:
+    """Capture consumed text responses without changing response streaming behavior."""
+    content_type = str(resp.headers.get("Content-Type", "")).lower()
+    textual = any(kind in content_type for kind in (
+        "text/", "json", "xml", "javascript", "x-www-form-urlencoded", "graphql",
+    ))
+    if not textual:
+        return
+    content = getattr(resp, "_content", False)
+    if content is not False and content is not None:
+        _emit_http_body(bytes(content), len(content), True, content_type, call_id, url)
+        return
+
+    original = resp.iter_content
+    if getattr(original, "_aether_trace", False):
+        return
+    byte_limit = min(max(S.st.max_field * 4, 1024), 1_000_000)
+
+    @functools.wraps(original)
+    def iter_content(*args, **kwargs):
+        captured = bytearray()
+        total = 0
+        complete = False
+        try:
+            for chunk in original(*args, **kwargs):
+                if chunk:
+                    raw = chunk.encode(resp.encoding or "utf-8", errors="replace") \
+                        if isinstance(chunk, str) else bytes(chunk)
+                    total += len(raw)
+                    if len(captured) < byte_limit:
+                        captured.extend(raw[:byte_limit - len(captured)])
+                yield chunk
+            complete = True
+        finally:
+            if total:
+                _emit_http_body(bytes(captured), total, complete, content_type, call_id, url)
+
+    iter_content._aether_trace = True
+    resp.iter_content = iter_content
+
+
+def _emit_http_body(body: bytes, total: int, complete: bool,
+                    content_type: str, call_id: int, url: str) -> None:
+    S = _S
+    if S is None:
+        return
+    cap = min(max(S.st.max_field * 4, 1024), 1_000_000)
+    text = body[:cap].decode("utf-8", errors="replace")
+    event("http_response_body", call=f"h{call_id}", url=url, content_type=content_type,
+          bytes=total, complete=complete, truncated=(len(body) < total), body=text)
 
 
 def _install_subprocess(S: _State) -> None:
@@ -953,6 +1005,8 @@ def start(config: dict | None = None, *, trace_dir: Path | str | None = None,
             return False
         try:
             cfg = config if config is not None else _load_cfg()
+            from core.log_redaction import configure_log_redaction
+            configure_log_redaction(cfg)
             st = _Settings(cfg)
             if trace_dir is not None:
                 st.dir = Path(trace_dir)
@@ -980,7 +1034,9 @@ def start(config: dict | None = None, *, trace_dir: Path | str | None = None,
             return False
 
         try:
-            (st.dir / "latest.txt").write_text(session + "\n", encoding="utf-8")
+            from core.log_redaction import open_private_text
+            with open_private_text(st.dir / "latest.txt", "w") as latest:
+                latest.write(session + "\n")
         except OSError:
             pass
         event("session_start", session=session, trace_file=str(S.trace_path),

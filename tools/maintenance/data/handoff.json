@@ -1,11 +1,11 @@
 {
-  "next_id": 138,
+  "next_id": 144,
   "entries": [
     {
       "id": 1,
       "timestamp": "2026-07-13 17:48 UTC",
       "by": "Claude (claude.ai chat)",
-      "summary": "Fixed the handoff system itself: handoff.py (plus newer versions of run_all.py and publish.py that wire it in) had been written to the project root instead of into tools/maintenance/, so 'from tools.maintenance import ... handoff ...' threw ImportError and the whole maintenance run was broken \u2014 HANDOFF.md, the one continuity file this project depends on, was never actually being generated. Moved handoff.py into tools/maintenance/, replaced the stale in-package run_all.py/publish.py with the versions that include handoff rendering + HANDOFF.md/handoff.json in the tracked-files list, deleted the redundant root copies, and wired handoff.cmd_render() into main.py's launch-time maintenance snapshot so HANDOFF.md can't silently drift out of sync with handoff.json again. Verified the import resolves and a full run_all --skip-deps produces HANDOFF.md correctly.",
+      "summary": "Fixed the handoff system itself: handoff.py (plus newer versions of run_all.py and publish.py that wire it in) had been written to the project root instead of into tools/maintenance/, so 'from tools.maintenance import ... handoff ...' threw ImportError and the whole maintenance run was broken — HANDOFF.md, the one continuity file this project depends on, was never actually being generated. Moved handoff.py into tools/maintenance/, replaced the stale in-package run_all.py/publish.py with the versions that include handoff rendering + HANDOFF.md/handoff.json in the tracked-files list, deleted the redundant root copies, and wired handoff.cmd_render() into main.py's launch-time maintenance snapshot so HANDOFF.md can't silently drift out of sync with handoff.json again. Verified the import resolves and a full run_all --skip-deps produces HANDOFF.md correctly.",
       "files": [
         "tools/maintenance/handoff.py",
         "tools/maintenance/run_all.py",
@@ -13,7 +13,7 @@
         "main.py",
         "CLAUDE.md"
       ],
-      "next_steps": "Nothing blocking \u2014 system is verified working end to end. If you add entries by hand rather than via this CLI, run 'python -m tools.maintenance.handoff render' afterward so HANDOFF.md stays in sync with handoff.json."
+      "next_steps": "Nothing blocking — system is verified working end to end. If you add entries by hand rather than via this CLI, run 'python -m tools.maintenance.handoff render' afterward so HANDOFF.md stays in sync with handoff.json."
     },
     {
       "id": 2,
@@ -41,7 +41,7 @@
         "security/middleware.py",
         ".gitignore"
       ],
-      "next_steps": "Wait for user approval to start Stage 2: dashboard/api_secure.py (new router) + 1 opt-in include_router line in dashboard/server.py. After Stage 2: Stage 3 PWA, Stage 4 tunnel scripts, Stage 5 React Native Expo source. No edits to existing Aether source in any stage \u2014 all new files."
+      "next_steps": "Wait for user approval to start Stage 2: dashboard/api_secure.py (new router) + 1 opt-in include_router line in dashboard/server.py. After Stage 2: Stage 3 PWA, Stage 4 tunnel scripts, Stage 5 React Native Expo source. No edits to existing Aether source in any stage — all new files."
     },
     {
       "id": 4,
@@ -65,7 +65,7 @@
       "id": 5,
       "timestamp": "2026-07-14 01:01 UTC",
       "by": "Claude (claude.ai chat, Sonnet 5)",
-      "summary": "Implemented comprehensive stress_test.py covering Config, HybridMemory, RAG, Security, ToolDispatch, LLM, FileOps, and Concurrency. Ran 50 iterations each \u2013 all passed. Identified meta-tensor warnings from PyTorch/sentence-transformers (non-fatal). Performance: LLM is slowest (~0.8 ops/s) due to real Ollama inference; all other subsystems are fast. Provided optimization suggestions.",
+      "summary": "Implemented comprehensive stress_test.py covering Config, HybridMemory, RAG, Security, ToolDispatch, LLM, FileOps, and Concurrency. Ran 50 iterations each – all passed. Identified meta-tensor warnings from PyTorch/sentence-transformers (non-fatal). Performance: LLM is slowest (~0.8 ops/s) due to real Ollama inference; all other subsystems are fast. Provided optimization suggestions.",
       "files": [
         "tests/stress_test.py"
       ],
@@ -1681,7 +1681,7 @@
       "id": 120,
       "timestamp": "2026-10-29 11:51 UTC",
       "by": "Claude Code",
-      "summary": "Repo-presentation cleanup: removed root duplicate files, moved historical docs to docs/archive/, stripped '# \u2500\u2500 NEW vN' divider comments (31) in main.py/core, dropped emoji header from core/prompt.txt, replaced 'Tony Stark' fallback prompt in main.py, fixed doc/tool references. No logic changes. Full suite: 950 passed, same 5 pre-existing failures (PortAudio/ModuleNotFound in sandbox).",
+      "summary": "Repo-presentation cleanup: removed root duplicate files, moved historical docs to docs/archive/, stripped '# ── NEW vN' divider comments (31) in main.py/core, dropped emoji header from core/prompt.txt, replaced 'Tony Stark' fallback prompt in main.py, fixed doc/tool references. No logic changes. Full suite: 950 passed, same 5 pre-existing failures (PortAudio/ModuleNotFound in sandbox).",
       "files": [
         "main.py",
         "core/prompt.txt",
@@ -1915,6 +1915,107 @@
     },
     {
       "id": 136,
+      "timestamp": "2026-11-05 02:16 UTC",
+      "by": "GitHub Copilot (Auto)",
+      "summary": "Expanded detailed local logging across runtime, HTTP traces, updater, crash, audit, and observability sinks with shared credential redaction and private POSIX log files. Fixed short-placeholder redaction collisions, updater timestamp IDs being mistaken for card numbers, crash extra-field JSON preservation, missing main.py os import, and shell-safety test isolation. Full suite: 1654 passed, 3 skipped.",
+      "files": [
+        "core/log_redaction.py",
+        "core/credentials.py",
+        "main.py",
+        "core/trace_log.py",
+        "core/updater.py",
+        "core/observability.py",
+        "core/live_report.py",
+        "core/audit_log.py",
+        "core/crash_logger.py",
+        "actions/dev_agent.py",
+        "tests/test_log_redaction.py",
+        "tests/test_trace_log.py",
+        "tests/test_updater_logging.py",
+        "tests/test_shell_safety.py",
+        "readme.md",
+        "config/config.example.json"
+      ],
+      "next_steps": "Review the uncommitted diff and commit when ready; no code or test follow-up is currently pending."
+    },
+    {
+      "id": 137,
+      "timestamp": "2026-11-05 02:21 UTC",
+      "by": "GitHub Copilot (Auto)",
+      "summary": "Added an explicitly scoped LAN service audit: discovers private IPv4 hosts responding on common TCP ports within at most one /24, reports exposed services without claiming vulnerability verification, and requires confirmation. Added schema warnings and regression coverage for subnet restrictions, port limits, results, and approval gating. Focused suite: 193 passed, 1 skipped.",
+      "files": [
+        "actions/osint_tools.py",
+        "core/tool_declarations.py",
+        "core/tool_dispatch.py",
+        "core/risk.py",
+        "core/safety.py",
+        "tests/test_osint_tools.py",
+        "tests/test_all_critical.py"
+      ],
+      "next_steps": "To use the LAN audit, provide the RFC1918 subnet CIDR (for example 192.168.1.0/24) and confirm the scan; broader vulnerability verification is not included."
+    },
+    {
+      "id": 138,
+      "timestamp": "2026-11-05 02:25 UTC",
+      "by": "GitHub Copilot (Auto)",
+      "summary": "Reviewed OPSEC references and updated the private-LAN audit to follow a threat-first assessment flow. Reports distinguish LAN-reachable services from internet exposure and confirmed vulnerabilities, then prompt users to consider assets, reachability, service expectations, impact, and proportionate mitigations. Added README attribution to OPSEC 101. opsecprofessionals.org returned 403 and Reddit was blocked by a JavaScript challenge. Focused suite: 193 passed, 1 skipped.",
+      "files": [
+        "actions/osint_tools.py",
+        "tests/test_osint_tools.py",
+        "readme.md"
+      ],
+      "next_steps": "Continue using only explicitly confirmed RFC1918 private subnet scans; do not claim vulnerability verification from open-port observations."
+    },
+    {
+      "id": 139,
+      "timestamp": "2026-11-05 02:52 UTC",
+      "by": "GitHub Copilot (Auto)",
+      "summary": "Implemented both user-selected OPSEC-inspired features: a local image metadata privacy check and approved metadata-stripping copy for static JPEG/PNG/WebP; plus CVE briefs cross-checking OSV and CISA KEV with source links, explicit unavailable/not-listed distinctions, size limits, and no device scanning. Added regression tests and README/tool-schema documentation. Full suite: 1670 passed, 3 skipped.",
+      "files": [
+        "actions/file_processor.py",
+        "actions/threat_intel.py",
+        "actions/osint_tools.py",
+        "core/risk.py",
+        "core/tool_declarations.py",
+        "tests/test_file_processor_privacy.py",
+        "tests/test_threat_intel.py",
+        "tests/test_risk.py",
+        "tests/test_all_critical.py",
+        "readme.md"
+      ],
+      "next_steps": "Review the uncommitted implementation before committing. Metadata removal supports static JPEG/PNG/WebP only; threat-intel currently accepts CVE IDs and does not determine whether installed software is affected."
+    },
+    {
+      "id": 140,
+      "timestamp": "2026-11-05 03:16 UTC",
+      "by": "GitHub Copilot (Auto)",
+      "summary": "Added an approved antivirus tool: local file scanning via Microsoft Defender or ClamAV when the supported CLI is available, Windows Security Center product discovery, and optional VirusTotal SHA-256 reputation checks that never upload file contents. Added tool schema, dispatch, risk gates, docs, and regression tests. Full suite: 1681 passed, 3 skipped.",
+      "files": [
+        "actions/antivirus.py",
+        "core/risk.py",
+        "core/tool_declarations.py",
+        "core/tool_dispatch.py",
+        "readme.md",
+        "tests/test_antivirus.py"
+      ],
+      "next_steps": "Test supported scans on a Windows machine with Defender enabled; add vendor-specific adapters if Malwarebytes/ThreatDown, Kaspersky, Bitdefender, HitmanPro, or CrowdStrike scan APIs are needed. No live scan was run."
+    },
+    {
+      "id": 141,
+      "timestamp": "2026-11-05 03:23 UTC",
+      "by": "GitHub Copilot",
+      "summary": "Reduced idle Ollama resource use: startup no longer launches/warmups the LLM by default, and all Ollama requests now use a configurable five-minute keep-alive instead of retaining models forever. Added configuration docs and request/startup regression tests; targeted suite and py_compile passed.",
+      "files": [
+        "core/llm_client.py",
+        "main.py",
+        "config/config.example.json",
+        "docs/PERFORMANCE_NOTES.md",
+        "tests/test_ollama_resource_use.py"
+      ],
+      "next_steps": "Observe idle memory and first-response delay on the user's machine; adjust llm_keep_alive or enable llm_warmup_on_start if needed."
+    },
+    {
+      "id": 142,
       "timestamp": "2026-11-05 03:17 UTC",
       "by": "GitHub Copilot (Copilot App)",
       "summary": "Implemented roadmap #56: local structured knowledge graph with conflict preservation and explicit resolution, prompt/tool integration, memory panel and dashboard controls, and export/import support. Verified compilation and 173 targeted regression tests.",
@@ -1937,7 +2038,7 @@
       "next_steps": "Choose the next actionable item from the roadmap backlog; #88 and #93 still need machine-specific inputs or live measurements."
     },
     {
-      "id": 137,
+      "id": 143,
       "timestamp": "2026-11-05 03:32 UTC",
       "by": "GitHub Copilot (Copilot App)",
       "summary": "Completed roadmap #58: task queue state persists atomically; queued tasks restore after restart; running tasks become interrupted and require explicit confirmation to rerun the original goal. Added list/status/cancel and resume controls plus persistence/routing regressions. Preserved existing #56 work.",
