@@ -20,12 +20,11 @@ class WhisperSTT:
     """Offline transcription using faster-whisper."""
 
     def __init__(self, model_name: str = "small", language: str | None = None):
-        import os
         from faster_whisper import WhisperModel
         logger.info(f"[STT] Loading Whisper '{model_name}'…")
         try:
-            import torch
-            device  = "cuda" if torch.cuda.is_available() else "cpu"
+            import ctranslate2
+            device  = "cuda" if ctranslate2.get_cuda_device_count() > 0 else "cpu"
             compute = "float16" if device == "cuda" else "int8"
         except Exception:
             device, compute = "cpu", "int8"

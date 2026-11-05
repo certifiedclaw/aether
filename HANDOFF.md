@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 03:39 UTC
+Generated: 2026-11-05 03:41 UTC
+
+## #145 — 2026-11-05 03:41 UTC — GitHub Copilot
+
+Removed an unconditional startup PyTorch preload and replaced Whisper's CUDA detection with CTranslate2's device query, avoiding unnecessary PyTorch import/resident memory on installs that do not need it while preserving CUDA float16 and CPU int8 selection. Added regression tests; 22 focused tests passed and py_compile succeeded.
+
+**Touched:** `main.py`, `core/stt.py`, `docs/PERFORMANCE_NOTES.md`, `tests/test_stt_resource_use.py`
+
+**Next steps:** Measure idle process memory on the target PC; verify Whisper CUDA and CPU startup paths against real devices.
+
+---
 
 ## #144 — 2026-11-05 03:32 UTC — GitHub Copilot (Copilot App)
 
