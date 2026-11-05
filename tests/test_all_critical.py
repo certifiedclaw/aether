@@ -8,6 +8,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 import pytest
 import json
 import tempfile
+import threading
 from unittest.mock import MagicMock, patch
 import time
 import re
@@ -125,15 +126,16 @@ def test_empty_model_response_retries_once_without_tools():
     assert "_empty_retried = True" in blk and "tools = None" in blk and "continue" in blk
 
 # ------------------------------- 4. HYBRID MEMORY – NO FULL REBUILD ON STORE -------------------------------
-def test_hybrid_memory_store_does_not_full_rebuild():
+def test_hybrid_memory_store_does_not_full_rebuild(monkeypatch):
     from memory.hybrid_memory import HybridMemory
+    monkeypatch.setattr(HybridMemory, "_load_encoder_model", lambda _self: None)
     with patch('memory.hybrid_memory.BM25Index') as MockBM25:
         instance = MockBM25.return_value
         with patch('sqlite3.connect') as mock_sql:
             mock_conn = MagicMock()
             mock_sql.return_value = mock_conn
             mock_conn.execute.return_value.fetchone.return_value = (1,)
-            hm = HybridMemory()
+            hm = HybridMemory(config={"memory.preload_models": False})
             hm._bm25 = instance
             hm.store("test input", "test response")
             instance.add_doc.assert_called_once()
@@ -2109,17 +2111,9 @@ def test_tool_router_filter_tools_preserves_ollama_shape():
     assert "flight_finder" not in names  # not related to a file move
 
 
-# ---------------- HYBRID MEMORY: NON-BLOCKING MODEL LOAD ----------------
-#
-# Regression tests for: the dense encoder + cross-encoder used to load
-# synchronously on whichever conversation turn happened to trigger the
-# first _retrieve()/_encode_one() call, stalling that turn for however
-# long sentence-transformers takes to import and initialize. They now
-# preload in a background thread at construction time, and the hot-path
-# callers use blocking=False so a turn that lands before preloading
-# finishes just skips the dense/rerank stage instead of waiting.
+# ---------------- HYBRID MEMORY: LAZY MODEL LOAD ----------------
 
-def _make_hybrid_memory():
+def _make_hybrid_memory(preload_models=False):
     from memory.hybrid_memory import HybridMemory
     with patch('memory.hybrid_memory.BM25Index') as MockBM25:
         MockBM25.return_value = MagicMock()
@@ -2127,42 +2121,22 @@ def _make_hybrid_memory():
             mock_conn = MagicMock()
             mock_sql.return_value = mock_conn
             mock_conn.execute.return_value.fetchone.return_value = (1,)
-            return HybridMemory()
+            return HybridMemory(config={"memory.preload_models": preload_models})
 
 
-def test_hybrid_memory_preload_thread_starts_and_completes():
-    """The background preload thread should run to completion (setting
-    _enc_tried/_re_tried) shortly after construction, without the test
-    (i.e. the constructor) ever blocking on it itself."""
-    hm = _make_hybrid_memory()
-    # Give the daemon thread a moment; sentence-transformers isn't
-    # installed in this environment so it resolves via ImportError almost
-    # immediately either way.
-    # Where sentence-transformers IS installed the preload really loads the
-    # encoder and cross-encoder (seconds, longer on a cold disk), so allow
-    # generous time; it exits as soon as both flags flip.
-    deadline = time.monotonic() + 60
-    while time.monotonic() < deadline:
-        if hm._enc_tried and hm._re_tried:
-            break
-        time.sleep(0.02)
-    assert hm._enc_tried is True
-    assert hm._re_tried is True
+def test_hybrid_memory_preload_is_opt_in(monkeypatch):
+    from memory.hybrid_memory import HybridMemory
+    started = threading.Event()
+    monkeypatch.setattr(HybridMemory, "_preload_models", lambda _self: started.set())
+
+    _make_hybrid_memory(preload_models=True)
+
+    assert started.wait(1)
 
 
 def test_hybrid_memory_nonblocking_load_returns_immediately_when_locked():
-    """FAILS if _load_encoder(blocking=False) waits for a concurrent
-    loader instead of bailing out -- that would reintroduce the exact
-    stall this fix removes, just moved behind a lock."""
+    """A concurrent loader must not make a conversation turn wait for the lock."""
     hm = _make_hybrid_memory()
-    # Let the real preload thread finish first: with sentence-transformers
-    # installed it loads the encoder in the background, which would make the
-    # "didn't do the load itself" check below meaningless.
-    deadline = time.monotonic() + 60
-    while time.monotonic() < deadline and not (hm._enc_tried and hm._re_tried):
-        time.sleep(0.02)
-    hm._encoder = None
-    hm._enc_tried = False  # simulate: preload hasn't finished yet
     hm._enc_lock.acquire()  # simulate: another thread is mid-load
     try:
         start = time.monotonic()
@@ -2174,12 +2148,11 @@ def test_hybrid_memory_nonblocking_load_returns_immediately_when_locked():
         hm._enc_lock.release()
 
 
-def test_hybrid_memory_blocking_load_actually_attempts_load():
-    """blocking=True (used by the preload thread) must actually perform
-    the load attempt (setting _enc_tried), not just return."""
+def test_hybrid_memory_blocking_load_actually_attempts_load(monkeypatch):
+    """blocking=True must call the model loader rather than defer it."""
     hm = _make_hybrid_memory()
-    hm._enc_tried = False
-    hm._encoder = None
+    called = threading.Event()
+    monkeypatch.setattr(hm, "_load_encoder_model", called.set)
     hm._load_encoder(blocking=True)
-    assert hm._enc_tried is True  # attempted (result is None here since
-                                   # sentence-transformers isn't installed)
+    assert hm._enc_tried is True
+    assert called.is_set()

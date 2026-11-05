@@ -2,8 +2,8 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.health_check` (or `run_all`) to refresh. Fix things here, don't edit this file directly.
 
-Generated: 2026-11-05T03:36:56.003301+00:00
-Files scanned: 256
+Generated: 2026-11-05T03:38:51.696304+00:00
+Files scanned: 257
 
 ## Summary
 
@@ -19,7 +19,7 @@ Files scanned: 256
 
 ## Files over 600 lines
 - `ui.py` — 4142 lines
-- `tests\test_all_critical.py` — 2185 lines
+- `tests\test_all_critical.py` — 2158 lines
 - `core\conversation_core.py` — 1665 lines
 - `core\llm_client.py` — 1589 lines
 - `actions\osint_tools.py` — 1441 lines
@@ -64,11 +64,11 @@ Files scanned: 256
 - `actions\deep_research.py:329` — `deep_research()` (117 lines)
 - `ui.py:1339` — `__init__()` (116 lines)
 - `actions\game_updater.py:930` — `game_updater()` (115 lines)
-- `tests\test_all_critical.py:760` — `test_setup_overlay_refactor_preserves_behavior()` (115 lines)
+- `tests\test_all_critical.py:762` — `test_setup_overlay_refactor_preserves_behavior()` (115 lines)
 - `core\llm_client.py:672` — `_call_llm_impl()` (112 lines)
 - `actions\browser_control.py:449` — `_launch()` (104 lines)
 - `dashboard\server.py:1048` — `_register_file_routes()` (104 lines)
-- `tests\test_all_critical.py:1187` — `test_confirm_blocking_dialog_thread_safety()` (102 lines)
+- `tests\test_all_critical.py:1189` — `test_confirm_blocking_dialog_thread_safety()` (102 lines)
 - `core\portable_bundle.py:65` — `_write_bundle()` (101 lines)
 - `tests\test_action_launcher.py:211` — `test_chat_input_is_discoverable_and_does_not_drop_unsent_text()` (100 lines)
 - `actions\reminder.py:40` — `_write_notify_script()` (98 lines)
@@ -96,9 +96,9 @@ Files scanned: 256
 - `integrations\langchain_tools.py:253` — `lc_research_agent()` (87 lines)
 - `actions\computer_settings.py:669` — `computer_settings()` (86 lines)
 - `actions\desktop.py:569` — `desktop_control()` (86 lines)
+- `memory\hybrid_memory.py:318` — `_retrieve()` (86 lines)
 - `tools\live_grader.py:132` — `grade_overall()` (86 lines)
 - `ui.py:2358` — `__init__()` (85 lines)
-- `memory\hybrid_memory.py:305` — `_retrieve()` (85 lines)
 - `tools\eval_harness.py:125` — `run_tool_call_suite()` (85 lines)
 - `core\updater.py:510` — `_run_tests()` (84 lines)
 - `agent\executor.py:41` — `_run_generated_code()` (83 lines)

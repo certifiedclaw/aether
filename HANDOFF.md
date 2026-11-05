@@ -2,9 +2,9 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 03:37 UTC
+Generated: 2026-11-05 03:39 UTC
 
-## #143 — 2026-11-05 03:32 UTC — GitHub Copilot (Copilot App)
+## #144 — 2026-11-05 03:32 UTC — GitHub Copilot (Copilot App)
 
 Completed roadmap #58: task queue state persists atomically; queued tasks restore after restart; running tasks become interrupted and require explicit confirmation to rerun the original goal. Added list/status/cancel and resume controls plus persistence/routing regressions. Preserved existing #56 work.
 
@@ -14,13 +14,23 @@ Completed roadmap #58: task queue state persists atomically; queued tasks restor
 
 ---
 
-## #142 — 2026-11-05 03:17 UTC — GitHub Copilot (Copilot App)
+## #143 — 2026-11-05 03:17 UTC — GitHub Copilot (Copilot App)
 
 Implemented roadmap #56: local structured knowledge graph with conflict preservation and explicit resolution, prompt/tool integration, memory panel and dashboard controls, and export/import support. Verified compilation and 173 targeted regression tests.
 
 **Touched:** `memory/knowledge_graph.py`, `memory/memory_manager.py`, `core/memory_panel.py`, `core/memory_tools.py`, `core/tool_declarations.py`, `core/tool_dispatch.py`, `core/tool_router.py`, `core/chat_commands.py`, `core/prompt.txt`, `dashboard/server.py`, `dashboard/static/memory.html`, `tests/test_knowledge_graph.py`, `tests/test_memory_panel.py`, `tools/maintenance/data/roadmap.json`
 
 **Next steps:** Choose the next actionable item from the roadmap backlog; #88 and #93 still need machine-specific inputs or live measurements.
+
+---
+
+## #142 — 2026-11-05 03:30 UTC — GitHub Copilot
+
+Reduced additional idle memory use by stopping unconditional startup loads of hybrid memory's dense encoder and cross-encoder. Memory models now load asynchronously only after a retrieval or write needs them; one-candidate retrieval skips unnecessary reranker loading. Startup preloading remains opt-in via memory.preload_models=true. Focused memory suite: 26 passed; py_compile and config validation passed.
+
+**Touched:** `memory/hybrid_memory.py`, `config/config.example.json`, `docs/PERFORMANCE_NOTES.md`, `tests/test_hybrid_memory_lazy_models.py`, `tests/test_all_critical.py`
+
+**Next steps:** Observe idle RAM and first relevant memory retrieval on the user's machine; keep model preload disabled unless first-retrieval latency matters more than idle memory.
 
 ---
 

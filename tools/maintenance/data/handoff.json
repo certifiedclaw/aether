@@ -1,5 +1,5 @@
 {
-  "next_id": 144,
+  "next_id": 145,
   "entries": [
     {
       "id": 1,
@@ -2016,6 +2016,20 @@
     },
     {
       "id": 142,
+      "timestamp": "2026-11-05 03:30 UTC",
+      "by": "GitHub Copilot",
+      "summary": "Reduced additional idle memory use by stopping unconditional startup loads of hybrid memory's dense encoder and cross-encoder. Memory models now load asynchronously only after a retrieval or write needs them; one-candidate retrieval skips unnecessary reranker loading. Startup preloading remains opt-in via memory.preload_models=true. Focused memory suite: 26 passed; py_compile and config validation passed.",
+      "files": [
+        "memory/hybrid_memory.py",
+        "config/config.example.json",
+        "docs/PERFORMANCE_NOTES.md",
+        "tests/test_hybrid_memory_lazy_models.py",
+        "tests/test_all_critical.py"
+      ],
+      "next_steps": "Observe idle RAM and first relevant memory retrieval on the user's machine; keep model preload disabled unless first-retrieval latency matters more than idle memory."
+    },
+    {
+      "id": 143,
       "timestamp": "2026-11-05 03:17 UTC",
       "by": "GitHub Copilot (Copilot App)",
       "summary": "Implemented roadmap #56: local structured knowledge graph with conflict preservation and explicit resolution, prompt/tool integration, memory panel and dashboard controls, and export/import support. Verified compilation and 173 targeted regression tests.",
@@ -2038,7 +2052,7 @@
       "next_steps": "Choose the next actionable item from the roadmap backlog; #88 and #93 still need machine-specific inputs or live measurements."
     },
     {
-      "id": 143,
+      "id": 144,
       "timestamp": "2026-11-05 03:32 UTC",
       "by": "GitHub Copilot (Copilot App)",
       "summary": "Completed roadmap #58: task queue state persists atomically; queued tasks restore after restart; running tasks become interrupted and require explicit confirmation to rerun the original goal. Added list/status/cancel and resume controls plus persistence/routing regressions. Preserved existing #56 work.",

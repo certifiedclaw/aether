@@ -71,7 +71,7 @@
     },
     {
       "file": "tests\\test_all_critical.py",
-      "lines": 2185
+      "lines": 2158
     },
     {
       "file": "tests\\test_invariants.py",
@@ -418,8 +418,8 @@
     {
       "file": "memory\\hybrid_memory.py",
       "function": "_retrieve",
-      "lines": 85,
-      "at_line": 305
+      "lines": 86,
+      "at_line": 318
     },
     {
       "file": "memory\\memory_manager.py",
@@ -443,13 +443,13 @@
       "file": "tests\\test_all_critical.py",
       "function": "test_setup_overlay_refactor_preserves_behavior",
       "lines": 115,
-      "at_line": 760
+      "at_line": 762
     },
     {
       "file": "tests\\test_all_critical.py",
       "function": "test_confirm_blocking_dialog_thread_safety",
       "lines": 102,
-      "at_line": 1187
+      "at_line": 1189
     },
     {
       "file": "tests\\test_listen_mode.py",
@@ -512,7 +512,7 @@
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-11-05T03:36:56.003301+00:00",
-    "files_scanned": 256
+    "generated": "2026-11-05T03:38:51.696304+00:00",
+    "files_scanned": 257
   }
 }

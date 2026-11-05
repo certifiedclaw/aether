@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Do not hand-edit — rerun `python -m tools.maintenance.project_state` (or `run_all`) to refresh. This is meant to be the one file a new session (human or Claude) reads first to get oriented.
 
-Generated: 2026-11-05 03:36 UTC
+Generated: 2026-11-05 03:38 UTC
 Version: Aether v1.0.0
 
 ## Entry points
@@ -24,12 +24,12 @@ Version: Aether v1.0.0
 | `dashboard/` | 5 | 1,707 |
 | `dev_tools/` | 1 | 78 |
 | `integrations/` | 4 | 1,152 |
-| `memory/` | 7 | 1,598 |
+| `memory/` | 7 | 1,612 |
 | `plugins/` | 1 | 44 |
 | `security/` | 7 | 1,340 |
-| `tests/` | 97 | 18,124 |
+| `tests/` | 98 | 18,169 |
 | `tools/` | 24 | 3,759 |
-| **Total** | **256** | **69,218** |
+| **Total** | **257** | **69,277** |
 
 ## Modules with docstrings (top-level summary)
 
@@ -165,7 +165,7 @@ Version: Aether v1.0.0
 ### `memory/`
 - `memory\__init__.py` (1 lines, 0 classes, 0 functions)
 - `memory\config_manager.py` (171 lines, 1 classes, 8 functions)
-- `memory\hybrid_memory.py` (448 lines, 3 classes, 1 functions) — memory/hybrid_memory.py — Aether Hybrid Memory
+- `memory\hybrid_memory.py` (462 lines, 3 classes, 1 functions) — memory/hybrid_memory.py — Aether Hybrid Memory
 - `memory\knowledge_graph.py` (308 lines, 0 classes, 13 functions) — Small local knowledge graph with explicit handling of conflicting facts.
 - `memory\memory_manager.py` (239 lines, 0 classes, 12 functions)
 - `memory\rag.py` (221 lines, 2 classes, 0 functions) — memory/rag.py — Aether Hybrid RAG Engine
@@ -188,7 +188,7 @@ Version: Aether v1.0.0
 - `tests\stress_test.py` (369 lines, 0 classes, 15 functions) — stress_test.py — Aether Comprehensive Stress Test
 - `tests\test_action_launcher.py` (336 lines, 0 classes, 6 functions)
 - `tests\test_action_signatures.py` (44 lines, 0 classes, 4 functions) — Roadmap #16: the dead `session_memory` parameter is gone from actions/,
-- `tests\test_all_critical.py` (2186 lines, 0 classes, 90 functions)
+- `tests\test_all_critical.py` (2159 lines, 0 classes, 90 functions)
 - `tests\test_answer_check.py` (195 lines, 1 classes, 25 functions) — Roadmap #53 (self-check pass) and #55 (confidence / 'I don't know' flagging).
 - `tests\test_antivirus.py` (252 lines, 1 classes, 10 functions)
 - `tests\test_apply_handoff.py` (66 lines, 0 classes, 6 functions) — tools/apply_handoff_v12.py records the session once, through the handoff module.
@@ -223,6 +223,7 @@ Version: Aether v1.0.0
 - `tests\test_file_processor_privacy.py` (81 lines, 0 classes, 4 functions)
 - `tests\test_followup_routing.py` (82 lines, 0 classes, 10 functions) — Short follow-ups ("yes", "retry", "view") must keep their tools.
 - `tests\test_gemini_models.py` (288 lines, 1 classes, 31 functions) — The Gemini model dropdown asks Google which models the key can use.
+- `tests\test_hybrid_memory_lazy_models.py` (72 lines, 0 classes, 4 functions)
 - `tests\test_installer.py` (48 lines, 0 classes, 3 functions) — Focused tests for dependency-install batching and failure recovery.
 - `tests\test_invariants.py` (675 lines, 1 classes, 51 functions) — Whole-codebase invariants: properties that must hold across ALL tools / ALL inputs.
 - `tests\test_knowledge_graph.py` (128 lines, 0 classes, 9 functions)
@@ -309,14 +310,14 @@ Version: Aether v1.0.0
 - `tools\verify_local.py` (355 lines, 1 classes, 11 functions) — tools/verify_local.py -- one-shot health check for a real Aether install.
 
 ## Recent history (git log)
+- f854162 2026-11-04 Merge remote-tracking branch 'origin/master' into certifiedclaw-roadmap-backlog
 - 05bba31 2026-11-04 Complete structured memory and task resumption
+- 9089654 2026-11-04 Merge pull request #32 from certifiedclaw/certifiedclaw-reduce-resource-use
+- 0f973a3 2026-11-04 Merge remote-tracking branch 'origin/master' into certifiedclaw-reduce-resource-use
+- e891477 2026-11-04 Reduce idle Ollama resource use
+- bea7b16 2026-11-04 Merge pull request #31 from certifiedclaw/port/desktop-mate
+- 080c55b 2026-11-04 Add antivirus scanning and privacy tools
 - 15aa85b 2026-11-04 Merge pull request #29 from certifiedclaw/port/updater-48
-- 3bbc1c6 2026-11-04 Merge latest master into updater branch
-- 0d9f9d2 2026-11-04 Merge pull request #30 from certifiedclaw/port/easy-mode
-- 8f4af71 2026-11-04 Merge master into easy mode PR
-- 457204f 2026-11-04 Merge pull request #26 from certifiedclaw/work/roadmap-96
-- 82e05e1 2026-11-04 Merge master into work/roadmap-96
-- 9c95dfb 2026-11-04 Merge master into easy mode PR
 
 ## See also
 - `HEALTH_REPORT.md` — automated code health scan
