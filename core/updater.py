@@ -107,6 +107,28 @@ def _git(root: Path, *args: str, timeout: int = GIT_TIMEOUT) -> subprocess.Compl
                           text=True, timeout=timeout, env=env)
 
 
+def _split_command(command: str) -> list[str]:
+    if os.name != "nt":
+        return shlex.split(command)
+
+    import ctypes
+
+    shell32 = ctypes.WinDLL("shell32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    shell32.CommandLineToArgvW.argtypes = [ctypes.c_wchar_p, ctypes.POINTER(ctypes.c_int)]
+    shell32.CommandLineToArgvW.restype = ctypes.POINTER(ctypes.c_wchar_p)
+    kernel32.LocalFree.argtypes = [ctypes.c_void_p]
+    kernel32.LocalFree.restype = ctypes.c_void_p
+    argc = ctypes.c_int()
+    argv = shell32.CommandLineToArgvW(command, ctypes.byref(argc))
+    if not argv:
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        return [argv[i] for i in range(argc.value)]
+    finally:
+        kernel32.LocalFree(ctypes.cast(argv, ctypes.c_void_p))
+
+
 def _out(proc: subprocess.CompletedProcess) -> str:
     return (proc.stdout or "").strip()
 
@@ -314,7 +336,8 @@ def _begin(log: RunLog, root: Path, remote: str, **extra) -> None:
 def _inspect(root: Path, remote: str, log: RunLog):
     """Fetch and compare. Returns (result_if_stop, context). context holds
     branch/head/upstream/behind when the update may proceed."""
-    if _git(root, "rev-parse", "--is-inside-work-tree").returncode != 0:
+    top_level = _out(_git(root, "rev-parse", "--show-toplevel"))
+    if not top_level or os.path.normcase(str(Path(top_level).resolve())) != os.path.normcase(str(root.resolve())):
         log.event("not_a_repo", root=str(root))
         return UpdateResult("error", f"{root} is not a git checkout. "
                             "Run `python -m tools.maintenance.git_setup` first."), None
@@ -685,7 +708,7 @@ def main(argv: list | None = None) -> int:
     if args.action == "check":
         r = check(root=REPO_ROOT, remote=args.remote, echo=echo)
     else:
-        cmd = shlex.split(args.test_cmd) if args.test_cmd else None
+        cmd = _split_command(args.test_cmd) if args.test_cmd else None
         r = apply(root=REPO_ROOT, remote=args.remote, test_cmd=cmd, test_timeout=args.test_timeout,
                   echo=echo, stream_tests=args.verbose)
     print(r.message)

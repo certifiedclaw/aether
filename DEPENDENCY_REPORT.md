@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.dep_watcher` (or `run_all`) to refresh. Requires internet access.
 
-Generated: 2026-10-29T18:32:49.114962+00:00
+Generated: 2026-11-05T00:57:53.908229+00:00
 
 Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 3 versions behind" — it reports the latest available so you can decide whether to pin and bump.
 
@@ -10,8 +10,8 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 
 | Component | Latest | Source | Why it matters |
 |---|---|---|---|
-| [Ollama](https://github.com/ollama/ollama) | unknown (lookup failed: API releases: HTTP 403 (rate-limited or blocked); web: HTTP 403 (rate-limited or blocked); API tags: HTTP 403 (rate-limited or blocked)) | — | local LLM runtime — core/llm_client.py talks to it |
-| [faster-whisper (engine)](https://github.com/SYSTRAN/faster-whisper) | 1.2.1 | PyPI faster-whisper | default STT engine per requirements.txt |
+| [Ollama](https://github.com/ollama/ollama) | v0.40.14 | GitHub release | local LLM runtime — core/llm_client.py talks to it |
+| [faster-whisper (engine)](https://github.com/SYSTRAN/faster-whisper) | v1.2.1 | GitHub release | default STT engine per requirements.txt |
 | [Kokoro TTS](https://github.com/hexgrad/kokoro) | 0.9.4 | PyPI kokoro | offline TTS option, alternative to edge-tts |
 
 ## Python packages (from requirements.txt)
@@ -21,7 +21,7 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 | fastapi | 0.162.0 |  |
 | uvicorn | 0.54.0 |  |
 | cryptography | 50.0.2 |  |
-| python-multipart | 0.0.32 |  |
+| python-multipart | 0.0.33 |  |
 | PyQt6 | 6.12.0 |  |
 | psutil | 7.2.2 |  |
 | pillow | 13.0.0 |  |
@@ -48,13 +48,13 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 | faster-whisper | 1.2.1 |  |
 | edge-tts | 7.3.1 |  |
 | sentence-transformers | 6.2.0 |  |
-| PyMuPDF | 2.0 |  |
+| PyMuPDF | 2.1 |  |
 | python-whois | 0.9.6 |  |
-| dnspython | 2.9.1 |  |
-| watchdog | 6.0.0 |  |
+| dnspython | 2.9.2 |  |
+| watchdog | 7.0.0 |  |
 | keyboard | 0.13.5 |  |
 | python-docx | 1.2.0 |  |
-| langchain | 1.4.7 | Fast-moving API; pin a version once Aether's LangChain tool wiring is stable. |
+| langchain | 1.4.9 | Fast-moving API; pin a version once Aether's LangChain tool wiring is stable. |
 | langchain-community | 0.4.2 |  |
 | langchain-ollama | 1.1.0 |  |
 | llama-index | 0.14.25 | Splits into many llama-index-* subpackages frequently; check changelog before bumping. |

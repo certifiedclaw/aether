@@ -49,6 +49,7 @@ from core.tool_router import filter_tools as _filter_tools_for_turn
 from core.tool_router import filter_tools_hard as _filter_tools_hard
 
 _CLOUD_HISTORY_BUDGET = 8000   # message tokens for Gemini-routed turns (schema is extra)
+_QUICK_HISTORY_BUDGET = 1800   # keep recent context, but avoid replaying long chats for short turns
 
 
 def _decision(what: str, **detail) -> None:
@@ -123,6 +124,14 @@ def _load_cfg_for_degrade() -> dict:
 _FAKE_TOOL_CALL_RE = re.compile(r'^([a-zA-Z_][a-zA-Z0-9_]*)\((.*)\)\s*$', re.DOTALL)
 _FAKE_TOOL_KWARG_RE = re.compile(
     r'(\w+)\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^,")\']+))'
+)
+_ACTION_PROMISE_RE = re.compile(
+    r"\b(?:i(?:'ll| will)|let me|i'm going to|i am going to)\s+"
+    r"(?:quickly\s+)?(?:research|search|look\s+up|find\s+out|investigate|browse)\b",
+    re.I,
+)
+_DEEP_RESEARCH_REQUEST_RE = re.compile(
+    r"\b(?:deep(?:ly)?\s+research|thorough research|research in depth)\b", re.I
 )
 
 
@@ -251,6 +260,51 @@ def _normalize_recovered_call(name: str, args: dict) -> tuple[str, dict]:
     return name, args
 
 
+def _research_context_from_messages(messages: list[dict], max_chars: int = 2400) -> tuple[str, str]:
+    """Return the active user request and short prior context for research.
+
+    The model can accidentally reuse a previous tool's topic when a user
+    starts a new research request. The newest user message is authoritative;
+    older turns are supplied only so the research agent can resolve a
+    follow-up such as "go deeper on that".
+    """
+    conversational = [
+        m for m in messages
+        if isinstance(m, dict) and m.get("role") in ("user", "assistant")
+        and isinstance(m.get("content"), str) and m.get("content", "").strip()
+    ]
+    if not conversational:
+        return "", ""
+    current_index = next(
+        (i for i in range(len(conversational) - 1, -1, -1)
+         if conversational[i].get("role") == "user"),
+        None,
+    )
+    if current_index is None:
+        return "", ""
+    current_request = conversational[current_index]["content"].strip()
+    prior = conversational[:current_index]
+    context = "\n".join(
+        f"{m['role'].capitalize()}: {m['content'].strip()}" for m in prior[-6:]
+    )
+    if len(context) > max_chars:
+        context = context[-max_chars:]
+    return current_request, context
+
+
+def _has_explicit_research_subject(request: str) -> bool:
+    """Whether a research request names a subject instead of only referring back."""
+    generic = {
+        "a", "about", "again", "as", "can", "comprehensive", "could", "deep",
+        "deeply", "do", "find", "for", "full", "go", "in", "investigate",
+        "it", "look", "me", "more", "on", "please", "previous", "research",
+        "same", "search", "that", "the", "this", "thorough", "thoroughly",
+        "topic", "up", "want", "you",
+    }
+    words = re.findall(r"[a-z0-9]+", str(request or "").casefold())
+    return any(word not in generic for word in words)
+
+
 def _parse_tagged_tool_calls(text: str) -> list[tuple[str, dict]] | None:
     """Recover tool calls a model wrote as text instead of calling them.
 
@@ -303,7 +357,8 @@ class ConversationCoreMixin:
 
     def _prepare_conversation_messages(self, user_text: str, light: bool = False, tools: list | None = None,
                                        history_budget: int | None = None,
-                                       model_name: str = ""):
+                                       model_name: str = "", provider_name: str = "",
+                                       tier_name: str = ""):
         """Log the incoming message, store it to memory, trim history, and
         build the compressed message list to send to the LLM.
 
@@ -350,12 +405,29 @@ class ConversationCoreMixin:
                 trimmed = trimmed[1:]
             self._conversation = trimmed
 
+        tool_names = []
+        for tool in tools or []:
+            name = ((tool.get("function") or {}).get("name")
+                    if isinstance(tool, dict) else None)
+            name = name or (tool.get("name") if isinstance(tool, dict) else None)
+            if name and name not in tool_names:
+                tool_names.append(str(name))
+        runtime_facts = [
+            f"Provider for this turn: {provider_name or 'unknown'}.",
+            f"Model for this turn: {model_name or 'unknown'}.",
+            f"Routing tier: {tier_name or 'unknown'}.",
+            "Tools available for this turn: " + (", ".join(tool_names) if tool_names else "none"),
+            "These are configuration/routing facts, not a live connectivity check. "
+            "You are software, not conscious; do not claim feelings, perception, "
+            "or unobserved actions. Claim an action succeeded only after its tool result confirms it.",
+        ]
+        runtime_context = "[CURRENT RUNTIME FACTS — use for accurate self-reporting]\n" + "\n".join(runtime_facts)
         messages = [
             {
                 "role": "system",
-                "content": self._build_system_prompt(
+                "content": (self._build_system_prompt(
                     user_text, light=light, model_name=model_name
-                ),
+                ) + "\n\n" + runtime_context),
             }
         ] + list(self._conversation)
 
@@ -442,6 +514,29 @@ class ConversationCoreMixin:
                 except Exception:
                     targs = {}
 
+            # Research arguments generated by the model can accidentally
+            # carry forward a previous topic (for example France) after the
+            # user has named a new one (for example turtles). Bind the tool
+            # call to this turn's actual user request, and keep only bounded
+            # earlier conversation as reference for pronoun-only follow-ups.
+            if (tname == "langchain" and isinstance(targs, dict)
+                    and str(targs.get("action", "")).lower() == "research"):
+                current_request, prior_context = _research_context_from_messages(messages)
+                if current_request:
+                    targs = dict(targs)
+                    targs["task"] = current_request
+                    targs["context"] = prior_context
+            elif (tname == "web_search" and isinstance(targs, dict)
+                    and str(targs.get("mode", "")).lower()
+                    in {"deep", "research", "deep research", "deep_research"}):
+                current_request, _prior_context = _research_context_from_messages(messages)
+                # For a request that names a subject, the current wording wins
+                # over stale query arguments. For referential follow-ups such
+                # as "go deeper on that", retain the model-expanded query.
+                if current_request and _has_explicit_research_subject(current_request):
+                    targs = dict(targs)
+                    targs["query"] = current_request
+
             tc_id = tc.get("id", "")
             _trace.event("tool_request", tool=tname, args=targs, call_id=tc_id,
                          raw_arguments=fn.get("arguments", {}))
@@ -451,6 +546,7 @@ class ConversationCoreMixin:
                 _first_v = str(targs[_first_k])[:40]
                 _arg_hint = f" ({_first_k}={_first_v})"
             self.ui.write_log(f"SYS: ▶ {tname}{_arg_hint}")
+            _tool_started = time.monotonic()
 
             # ── Loop guard — block if tool called too many times ──
             if self._loop_guard:
@@ -475,6 +571,11 @@ class ConversationCoreMixin:
             if result != "__SILENT__":
                 all_silent = False
                 _tool_results.append((tname, result))
+            self.ui.write_log(
+                f"SYS: ✓ {tname} completed in "
+                f"{(time.monotonic() - _tool_started) * 1000:.1f} ms "
+                f"({len(str(result))} output chars)"
+            )
 
             tool_msg: dict = {
                 "role":    "tool",
@@ -588,6 +689,12 @@ class ConversationCoreMixin:
             _decision("chat_command_handled", user_text=user_text)
             return
 
+        # ── Answer to a pending "remember that as a rule?" (roadmap #96), and ──
+        # note whether THIS message is a correction worth proposing a rule for.
+        if self._answer_pending_rule(user_text):
+            return
+        self._correction_candidate = self._spot_correction(user_text)
+
         # ── Deterministic shortcuts for simple commands (volume, weather, ──
         # list files, open app). Small local models invent tool names/actions
         # or answer from imagination; these phrases need no model at all.
@@ -602,7 +709,16 @@ class ConversationCoreMixin:
         # get downgraded, so an in-progress task isn't interrupted.
         _turn_start = time.monotonic()  # for live_report — whole-turn wall time
         _has_active_task = bool(self._goals and self._goals.list_active())
-        _route = _classify_tier(user_text, has_active_task=_has_active_task)
+        # A prior assistant reply means short messages like "yes"/"retry"/"view"
+        # are continuations and must keep their tools (see tier_router).
+        with self._conversation_lock:
+            _follows_turn = any(
+                m.get("role") == "assistant" and m.get("content")
+                for m in self._conversation
+            )
+        _route = _classify_tier(
+            user_text, has_active_task=_has_active_task, follows_turn=_follows_turn
+        )
         _is_quick = _route.tier == _Tier.QUICK
         _trace.event("route", tier=_route.tier.name, reason=_route.reason,
                      has_active_task=_has_active_task, user_text=user_text)
@@ -684,6 +800,14 @@ class ConversationCoreMixin:
                 and ConversationCoreMixin._try_cached_response(self, user_text, _cache_scope, _turn_start)):
             return
 
+        _runtime_provider = _stream_kwargs.get("provider_override") or _primary_provider
+        _runtime_model = _stream_kwargs.get("model_override") or _prompt_model
+        if not _runtime_model:
+            if _runtime_provider == "gemini":
+                _runtime_model = get_gemini_settings()[1]
+            else:
+                _runtime_model = get_llm_settings()[1]
+
         # Tool exposure scales with tier: QUICK gets none (see above),
         # EVERYDAY gets only the category-relevant subset (core/tool_router)
         # instead of the full ~28-tool catalog on every ordinary turn, and
@@ -697,10 +821,14 @@ class ConversationCoreMixin:
             _turn_tools = _filter_tools_for_turn(self._tools_for_current_turn(), user_text)
         messages, _active_mem = self._prepare_conversation_messages(
             user_text, light=_is_quick, tools=_turn_tools,
-            model_name=_prompt_model,
-            history_budget=(_CLOUD_HISTORY_BUDGET
-                            if _stream_kwargs or _primary_provider in ("gemini", "openai_api")
-                            else None),
+            model_name=_runtime_model, provider_name=_runtime_provider,
+            tier_name=_route.tier.value,
+            history_budget=(
+                _CLOUD_HISTORY_BUDGET
+                if (_stream_kwargs.get("provider_override") in ("gemini", "openai_api")
+                    or _primary_provider in ("gemini", "openai_api"))
+                else _QUICK_HISTORY_BUDGET if _is_quick else None
+            ),
         )
         # For live_report: did memory injection actually surface anything?
         # None means "not attempted" (QUICK-tier turns skip retrieval
@@ -762,6 +890,10 @@ class ConversationCoreMixin:
                                 _turn_cancelled = True
                                 break
                             _streamed.append(event["text"])
+                        elif event["type"] == "token":
+                            _stream_writer = getattr(self.ui, "write_stream", None)
+                            if _stream_writer:
+                                _stream_writer(event["text"])
                         elif event["type"] == "done":
                             final_content    = event["content"]
                             final_tool_calls = event["tool_calls"]
@@ -991,7 +1123,11 @@ class ConversationCoreMixin:
                     assistant_msg = {"role": "assistant", "content": final_content}
                     messages.append(assistant_msg)
                     self._conversation.append(assistant_msg)
-                    self.ui.write_log(f"Aether: {final_content}")
+                    _stream_writer = getattr(self.ui, "write_stream", None)
+                    if _stream_writer:
+                        _stream_writer("", done=True)
+                    else:
+                        self.ui.write_log(f"Aether: {final_content}")
                     if _was_truncated:
                         self.speak(" …")
                     final_assistant_reply = final_content
@@ -1003,6 +1139,9 @@ class ConversationCoreMixin:
                     messages.append(assistant_msg)
                     self._conversation.append(assistant_msg)
                     self.ui.write_log(f"Aether: {final_content}")
+                    _stream_writer = getattr(self.ui, "write_stream", None)
+                    if _stream_writer:
+                        _stream_writer("", done=True)
                     self.speak(final_content)
                     final_assistant_reply = final_content
                     _llm_synthesized = True
@@ -1056,9 +1195,40 @@ class ConversationCoreMixin:
                 final_assistant_reply = final_content
                 break
 
+            if _DEEP_RESEARCH_REQUEST_RE.search(user_text):
+                for _tc in final_tool_calls:
+                    _fn = _tc.get("function", {})
+                    if _fn.get("name") != "web_search":
+                        continue
+                    _args = _fn.get("arguments", {})
+                    if isinstance(_args, str):
+                        try:
+                            _args = json.loads(_args)
+                        except Exception:
+                            _args = {}
+                    if isinstance(_args, dict):
+                        _args["mode"] = "deep_research"
+                        _fn["arguments"] = _args
+
             _tool_results, all_silent = self._execute_tool_calls(final_tool_calls, messages)
             _trace.event("tool_round_done", round=_round, all_silent=all_silent,
                          results=[{"tool": n, "result": r} for n, r in _tool_results])
+
+            _deep_research_call = False
+            if len(final_tool_calls) == 1:
+                _deep_args = final_tool_calls[0].get("function", {}).get("arguments", {})
+                if isinstance(_deep_args, str):
+                    try:
+                        _deep_args = json.loads(_deep_args)
+                    except Exception:
+                        _deep_args = {}
+                _deep_research_call = (
+                    (final_tool_calls[0].get("function", {}).get("name") == "web_search"
+                     and str((_deep_args or {}).get("mode", "")).lower()
+                     in {"deep", "research", "deep research", "deep_research"})
+                    or (final_tool_calls[0].get("function", {}).get("name") == "langchain"
+                        and str((_deep_args or {}).get("action", "")).lower() == "research")
+                )
 
             if self._cancel_current_turn.is_set():
                 _turn_cancelled = True
@@ -1106,6 +1276,19 @@ class ConversationCoreMixin:
                 break
             else:
                 _consecutive_silent_rounds = 0
+
+            if _deep_research_call and _tool_results:
+                _report = _tool_results[-1][1]
+                _report_msg = {"role": "assistant", "content": _report}
+                messages.append(_report_msg)
+                self._conversation.append(_report_msg)
+                self.ui.write_log(f"Aether: {_report}")
+                if _report.startswith("Deep research could not find"):
+                    self.speak("I couldn't find usable sources. The details are in chat.")
+                else:
+                    self.speak("The deep research report is ready in chat, with its source links.")
+                final_assistant_reply = _report
+                break
 
             from main import _NEEDS_LLM_ROUND  # lazy: avoids circular import at module load time
             if _tool_results and not any(n in _NEEDS_LLM_ROUND for n, _ in _tool_results):
@@ -1310,6 +1493,61 @@ class ConversationCoreMixin:
 
         if final_assistant_reply and _llm_synthesized:
             self._self_check_follow_up(user_text, final_assistant_reply, _tool_results)
+            self._propose_rule_follow_up()
+
+    # ── learning from corrections (roadmap #96, core/behavior_rules.py) ──────
+    def _answer_pending_rule(self, user_text: str) -> bool:
+        """True if this message was the yes/no to a rule proposal (handled here, no model turn)."""
+        try:
+            from core import behavior_rules
+            reply = behavior_rules.answer_pending(user_text)
+        except Exception as e:  # noqa: BLE001 - never block a turn
+            logger.debug("pending rule answer skipped: %s", e)
+            return False
+        if reply is None:
+            return False
+        self._obs.count("rules.answered")
+        self._conversation.append({"role": "user", "content": user_text})
+        self._conversation.append({"role": "assistant", "content": reply})
+        self.ui.write_log(f"You: {user_text}")
+        self.ui.write_log(f"Aether: {reply}")
+        self.speak(reply)
+        return True
+
+    def _spot_correction(self, user_text: str):
+        """(user_text, previous reply) if this message corrects Aether, else None. Set every turn."""
+        try:
+            from core import behavior_rules
+            from core.llm_client import get_config_flag
+            if not get_config_flag("learn_corrections", True):
+                return None
+            prior = behavior_rules.last_assistant_text(self._conversation)
+            if behavior_rules.looks_like_correction(user_text, prior):
+                return (user_text, prior)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("correction check skipped: %s", e)
+        return None
+
+    def _propose_rule_follow_up(self) -> None:
+        """After the reply to a correction: draft one rule and ask yes/no. Saves nothing itself."""
+        cand = getattr(self, "_correction_candidate", None)
+        self._correction_candidate = None
+        if not cand:
+            return
+        try:
+            from core import behavior_rules
+            rule = behavior_rules.draft_rule(*cand)
+            if not rule:
+                self._obs.count("rules.no_draft")
+                return
+            behavior_rules.set_pending(rule)
+            question = behavior_rules.question_for(rule)
+            self._obs.count("rules.proposed")
+            self._conversation.append({"role": "assistant", "content": question})
+            self.ui.write_log(f"Aether: {question}")
+            self.speak(question)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("rule proposal skipped: %s", e)
 
     def _self_check_follow_up(self, user_text: str, reply: str, tool_results: list) -> None:
         """Self-check pass + confidence flag (roadmap #53/#55). Opt-in

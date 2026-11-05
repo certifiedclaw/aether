@@ -83,13 +83,14 @@ def test_open_vscode_refuses_cmd_metacharacters_for_batch_launchers(dev_agent, b
     popen.assert_not_called()
 
 
-def test_open_vscode_allows_same_characters_for_real_executables(dev_agent):
+def test_open_vscode_allows_same_characters_for_real_executables(dev_agent, tmp_path):
     """Metacharacters only matter when cmd.exe is in the loop (.cmd/.bat)."""
     popen = MagicMock()
+    project_dir = tmp_path / "a & b"
     with patch.object(dev_agent, "_vscode_candidates", return_value=["/usr/bin/code"]), \
          patch.object(dev_agent.subprocess, "Popen", popen):
-        assert dev_agent._open_vscode(Path("/tmp/a & b")) is True
-    assert popen.call_args.args[0] == ["/usr/bin/code", "/tmp/a & b"]
+        assert dev_agent._open_vscode(project_dir) is True
+    assert popen.call_args.args[0] == ["/usr/bin/code", str(project_dir)]
 
 
 # ── computer_settings xrandr fallback ──────────────────────────────────────

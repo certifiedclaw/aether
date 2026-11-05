@@ -1,5 +1,5 @@
 {
-  "next_id": 129,
+  "next_id": 136,
   "entries": [
     {
       "id": 1,
@@ -1807,6 +1807,111 @@
         "docs/SERVER.md"
       ],
       "next_steps": "On iansserver/PC: enable api_server_enabled + token, run 'python -m tools.eval.run check' then promptfoo/inspect with the real model (not yet run against Ollama). Then #98 model arena can reuse this, or #100 MCP both ways."
+    },
+    {
+      "id": 129,
+      "timestamp": "2026-11-05 00:57 UTC",
+      "by": "GitHub Copilot App",
+      "summary": "Ported the 28 desktop-mate/Codex commits onto port/desktop-mate from master. Kept master tracing/cache/promise-retry and prompt behavior while integrating research, coding instructions, desktop companion, Gemini model discovery, and related fixes. Full suite: 1484 passed, 2 skipped; one unrelated POSIX-path expectation fails on Windows.",
+      "files": [
+        "actions/",
+        "assets/mate/",
+        "core/",
+        "dashboard/",
+        "desktop_mate.py",
+        "install.bat",
+        "install.sh",
+        "integrations/",
+        "main.py",
+        "mate_personality.py",
+        "readme.md",
+        "tests/",
+        "ui.py"
+      ],
+      "next_steps": "Review port/desktop-mate and decide whether to open its PR; test the Linux-path case in tests/test_shell_safety.py on Linux."
+    },
+    {
+      "id": 130,
+      "timestamp": "2026-11-05 01:03 UTC",
+      "by": "GitHub Copilot App",
+      "summary": "Fixed the Windows shell-safety test to use pytest's platform-native tmp_path instead of a hard-coded POSIX /tmp path; full suite passes (1485 passed, 2 skipped).",
+      "files": [
+        "tests/test_shell_safety.py"
+      ],
+      "next_steps": "No follow-up required for the Windows shell-safety test; retain cross-platform path fixtures in future tests."
+    },
+    {
+      "id": 131,
+      "timestamp": "2026-11-05 01:10 UTC",
+      "by": "GitHub Copilot App",
+      "summary": "Merged latest master into the roadmap #96 branch. Preserved the correction-learning feature alongside master's response cache docs and desktop-mate/runtime changes; retained both master handoffs and recorded the correction feature as a new entry after renumbering the colliding handoff IDs.",
+      "files": [
+        "readme.md",
+        "tools/maintenance/data/handoff.json",
+        "core/conversation_core.py",
+        "core/prompt_builder.py",
+        "config/config.example.json"
+      ],
+      "next_steps": "Run the focused correction, conversation, prompt, and memory tests plus py_compile; inspect and push the resolution commit if all pass."
+    },
+    {
+      "id": 132,
+      "timestamp": "2026-11-05 01:15 UTC",
+      "by": "GitHub Copilot App",
+      "summary": "Resolved PR #26 against the latest master. Kept the correction-learning feature and master's response-cache, tracing, and desktop-mate changes; combined both README sections, regenerated reports from merged maintenance data, and retained both master handoffs while assigning correction work a unique handoff ID. Updated the response-cache test host to explicitly stub the newly added correction hooks. Focused suite: 273 passed; full suite: 1579 passed, 2 skipped; py_compile: 53 changed Python files passed.",
+      "files": [
+        "HANDOFF.md",
+        "ROADMAP.md",
+        "readme.md",
+        "config/config.example.json",
+        "core/conversation_core.py",
+        "core/prompt_builder.py",
+        "tools/maintenance/data/handoff.json",
+        "tests/test_response_cache.py"
+      ],
+      "next_steps": "Review GitHub's updated mergeability after this branch is pushed; test correction-rule draft quality against a live Ollama model when available."
+    },
+    {
+      "id": 133,
+      "timestamp": "2026-11-05 01:11 UTC",
+      "by": "GitHub Copilot (Copilot App)",
+      "summary": "Merged latest origin/master into PR #30 and reconciled main.py reconfiguration: text-only mode still stops/disables TTS while master's selective TTS/STT rebuild plan and STT restart behavior remain intact. Ran preference/setup/reconfiguration tests and Python compilation.",
+      "files": [
+        "main.py",
+        "HANDOFF.md",
+        "tools/maintenance/data/handoff.json"
+      ],
+      "next_steps": "After the next master update, reconcile conflicts again and verify PR #30 mergeability; do not merge the PR."
+    },
+    {
+      "id": 134,
+      "timestamp": "2026-11-05 01:19 UTC",
+      "by": "GitHub Copilot (Copilot App)",
+      "summary": "Merged newly advanced master (including PR #26) into PR #30. Preserved learn-from-corrections behavior, master response-cache and other runtime changes, and easy-mode setup; resolved generated handoff/roadmap report conflicts while retaining both branches' history.",
+      "files": [
+        "HANDOFF.md",
+        "ROADMAP.md",
+        "tools/maintenance/data/handoff.json",
+        "core/behavior_rules.py",
+        "core/conversation_core.py",
+        "core/prompt_builder.py",
+        "core/ui_prefs.py"
+      ],
+      "next_steps": "Push the merge commit and confirm PR #30 is mergeable; do not merge it."
+    },
+    {
+      "id": 135,
+      "timestamp": "2026-11-05 01:26 UTC",
+      "by": "GitHub Copilot",
+      "summary": "Merged latest master into updater PR #29, regenerated the roadmap after resolving its timestamp-only conflict, and fixed Windows command parsing and updater-root validation found by the focused suite. Updater tests: 47 passed, 1 skipped; py_compile passed.",
+      "files": [
+        "core/updater.py",
+        "ROADMAP.md",
+        "tools/maintenance/data/roadmap.json",
+        "tools/maintenance/data/handoff.json",
+        "HANDOFF.md"
+      ],
+      "next_steps": "Push the merge commit and confirm PR #29 has been reevaluated for mergeability."
     }
   ]
 }

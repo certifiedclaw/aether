@@ -8,7 +8,7 @@ Local is the default, not a requirement: optional hosted model providers, web re
 
 - **Talk or type:** Use the microphone for speech input, or send text in the desktop chat.
 - **Browse actions:** Use the **Actions** tab for quick tasks, or choose **Browse All Actions** to search enabled capabilities, fill in action details, and launch them directly. Sensitive actions continue to use Aether's approval checks.
-- **Research:** Start a multi-step research task from the Research quick action when that integration is enabled. If it is unavailable, Aether offers a single-search fallback.
+- **Research:** Quick web search returns linked results. Ask for **deep research** to create a multi-angle search plan, read up to eight public web pages, compare evidence, and produce a cited report. Deep research works with Aether's configured model and does not require LangChain.
 - **Choose voice and model providers:** Configure Whisper or Vosk; Edge TTS, Kokoro, or ElevenLabs; and a local Ollama/LM Studio server or supported hosted providers.
 - **Use local memory:** Aether can retain facts and chat history locally between turns. It also includes memory backup, export/import, and maintenance commands.
 - **Connect optional integrations:** Use document retrieval, LangChain research, LlamaIndex, MCP servers, plugins, and the web dashboard when configured.
@@ -100,6 +100,10 @@ From a git checkout, `python -m core.updater check` reports whether new commits 
 
 Set `self_check_enabled` to `true` in your config and, after each reply, Aether asks the model to re-read its own answer once. A clear mistake becomes a short spoken correction; an answer the model rates below `self_check_min_confidence` (default 0.5) gets an offer to search the web. Because the reply has already been spoken, this arrives as a follow-up, not a rewrite. It is off by default because it adds one extra fast model call per checked reply, and it skips short replies, code, and answers that came from a tool.
 
+### Learning from corrections
+
+When you correct Aether ("no, not that", "stop adding emojis", "from now on use PowerShell commands") it replies as usual, then drafts one short rule and asks **yes/no**. Nothing is saved without a yes. Saved rules are applied to later prompts: style rules every time, topic rules only when your message mentions the topic, never more than three at once. See and change them with `/learned` (`add`, `edit <id>`, `forget <id>`, `off <id>`, `on <id>`) or on the dashboard's `/memory` page. Rules never hold personal facts, secrets, or anything about approvals and safety checks. They are a separate store from `/memory` facts, and not the same as `/rules` (trigger -> action automation). Turn it off with `"learn_corrections": false`.
+
 ### Response cache (optional)
 
 Set `"response_cache_enabled": true` to answer a repeated, self-contained factual question ("how does a transistor work") from a local cache instead of the model. It is deliberately narrow: it never caches anything that used a tool or injected memory, mentions you ("my", "I", "you"), points back into the conversation ("it", "that", "again"), or can change ("today", "latest", "price", "weather", "time"), and it skips creative or random requests. Entries are tied to the provider, model and system prompt, expire after `response_cache_ttl_s` (24 h), and are capped at `response_cache_max` (200). Stored in `response_cache.json` in the data folder; delete that file to clear it. Every lookup and store, including why something was not cached, appears in the trace (`cache_lookup`, `cache_store`).
@@ -109,6 +113,20 @@ Set `"response_cache_enabled": true` to answer a repeated, self-contained factua
 Use the chat to ask Aether to index a PDF, Markdown notes folder, or Obsidian vault, then ask questions about the indexed material. For example: “Index `C:\Notes\Obsidian`” and then “What did I write about local backups?” Answers from the built-in RAG engine include numbered source references with filenames and PDF page numbers when available. LlamaIndex retrieval answers include inline citations and a matching source list; summaries include their source list. Markdown files are supported without a separate Obsidian export.
 
 Create a portable bundle of chats, memory, indexed documents, goals, and non-secret settings with `python -m core.portable_bundle export [path.zip]`. Restore one with `python -m core.portable_bundle import path.zip`; importing replaces current data after saving a recovery bundle under `data/backups/`. Close Aether before either operation to keep the snapshot consistent and ensure restored files are not overwritten by in-memory state. API credentials are never included; configure them separately on the destination machine.
+
+## Easy mode: simple setup, big text
+
+On first run Aether shows a plain-language page: it picks settings that suit your computer, asks only "speak out loud?" and "text size", and one big **Get started** button finishes setup. Everything technical (speech, AI and voice engines, API keys) is behind **Advanced setup**, and the **Settings** button opens the full screen at any time.
+
+| Setting (config) | Default | What it does |
+|---|---|---|
+| `ui.simple_setup` | `true` | `false` goes straight to the full technical setup on first run |
+| `ui.text_scale` | `1.0` | `1.25` large, `1.5` extra large (also set from the setup page or Settings) |
+| `ui.min_font_pt` | `9` | nothing is drawn smaller than this after scaling (`0` turns it off) |
+| `ui.high_contrast` | `false` | brighter text and borders; takes effect after a restart |
+| `tts_enabled` | `true` | `false` = text only, Aether never speaks |
+
+The first-run wording, the size presets and the high-contrast colours are all in one file, `core/ui_prefs.py`.
 
 ## Desktop controls
 

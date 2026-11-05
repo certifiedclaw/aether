@@ -2,1453 +2,454 @@
   "todos": [],
   "large_files": [
     {
+      "file": "desktop_mate.py",
+      "lines": 835
+    },
+    {
       "file": "main.py",
-      "lines": 1196
+      "lines": 1252
     },
     {
       "file": "ui.py",
-      "lines": 3682
+      "lines": 4142
     },
     {
-      "file": "actions/extra_tools.py",
-      "lines": 1077
-    },
-    {
-      "file": "actions/browser_control.py",
+      "file": "actions\\browser_control.py",
       "lines": 941
     },
     {
-      "file": "actions/computer_settings.py",
+      "file": "actions\\computer_settings.py",
       "lines": 755
     },
     {
-      "file": "actions/file_processor.py",
-      "lines": 950
-    },
-    {
-      "file": "actions/file_controller.py",
-      "lines": 651
-    },
-    {
-      "file": "actions/game_updater.py",
-      "lines": 1052
-    },
-    {
-      "file": "actions/osint_tools.py",
-      "lines": 1355
-    },
-    {
-      "file": "actions/desktop.py",
+      "file": "actions\\desktop.py",
       "lines": 655
     },
     {
-      "file": "tests/test_invariants.py",
-      "lines": 674
+      "file": "actions\\extra_tools.py",
+      "lines": 1077
     },
     {
-      "file": "tests/test_all_critical.py",
+      "file": "actions\\file_controller.py",
+      "lines": 651
+    },
+    {
+      "file": "actions\\file_processor.py",
+      "lines": 950
+    },
+    {
+      "file": "actions\\game_updater.py",
+      "lines": 1052
+    },
+    {
+      "file": "actions\\osint_tools.py",
+      "lines": 1355
+    },
+    {
+      "file": "core\\conversation_core.py",
+      "lines": 1665
+    },
+    {
+      "file": "core\\llm_client.py",
+      "lines": 1574
+    },
+    {
+      "file": "core\\trace_log.py",
+      "lines": 1027
+    },
+    {
+      "file": "dashboard\\server.py",
+      "lines": 1333
+    },
+    {
+      "file": "tests\\test_all_critical.py",
       "lines": 2165
     },
     {
-      "file": "dashboard/server.py",
-      "lines": 1272
-    },
-    {
-      "file": "core/llm_client.py",
-      "lines": 1570
-    },
-    {
-      "file": "core/conversation_core.py",
-      "lines": 1427
-    },
-    {
-      "file": "core/trace_log.py",
-      "lines": 1027
+      "file": "tests\\test_invariants.py",
+      "lines": 674
     }
   ],
   "large_functions": [
     {
+      "file": "desktop_mate.py",
+      "function": "_draw_eyes",
+      "lines": 93,
+      "at_line": 578
+    },
+    {
+      "file": "desktop_mate.py",
+      "function": "_draw_extras",
+      "lines": 92,
+      "at_line": 699
+    },
+    {
       "file": "main.py",
       "function": "main",
       "lines": 145,
-      "at_line": 1048
+      "at_line": 1104
     },
     {
       "file": "main.py",
       "function": "run",
-      "lines": 133,
-      "at_line": 908
+      "lines": 142,
+      "at_line": 955
     },
     {
       "file": "main.py",
       "function": "runner",
       "lines": 87,
-      "at_line": 1103
+      "at_line": 1159
     },
     {
       "file": "ui.py",
       "function": "paintEvent",
       "lines": 140,
-      "at_line": 428
+      "at_line": 498
+    },
+    {
+      "file": "ui.py",
+      "function": "__init__",
+      "lines": 116,
+      "at_line": 1339
     },
     {
       "file": "ui.py",
       "function": "_build_llm_section",
-      "lines": 167,
-      "at_line": 1456
+      "lines": 180,
+      "at_line": 1645
     },
     {
       "file": "ui.py",
       "function": "_build_tts_section",
       "lines": 92,
-      "at_line": 1625
+      "at_line": 1827
     },
     {
       "file": "ui.py",
       "function": "__init__",
       "lines": 85,
-      "at_line": 1971
+      "at_line": 2358
     },
     {
       "file": "ui.py",
       "function": "__init__",
-      "lines": 86,
-      "at_line": 2097
+      "lines": 93,
+      "at_line": 2484
     },
     {
       "file": "ui.py",
       "function": "_build_right_panel",
       "lines": 278,
-      "at_line": 2453
+      "at_line": 2848
     },
     {
       "file": "ui.py",
       "function": "_open_action_catalog",
       "lines": 205,
-      "at_line": 2804
+      "at_line": 3199
     },
     {
       "file": "ui.py",
       "function": "_open_action_form",
       "lines": 149,
-      "at_line": 3045
+      "at_line": 3440
     },
     {
-      "file": "actions/reminder.py",
-      "function": "_write_notify_script",
-      "lines": 98,
-      "at_line": 40
-    },
-    {
-      "file": "actions/code_helper.py",
-      "function": "_screen_debug_action",
-      "lines": 92,
-      "at_line": 413
-    },
-    {
-      "file": "actions/extra_tools.py",
-      "function": "run_extra_tool",
-      "lines": 140,
-      "at_line": 937
-    },
-    {
-      "file": "actions/dev_agent.py",
-      "function": "_build_project",
-      "lines": 154,
-      "at_line": 401
-    },
-    {
-      "file": "actions/browser_control.py",
+      "file": "actions\\browser_control.py",
       "function": "browser_control",
       "lines": 87,
       "at_line": 847
     },
     {
-      "file": "actions/browser_control.py",
+      "file": "actions\\browser_control.py",
       "function": "_launch",
       "lines": 104,
       "at_line": 449
     },
     {
-      "file": "actions/computer_settings.py",
-      "function": "computer_settings",
-      "lines": 86,
-      "at_line": 669
+      "file": "actions\\code_helper.py",
+      "function": "_screen_debug_action",
+      "lines": 92,
+      "at_line": 431
     },
     {
-      "file": "actions/file_processor.py",
-      "function": "_process_image",
-      "lines": 90,
-      "at_line": 81
-    },
-    {
-      "file": "actions/file_processor.py",
-      "function": "_process_data",
-      "lines": 95,
-      "at_line": 313
-    },
-    {
-      "file": "actions/file_processor.py",
-      "function": "_process_video",
-      "lines": 127,
-      "at_line": 582
-    },
-    {
-      "file": "actions/file_processor.py",
-      "function": "_process_archive",
-      "lines": 97,
-      "at_line": 711
-    },
-    {
-      "file": "actions/game_updater.py",
-      "function": "game_updater",
-      "lines": 115,
-      "at_line": 930
-    },
-    {
-      "file": "actions/osint_tools.py",
-      "function": "tech_stack",
-      "lines": 127,
-      "at_line": 564
-    },
-    {
-      "file": "actions/osint_tools.py",
-      "function": "github_user_osint",
-      "lines": 81,
-      "at_line": 952
-    },
-    {
-      "file": "actions/osint_tools.py",
-      "function": "extract_metadata",
-      "lines": 88,
-      "at_line": 1058
-    },
-    {
-      "file": "actions/desktop.py",
-      "function": "set_wallpaper",
-      "lines": 89,
-      "at_line": 302
-    },
-    {
-      "file": "actions/desktop.py",
-      "function": "desktop_control",
-      "lines": 86,
-      "at_line": 569
-    },
-    {
-      "file": "actions/computer_control.py",
+      "file": "actions\\computer_control.py",
       "function": "computer_control",
       "lines": 154,
       "at_line": 354
     },
     {
-      "file": "agent/executor.py",
+      "file": "actions\\computer_settings.py",
+      "function": "computer_settings",
+      "lines": 86,
+      "at_line": 669
+    },
+    {
+      "file": "actions\\deep_research.py",
+      "function": "deep_research",
+      "lines": 117,
+      "at_line": 329
+    },
+    {
+      "file": "actions\\desktop.py",
+      "function": "set_wallpaper",
+      "lines": 89,
+      "at_line": 302
+    },
+    {
+      "file": "actions\\desktop.py",
+      "function": "desktop_control",
+      "lines": 86,
+      "at_line": 569
+    },
+    {
+      "file": "actions\\dev_agent.py",
+      "function": "_build_project",
+      "lines": 154,
+      "at_line": 401
+    },
+    {
+      "file": "actions\\extra_tools.py",
+      "function": "run_extra_tool",
+      "lines": 140,
+      "at_line": 937
+    },
+    {
+      "file": "actions\\file_processor.py",
+      "function": "_process_image",
+      "lines": 90,
+      "at_line": 81
+    },
+    {
+      "file": "actions\\file_processor.py",
+      "function": "_process_data",
+      "lines": 95,
+      "at_line": 313
+    },
+    {
+      "file": "actions\\file_processor.py",
+      "function": "_process_video",
+      "lines": 127,
+      "at_line": 582
+    },
+    {
+      "file": "actions\\file_processor.py",
+      "function": "_process_archive",
+      "lines": 97,
+      "at_line": 711
+    },
+    {
+      "file": "actions\\game_updater.py",
+      "function": "game_updater",
+      "lines": 115,
+      "at_line": 930
+    },
+    {
+      "file": "actions\\osint_tools.py",
+      "function": "tech_stack",
+      "lines": 127,
+      "at_line": 564
+    },
+    {
+      "file": "actions\\osint_tools.py",
+      "function": "github_user_osint",
+      "lines": 81,
+      "at_line": 952
+    },
+    {
+      "file": "actions\\osint_tools.py",
+      "function": "extract_metadata",
+      "lines": 88,
+      "at_line": 1058
+    },
+    {
+      "file": "actions\\reminder.py",
+      "function": "_write_notify_script",
+      "lines": 98,
+      "at_line": 40
+    },
+    {
+      "file": "agent\\executor.py",
       "function": "_run_generated_code",
       "lines": 83,
-      "at_line": 38
+      "at_line": 41
     },
     {
-      "file": "agent/executor.py",
+      "file": "agent\\executor.py",
       "function": "execute",
-      "lines": 127,
-      "at_line": 310
+      "lines": 139,
+      "at_line": 313
     },
     {
-      "file": "tests/test_listen_mode.py",
-      "function": "_harness",
-      "lines": 81,
-      "at_line": 163
+      "file": "core\\chat_commands.py",
+      "function": "_handle_chat_command",
+      "lines": 306,
+      "at_line": 70
     },
     {
-      "file": "tests/test_action_launcher.py",
-      "function": "test_action_launcher_builds_form_and_dispatches_values",
-      "lines": 138,
-      "at_line": 10
+      "file": "core\\conversation_core.py",
+      "function": "_prepare_conversation_messages",
+      "lines": 134,
+      "at_line": 358
     },
     {
-      "file": "tests/test_action_launcher.py",
-      "function": "test_chat_input_is_discoverable_and_does_not_drop_unsent_text",
-      "lines": 83,
-      "at_line": 196
+      "file": "core\\conversation_core.py",
+      "function": "_execute_tool_calls",
+      "lines": 96,
+      "at_line": 494
     },
     {
-      "file": "tests/test_all_critical.py",
-      "function": "test_setup_overlay_refactor_preserves_behavior",
-      "lines": 115,
-      "at_line": 760
+      "file": "core\\conversation_core.py",
+      "function": "_process_message_inner",
+      "lines": 690,
+      "at_line": 669
     },
     {
-      "file": "tests/test_all_critical.py",
-      "function": "test_confirm_blocking_dialog_thread_safety",
-      "lines": 102,
-      "at_line": 1178
-    },
-    {
-      "file": "tools/live_grader.py",
-      "function": "grade_overall",
-      "lines": 86,
-      "at_line": 132
-    },
-    {
-      "file": "tools/eval_harness.py",
-      "function": "run_tool_call_suite",
-      "lines": 85,
-      "at_line": 125
-    },
-    {
-      "file": "dashboard/openai_api.py",
-      "function": "build_router",
-      "lines": 92,
-      "at_line": 94
-    },
-    {
-      "file": "dashboard/server.py",
-      "function": "_ensure_network_access_windows",
-      "lines": 123,
-      "at_line": 190
-    },
-    {
-      "file": "dashboard/server.py",
-      "function": "_register_auth_routes",
-      "lines": 130,
-      "at_line": 686
-    },
-    {
-      "file": "dashboard/server.py",
-      "function": "_register_file_routes",
-      "lines": 104,
-      "at_line": 989
-    },
-    {
-      "file": "core/diagnostics.py",
+      "file": "core\\diagnostics.py",
       "function": "run_all",
       "lines": 91,
       "at_line": 22
     },
     {
-      "file": "core/llm_client.py",
-      "function": "_call_llm_impl",
-      "lines": 112,
-      "at_line": 657
-    },
-    {
-      "file": "core/llm_client.py",
-      "function": "_stream_openai_once",
-      "lines": 186,
-      "at_line": 960
-    },
-    {
-      "file": "core/llm_client.py",
-      "function": "_call_llm_stream_impl",
-      "lines": 190,
-      "at_line": 1380
-    },
-    {
-      "file": "core/llm_client.py",
-      "function": "_do_stream",
-      "lines": 93,
-      "at_line": 1447
-    },
-    {
-      "file": "core/echo.py",
+      "file": "core\\echo.py",
       "function": "is_user_speech",
       "lines": 94,
       "at_line": 197
     },
     {
-      "file": "core/smart_context.py",
-      "function": "compress_if_needed",
-      "lines": 96,
-      "at_line": 55
+      "file": "core\\listen_loops.py",
+      "function": "_listen_whisper",
+      "lines": 158,
+      "at_line": 142
     },
     {
-      "file": "core/conversation_core.py",
-      "function": "_prepare_conversation_messages",
-      "lines": 116,
-      "at_line": 304
+      "file": "core\\llm_client.py",
+      "function": "_call_llm_impl",
+      "lines": 112,
+      "at_line": 657
     },
     {
-      "file": "core/conversation_core.py",
-      "function": "_process_message_inner",
-      "lines": 608,
-      "at_line": 568
+      "file": "core\\llm_client.py",
+      "function": "_stream_openai_once",
+      "lines": 188,
+      "at_line": 960
     },
     {
-      "file": "core/portable_bundle.py",
+      "file": "core\\llm_client.py",
+      "function": "_call_llm_stream_impl",
+      "lines": 192,
+      "at_line": 1382
+    },
+    {
+      "file": "core\\llm_client.py",
+      "function": "_do_stream",
+      "lines": 95,
+      "at_line": 1449
+    },
+    {
+      "file": "core\\portable_bundle.py",
       "function": "_write_bundle",
       "lines": 101,
       "at_line": 65
     },
     {
-      "file": "core/chat_commands.py",
-      "function": "_handle_chat_command",
-      "lines": 250,
-      "at_line": 70
+      "file": "core\\prompt_builder.py",
+      "function": "_build_system_prompt",
+      "lines": 92,
+      "at_line": 212
     },
     {
-      "file": "core/listen_loops.py",
-      "function": "_listen_whisper",
-      "lines": 158,
-      "at_line": 139
+      "file": "core\\smart_context.py",
+      "function": "compress_if_needed",
+      "lines": 96,
+      "at_line": 55
     },
     {
-      "file": "memory/hybrid_memory.py",
+      "file": "dashboard\\openai_api.py",
+      "function": "build_router",
+      "lines": 92,
+      "at_line": 94
+    },
+    {
+      "file": "dashboard\\server.py",
+      "function": "_ensure_network_access_windows",
+      "lines": 123,
+      "at_line": 190
+    },
+    {
+      "file": "dashboard\\server.py",
+      "function": "_register_auth_routes",
+      "lines": 130,
+      "at_line": 687
+    },
+    {
+      "file": "dashboard\\server.py",
+      "function": "_register_file_routes",
+      "lines": 104,
+      "at_line": 1039
+    },
+    {
+      "file": "integrations\\langchain_tools.py",
+      "function": "lc_research_agent",
+      "lines": 87,
+      "at_line": 253
+    },
+    {
+      "file": "memory\\hybrid_memory.py",
       "function": "_retrieve",
       "lines": 85,
       "at_line": 305
+    },
+    {
+      "file": "tests\\test_action_launcher.py",
+      "function": "test_action_launcher_builds_form_and_dispatches_values",
+      "lines": 138,
+      "at_line": 10
+    },
+    {
+      "file": "tests\\test_action_launcher.py",
+      "function": "test_chat_input_is_discoverable_and_does_not_drop_unsent_text",
+      "lines": 100,
+      "at_line": 211
+    },
+    {
+      "file": "tests\\test_all_critical.py",
+      "function": "test_setup_overlay_refactor_preserves_behavior",
+      "lines": 115,
+      "at_line": 760
+    },
+    {
+      "file": "tests\\test_all_critical.py",
+      "function": "test_confirm_blocking_dialog_thread_safety",
+      "lines": 102,
+      "at_line": 1178
+    },
+    {
+      "file": "tests\\test_listen_mode.py",
+      "function": "_harness",
+      "lines": 81,
+      "at_line": 163
+    },
+    {
+      "file": "tools\\eval_harness.py",
+      "function": "run_tool_call_suite",
+      "lines": 85,
+      "at_line": 125
+    },
+    {
+      "file": "tools\\live_grader.py",
+      "function": "grade_overall",
+      "lines": 86,
+      "at_line": 132
     }
   ],
   "bare_except": [],
-  "print_calls": [
-    {
-      "file": "agent/executor.py",
-      "line": 92
-    },
-    {
-      "file": "agent/executor.py",
-      "line": 145
-    },
-    {
-      "file": "agent/executor.py",
-      "line": 157
-    },
-    {
-      "file": "agent/executor.py",
-      "line": 160
-    },
-    {
-      "file": "agent/executor.py",
-      "line": 211
-    },
-    {
-      "file": "agent/executor.py",
-      "line": 298
-    },
-    {
-      "file": "agent/executor.py",
-      "line": 316
-    },
-    {
-      "file": "agent/executor.py",
-      "line": 345
-    },
-    {
-      "file": "agent/executor.py",
-      "line": 357
-    },
-    {
-      "file": "agent/executor.py",
-      "line": 367
-    },
-    {
-      "file": "agent/executor.py",
-      "line": 382
-    },
-    {
-      "file": "agent/executor.py",
-      "line": 408
-    },
-    {
-      "file": "agent/task_queue.py",
-      "line": 67
-    },
-    {
-      "file": "agent/task_queue.py",
-      "line": 73
-    },
-    {
-      "file": "agent/task_queue.py",
-      "line": 99
-    },
-    {
-      "file": "agent/task_queue.py",
-      "line": 122
-    },
-    {
-      "file": "agent/task_queue.py",
-      "line": 203
-    },
-    {
-      "file": "agent/task_queue.py",
-      "line": 225
-    },
-    {
-      "file": "agent/task_queue.py",
-      "line": 227
-    },
-    {
-      "file": "agent/task_queue.py",
-      "line": 235
-    },
-    {
-      "file": "agent/error_handler.py",
-      "line": 58
-    },
-    {
-      "file": "agent/error_handler.py",
-      "line": 96
-    },
-    {
-      "file": "agent/error_handler.py",
-      "line": 100
-    },
-    {
-      "file": "agent/error_handler.py",
-      "line": 141
-    },
-    {
-      "file": "agent/planner.py",
-      "line": 82
-    },
-    {
-      "file": "agent/planner.py",
-      "line": 241
-    },
-    {
-      "file": "agent/planner.py",
-      "line": 245
-    },
-    {
-      "file": "agent/planner.py",
-      "line": 247
-    },
-    {
-      "file": "agent/planner.py",
-      "line": 251
-    },
-    {
-      "file": "agent/planner.py",
-      "line": 254
-    },
-    {
-      "file": "agent/planner.py",
-      "line": 259
-    },
-    {
-      "file": "agent/planner.py",
-      "line": 300
-    },
-    {
-      "file": "agent/planner.py",
-      "line": 303
-    },
-    {
-      "file": "tests/stress_test.py",
-      "line": 38
-    },
-    {
-      "file": "tests/stress_test.py",
-      "line": 325
-    },
-    {
-      "file": "tests/stress_test.py",
-      "line": 326
-    },
-    {
-      "file": "tests/stress_test.py",
-      "line": 327
-    },
-    {
-      "file": "tests/stress_test.py",
-      "line": 328
-    },
-    {
-      "file": "tests/stress_test.py",
-      "line": 329
-    },
-    {
-      "file": "tests/stress_test.py",
-      "line": 334
-    },
-    {
-      "file": "tests/stress_test.py",
-      "line": 342
-    },
-    {
-      "file": "tests/stress_test.py",
-      "line": 345
-    },
-    {
-      "file": "tests/stress_test.py",
-      "line": 346
-    },
-    {
-      "file": "tests/stress_test.py",
-      "line": 347
-    },
-    {
-      "file": "tests/stress_test.py",
-      "line": 364
-    },
-    {
-      "file": "tests/test_trace_log.py",
-      "line": 117
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 104
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 108
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 115
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 123
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 130
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 133
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 140
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 142
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 149
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 154
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 155
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 156
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 158
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 161
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 163
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 167
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 169
-    },
-    {
-      "file": "tools/trace_view.py",
-      "line": 173
-    },
-    {
-      "file": "tools/apply_handoff_v12.py",
-      "line": 165
-    },
-    {
-      "file": "tools/live_grader.py",
-      "line": 234
-    },
-    {
-      "file": "tools/live_grader.py",
-      "line": 236
-    },
-    {
-      "file": "tools/apply_roadmap_v12.py",
-      "line": 105
-    },
-    {
-      "file": "tools/apply_roadmap_v12.py",
-      "line": 107
-    },
-    {
-      "file": "tools/eval_harness.py",
-      "line": 458
-    },
-    {
-      "file": "tools/eval_harness.py",
-      "line": 459
-    },
-    {
-      "file": "tools/eval_harness.py",
-      "line": 463
-    },
-    {
-      "file": "tools/eval_harness.py",
-      "line": 464
-    },
-    {
-      "file": "tools/eval_harness.py",
-      "line": 468
-    },
-    {
-      "file": "tools/eval_harness.py",
-      "line": 471
-    },
-    {
-      "file": "tools/eval_harness.py",
-      "line": 476
-    },
-    {
-      "file": "tools/eval_harness.py",
-      "line": 480
-    },
-    {
-      "file": "tools/clean_memory.py",
-      "line": 56
-    },
-    {
-      "file": "tools/clean_memory.py",
-      "line": 62
-    },
-    {
-      "file": "tools/clean_memory.py",
-      "line": 63
-    },
-    {
-      "file": "tools/clean_memory.py",
-      "line": 72
-    },
-    {
-      "file": "tools/clean_memory.py",
-      "line": 75
-    },
-    {
-      "file": "tools/clean_memory.py",
-      "line": 76
-    },
-    {
-      "file": "tools/clean_memory.py",
-      "line": 78
-    },
-    {
-      "file": "tools/clean_memory.py",
-      "line": 85
-    },
-    {
-      "file": "tools/verify_local.py",
-      "line": 54
-    },
-    {
-      "file": "tools/verify_local.py",
-      "line": 349
-    },
-    {
-      "file": "tools/fix_local_state.py",
-      "line": 67
-    },
-    {
-      "file": "tools/fix_local_state.py",
-      "line": 69
-    },
-    {
-      "file": "tools/fix_local_state.py",
-      "line": 78
-    },
-    {
-      "file": "tools/fix_local_state.py",
-      "line": 80
-    },
-    {
-      "file": "tools/fix_local_state.py",
-      "line": 94
-    },
-    {
-      "file": "tools/fix_local_state.py",
-      "line": 98
-    },
-    {
-      "file": "tools/fix_local_state.py",
-      "line": 99
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 61
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 63
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 67
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 69
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 76
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 82
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 84
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 90
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 92
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 99
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 104
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 108
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 110
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 116
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 122
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 132
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 137
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 140
-    },
-    {
-      "file": "tools/secrets_cli.py",
-      "line": 141
-    },
-    {
-      "file": "dashboard/__main__.py",
-      "line": 24
-    },
-    {
-      "file": "dashboard/__main__.py",
-      "line": 31
-    },
-    {
-      "file": "dashboard/__main__.py",
-      "line": 32
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 271
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 283
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 284
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 298
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 299
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 301
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 302
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 304
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 335
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 363
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 365
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 378
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 380
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 389
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 391
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 401
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 403
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 405
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 406
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 629
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 656
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 1141
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 1146
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 1147
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 1156
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 1171
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 1172
-    },
-    {
-      "file": "dashboard/server.py",
-      "line": 1213
-    },
-    {
-      "file": "core/diagnostics.py",
-      "line": 134
-    },
-    {
-      "file": "core/config_validator.py",
-      "line": 197
-    },
-    {
-      "file": "core/tool_dispatch.py",
-      "line": 77
-    },
-    {
-      "file": "core/tool_dispatch.py",
-      "line": 140
-    },
-    {
-      "file": "core/tool_dispatch.py",
-      "line": 150
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 300
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 302
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 305
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 323
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 330
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 333
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 340
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 343
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 364
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 385
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 388
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 405
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 408
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 492
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 494
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 696
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 718
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 723
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 1545
-    },
-    {
-      "file": "core/llm_client.py",
-      "line": 1569
-    },
-    {
-      "file": "core/headless_ui.py",
-      "line": 91
-    },
-    {
-      "file": "core/stt.py",
-      "line": 22
-    },
-    {
-      "file": "core/stt.py",
-      "line": 36
-    },
-    {
-      "file": "core/stt.py",
-      "line": 44
-    },
-    {
-      "file": "core/stt.py",
-      "line": 120
-    },
-    {
-      "file": "core/stt.py",
-      "line": 129
-    },
-    {
-      "file": "core/stt.py",
-      "line": 136
-    },
-    {
-      "file": "core/doctor.py",
-      "line": 426
-    },
-    {
-      "file": "core/doctor.py",
-      "line": 428
-    },
-    {
-      "file": "core/observability.py",
-      "line": 31
-    },
-    {
-      "file": "core/config_home.py",
-      "line": 115
-    },
-    {
-      "file": "core/config_home.py",
-      "line": 198
-    },
-    {
-      "file": "core/tts.py",
-      "line": 183
-    },
-    {
-      "file": "core/tts.py",
-      "line": 202
-    },
-    {
-      "file": "core/tts.py",
-      "line": 270
-    },
-    {
-      "file": "core/tts.py",
-      "line": 277
-    },
-    {
-      "file": "core/tts.py",
-      "line": 293
-    },
-    {
-      "file": "core/tts.py",
-      "line": 300
-    },
-    {
-      "file": "core/tts.py",
-      "line": 305
-    },
-    {
-      "file": "core/tts.py",
-      "line": 307
-    },
-    {
-      "file": "core/portable_bundle.py",
-      "line": 406
-    },
-    {
-      "file": "core/listen_loops.py",
-      "line": 128
-    },
-    {
-      "file": "core/listen_loops.py",
-      "line": 293
-    },
-    {
-      "file": "core/listen_loops.py",
-      "line": 331
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 119
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 120
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 121
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 122
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 123
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 124
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 125
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 126
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 127
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 129
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 130
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 131
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 132
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 133
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 134
-    },
-    {
-      "file": "security/first_run.py",
-      "line": 141
-    },
-    {
-      "file": "memory/memory_manager.py",
-      "line": 45
-    },
-    {
-      "file": "memory/memory_manager.py",
-      "line": 68
-    },
-    {
-      "file": "memory/memory_manager.py",
-      "line": 124
-    },
-    {
-      "file": "tools/maintenance/roadmap.py",
-      "line": 97
-    },
-    {
-      "file": "tools/maintenance/roadmap.py",
-      "line": 107
-    },
-    {
-      "file": "tools/maintenance/roadmap.py",
-      "line": 109
-    },
-    {
-      "file": "tools/maintenance/roadmap.py",
-      "line": 127
-    },
-    {
-      "file": "tools/maintenance/roadmap.py",
-      "line": 129
-    },
-    {
-      "file": "tools/maintenance/roadmap.py",
-      "line": 138
-    },
-    {
-      "file": "tools/maintenance/roadmap.py",
-      "line": 180
-    },
-    {
-      "file": "tools/maintenance/roadmap.py",
-      "line": 182
-    },
-    {
-      "file": "tools/maintenance/dep_watcher.py",
-      "line": 262
-    },
-    {
-      "file": "tools/maintenance/dep_watcher.py",
-      "line": 264
-    },
-    {
-      "file": "tools/maintenance/publish.py",
-      "line": 99
-    },
-    {
-      "file": "tools/maintenance/project_state.py",
-      "line": 165
-    },
-    {
-      "file": "tools/maintenance/project_state.py",
-      "line": 167
-    },
-    {
-      "file": "tools/maintenance/health_check.py",
-      "line": 194
-    },
-    {
-      "file": "tools/maintenance/health_check.py",
-      "line": 196
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 40
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 41
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 44
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 46
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 52
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 54
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 59
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 61
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 63
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 65
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 66
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 67
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 68
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 69
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 70
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 71
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 72
-    },
-    {
-      "file": "tools/maintenance/git_setup.py",
-      "line": 73
-    },
-    {
-      "file": "tools/maintenance/handoff.py",
-      "line": 60
-    },
-    {
-      "file": "tools/maintenance/handoff.py",
-      "line": 67
-    },
-    {
-      "file": "tools/maintenance/handoff.py",
-      "line": 110
-    },
-    {
-      "file": "tools/maintenance/handoff.py",
-      "line": 112
-    },
-    {
-      "file": "tools/maintenance/run_all.py",
-      "line": 32
-    },
-    {
-      "file": "tools/maintenance/run_all.py",
-      "line": 35
-    },
-    {
-      "file": "tools/maintenance/run_all.py",
-      "line": 40
-    },
-    {
-      "file": "tools/maintenance/run_all.py",
-      "line": 45
-    },
-    {
-      "file": "tools/maintenance/run_all.py",
-      "line": 48
-    },
-    {
-      "file": "tools/maintenance/run_all.py",
-      "line": 50
-    },
-    {
-      "file": "tools/maintenance/run_all.py",
-      "line": 53
-    },
-    {
-      "file": "tools/maintenance/run_all.py",
-      "line": 89
-    },
-    {
-      "file": "tools/maintenance/run_all.py",
-      "line": 91
-    },
-    {
-      "file": "tools/maintenance/run_all.py",
-      "line": 94
-    },
-    {
-      "file": "tools/maintenance/run_all.py",
-      "line": 96
-    },
-    {
-      "file": "tools/maintenance/run_all.py",
-      "line": 98
-    }
-  ],
+  "print_calls": [],
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-10-30T22:19:19.840501+00:00",
-    "files_scanned": 204
+    "generated": "2026-11-05T01:19:53.293462+00:00",
+    "files_scanned": 242
   }
 }

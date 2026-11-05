@@ -61,16 +61,16 @@ REM never bare "pip" -- pip.exe cannot overwrite its own running
 REM executable on Windows, which is the exact error this project hit
 REM before. Non-fatal: an old pip can still install everything below.
 echo [INFO] Upgrading pip, setuptools, and wheel...
-python -m pip install --upgrade pip setuptools wheel
+python -m pip install --prefer-binary --upgrade pip setuptools wheel
 if errorlevel 1 echo [WARN] Could not upgrade pip/setuptools/wheel - continuing anyway.
 
 REM Step 6: install dependencies, with one automatic retry
 echo [INFO] Installing dependencies from requirements.txt...
-python -m pip install -r requirements.txt
+python -m pip install --prefer-binary -r requirements.txt
 if not errorlevel 1 goto :success
 
 echo [WARN] First attempt failed - retrying once...
-python -m pip install -r requirements.txt
+python -m pip install --prefer-binary -r requirements.txt
 if errorlevel 1 goto :deps_failed
 
 :success

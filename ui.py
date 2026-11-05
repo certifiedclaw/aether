@@ -17,7 +17,7 @@ from version import APP_NAME, __version__, version_string
 import psutil
 
 from PyQt6.QtCore import (
-    QEasingCurve, QMimeData, QObject, QPointF, QRectF, QSize, Qt,
+    QEasingCurve, QEvent, QMimeData, QObject, QPointF, QRectF, QSize, Qt,
     QTimer, QUrl, pyqtSignal,
 )
 from PyQt6.QtGui import (
@@ -40,6 +40,7 @@ def _base_dir() -> Path:
 
 BASE_DIR   = _base_dir()
 from core import config_home as _config_home
+from core import ui_prefs as _ui_prefs
 API_FILE   = _config_home.config_path()
 CONFIG_DIR = API_FILE.parent
 
@@ -78,6 +79,18 @@ class C:
     DARK      = "#141b1e"
     BAR_BG    = "#283438"
 
+
+def _load_ui_prefs():
+    """ui.* settings (core/ui_prefs.py), safe defaults on any problem."""
+    try:
+        return _ui_prefs.load(_config_home.load_config())
+    except Exception:
+        return _ui_prefs.UiPrefs()
+
+
+if _load_ui_prefs().high_contrast:       # brighter text/borders; read once at start-up
+    for _k, _v in _ui_prefs.CONTRAST_OVERRIDES.items():
+        setattr(C, _k, _v)
 
 ROUTE_COLORS = {"local": C.PRI, "remote": C.SEC, "cloud": C.ACC}
 
@@ -125,6 +138,63 @@ def detect_system_theme() -> str:
 
 def qcol(h: str, a: int = 255) -> QColor:
     c = QColor(h); c.setAlpha(a); return c
+
+
+# ── Text size (ui.text_scale / ui.min_font_pt, see core/ui_prefs.py) ────
+_ACTIVE_PREFS = None
+_P_PT, _P_SS, _P_SSOUT, _P_H, _P_W = ("_aether_base_pt", "_aether_base_ss", "_aether_ss_out",
+                                      "_aether_base_h", "_aether_base_w")
+
+
+def _scale_one(w, prefs) -> None:
+    """Scale one widget's font, stylesheet font sizes and fixed button/field sizes from
+    its ORIGINAL values (remembered on first sight), so repeated calls never compound."""
+    scale, floor = prefs.text_scale, prefs.min_font_pt
+    # stylesheet: a widget that restyled itself since our last pass has a new original
+    cur = w.styleSheet()
+    out = w.property(_P_SSOUT)
+    base = w.property(_P_SS)
+    if base is None or (out is not None and cur != out):
+        base = cur
+        w.setProperty(_P_SS, base)
+    new_ss = _ui_prefs.scale_stylesheet(base, scale, floor)
+    if new_ss != cur:
+        w.setStyleSheet(new_ss)
+    w.setProperty(_P_SSOUT, new_ss)
+    # font
+    bpt = w.property(_P_PT)
+    if bpt is None:
+        bpt = w.font().pointSizeF()
+        w.setProperty(_P_PT, bpt)
+    if bpt and bpt > 0:
+        f = w.font()
+        f.setPointSizeF(_ui_prefs.scaled_pt(float(bpt), scale, floor))
+        w.setFont(f)
+        if isinstance(w, QTextEdit):
+            w.document().setDefaultFont(f)
+    # fixed-size controls grow with their text
+    if isinstance(w, (QPushButton, QLineEdit, QComboBox, QLabel)):
+        for prop, lo, hi, setter, cap in (
+                (_P_H, w.minimumHeight(), w.maximumHeight(), w.setFixedHeight, 200),
+                (_P_W, w.minimumWidth(), w.maximumWidth(), w.setFixedWidth, 400)):
+            base_v = w.property(prop)
+            if base_v is None and lo == hi and 0 < lo < cap:
+                base_v = lo
+                w.setProperty(prop, lo)
+            if base_v:
+                setter(_ui_prefs.scaled_height(int(base_v), scale))
+
+
+def apply_text_scale(root, prefs=None) -> None:
+    """Apply the text-size settings to `root` and every widget inside it."""
+    global _ACTIVE_PREFS
+    prefs = prefs or _load_ui_prefs()
+    _ACTIVE_PREFS = prefs
+    try:
+        for w in [root] + root.findChildren(QWidget):
+            _scale_one(w, prefs)
+    except Exception:
+        pass
 
 
 # ── Bundled fonts (Rajdhani for display, system sans for body) ──────────
@@ -732,6 +802,7 @@ class MetricBar(QWidget):
 
 class LogWidget(QTextEdit):
     _sig = pyqtSignal(str)
+    _stream_sig = pyqtSignal(str, bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -758,9 +829,34 @@ class LogWidget(QTextEdit):
             }}
         """)
         self._sig.connect(self._append_entry)
+        self._stream_sig.connect(self._append_stream)
+        self._stream_active = False
 
     def append_log(self, text: str):
+        if self._stream_active and text.lower().startswith("aether:"):
+            self._stream_sig.emit("", True)
+            return
         self._sig.emit(text)
+
+    def append_stream(self, text: str, done: bool = False):
+        self._stream_sig.emit(text, done)
+
+    def _append_stream(self, text: str, done: bool):
+        if text and not self._stream_active:
+            cursor = self.textCursor()
+            cursor.movePosition(cursor.MoveOperation.End)
+            if not self.document().isEmpty():
+                cursor.insertBlock()
+            cursor.insertText("Aether: ")
+            self._stream_active = True
+        if text:
+            cursor = self.textCursor()
+            cursor.movePosition(cursor.MoveOperation.End)
+            cursor.insertText(text)
+            self.setTextCursor(cursor)
+            self.ensureCursorVisible()
+        if done:
+            self._stream_active = False
 
     def _append_entry(self, text: str):
         tl = text.lower()
@@ -822,7 +918,7 @@ class MessageInput(QPlainTextEdit):
         super().__init__(parent)
         self.setPlaceholderText("Ask Aether anything…  (/help for commands)")
         self.setToolTip(
-            "Enter adds a new line. Press Ctrl+Enter or use Send to send."
+            "Enter sends. Press Shift+Enter for a new line."
         )
         self.setAccessibleName("Message Aether")
         self.setTabChangesFocus(True)
@@ -831,9 +927,11 @@ class MessageInput(QPlainTextEdit):
         self._fit_height()
 
     def keyPressEvent(self, event):
+        # Enter (or Ctrl+Enter) sends; Shift+Enter falls through to the default
+        # handler, which inserts a line break.
         if (
             event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter)
-            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+            and not event.modifiers() & Qt.KeyboardModifier.ShiftModifier
         ):
             self.sendRequested.emit()
             return
@@ -1233,6 +1331,7 @@ class _DropCanvas(QWidget):
 class SetupOverlay(QWidget):
     # Emits a JSON string containing the full config dict
     done = pyqtSignal(str)
+    _gemini_models_sig = pyqtSignal(object)   # live model ids (list) or None, from a worker thread
 
     # ------------------------------------------------------------------ #
     _INPUT_STYLE = ""  # filled in __init__ after C is available
@@ -1297,12 +1396,41 @@ class SetupOverlay(QWidget):
         scroll.setWidget(content)
         outer.addWidget(scroll)
 
-        layout = QVBoxLayout(content)
-        layout.setContentsMargins(22, 16, 22, 16)
+        outer_layout = QVBoxLayout(content)
+        outer_layout.setContentsMargins(22, 16, 22, 16)
+        outer_layout.setSpacing(6)
+
+        # First run shows a plain-language page; everything technical is one click away
+        # ("Advanced setup"). Config mode (the Settings button) goes straight to the
+        # full screen. Wording and defaults: core/ui_prefs.py.
+        self._prefs = _ui_prefs.load({**_init, **_config_home.load_config()}
+                                     if mode == "init" else _init)
+        self._simple_box = None
+        use_simple = mode == "init" and self._prefs.simple_setup
+        if use_simple:
+            self._build_simple_page(outer_layout)
+
+        self._advanced_box = QWidget()
+        self._advanced_box.setStyleSheet("background: transparent;")
+        layout = QVBoxLayout(self._advanced_box)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
+        outer_layout.addWidget(self._advanced_box)
 
         # ── Header ──────────────────────────────────────────────────── #
-        if mode == "config":
+        W = _ui_prefs.WORDING
+        if use_simple:
+            back = QPushButton(W["simple"])
+            back.setFlat(True)
+            back.setCursor(Qt.CursorShape.PointingHandCursor)
+            back.setFont(QFont(FONT_BODY, 10))
+            back.setStyleSheet(f"QPushButton {{ color: {C.PRI}; background: transparent; "
+                               f"border: none; text-align: left; padding: 4px 0; }}")
+            back.clicked.connect(self._show_simple)
+            layout.addWidget(back, 0, Qt.AlignmentFlag.AlignLeft)
+            layout.addWidget(self._lbl(W["adv_title"], 12, True))
+            layout.addWidget(self._lbl(W["adv_sub"], 9, col=C.PRI_DIM))
+        elif mode == "config":
             layout.addWidget(self._lbl("CONFIGURATION", 12, True))
             layout.addWidget(self._lbl("Update Aether\u2019s settings and click Apply.", 8, col=C.PRI_DIM))
         else:
@@ -1313,11 +1441,18 @@ class SetupOverlay(QWidget):
         self._build_stt_section(layout, _init)
         self._build_llm_section(layout, _init)
         self._build_tts_section(layout, _init)
+        self._build_comfort_section(layout)
 
         # Set correct initial state for TTS UI
         self._set_tts(self._sel_tts)
 
+        # First run: start from the model that suits this computer, not an empty box.
+        if mode == "init" and not self._llm_model_input.text().strip():
+            self._llm_model_input.setText(_ui_prefs.pick_model(self._model_recs))
+
         self._build_action_buttons(layout, mode)
+        if use_simple:
+            self._advanced_box.hide()
 
     # ------------------------------------------------------------------ #
     # Shared widget-builder helpers (formerly local closures in __init__)
@@ -1378,6 +1513,8 @@ class SetupOverlay(QWidget):
                 }}
                 QPushButton:hover {{ color: {C.TEXT}; border: 1px solid {C.BORDER_B}; }}
             """)
+        if _ACTIVE_PREFS is not None:
+            _scale_one(btn, _ACTIVE_PREFS)
 
     # ------------------------------------------------------------------ #
     # Section builders (formerly inline in __init__)
@@ -1452,6 +1589,58 @@ class SetupOverlay(QWidget):
         ("gemini-2.0-flash",      "Gemini 2.0 Flash — previous gen"),
     ]
     GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
+
+    def _populate_gemini_models(self, live, selected: str | None = None) -> None:
+        """(Re)fill the Gemini model dropdown. `live` is the list of model ids the
+        key can use, or None to show the built-in list. Keeps the current choice."""
+        from core.gemini_models import merge_choices
+        combo = self._gemini_model_combo
+        keep = selected if selected is not None else (combo.currentData() or "")
+        combo.blockSignals(True)
+        try:
+            combo.clear()
+            for val, disp in merge_choices(self._GEMINI_MODELS, live, current=keep):
+                combo.addItem(disp, userData=val)
+            for i in range(combo.count()):
+                if combo.itemData(i) == keep:
+                    combo.setCurrentIndex(i)
+                    break
+        finally:
+            combo.blockSignals(False)
+
+    def _refresh_gemini_models(self) -> None:
+        """Ask Google (in a worker thread) which models the typed key can use."""
+        key = self._gemini_key_input.text().strip()
+        if not key:
+            from core.credentials import get_secret
+            key = get_secret("gemini_api_key", self._initial_config)
+        if not key:
+            self._gemini_refresh_btn.setToolTip("Enter a Gemini API key first.")
+            return
+        self._gemini_refresh_btn.setEnabled(False)
+        self._gemini_refresh_btn.setText("…")
+
+        def _work(k=key):
+            from core.gemini_models import fetch_available
+            try:
+                live = fetch_available(k)
+            except Exception:  # noqa: BLE001
+                live = None
+            try:
+                self._gemini_models_sig.emit(live)
+            except RuntimeError:        # the dialog was closed meanwhile
+                pass
+
+        threading.Thread(target=_work, daemon=True).start()
+
+    def _on_gemini_models(self, live) -> None:
+        self._gemini_refresh_btn.setEnabled(True)
+        self._gemini_refresh_btn.setText("↻")
+        self._populate_gemini_models(live if isinstance(live, list) else None)
+        self._gemini_refresh_btn.setToolTip(
+            "Ask Google which models your API key can use (sends only the key, to Google)"
+            if isinstance(live, list) else
+            "Couldn't reach Google or the key was rejected - showing the built-in list. Click to retry.")
 
     def _build_llm_section(self, layout, _init) -> None:
         layout.addWidget(self._lbl("AI ENGINE", 7, col=C.TEXT_DIM,
@@ -1575,15 +1764,28 @@ class SetupOverlay(QWidget):
         self._gemini_model_combo = QComboBox()
         self._gemini_model_combo.setFixedHeight(28)
         self._gemini_model_combo.setStyleSheet(self._COMBO_STYLE)
-        for val, disp in self._GEMINI_MODELS:
-            self._gemini_model_combo.addItem(disp, userData=val)
         _cur_gem_model = _init.get("llm_model", "gemini-3.8-flash") if self._sel_llm_provider == "gemini" else "gemini-3.8-flash"
-        for i in range(self._gemini_model_combo.count()):
-            if self._gemini_model_combo.itemData(i) == _cur_gem_model:
-                self._gemini_model_combo.setCurrentIndex(i)
-                break
-        gem_model_row.addWidget(self._gemini_model_combo)
+        self._populate_gemini_models(None, selected=_cur_gem_model)
+        gem_model_row.addWidget(self._gemini_model_combo, 1)
+        self._gemini_refresh_btn = QPushButton("↻")
+        self._gemini_refresh_btn.setFixedSize(28, 28)
+        self._gemini_refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._gemini_refresh_btn.setToolTip(
+            "Ask Google which models your API key can use (sends only the key, to Google)")
+        self._gemini_refresh_btn.setStyleSheet(f"""
+            QPushButton {{ background: transparent; color: {C.TEXT_DIM};
+                           border: 1px solid {C.BORDER}; border-radius: 3px; }}
+            QPushButton:hover {{ color: {C.TEXT}; border: 1px solid {C.BORDER_B}; }}
+            QPushButton:disabled {{ color: {C.TEXT_DIM}; }}
+        """)
+        self._gemini_refresh_btn.clicked.connect(self._refresh_gemini_models)
+        self._gemini_models_sig.connect(self._on_gemini_models)
+        gem_model_row.addWidget(self._gemini_refresh_btn)
         gem_lay.addLayout(gem_model_row)
+        # A key is already saved and Gemini is the chosen provider: look up the live
+        # list once now, so retired models disappear without the user doing anything.
+        if self._sel_llm_provider == "gemini" and self._gemini_key_input.text().strip():
+            QTimer.singleShot(0, self._refresh_gemini_models)
 
         layout.addWidget(self._llm_gemini_widget)
 
@@ -1715,6 +1917,188 @@ class SetupOverlay(QWidget):
         layout.addWidget(self._el_key_widget)
 
         layout.addWidget(self._sep())
+
+    # ------------------------------------------------------------------ #
+    # Plain-language first run + comfort settings (wording: core/ui_prefs.py)
+    # ------------------------------------------------------------------ #
+
+    def _big_btn(self, text: str, height: int = 46, pt: int = 12) -> QPushButton:
+        b = QPushButton(text)
+        b.setFixedHeight(height)
+        b.setFont(QFont(FONT_BODY, pt, QFont.Weight.Bold))
+        b.setCursor(Qt.CursorShape.PointingHandCursor)
+        return b
+
+    def _build_simple_page(self, outer_layout) -> None:
+        W = _ui_prefs.WORDING
+        box = QWidget()
+        box.setStyleSheet("background: transparent;")
+        v = QVBoxLayout(box)
+        v.setContentsMargins(0, 6, 0, 0)
+        v.setSpacing(12)
+        self._simple_box = box
+
+        def wrapped(txt, sz, bold=False, col=C.TEXT):
+            w = self._lbl(txt, sz, bold, col)
+            w.setWordWrap(True)
+            return w
+
+        v.addWidget(wrapped(W["title"], 20, True, C.TEXT))
+        v.addWidget(wrapped(W["subtitle"], 12, False, C.TEXT_MED))
+
+        tag = _ui_prefs.pick_model(self._model_recs)
+        card = QFrame()
+        card.setStyleSheet(f"QFrame {{ background: {C.PANEL}; border: 1px solid {C.BORDER}; "
+                           f"border-radius: 8px; }} QLabel {{ border: none; }}")
+        cv = QVBoxLayout(card)
+        cv.setContentsMargins(14, 10, 14, 10)
+        cv.setSpacing(4)
+        cv.addWidget(wrapped(W["picked"], 11, True, C.TEXT))
+        cv.addWidget(wrapped(W["picked_model"].format(tag=tag), 10, False, C.TEXT_MED))
+        cv.addWidget(wrapped(W["picked_voice"], 10, False, C.TEXT_MED))
+        v.addWidget(card)
+
+        # Speak out loud?
+        self._simple_speak = self._prefs.tts_enabled
+        v.addWidget(wrapped(W["ask_speak"], 12, True, C.TEXT))
+        speak_row = QHBoxLayout(); speak_row.setSpacing(8)
+        self._simple_speak_btns = {}
+        for key, label in ((True, W["speak_yes"]), (False, W["speak_no"])):
+            b = self._big_btn(label, 46, 12)
+            b.clicked.connect(lambda _, k=key: self._pick_simple_speak(k))
+            speak_row.addWidget(b)
+            self._simple_speak_btns[key] = b
+        v.addLayout(speak_row)
+        self._pick_simple_speak(self._simple_speak)
+
+        # Text size (applies instantly so the user can see the result)
+        self._simple_scale = self._prefs.text_scale
+        v.addWidget(wrapped(W["ask_size"], 12, True, C.TEXT))
+        size_row = QHBoxLayout(); size_row.setSpacing(8)
+        self._simple_size_btns = {}
+        for sid, label, scale in _ui_prefs.TEXT_SIZES:
+            b = self._big_btn(label, 40, 11)
+            b.clicked.connect(lambda _, sc=scale: self._pick_simple_size(sc))
+            size_row.addWidget(b)
+            self._simple_size_btns[sid] = b
+        v.addLayout(size_row)
+        self._pick_simple_size(self._simple_scale, apply=False)
+
+        go = self._big_btn(W["go"], 54, 14)
+        go.setStyleSheet(f"""
+            QPushButton {{ background: {C.PRI}; color: #001a22; border: none; border-radius: 8px; }}
+            QPushButton:hover {{ background: {C.GREEN}; }}
+        """)
+        go.clicked.connect(self._simple_go)
+        v.addSpacing(6)
+        v.addWidget(go)
+
+        adv = QPushButton(W["advanced"])
+        adv.setFlat(True)
+        adv.setCursor(Qt.CursorShape.PointingHandCursor)
+        adv.setFont(QFont(FONT_BODY, 10))
+        adv.setStyleSheet(f"QPushButton {{ color: {C.TEXT_MED}; background: transparent; border: none; "
+                          f"text-decoration: underline; padding: 6px; }} "
+                          f"QPushButton:hover {{ color: {C.PRI}; }}")
+        adv.clicked.connect(self._show_advanced)
+        v.addWidget(adv, 0, Qt.AlignmentFlag.AlignHCenter)
+        outer_layout.addWidget(box)
+
+    def _style_choice(self, btn: QPushButton, active: bool) -> None:
+        self._style_btn(btn, active)
+
+    def _pick_simple_speak(self, key: bool) -> None:
+        self._simple_speak = bool(key)
+        for k, b in self._simple_speak_btns.items():
+            self._style_choice(b, k == self._simple_speak)
+
+    def _pick_simple_size(self, scale: float, apply: bool = True) -> None:
+        self._simple_scale = scale
+        active = _ui_prefs.size_id(scale)
+        for sid, b in self._simple_size_btns.items():
+            self._style_choice(b, sid == active)
+        if apply:
+            self._preview_scale(scale)
+
+    def _preview_scale(self, scale: float) -> None:
+        """Re-scale this dialog (and the window behind it) right away."""
+        import dataclasses
+        prefs = dataclasses.replace(self._prefs, text_scale=scale)
+        self._prefs = prefs
+        top = self.window()
+        apply_text_scale(top if top is not None else self, prefs)
+        self._recenter()
+
+    def eventFilter(self, obj, event):
+        """Keep the dialog centred when the window is resized or first shown."""
+        try:
+            if obj is self.parentWidget() and event.type() in (QEvent.Type.Resize, QEvent.Type.Show):
+                self._recenter()
+        except Exception:
+            pass
+        return False
+
+    def _recenter(self) -> None:
+        par = self.parentWidget()
+        if par is None:
+            return
+        if not getattr(self, "_filter_on", False):
+            par.installEventFilter(self)
+            self._filter_on = True
+        sc = self._prefs.text_scale
+        base_w = 560
+        if self._simple_box is not None and self._simple_box.isVisible():
+            want_h = self._simple_box.sizeHint().height() + 100
+        else:
+            want_h = 680
+        w = min(int(base_w * max(1.0, sc * 0.9)), max(par.width() - 20, 400))
+        h = min(max(want_h, 420), max(par.height() - 20, 420))
+        self.setGeometry((par.width() - w) // 2, (par.height() - h) // 2, w, h)
+
+    def _show_advanced(self) -> None:
+        if self._simple_box is not None:
+            self._simple_box.hide()
+        self._advanced_box.show()
+        self._recenter()
+
+    def _show_simple(self) -> None:
+        self._advanced_box.hide()
+        if self._simple_box is not None:
+            self._simple_box.show()
+        self._recenter()
+
+    def _simple_go(self) -> None:
+        """Finish setup with the settings Aether chose for this computer."""
+        cfg = _ui_prefs.simple_config(
+            model_tag=_ui_prefs.pick_model(self._model_recs),
+            speak=self._simple_speak, text_scale=self._simple_scale)
+        self.done.emit(json.dumps(cfg))
+
+    def _build_comfort_section(self, layout) -> None:
+        """Speak-aloud switch and text size, for the full settings screen."""
+        W = _ui_prefs.WORDING
+        layout.addWidget(self._sep())
+        layout.addWidget(self._lbl(W["speak_row"].upper(), 7, col=C.TEXT_DIM,
+                                   align=Qt.AlignmentFlag.AlignLeft))
+        self._sel_speak = "yes" if self._prefs.tts_enabled else "no"
+        row, self._speak_btns = self._toggle_row(
+            [("yes", W["speak_yes"]), ("no", W["speak_no"])],
+            lambda: self._sel_speak, lambda k: setattr(self, "_sel_speak", k))
+        layout.addLayout(row)
+        layout.addWidget(self._lbl(W["size_row"], 7, col=C.TEXT_DIM,
+                                   align=Qt.AlignmentFlag.AlignLeft))
+        self._sel_size = _ui_prefs.size_id(self._prefs.text_scale)
+        row, self._size_btns = self._toggle_row(
+            [(sid, label) for sid, label, _ in _ui_prefs.TEXT_SIZES],
+            lambda: self._sel_size, self._set_size_choice)
+        layout.addLayout(row)
+
+    def _set_size_choice(self, sid: str) -> None:
+        prev = getattr(self, "_sel_size", None)
+        self._sel_size = sid
+        if prev is not None and prev != sid and hasattr(self, "_size_btns"):
+            scale = next(sc for i, _, sc in _ui_prefs.TEXT_SIZES if i == sid)
+            self._preview_scale(scale)
 
     def _build_action_buttons(self, layout, mode) -> None:
         # ── Action buttons ─────────────────────────────────────────────── #
@@ -1962,6 +2346,9 @@ class SetupOverlay(QWidget):
         }
         if self._sel_stt == "vosk" and stt_model:
             cfg["vosk_model_path"] = stt_model
+        cfg["tts_enabled"] = getattr(self, "_sel_speak", "yes") != "no"
+        cfg["ui.text_scale"] = next((sc for i, _, sc in _ui_prefs.TEXT_SIZES
+                                     if i == getattr(self, "_sel_size", "normal")), 1.0)
         self.done.emit(json.dumps(cfg))
 
 
@@ -2150,6 +2537,7 @@ class MainWindow(QMainWindow):
         self._update_metrics()
 
         self._log_sig.connect(self._log.append_log)
+        self._log_sig.connect(self._on_log_for_mate)
         self._clear_log_sig.connect(self._log.clear)
         self._chat_sessions_sig.connect(self._set_chat_sessions)
         self._state_sig.connect(self._apply_state)
@@ -2165,6 +2553,7 @@ class MainWindow(QMainWindow):
         self._ready = self._check_config()
         if not self._ready:
             self._show_setup()
+        apply_text_scale(self)      # ui.text_scale / ui.min_font_pt (core/ui_prefs.py)
 
         sc_mute = QShortcut(QKeySequence("F4"), self)
         sc_mute.activated.connect(self._toggle_mute)
@@ -2178,9 +2567,14 @@ class MainWindow(QMainWindow):
         sc_newchat.activated.connect(self._request_new_chat)
         sc_focus_input = QShortcut(QKeySequence("Ctrl+L"), self)
         sc_focus_input.activated.connect(self._focus_input)
+        sc_mate = QShortcut(QKeySequence("Ctrl+Shift+M"), self)
+        sc_mate.activated.connect(self._toggle_mate)
 
         self._collapsed = False
         self._saved_size = None
+
+        self._mate = None
+        self._init_desktop_mate()
 
     def _toggle_fullscreen(self):
         if self.isFullScreen():
@@ -2220,7 +2614,8 @@ class MainWindow(QMainWindow):
             self._log.setMinimumHeight(100 if compact else 200)
             self.orb.setFixedHeight(44 if compact else 58)
             self._chat_subtitle.setVisible(not compact)
-            self._stats_heading.setVisible(not compact)
+            # _stats_heading is parentless and intentionally hidden (the reply summary
+            # line replaced it); showing it here popped up a stray top-level window.
             self._input_hint.setVisible(not compact)
             self._update_prompt_suggestions()
         cw = self.centralWidget()
@@ -2588,7 +2983,7 @@ class MainWindow(QMainWindow):
         input_heading = QHBoxLayout()
         input_heading.addWidget(_section_label("Message"))
         input_heading.addStretch()
-        input_hint = QLabel("Enter for a new line  ·  Ctrl+Enter to send  ·  Ctrl+L to focus")
+        input_hint = QLabel("Enter to send  ·  Shift+Enter for a new line  ·  Ctrl+L to focus")
         self._input_hint = input_hint
         input_hint.setFont(QFont(FONT_BODY, 8))
         input_hint.setStyleSheet(f"color: {C.TEXT_DIM}; background: transparent;")
@@ -3420,10 +3815,64 @@ class MainWindow(QMainWindow):
             f"color: {status[1]}; background: transparent;"
         )
         show_stop = state in ("THINKING", "PROCESSING", "SPEAKING") and bool(self.on_stop_command)
-        self._send_btn.setVisible(not show_stop)
+        # Keep Send available while Aether works or speaks. Users may queue a
+        # written follow-up at any time; Stop remains alongside it for an
+        # explicit cancel.
+        self._send_btn.setVisible(True)
         self._stop_btn.setVisible(show_stop)
         if state == "ERROR":
             self.orb.flash_error()
+        mate = getattr(self, "_mate", None)
+        if mate is not None:
+            mate.on_app_state(state)
+
+    # ── Desktop mate (floating companion, see desktop_mate.py) ───────────
+    def _init_desktop_mate(self, force: bool = False):
+        """Create the floating companion. Config keys (all default true):
+        desktop_mate, desktop_mate_bubbles, desktop_mate_personality. It is purely cosmetic, so any
+        failure here is logged and swallowed -- it must never stop Aether
+        from starting."""
+        try:
+            cfg = _config_home.load_config()
+        except Exception:
+            cfg = {}
+        if not force and not cfg.get("desktop_mate", True):
+            return
+        try:
+            from desktop_mate import DesktopMate
+            mate = DesktopMate(assets_dir=str(BASE_DIR / "assets" / "mate"))
+            mate.show_bubbles = bool(cfg.get("desktop_mate_bubbles", True))
+            mate.chatty = bool(cfg.get("desktop_mate_personality", True))
+            mate.activated.connect(self._show_main_from_mate)
+            mate.show()
+            self._mate = mate
+        except Exception as exc:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).warning("Desktop mate unavailable: %s", exc)
+            self._mate = None
+
+    def _toggle_mate(self):
+        mate = getattr(self, "_mate", None)
+        if mate is None:
+            self._init_desktop_mate(force=True)
+        else:
+            mate.setVisible(not mate.isVisible())
+
+    def _show_main_from_mate(self):
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+
+    def _on_log_for_mate(self, text: str):
+        mate = getattr(self, "_mate", None)
+        if mate is not None:
+            mate.on_log_line(text)
+
+    def closeEvent(self, event):
+        mate = getattr(self, "_mate", None)
+        if mate is not None:
+            mate.close()
+        super().closeEvent(event)
 
     def _check_config(self) -> bool:
         if not API_FILE.exists(): return False
@@ -3448,6 +3897,7 @@ class MainWindow(QMainWindow):
         )
         ov.done.connect(self._on_setup_done)
         ov.show()
+        ov._recenter()
         self._overlay = ov
 
     def _on_setup_done(self, config_json: str):
@@ -3462,6 +3912,7 @@ class MainWindow(QMainWindow):
         if self._overlay:
             self._overlay.hide()
             self._overlay = None
+        apply_text_scale(self)
         self._apply_state("LISTENING")
         llm = cfg.get("llm_model", "")
         stt = cfg.get("stt_engine", "")
@@ -3488,6 +3939,8 @@ class MainWindow(QMainWindow):
         )
         ov.done.connect(self._on_config_done)
         ov.show()
+        apply_text_scale(ov)
+        ov._recenter()
         self._overlay = ov
 
     def _on_config_done(self, config_json: str):
@@ -3501,6 +3954,7 @@ class MainWindow(QMainWindow):
         if self._overlay:
             self._overlay.hide()
             self._overlay = None
+        apply_text_scale(self)
         llm = cfg.get("llm_model", "")
         stt = cfg.get("stt_engine", "")
         tts = cfg.get("tts_engine", "")
@@ -3609,6 +4063,12 @@ class AetherUI:
             pass
         try:
             self._win._log_sig.emit(text)
+        except RuntimeError:
+            pass
+
+    def write_stream(self, text: str, done: bool = False):
+        try:
+            self._win._log.append_stream(text, done)
         except RuntimeError:
             pass
 
