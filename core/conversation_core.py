@@ -355,7 +355,8 @@ def _wrap_untrusted(tool: str, result) -> str:
     (a closing tag inside it is defused so it cannot fake the end), and prompt.txt says the
     contents never carry authority. This is a hint to the model, not a boundary: the
     enforcement that matters is the per-turn tool allowlist and the risk gates."""
-    text = str(result).replace("</tool_result", "<\\/tool_result")
+    text = (str(result).replace("</tool_result", "<\\/tool_result")
+            .replace("<tool_result", "<\\tool_result"))
     name = re.sub(r"[^A-Za-z0-9_.:-]", "_", str(tool))[:64]
     return f'<tool_result tool="{name}" trust="untrusted">\n{text}\n</tool_result>'
 
