@@ -2,7 +2,7 @@
 
 > **Auto-rendered** from `tools/maintenance/data/roadmap.json`. Don't hand-edit this file — use `python -m tools.maintenance.roadmap`.
 
-Generated: 2026-11-05 01:19 UTC
+Generated: 2026-11-05 01:21 UTC
 
 ## In progress
 
@@ -13,7 +13,6 @@ Generated: 2026-11-05 01:19 UTC
 
 ## Backlog
 
-- [ ] **#48** [F0] Auto-update with rollback: pull, run tests, roll back on failure `medium`
 - [ ] **#56** [F1] Structured memory: small knowledge graph with conflict handling `medium`
 - [ ] **#58** [F1] Task resumption after interruption or restart `medium`
   - Related to #19.
@@ -152,6 +151,8 @@ Generated: 2026-11-05 01:19 UTC
   - Implemented portable ZIP export/import for named chats, long-term memory, SQLite memory, goals, basic RAG index, Chroma/LlamaIndex index, and non-secret settings. Import validates the manifest, archive size, member paths, JSON, and SQLite integrity; rejects symlinks/traversal; replaces non-secret settings while preserving destination credentials; and writes a recovery bundle before replacement. CLI usage and close-app requirement are documented in README. Round-trip and safety tests pass; 47 focused tests passed (1 skipped), changed Python files compile, diff check passes. Verified #45 was backlog on origin/master before starting.
 - [x] **#46** [F0] Resource governor: pause heavy jobs when other containers (Palworld) need CPU/RAM
 - [x] **#47** [F0] Cost and speed dashboard: tokens/s, memory use, latency per model
+- [x] **#48** [F0] Auto-update with rollback: pull, run tests, roll back on failure
+  - Done as core/updater.py (python -m core.updater check|apply|log). Fast-forward only; refuses dirty tracked tree, local commits, diverged or detached branches. Records HEAD, ff-merges, runs the test command (default full pytest, 900s timeout, or --test-cmd), and resets --hard to the recorded HEAD if tests fail, time out, cannot start, or Ctrl-C. Never installs packages; flags requirements changes. Manual only. Logging: timed live progress (-v streams tests), update_log.jsonl summary per run (check too), update_runs/<id>.jsonl step-by-step flushed per event (crash-safe), update_runs/<id>.tests.log full output (2MB cap), phase timings, parsed failed tests and summary, env context, URL credentials masked, newest 25 runs kept, index rotates at 512KB, unfinished runs flagged as interrupted, timeout kills the whole test process group, log viewer with --run/--json. 48 tests on real git repos; mutation-checked rollback, dirty-tree guard, secret masking, per-event flush and Ctrl-C rollback. Not yet run on the real Windows install (process-group kill is POSIX-only there; falls back to killing the runner); no /update chat command or doctor hook yet.
 - [x] **#49** [F0] Crash reporter: sanitized report saved locally
 - [x] **#50** [F0] Telemetry that stays local: usage stats for the owner only
   - Done: core/usage_stats.py + /stats [days]. Local-only summary of logs Aether already writes (perf.jsonl, audit.jsonl, crashes/): model rounds per day/route/model, busiest hours, top tools, approval-denied rate, crash count. No message text read, nothing sent, no new collection. 2 tests in tests/test_usage_and_logs.py.

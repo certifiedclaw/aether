@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 01:19 UTC
+Generated: 2026-11-05 01:26 UTC
+
+## #135 — 2026-11-05 01:26 UTC — GitHub Copilot
+
+Merged latest master into updater PR #29, regenerated the roadmap after resolving its timestamp-only conflict, and fixed Windows command parsing and updater-root validation found by the focused suite. Updater tests: 47 passed, 1 skipped; py_compile passed.
+
+**Touched:** `core/updater.py`, `ROADMAP.md`, `tools/maintenance/data/roadmap.json`, `tools/maintenance/data/handoff.json`, `HANDOFF.md`
+
+**Next steps:** Push the merge commit and confirm PR #29 has been reevaluated for mergeability.
+
+---
 
 ## #134 — 2026-11-05 01:19 UTC — GitHub Copilot (Copilot App)
 
