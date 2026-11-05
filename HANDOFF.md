@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 22:37 UTC
+Generated: 2026-11-05 22:44 UTC
+
+## #153 — 2026-11-05 22:44 UTC — Claude Code
+
+Third batch from the external review (stacked on #37). (c) dashboard/server.py Windows setup no longer runs Set-NetConnectionProfile (Public->Private) and no longer adds a program-wide rule. It now adds one inbound rule for the dashboard port, limited to profile=private,domain and remoteip=LocalSubnet,100.64.0.0/10 (LAN + Tailscale), named 'AETHER Dashboard Port N (scoped)'; the old unscoped port rule and 'AETHER Dashboard Python' rule are deleted when found. A Public-classed network is reported in the console, never changed. Logic is in the pure _windows_firewall_commands(). NOT RUN ON WINDOWS: tested by mocking subprocess and reading the generated .bat. If phone access over Tailscale or a non-/24 LAN stops working, check _FW_REMOTE_SCOPE. (n) /ws/phone-audio sockets are now tracked so /api/revoke-devices closes them. (m-part) _wrap_untrusted also defuses an opening <tool_result so tool output cannot forge a second block. 4 new tests (all fail on old code). Full suite 1808 passed, 2 skipped.
+
+**Touched:** `dashboard/server.py`, `core/conversation_core.py`, `tests/test_review_fixes.py`
+
+**Next steps:** STILL OPEN: (d) core/risk.py grants (_TURN/_GRANTS/_PLAN_GRANTS) are module-global, not request-scoped; (f) one bearer token can both send commands and approve high-risk actions from a remote client (needs a design decision: re-enter pairing code, or an approver capability); (g) _ensure_crypto_js downloads JS from a CDN with no integrity hash (vendor it or pin a SHA-384); (h) security/middleware.py require_approval not bound to device/capability/endpoint (NOT CHECKED); (i) executor max_retries vs hardcoded loop, recovery records original step, planner has no schema validation (NOT RE-VERIFIED); (j) generated-fix code= vs code_helper file_path (NOT RE-VERIFIED); (k) TaskQueue cancel() reports CANCELLED before the tool stops, stop() does not join; (l) mcp_bridge stdin write before deadline, stderr=DEVNULL, unpinned npx, serial boot, unsanitised tool names; (m-rest) arg previews reach remote dashboard unredacted; (o) COMPLEX_HINTS routes short plan/design/debug prompts HARD, tune if noisy; also consider a trusted-plugin tier if per-call plugin approval is too noisy.
+
+---
 
 ## #152 — 2026-11-05 22:37 UTC — Claude Code
 

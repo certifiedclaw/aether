@@ -188,13 +188,40 @@ def _ensure_network_access(port: int) -> None:
         _ensure_network_access_linux(port)
 
 
+# Remote addresses the dashboard firewall rule admits: the local subnet and Tailscale's
+# CGNAT range. Never "any".
+_FW_REMOTE_SCOPE = "LocalSubnet,100.64.0.0/10"
+_FW_PROFILES     = "private,domain"      # never Public
+
+
+def _windows_firewall_commands(port: int, scoped_exists: bool,
+                               legacy_port_exists: bool, legacy_prog_exists: bool) -> list[str]:
+    """netsh commands for the dashboard. Pure so it can be tested without Windows.
+
+    One inbound rule for this port only, limited to Private/Domain profiles and to the
+    local subnet / Tailscale. It never changes a network's category and never opens a
+    program-wide rule. Older unscoped rules created by earlier versions are removed."""
+    cmds: list[str] = []
+    if legacy_port_exists:
+        cmds.append(f'netsh advfirewall firewall delete rule name="AETHER Dashboard Port {port}"')
+    if legacy_prog_exists:
+        cmds.append('netsh advfirewall firewall delete rule name="AETHER Dashboard Python"')
+    if not scoped_exists:
+        cmds.append(
+            f'netsh advfirewall firewall add rule name="AETHER Dashboard Port {port} (scoped)" '
+            f'protocol=TCP dir=in localport={port} action=allow '
+            f'profile={_FW_PROFILES} remoteip={_FW_REMOTE_SCOPE}'
+        )
+    return cmds
+
+
 def _ensure_network_access_windows(port: int) -> None:
     import sys, subprocess, os, tempfile, threading
     import ctypes, time
 
-    port_rule = f"AETHER Dashboard Port {port}"
-    prog_rule  = "AETHER Dashboard Python"
-    py_exe     = sys.executable
+    scoped_rule = f"AETHER Dashboard Port {port} (scoped)"
+    legacy_port = f"AETHER Dashboard Port {port}"
+    legacy_prog = "AETHER Dashboard Python"
 
     def _netsh_rule_exists(name: str) -> bool:
         try:
@@ -219,34 +246,19 @@ def _ensure_network_access_windows(port: int) -> None:
         except Exception:
             return False
 
-    need_port    = not _netsh_rule_exists(port_rule)
-    need_prog    = not _netsh_rule_exists(prog_rule)
-    need_private = _network_is_public()
-
-    if not need_port and not need_prog and not need_private:
-        return  # already fully configured
-
-    # Build a .bat file — netsh + powershell, runs fast when elevated
-    bat_lines = ["@echo off"]
-    if need_private:
-        bat_lines.append(
-            'powershell -NoProfile -NonInteractive -Command "'
-            'Get-NetConnectionProfile | '
-            "Where-Object {$_.NetworkCategory -eq 'Public'} | "
-            'Set-NetConnectionProfile -NetworkCategory Private"'
-        )
-    if need_port:
-        bat_lines.append(
-            f'netsh advfirewall firewall add rule '
-            f'name="{port_rule}" protocol=TCP dir=in '
-            f'localport={port} action=allow'
-        )
-    if need_prog:
-        bat_lines.append(
-            f'netsh advfirewall firewall add rule '
-            f'name="{prog_rule}" dir=in action=allow '
-            f'program="{py_exe}" enable=yes'
-        )
+    bat_lines = ["@echo off"] + _windows_firewall_commands(
+        port,
+        scoped_exists=_netsh_rule_exists(scoped_rule),
+        legacy_port_exists=_netsh_rule_exists(legacy_port),
+        legacy_prog_exists=_netsh_rule_exists(legacy_prog),
+    )
+    if _network_is_public():
+        # Reported, never changed: reclassifying a network is the user's decision.
+        print("[Dashboard] A connected network is classed Public; the dashboard rule only applies "
+              "to Private/Domain networks. Change that network's category in Windows settings "
+              "if you want phone access on it.")
+    if len(bat_lines) == 1:
+        return  # already configured
 
     bat_body = "\r\n".join(bat_lines) + "\r\n"
     fd, bat_path = tempfile.mkstemp(suffix=".bat", prefix="aether_fw_")
@@ -1067,6 +1079,7 @@ class DashboardServer:
                 await websocket.close(code=4001)
                 return
             await websocket.accept()
+            self._ws_tokens[websocket] = tok
             asyncio.create_task(self.broadcast(
                 {"type": "sys", "text": "Phone microphone connected."}
             ))
@@ -1082,6 +1095,7 @@ class DashboardServer:
             except WebSocketDisconnect:
                 pass
             finally:
+                self._ws_tokens.pop(websocket, None)
                 asyncio.create_task(self.broadcast(
                     {"type": "sys", "text": "Phone microphone stopped."}
                 ))
