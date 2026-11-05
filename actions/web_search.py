@@ -71,7 +71,8 @@ def _format_sources(results: list[dict]) -> str:
         return ""
     lines = ["Sources:"]
     for i, result in enumerate(results, 1):
-        lines.append(f"[{i}] {result['title']} — {result['url']}")
+        note = f" ({result['credibility_note']})" if result.get("credibility_note") else ""
+        lines.append(f"[{i}] {result['title']} — {result['url']}{note}")
     return "\n".join(lines)
 
 
@@ -157,6 +158,10 @@ def web_search(
 
     if items and mode != "compare":
         mode = "compare"
+
+    if mode in {"deep", "research", "deep research", "deep_research"}:
+        from actions.deep_research import deep_research
+        return deep_research(query, player=player)
 
     if player:
         player.write_log(f"[Search] {query or ', '.join(items)}")

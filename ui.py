@@ -732,6 +732,7 @@ class MetricBar(QWidget):
 
 class LogWidget(QTextEdit):
     _sig = pyqtSignal(str)
+    _stream_sig = pyqtSignal(str, bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -758,9 +759,34 @@ class LogWidget(QTextEdit):
             }}
         """)
         self._sig.connect(self._append_entry)
+        self._stream_sig.connect(self._append_stream)
+        self._stream_active = False
 
     def append_log(self, text: str):
+        if self._stream_active and text.lower().startswith("aether:"):
+            self._stream_sig.emit("", True)
+            return
         self._sig.emit(text)
+
+    def append_stream(self, text: str, done: bool = False):
+        self._stream_sig.emit(text, done)
+
+    def _append_stream(self, text: str, done: bool):
+        if text and not self._stream_active:
+            cursor = self.textCursor()
+            cursor.movePosition(cursor.MoveOperation.End)
+            if not self.document().isEmpty():
+                cursor.insertBlock()
+            cursor.insertText("Aether: ")
+            self._stream_active = True
+        if text:
+            cursor = self.textCursor()
+            cursor.movePosition(cursor.MoveOperation.End)
+            cursor.insertText(text)
+            self.setTextCursor(cursor)
+            self.ensureCursorVisible()
+        if done:
+            self._stream_active = False
 
     def _append_entry(self, text: str):
         tl = text.lower()
@@ -822,7 +848,7 @@ class MessageInput(QPlainTextEdit):
         super().__init__(parent)
         self.setPlaceholderText("Ask Aether anything…  (/help for commands)")
         self.setToolTip(
-            "Enter adds a new line. Press Ctrl+Enter or use Send to send."
+            "Enter sends. Press Shift+Enter for a new line."
         )
         self.setAccessibleName("Message Aether")
         self.setTabChangesFocus(True)
@@ -831,9 +857,11 @@ class MessageInput(QPlainTextEdit):
         self._fit_height()
 
     def keyPressEvent(self, event):
+        # Enter (or Ctrl+Enter) sends; Shift+Enter falls through to the default
+        # handler, which inserts a line break.
         if (
             event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter)
-            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+            and not event.modifiers() & Qt.KeyboardModifier.ShiftModifier
         ):
             self.sendRequested.emit()
             return
@@ -1233,6 +1261,7 @@ class _DropCanvas(QWidget):
 class SetupOverlay(QWidget):
     # Emits a JSON string containing the full config dict
     done = pyqtSignal(str)
+    _gemini_models_sig = pyqtSignal(object)   # live model ids (list) or None, from a worker thread
 
     # ------------------------------------------------------------------ #
     _INPUT_STYLE = ""  # filled in __init__ after C is available
@@ -1453,6 +1482,58 @@ class SetupOverlay(QWidget):
     ]
     GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
 
+    def _populate_gemini_models(self, live, selected: str | None = None) -> None:
+        """(Re)fill the Gemini model dropdown. `live` is the list of model ids the
+        key can use, or None to show the built-in list. Keeps the current choice."""
+        from core.gemini_models import merge_choices
+        combo = self._gemini_model_combo
+        keep = selected if selected is not None else (combo.currentData() or "")
+        combo.blockSignals(True)
+        try:
+            combo.clear()
+            for val, disp in merge_choices(self._GEMINI_MODELS, live, current=keep):
+                combo.addItem(disp, userData=val)
+            for i in range(combo.count()):
+                if combo.itemData(i) == keep:
+                    combo.setCurrentIndex(i)
+                    break
+        finally:
+            combo.blockSignals(False)
+
+    def _refresh_gemini_models(self) -> None:
+        """Ask Google (in a worker thread) which models the typed key can use."""
+        key = self._gemini_key_input.text().strip()
+        if not key:
+            from core.credentials import get_secret
+            key = get_secret("gemini_api_key", self._initial_config)
+        if not key:
+            self._gemini_refresh_btn.setToolTip("Enter a Gemini API key first.")
+            return
+        self._gemini_refresh_btn.setEnabled(False)
+        self._gemini_refresh_btn.setText("…")
+
+        def _work(k=key):
+            from core.gemini_models import fetch_available
+            try:
+                live = fetch_available(k)
+            except Exception:  # noqa: BLE001
+                live = None
+            try:
+                self._gemini_models_sig.emit(live)
+            except RuntimeError:        # the dialog was closed meanwhile
+                pass
+
+        threading.Thread(target=_work, daemon=True).start()
+
+    def _on_gemini_models(self, live) -> None:
+        self._gemini_refresh_btn.setEnabled(True)
+        self._gemini_refresh_btn.setText("↻")
+        self._populate_gemini_models(live if isinstance(live, list) else None)
+        self._gemini_refresh_btn.setToolTip(
+            "Ask Google which models your API key can use (sends only the key, to Google)"
+            if isinstance(live, list) else
+            "Couldn't reach Google or the key was rejected - showing the built-in list. Click to retry.")
+
     def _build_llm_section(self, layout, _init) -> None:
         layout.addWidget(self._lbl("AI ENGINE", 7, col=C.TEXT_DIM,
                                align=Qt.AlignmentFlag.AlignLeft))
@@ -1575,15 +1656,28 @@ class SetupOverlay(QWidget):
         self._gemini_model_combo = QComboBox()
         self._gemini_model_combo.setFixedHeight(28)
         self._gemini_model_combo.setStyleSheet(self._COMBO_STYLE)
-        for val, disp in self._GEMINI_MODELS:
-            self._gemini_model_combo.addItem(disp, userData=val)
         _cur_gem_model = _init.get("llm_model", "gemini-3.8-flash") if self._sel_llm_provider == "gemini" else "gemini-3.8-flash"
-        for i in range(self._gemini_model_combo.count()):
-            if self._gemini_model_combo.itemData(i) == _cur_gem_model:
-                self._gemini_model_combo.setCurrentIndex(i)
-                break
-        gem_model_row.addWidget(self._gemini_model_combo)
+        self._populate_gemini_models(None, selected=_cur_gem_model)
+        gem_model_row.addWidget(self._gemini_model_combo, 1)
+        self._gemini_refresh_btn = QPushButton("↻")
+        self._gemini_refresh_btn.setFixedSize(28, 28)
+        self._gemini_refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._gemini_refresh_btn.setToolTip(
+            "Ask Google which models your API key can use (sends only the key, to Google)")
+        self._gemini_refresh_btn.setStyleSheet(f"""
+            QPushButton {{ background: transparent; color: {C.TEXT_DIM};
+                           border: 1px solid {C.BORDER}; border-radius: 3px; }}
+            QPushButton:hover {{ color: {C.TEXT}; border: 1px solid {C.BORDER_B}; }}
+            QPushButton:disabled {{ color: {C.TEXT_DIM}; }}
+        """)
+        self._gemini_refresh_btn.clicked.connect(self._refresh_gemini_models)
+        self._gemini_models_sig.connect(self._on_gemini_models)
+        gem_model_row.addWidget(self._gemini_refresh_btn)
         gem_lay.addLayout(gem_model_row)
+        # A key is already saved and Gemini is the chosen provider: look up the live
+        # list once now, so retired models disappear without the user doing anything.
+        if self._sel_llm_provider == "gemini" and self._gemini_key_input.text().strip():
+            QTimer.singleShot(0, self._refresh_gemini_models)
 
         layout.addWidget(self._llm_gemini_widget)
 
@@ -2150,6 +2244,7 @@ class MainWindow(QMainWindow):
         self._update_metrics()
 
         self._log_sig.connect(self._log.append_log)
+        self._log_sig.connect(self._on_log_for_mate)
         self._clear_log_sig.connect(self._log.clear)
         self._chat_sessions_sig.connect(self._set_chat_sessions)
         self._state_sig.connect(self._apply_state)
@@ -2178,9 +2273,14 @@ class MainWindow(QMainWindow):
         sc_newchat.activated.connect(self._request_new_chat)
         sc_focus_input = QShortcut(QKeySequence("Ctrl+L"), self)
         sc_focus_input.activated.connect(self._focus_input)
+        sc_mate = QShortcut(QKeySequence("Ctrl+Shift+M"), self)
+        sc_mate.activated.connect(self._toggle_mate)
 
         self._collapsed = False
         self._saved_size = None
+
+        self._mate = None
+        self._init_desktop_mate()
 
     def _toggle_fullscreen(self):
         if self.isFullScreen():
@@ -2220,7 +2320,8 @@ class MainWindow(QMainWindow):
             self._log.setMinimumHeight(100 if compact else 200)
             self.orb.setFixedHeight(44 if compact else 58)
             self._chat_subtitle.setVisible(not compact)
-            self._stats_heading.setVisible(not compact)
+            # _stats_heading is parentless and intentionally hidden (the reply summary
+            # line replaced it); showing it here popped up a stray top-level window.
             self._input_hint.setVisible(not compact)
             self._update_prompt_suggestions()
         cw = self.centralWidget()
@@ -2588,7 +2689,7 @@ class MainWindow(QMainWindow):
         input_heading = QHBoxLayout()
         input_heading.addWidget(_section_label("Message"))
         input_heading.addStretch()
-        input_hint = QLabel("Enter for a new line  ·  Ctrl+Enter to send  ·  Ctrl+L to focus")
+        input_hint = QLabel("Enter to send  ·  Shift+Enter for a new line  ·  Ctrl+L to focus")
         self._input_hint = input_hint
         input_hint.setFont(QFont(FONT_BODY, 8))
         input_hint.setStyleSheet(f"color: {C.TEXT_DIM}; background: transparent;")
@@ -3420,10 +3521,64 @@ class MainWindow(QMainWindow):
             f"color: {status[1]}; background: transparent;"
         )
         show_stop = state in ("THINKING", "PROCESSING", "SPEAKING") and bool(self.on_stop_command)
-        self._send_btn.setVisible(not show_stop)
+        # Keep Send available while Aether works or speaks. Users may queue a
+        # written follow-up at any time; Stop remains alongside it for an
+        # explicit cancel.
+        self._send_btn.setVisible(True)
         self._stop_btn.setVisible(show_stop)
         if state == "ERROR":
             self.orb.flash_error()
+        mate = getattr(self, "_mate", None)
+        if mate is not None:
+            mate.on_app_state(state)
+
+    # ── Desktop mate (floating companion, see desktop_mate.py) ───────────
+    def _init_desktop_mate(self, force: bool = False):
+        """Create the floating companion. Config keys (all default true):
+        desktop_mate, desktop_mate_bubbles, desktop_mate_personality. It is purely cosmetic, so any
+        failure here is logged and swallowed -- it must never stop Aether
+        from starting."""
+        try:
+            cfg = _config_home.load_config()
+        except Exception:
+            cfg = {}
+        if not force and not cfg.get("desktop_mate", True):
+            return
+        try:
+            from desktop_mate import DesktopMate
+            mate = DesktopMate(assets_dir=str(BASE_DIR / "assets" / "mate"))
+            mate.show_bubbles = bool(cfg.get("desktop_mate_bubbles", True))
+            mate.chatty = bool(cfg.get("desktop_mate_personality", True))
+            mate.activated.connect(self._show_main_from_mate)
+            mate.show()
+            self._mate = mate
+        except Exception as exc:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).warning("Desktop mate unavailable: %s", exc)
+            self._mate = None
+
+    def _toggle_mate(self):
+        mate = getattr(self, "_mate", None)
+        if mate is None:
+            self._init_desktop_mate(force=True)
+        else:
+            mate.setVisible(not mate.isVisible())
+
+    def _show_main_from_mate(self):
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+
+    def _on_log_for_mate(self, text: str):
+        mate = getattr(self, "_mate", None)
+        if mate is not None:
+            mate.on_log_line(text)
+
+    def closeEvent(self, event):
+        mate = getattr(self, "_mate", None)
+        if mate is not None:
+            mate.close()
+        super().closeEvent(event)
 
     def _check_config(self) -> bool:
         if not API_FILE.exists(): return False
@@ -3609,6 +3764,12 @@ class AetherUI:
             pass
         try:
             self._win._log_sig.emit(text)
+        except RuntimeError:
+            pass
+
+    def write_stream(self, text: str, done: bool = False):
+        try:
+            self._win._log.append_stream(text, done)
         except RuntimeError:
             pass
 

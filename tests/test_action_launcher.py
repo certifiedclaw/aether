@@ -173,6 +173,21 @@ def test_direct_action_uses_worker_queue_without_an_llm_turn():
     ]
 
 
+def test_new_written_prompt_stops_tts_and_enters_the_message_queue():
+    from main import AetherLocal
+
+    aether = object.__new__(AetherLocal)
+    aether._speaking_lock = threading.Lock()
+    aether._speaking = True
+    aether._text_queue = queue.Queue()
+    aether._interrupt_speaking = Mock()
+
+    aether._on_text_command("What is the weather in Montreal?")
+
+    aether._interrupt_speaking.assert_called_once_with(reason="new text prompt")
+    assert aether._text_queue.get_nowait() == "What is the weather in Montreal?"
+
+
 def test_published_message_stats_include_model_route(monkeypatch):
     from core import conversation_core, perf_stats
 
@@ -222,7 +237,7 @@ def test_chat_input_is_discoverable_and_does_not_drop_unsent_text(monkeypatch):
         "Ctrl+L" in label.text() for label in window.findChildren(ui.QLabel)
     )
     assert "(/help for commands)" in window._input.placeholderText()
-    assert "Ctrl+Enter" in window._input.toolTip()
+    assert "Shift+Enter" in window._input.toolTip()
     assert not window._send_btn.isEnabled()
     assert window._prompt_suggestions.isVisible()
 
@@ -248,11 +263,11 @@ def test_chat_input_is_discoverable_and_does_not_drop_unsent_text(monkeypatch):
     cursor = window._input.textCursor()
     cursor.movePosition(cursor.MoveOperation.End)
     window._input.setTextCursor(cursor)
-    QTest.keyClick(window._input, Qt.Key.Key_Return)
-    assert window._input.toPlainText() == "hello\nAether\n"
     QTest.keyClick(
-        window._input, Qt.Key.Key_Return, Qt.KeyboardModifier.ControlModifier
+        window._input, Qt.Key.Key_Return, Qt.KeyboardModifier.ShiftModifier
     )
+    assert window._input.toPlainText() == "hello\nAether\n"
+    QTest.keyClick(window._input, Qt.Key.Key_Return)  # no handler wired yet: draft is kept
     assert window._input.toPlainText() == "hello\nAether\n"
 
     sent = []
@@ -267,12 +282,29 @@ def test_chat_input_is_discoverable_and_does_not_drop_unsent_text(monkeypatch):
 
     monkeypatch.setattr(ui.threading, "Thread", ImmediateThread)
     window.on_text_command = sent.append
-    QTest.keyClick(
-        window._input, Qt.Key.Key_Return, Qt.KeyboardModifier.ControlModifier
-    )
+    window.on_stop_command = lambda: None
+    QTest.keyClick(window._input, Qt.Key.Key_Return)
     assert sent == ["hello\nAether"]
     assert window._input.toPlainText() == ""
     assert not window._send_btn.isEnabled()
+
+    window._input.setPlainText("old shortcut still works")
+    QTest.keyClick(
+        window._input, Qt.Key.Key_Return, Qt.KeyboardModifier.ControlModifier
+    )
+    assert sent[-1] == "old shortcut still works"
+    assert window._input.toPlainText() == ""
+    window._input.setPlainText("keypad enter sends too")
+    QTest.keyClick(window._input, Qt.Key.Key_Enter)
+    assert sent[-1] == "keypad enter sends too"
+
+    window._apply_state("SPEAKING")
+    assert not window._send_btn.isHidden()
+    assert not window._stop_btn.isHidden()
+    window._input.setPlainText("Next written prompt")
+    window._send_btn.click()
+    assert sent[-1] == "Next written prompt"
+    assert window._input.toPlainText() == ""
 
     window._focus_input()
     assert window.focusWidget() is window._input
