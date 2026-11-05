@@ -140,8 +140,10 @@ def test_unknown_tool_does_not_fall_back_to_generated_code(monkeypatch):
 
 
 def _fake_run(returncode, stdout="", stderr=""):
+    from core.sandbox import SandboxResult
+
     def run(*_a, **_k):
-        return subprocess.CompletedProcess([], returncode, stdout, stderr)
+        return SandboxResult(returncode, stdout, stderr)
     return run
 
 
@@ -157,20 +159,20 @@ def exec_env(monkeypatch):
 
 
 def test_nonzero_exit_without_stderr_is_a_failure(exec_env, monkeypatch):
-    monkeypatch.setattr(exec_env.subprocess, "run", _fake_run(3))
+    monkeypatch.setattr(exec_env.sandbox, "run_python", _fake_run(3))
     with pytest.raises(RuntimeError, match="exit"):
         exec_env._run_generated_code("do a thing", speak=None)
 
 
 def test_silent_success_is_not_reported_as_verified(exec_env, monkeypatch):
-    monkeypatch.setattr(exec_env.subprocess, "run", _fake_run(0))
+    monkeypatch.setattr(exec_env.sandbox, "run_python", _fake_run(0))
     out = exec_env._run_generated_code("do a thing", speak=None)
     assert "unverified" in out.lower() or "not verified" in out.lower()
     assert out != "Task completed successfully."
 
 
 def test_output_is_still_returned(exec_env, monkeypatch):
-    monkeypatch.setattr(exec_env.subprocess, "run", _fake_run(0, stdout="42\n"))
+    monkeypatch.setattr(exec_env.sandbox, "run_python", _fake_run(0, stdout="42\n"))
     assert exec_env._run_generated_code("do a thing", speak=None) == "42"
 
 

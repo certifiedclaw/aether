@@ -1,5 +1,5 @@
 {
-  "next_id": 147,
+  "next_id": 148,
   "entries": [
     {
       "id": 1,
@@ -2099,6 +2099,22 @@
         "tests/test_execution_gates.py"
       ],
       "next_steps": "Sandbox generated-code execution; fix the 6 pre-existing failures; schema validation of tool args."
+    },
+    {
+      "id": 147,
+      "timestamp": "2026-11-05 05:27 UTC",
+      "by": "Claude Code",
+      "summary": "Added core/sandbox.py: model-generated Python now runs in a restricted subprocess (scratch cwd, env allowlist so secrets are stripped, python -I, timeout + process-tree kill, memory cap via RLIMIT_AS / Windows job object, CPU cap on POSIX, output cap, network and program-launching blocked by default via audit hook). Config: sandbox.* keys. Approval dialog shows the policy; generation prompt no longer tells the model to pip install. NOT filesystem isolation. Windows job-object path is UNTESTED on Windows (tested on Linux only). 18 real-execution tests in tests/test_sandbox.py; gate tests now patch sandbox.run_python. Full suite 1711 passed, same 6 pre-existing failures.",
+      "files": [
+        "core/sandbox.py",
+        "agent/executor.py",
+        "config/config.example.json",
+        "docs/PLUGIN_SECURITY.md",
+        "tests/test_sandbox.py",
+        "tests/test_execution_gates.py",
+        "tests/test_runtime_hardening.py"
+      ],
+      "next_steps": "Try it on the Windows PC (generated code that needs network or pip will now fail until sandbox.allow_network / allow_subprocess are set); consider a container backend for real filesystem isolation; 6 pre-existing test failures."
     }
   ]
 }

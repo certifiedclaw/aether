@@ -39,14 +39,10 @@ def test_agent_generated_code_requires_approval_before_temp_file_or_execution(
         monkeypatch, tool):
     code = "print('review this exact code')"
     seen = []
-    temp_calls = []
     monkeypatch.setattr(agent_executor, "call_llm_text", lambda *a, **k: code)
     monkeypatch.setattr(safety, "confirm_action",
                         lambda op, detail="": seen.append((op, detail)) or False)
-    original_temp = agent_executor.tempfile.NamedTemporaryFile
-    monkeypatch.setattr(agent_executor.tempfile, "NamedTemporaryFile",
-                        lambda *a, **k: temp_calls.append(True) or original_temp(*a, **k))
-    monkeypatch.setattr(agent_executor.subprocess, "run",
+    monkeypatch.setattr(agent_executor.sandbox, "run_python",
                         lambda *a, **k: pytest.fail("generated code must not run"))
 
     with pytest.raises(agent_executor.GeneratedCodeNotRun, match="Cancelled"):
@@ -56,13 +52,13 @@ def test_agent_generated_code_requires_approval_before_temp_file_or_execution(
     assert seen[0][0] == "run model-generated Python code"
     assert "inspect files" in seen[0][1]
     assert code in seen[0][1]
-    assert temp_calls == []
+    assert "Restricted run" in seen[0][1]      # the dialog states the sandbox policy
 
 
 def test_unknown_tool_fails_closed_instead_of_generating_code(monkeypatch):
     monkeypatch.setattr(agent_executor, "call_llm_text",
                         lambda *a, **k: pytest.fail("unknown tool must not reach the model"))
-    monkeypatch.setattr(agent_executor.subprocess, "run",
+    monkeypatch.setattr(agent_executor.sandbox, "run_python",
                         lambda *a, **k: pytest.fail("unknown tool must not execute anything"))
     with pytest.raises(ValueError, match="Unknown tool"):
         agent_executor._call_tool("unknown_tool", {"description": "inspect files"}, None)
@@ -76,11 +72,11 @@ def test_agent_generated_code_runs_only_after_approval_of_exact_code(monkeypatch
     monkeypatch.setattr(safety, "confirm_action",
                         lambda op, detail="": seen.append((op, detail)) or True)
 
-    def run(command, **kwargs):
-        executed.append(Path(command[1]).read_text(encoding="utf-8"))
-        return SimpleNamespace(returncode=0, stdout="completed", stderr="")
+    def run(src, policy=None):
+        executed.append(src)
+        return agent_executor.sandbox.SandboxResult(0, "completed", "")
 
-    monkeypatch.setattr(agent_executor.subprocess, "run", run)
+    monkeypatch.setattr(agent_executor.sandbox, "run_python", run)
     result = agent_executor._call_tool("generated_code", {"description": "do task"}, None)
 
     assert result == "completed"
@@ -94,7 +90,7 @@ def test_agent_generated_code_over_review_limit_is_never_approved_or_run(monkeyp
                         lambda *a, **k: "x" * (agent_executor._MAX_GENERATED_CODE + 1))
     monkeypatch.setattr(safety, "confirm_action",
                         lambda *a, **k: seen.append(True) or True)
-    monkeypatch.setattr(agent_executor.subprocess, "run",
+    monkeypatch.setattr(agent_executor.sandbox, "run_python",
                         lambda *a, **k: pytest.fail("oversized code must not run"))
 
     with pytest.raises(agent_executor.GeneratedCodeNotRun, match="review limit"):

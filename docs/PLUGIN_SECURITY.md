@@ -26,3 +26,11 @@ The template file beginning with `_` is never loaded.
 Hash approval detects unexpected edits; it is not an execution sandbox. Do not
 approve untrusted plugins. Keep `config/api_keys.json` private and out of Git,
 archives, and shared bug reports because it may contain credentials.
+
+## Generated-code sandbox (`core/sandbox.py`)
+
+Model-written Python (agent `generated_code` step) runs in a restricted subprocess after you approve the exact code. The approval dialog states the active policy.
+
+Enforced: scratch working directory (deleted afterwards), environment allowlist (API keys and tokens never reach the code), `python -I`, timeout with process-tree kill, memory cap (POSIX `RLIMIT_AS`, Windows job object), CPU-seconds cap (POSIX), output cap, and network and program-launching blocked by default via an audit hook.
+
+Not enforced: filesystem isolation (absolute paths still work), and the audit hook can be bypassed by ctypes or C extensions. The Windows job-object path is untested on Windows as of this change. For real isolation use a container. Settings: `sandbox.*` in `config/config.example.json`.

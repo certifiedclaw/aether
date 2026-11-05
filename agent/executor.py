@@ -15,6 +15,7 @@ from typing import Callable
 from agent.planner       import create_plan, replan
 from agent.error_handler import analyze_error, generate_fix, ErrorDecision
 from core.llm_client     import call_llm_text
+from core                import sandbox
 import logging
 
 logger = logging.getLogger("aether")
@@ -32,6 +33,14 @@ _MAX_GENERATED_CODE = 4000
 
 class GeneratedCodeNotRun(RuntimeError):
     """Generated Python was blocked or declined and must not be retried silently."""
+
+
+def _sandbox_policy() -> "sandbox.SandboxPolicy":
+    try:
+        from config import get_config
+        return sandbox.SandboxPolicy.from_config(get_config())
+    except Exception:
+        return sandbox.SandboxPolicy()      # fail closed: strictest defaults
 
 
 # ---------------------------------------------------------------------------
@@ -58,11 +67,22 @@ def _run_generated_code(description: str, speak: Callable | None = None) -> str:
         except Exception:
             pass
 
+    policy = _sandbox_policy()
+    if not policy.enabled or policy.allow_subprocess:
+        pkg_rule = "Install missing packages with subprocess + pip if needed. "
+    else:
+        pkg_rule = ("Do not install packages or start other programs: they are blocked. "
+                    "If a needed package is missing, print which one and stop. ")
+    if not policy.enabled or policy.allow_network:
+        net_rule = ""
+    else:
+        net_rule = "The network is blocked; do not make web requests. "
+
     system = (
         "You are an expert Python developer. "
         "Write clean, complete, working Python code. "
         "Use standard library + common packages. "
-        "Install missing packages with subprocess + pip if needed. "
+        f"{pkg_rule}{net_rule}"
         "Return ONLY the Python code. No explanation, no markdown, no backticks.\n\n"
         f"SYSTEM PATHS:\n"
         f"  Desktop   = r'{desktop}'\n"
@@ -83,27 +103,17 @@ def _run_generated_code(description: str, speak: Callable | None = None) -> str:
         from core.safety import confirm_action
         if not confirm_action(
                 "run model-generated Python code",
-                f"Task: {description}\n\nComplete generated code:\n{code}"):
+                f"Task: {description}\n\n{policy.describe()}\n\n"
+                f"Complete generated code:\n{code}"):
             raise GeneratedCodeNotRun("Cancelled: you did not approve running the generated code.")
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False, encoding="utf-8"
-        ) as f:
-            f.write(code)
-            tmp_path = f.name
+        logger.info("[Executor] Running generated code in the sandbox "
+                    f"(enabled={policy.enabled}, network={policy.allow_network}, "
+                    f"subprocess={policy.allow_subprocess})")
 
-        logger.info(f"[Executor] 🐍 Running generated code: {tmp_path}")
-
-        result = subprocess.run(
-            [sys.executable, tmp_path],
-            capture_output=True, text=True,
-            timeout=120, cwd=str(Path.home()),
-        )
-
-        try:
-            os.unlink(tmp_path)
-        except Exception:
-            pass
+        result = sandbox.run_python(code, policy)
+        if result.timed_out:
+            raise RuntimeError(f"Generated code timed out after {policy.timeout_s} seconds.")
 
         output = result.stdout.strip()
         error  = result.stderr.strip()
@@ -119,8 +129,6 @@ def _run_generated_code(description: str, speak: Callable | None = None) -> str:
         raise RuntimeError(
             f"Code exited with status {result.returncode} and no error output.")
 
-    except subprocess.TimeoutExpired:
-        raise RuntimeError("Generated code timed out after 120 seconds.")
     except RuntimeError:
         raise
     except Exception as e:

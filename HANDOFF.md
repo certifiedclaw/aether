@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 05:21 UTC
+Generated: 2026-11-05 05:27 UTC
+
+## #147 — 2026-11-05 05:27 UTC — Claude Code
+
+Added core/sandbox.py: model-generated Python now runs in a restricted subprocess (scratch cwd, env allowlist so secrets are stripped, python -I, timeout + process-tree kill, memory cap via RLIMIT_AS / Windows job object, CPU cap on POSIX, output cap, network and program-launching blocked by default via audit hook). Config: sandbox.* keys. Approval dialog shows the policy; generation prompt no longer tells the model to pip install. NOT filesystem isolation. Windows job-object path is UNTESTED on Windows (tested on Linux only). 18 real-execution tests in tests/test_sandbox.py; gate tests now patch sandbox.run_python. Full suite 1711 passed, same 6 pre-existing failures.
+
+**Touched:** `core/sandbox.py`, `agent/executor.py`, `config/config.example.json`, `docs/PLUGIN_SECURITY.md`, `tests/test_sandbox.py`, `tests/test_execution_gates.py`, `tests/test_runtime_hardening.py`
+
+**Next steps:** Try it on the Windows PC (generated code that needs network or pip will now fail until sandbox.allow_network / allow_subprocess are set); consider a container backend for real filesystem isolation; 6 pre-existing test failures.
+
+---
 
 ## #146 — 2026-11-05 05:21 UTC — Claude Code
 
