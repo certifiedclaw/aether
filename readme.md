@@ -8,7 +8,7 @@ Local is the default, not a requirement: optional hosted model providers, web re
 
 - **Talk or type:** Use the microphone for speech input, or send text in the desktop chat.
 - **Browse actions:** Use the **Actions** tab for quick tasks, or choose **Browse All Actions** to search enabled capabilities, fill in action details, and launch them directly. Sensitive actions continue to use Aether's approval checks.
-- **Research:** Start a multi-step research task from the Research quick action when that integration is enabled. If it is unavailable, Aether offers a single-search fallback.
+- **Research:** Quick web search returns linked results. Ask for **deep research** to create a multi-angle search plan, read up to eight public web pages, compare evidence, and produce a cited report. Deep research works with Aether's configured model and does not require LangChain.
 - **Choose voice and model providers:** Configure Whisper or Vosk; Edge TTS, Kokoro, or ElevenLabs; and a local Ollama/LM Studio server or supported hosted providers.
 - **Use local memory:** Aether can retain facts and chat history locally between turns. It also includes memory backup, export/import, and maintenance commands.
 - **Connect optional integrations:** Use document retrieval, LangChain research, LlamaIndex, MCP servers, plugins, and the web dashboard when configured.
@@ -98,6 +98,9 @@ Set `self_check_enabled` to `true` in your config and, after each reply, Aether 
 
 When you correct Aether ("no, not that", "stop adding emojis", "from now on use PowerShell commands") it replies as usual, then drafts one short rule and asks **yes/no**. Nothing is saved without a yes. Saved rules are applied to later prompts: style rules every time, topic rules only when your message mentions the topic, never more than three at once. See and change them with `/learned` (`add`, `edit <id>`, `forget <id>`, `off <id>`, `on <id>`) or on the dashboard's `/memory` page. Rules never hold personal facts, secrets, or anything about approvals and safety checks. They are a separate store from `/memory` facts, and not the same as `/rules` (trigger -> action automation). Turn it off with `"learn_corrections": false`.
 
+### Response cache (optional)
+
+Set `"response_cache_enabled": true` to answer a repeated, self-contained factual question ("how does a transistor work") from a local cache instead of the model. It is deliberately narrow: it never caches anything that used a tool or injected memory, mentions you ("my", "I", "you"), points back into the conversation ("it", "that", "again"), or can change ("today", "latest", "price", "weather", "time"), and it skips creative or random requests. Entries are tied to the provider, model and system prompt, expire after `response_cache_ttl_s` (24 h), and are capped at `response_cache_max` (200). Stored in `response_cache.json` in the data folder; delete that file to clear it. Every lookup and store, including why something was not cached, appears in the trace (`cache_lookup`, `cache_store`).
 
 ### Ask questions about your documents
 
@@ -159,6 +162,22 @@ Enter these in the chat input:
 The FastAPI dashboard is optional and requires its listed server dependencies. The desktop app uses loopback by default. To use the dashboard from another device, deliberately configure a reachable interface and protect access; do not expose it directly to the public internet. See [`docs/SERVER.md`](docs/SERVER.md) for HTTPS, remote access, authentication, the OpenAI-compatible text API, and server deployment.
 
 For a server without a desktop display, set `AETHER_HEADLESS=1`. Headless mode skips the Qt interface and microphone/audio by default; the dashboard provides remote interaction. Set `AETHER_HEADLESS_VOICE=1` only when the server has configured audio devices. For scripted text replay, see `tests/live_test_script.txt`.
+
+## Logging: the flight recorder
+
+Every run writes `logs/trace/trace-<session>.jsonl`, one JSON event per line, so you can see exactly what happened, when, and with what. Each event has a global order number, a wall-clock timestamp (ms, with UTC offset), seconds since start, the emitting thread, and the user request (`t0001`...) it belongs to.
+
+It records, in full and unsummarised: the route and tools chosen, the exact messages sent to the model, every streamed sentence, final text, tool calls and token/timing stats, every tool call with arguments, full result, duration and error, permission-gate decisions, every outgoing HTTP call and subprocess, Whisper transcripts including segments it dropped, what was queued and spoken, UI log/state changes, all Python `logging` records at every level, stdout/stderr, heartbeats, a thread-stack dump if a turn stalls, and any crash. Secrets (secret-named keys, API-key/token patterns, URL key params) are redacted.
+
+```
+python -m tools.trace_view list
+python -m tools.trace_view summary            # counts, tools used, slowest operations
+python -m tools.trace_view turn t0003 --full  # one request end to end
+python -m tools.trace_view show --kind tool --grep web_search
+python -m tools.trace_view errors
+```
+
+Tune with `logging.trace_*` keys in the config (see `config.example.json`), or turn it off with `logging.trace_enabled=false` or `AETHER_TRACE=0`. `logs/aether.log` now also records DEBUG with thread names.
 
 ## Evaluation and tests
 

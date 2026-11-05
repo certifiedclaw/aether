@@ -30,6 +30,7 @@ main.py while main.py is still mid-import) and could grab the wrong
 method that uses each one instead, same pattern as conversation_core.py.
 """
 
+import logging
 import os
 from core.risk import gated  # noqa: E402
 import threading
@@ -55,7 +56,8 @@ from actions.computer_control  import computer_control
 from actions.game_updater      import game_updater
 
 from core import undo as undo_stack
-import logging
+
+from core import trace_log as _trace
 
 logger = logging.getLogger("aether")
 
@@ -67,7 +69,16 @@ class ToolDispatchMixin:
     """
 
     def _execute_tool(self, name: str, args: dict) -> str:
-        logger.info(f"[Aether] 🔧 {name}  {args}")
+        """Run one tool. Every call is recorded in full (arguments, complete result,
+        duration, any error) in logs/trace/ — see core/trace_log.py."""
+        with _trace.span("tool", tool=name, args=args) as _s:
+            result = self._execute_tool_impl(name, args)
+            _s["result"] = result
+            _s["result_chars"] = len(str(result))
+            return result
+
+    def _execute_tool_impl(self, name: str, args: dict) -> str:
+        logger.debug("Executing tool %s", name)
         self.ui.set_state("THINKING")
 
         if name == "save_memory":
@@ -86,6 +97,8 @@ class ToolDispatchMixin:
                     import time, os
                     self.speak("Goodbye.")
                     time.sleep(2.5)
+                    _trace.event("shutdown", reason="shutdown_aether tool")
+                    _trace.flush()  # os._exit skips atexit handlers
                     os._exit(0)
                 threading.Thread(target=_shutdown, daemon=True).start()
                 return "Shutting down."
@@ -118,6 +131,8 @@ class ToolDispatchMixin:
 
         except Exception as e:
             result = f"Tool '{name}' failed: {e}"
+            _trace.event("tool_exception", tool=name, args=args,
+                         error=f"{type(e).__name__}: {e}", traceback=traceback.format_exc())
             traceback.print_exc()
             from main import log_crash  # lazy: avoids circular import at module load time
             log_crash(e, tool=name, extra={"args": args})
@@ -372,6 +387,9 @@ class ToolDispatchMixin:
     # ── LangChain integration ──────────────────────────
 
     def _tool_langchain(self, args: dict) -> str:
+        if str(args.get("action", "")).strip().lower() == "research":
+            from actions.deep_research import deep_research
+            return deep_research(args.get("task") or args.get("query") or "", player=self.ui)
         from main import _LANGCHAIN_OK, langchain_tool  # lazy: avoids circular import at module load time
         if _LANGCHAIN_OK:
             return langchain_tool(

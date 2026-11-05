@@ -1,5 +1,5 @@
 {
-  "next_id": 130,
+  "next_id": 133,
   "entries": [
     {
       "id": 1,
@@ -1810,24 +1810,66 @@
     },
     {
       "id": 129,
-      "timestamp": "2026-11-04 23:33 UTC",
-      "by": "Claude (Sonnet 5.5)",
-      "summary": "Roadmap #96: learn from corrections. New core/behavior_rules.py + hooks in conversation_core (_answer_pending_rule, _spot_correction, _propose_rule_follow_up), prompt_builder (per-turn block), chat_commands (/learned), memory_panel + dashboard page (rules section). 94 new tests. Suite: 1278 pass, 1 PortAudio-only failure. Also: PR #25 merged earlier (master 3cce1a4); fixed memory.html success message being overwritten by the broken-fact banner; checked the page in headless Chromium. Two existing stand-in-host tests (test_promise_without_action, test_answer_check) needed the new hooks stubbed. Branch work/roadmap-96 (not merged).",
+      "timestamp": "2026-11-05 00:57 UTC",
+      "by": "GitHub Copilot App",
+      "summary": "Ported the 28 desktop-mate/Codex commits onto port/desktop-mate from master. Kept master tracing/cache/promise-retry and prompt behavior while integrating research, coding instructions, desktop companion, Gemini model discovery, and related fixes. Full suite: 1484 passed, 2 skipped; one unrelated POSIX-path expectation fails on Windows.",
       "files": [
-        "core/behavior_rules.py",
+        "actions/",
+        "assets/mate/",
+        "core/",
+        "dashboard/",
+        "desktop_mate.py",
+        "install.bat",
+        "install.sh",
+        "integrations/",
+        "main.py",
+        "mate_personality.py",
+        "readme.md",
+        "tests/",
+        "ui.py"
+      ],
+      "next_steps": "Review port/desktop-mate and decide whether to open its PR; test the Linux-path case in tests/test_shell_safety.py on Linux."
+    },
+    {
+      "id": 130,
+      "timestamp": "2026-11-05 01:03 UTC",
+      "by": "GitHub Copilot App",
+      "summary": "Fixed the Windows shell-safety test to use pytest's platform-native tmp_path instead of a hard-coded POSIX /tmp path; full suite passes (1485 passed, 2 skipped).",
+      "files": [
+        "tests/test_shell_safety.py"
+      ],
+      "next_steps": "No follow-up required for the Windows shell-safety test; retain cross-platform path fixtures in future tests."
+    },
+    {
+      "id": 131,
+      "timestamp": "2026-11-05 01:10 UTC",
+      "by": "GitHub Copilot App",
+      "summary": "Merged latest master into the roadmap #96 branch. Preserved the correction-learning feature alongside master's response cache docs and desktop-mate/runtime changes; retained both master handoffs and recorded the correction feature as a new entry after renumbering the colliding handoff IDs.",
+      "files": [
+        "readme.md",
+        "tools/maintenance/data/handoff.json",
         "core/conversation_core.py",
         "core/prompt_builder.py",
-        "core/chat_commands.py",
-        "core/memory_panel.py",
-        "dashboard/static/memory.html",
-        "tests/test_behavior_rules.py",
-        "tests/test_memory_panel.py",
-        "tests/test_promise_without_action.py",
-        "tests/test_answer_check.py",
-        "config/config.example.json",
-        "readme.md"
+        "config/config.example.json"
       ],
-      "next_steps": "On the real machine: correct Aether a few times and look at what it proposes (/learned), especially with the 1.5B model whose JSON may be poor; if drafts are bad, tune _DRAFT_SYSTEM. Then run tools.eval_harness with a few rules saved to confirm no regression. Branches roadmap-batch-2 and work/roadmap-57 still need deleting by hand (proxy blocks deletes). Next: #100 MCP both ways, #98 model arena, or #54 caching."
+      "next_steps": "Run the focused correction, conversation, prompt, and memory tests plus py_compile; inspect and push the resolution commit if all pass."
+    },
+    {
+      "id": 132,
+      "timestamp": "2026-11-05 01:15 UTC",
+      "by": "GitHub Copilot App",
+      "summary": "Resolved PR #26 against the latest master. Kept the correction-learning feature and master's response-cache, tracing, and desktop-mate changes; combined both README sections, regenerated reports from merged maintenance data, and retained both master handoffs while assigning correction work a unique handoff ID. Updated the response-cache test host to explicitly stub the newly added correction hooks. Focused suite: 273 passed; full suite: 1579 passed, 2 skipped; py_compile: 53 changed Python files passed.",
+      "files": [
+        "HANDOFF.md",
+        "ROADMAP.md",
+        "readme.md",
+        "config/config.example.json",
+        "core/conversation_core.py",
+        "core/prompt_builder.py",
+        "tools/maintenance/data/handoff.json",
+        "tests/test_response_cache.py"
+      ],
+      "next_steps": "Review GitHub's updated mergeability after this branch is pushed; test correction-rule draft quality against a live Ollama model when available."
     }
   ]
 }
