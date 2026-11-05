@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-04 02:45 UTC
+Generated: 2026-11-05 00:57 UTC
+
+## #129 — 2026-11-05 00:57 UTC — GitHub Copilot App
+
+Ported the 28 desktop-mate/Codex commits onto port/desktop-mate from master. Kept master tracing/cache/promise-retry and prompt behavior while integrating research, coding instructions, desktop companion, Gemini model discovery, and related fixes. Full suite: 1484 passed, 2 skipped; one unrelated POSIX-path expectation fails on Windows.
+
+**Touched:** `actions/`, `assets/mate/`, `core/`, `dashboard/`, `desktop_mate.py`, `install.bat`, `install.sh`, `integrations/`, `main.py`, `mate_personality.py`, `readme.md`, `tests/`, `ui.py`
+
+**Next steps:** Review port/desktop-mate and decide whether to open its PR; test the Linux-path case in tests/test_shell_safety.py on Linux.
+
+---
 
 ## #128 — 2026-11-04 02:45 UTC — Claude (Sonnet 5.5)
 

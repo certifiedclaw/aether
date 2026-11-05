@@ -819,8 +819,8 @@ class ConversationCoreMixin:
             tier_name=_route.tier.value,
             history_budget=(
                 _CLOUD_HISTORY_BUDGET
-                if (_stream_kwargs.get("provider_override") in {"gemini", "openai_api"}
-                    or _primary_provider in {"gemini", "openai_api"})
+                if (_stream_kwargs.get("provider_override") in ("gemini", "openai_api")
+                    or _primary_provider in ("gemini", "openai_api"))
                 else _QUICK_HISTORY_BUDGET if _is_quick else None
             ),
         )

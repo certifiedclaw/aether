@@ -231,12 +231,12 @@ def test_users_choice_survives_a_refresh(overlay):
 
 def test_refresh_without_any_key_does_nothing_and_never_calls_out(overlay, monkeypatch):
     import threading
-    started = []
-    monkeypatch.setattr(threading.Thread, "start", lambda self: started.append(self))
     from core import credentials
     monkeypatch.setattr(credentials, "get_secret", lambda *a, **k: "")
     ov = overlay(llm_provider="gemini")
     ov._gemini_key_input.setText("")
+    started = []
+    monkeypatch.setattr(threading.Thread, "start", lambda self: started.append(self))
     ov._refresh_gemini_models()
     assert not started and ov._gemini_refresh_btn.isEnabled()
 

@@ -1,5 +1,5 @@
 {
-  "next_id": 129,
+  "next_id": 130,
   "entries": [
     {
       "id": 1,
@@ -1807,6 +1807,28 @@
         "docs/SERVER.md"
       ],
       "next_steps": "On iansserver/PC: enable api_server_enabled + token, run 'python -m tools.eval.run check' then promptfoo/inspect with the real model (not yet run against Ollama). Then #98 model arena can reuse this, or #100 MCP both ways."
+    },
+    {
+      "id": 129,
+      "timestamp": "2026-11-05 00:57 UTC",
+      "by": "GitHub Copilot App",
+      "summary": "Ported the 28 desktop-mate/Codex commits onto port/desktop-mate from master. Kept master tracing/cache/promise-retry and prompt behavior while integrating research, coding instructions, desktop companion, Gemini model discovery, and related fixes. Full suite: 1484 passed, 2 skipped; one unrelated POSIX-path expectation fails on Windows.",
+      "files": [
+        "actions/",
+        "assets/mate/",
+        "core/",
+        "dashboard/",
+        "desktop_mate.py",
+        "install.bat",
+        "install.sh",
+        "integrations/",
+        "main.py",
+        "mate_personality.py",
+        "readme.md",
+        "tests/",
+        "ui.py"
+      ],
+      "next_steps": "Review port/desktop-mate and decide whether to open its PR; test the Linux-path case in tests/test_shell_safety.py on Linux."
     }
   ]
 }
