@@ -1133,13 +1133,6 @@ def main() -> None:
     except Exception as _e:  # noqa: BLE001 - tracing is best-effort, never blocks startup
         print(f"[Aether] trace log not started: {_e}")
 
-    def _preload_torch():
-        try:
-            import torch  # noqa
-        except Exception:
-            pass
-    threading.Thread(target=_preload_torch, daemon=True).start()
-
     def _refresh_maintenance_snapshot():
         # Regenerates PROJECT_STATE.md / HEALTH_REPORT.md / ROADMAP.md / HANDOFF.md
         # so they never go stale like hand-written snapshot docs do, then
