@@ -131,6 +131,12 @@ class _Settings:
         self.keep_sessions  = int(_as_num(get("trace_keep_sessions"), 30, 1, 1000))
         self.max_bytes      = int(_as_num(get("trace_max_mb"), 200, 1, 10_000) * 1024 * 1024)
         self.max_field      = int(_as_num(get("trace_max_field_chars"), 200_000, 200, 50_000_000))
+        # "full" (default) records prompts, tool arguments and results verbatim, which is
+        # what makes the trace useful for debugging but leaves private content on disk.
+        # "metadata" keeps event names, timings, tool names, status and short values, and
+        # replaces any long string with "<N chars omitted>".
+        self.content        = ("metadata" if str(get("trace_content", "full")).strip().lower()
+                               in ("metadata", "minimal", "off") else "full")
         self.capture_stdio  = _as_bool(get("trace_capture_stdio"), True)
         self.patch_io       = _as_bool(get("trace_patch_io"), True)
         self.heartbeat_s    = _as_num(get("trace_heartbeat_s"), 30.0, 1.0, 3600.0)
@@ -272,6 +278,21 @@ def _jsonable(v: Any, key: str = "", depth: int = 0, limit: int = 200_000) -> An
     return _clip(_redact(repr(v)), limit)
 
 
+_METADATA_KEEP_CHARS = 120
+
+
+def _strip_content(v: Any) -> Any:
+    """Metadata-only trace mode: drop long strings (prompts, outputs, file contents),
+    keep structure and short values such as tool names, statuses and ids."""
+    if isinstance(v, str):
+        return v if len(v) <= _METADATA_KEEP_CHARS else f"<{len(v)} chars omitted>"
+    if isinstance(v, dict):
+        return {k: _strip_content(x) for k, x in v.items()}
+    if isinstance(v, list):
+        return [_strip_content(x) for x in v]
+    return v
+
+
 def sanitize(value: Any, limit: int = 20_000) -> Any:
     """JSON-safe copy of `value` with secret-named keys hidden and key/token patterns
     removed. Works whether or not a trace is running (used by the crash reporter)."""
@@ -333,7 +354,10 @@ def event(kind: str, /, **fields: Any) -> None:
                 rec["active_turn"] = live
         limit = S.st.max_field
         for k, v in fields.items():
-            rec[k if k not in rec else f"f_{k}"] = _jsonable(v, k, 0, limit)
+            val = _jsonable(v, k, 0, limit)
+            if S.st.content != "full":
+                val = _strip_content(val)
+            rec[k if k not in rec else f"f_{k}"] = val
         line = json.dumps(rec, ensure_ascii=False, default=str, separators=(",", ":"))
         try:
             S.q.put_nowait(line)

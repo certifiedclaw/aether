@@ -466,7 +466,7 @@ class DashboardServer:
         self._history: list[dict]         = []
         # Thread-safe (not asyncio.Queue) so Aether's threaded main.py can
         # poll it directly with queue.get(timeout=...) from a normal thread.
-        self._command_queue               = _queue.Queue()
+        self._command_queue               = _queue.Queue(maxsize=32)   # bounded: remote input must not pile up
         self._wake_callback               = None
         self._connect_callback            = None
         self._pending_keys: dict[str, float] = {}
@@ -994,7 +994,10 @@ class DashboardServer:
             else:
                 text = (body.get("text") or "").strip()
             if text:
-                self._command_queue.put(text)
+                try:
+                    self._command_queue.put_nowait(text)
+                except _queue.Full:
+                    return JSONResponse({"error": "Busy: too many queued commands"}, status_code=429)
                 if self._wake_callback:
                     self._wake_callback()
             return JSONResponse({"ok": True})
@@ -1174,7 +1177,11 @@ class DashboardServer:
                         enc = data.get("enc", "")
                         t   = self._decrypt(tok, enc) if enc else (data.get("text") or "").strip()
                         if t:
-                            self._command_queue.put(t)
+                            try:
+                                self._command_queue.put_nowait(t)
+                            except _queue.Full:
+                                await websocket.send_json({"type": "error", "error": "Busy: too many queued commands"})
+                                continue
                             if self._wake_callback:
                                 self._wake_callback()
             except WebSocketDisconnect:

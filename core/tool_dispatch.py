@@ -88,6 +88,12 @@ class ToolDispatchMixin:
         result = "Done."
         try:
             if name == "shutdown_aether":
+                # This branch bypasses the dispatch table, so @gated never sees it:
+                # apply the risk tier here or the entry in core/risk.py is dead.
+                from core import risk as _risk
+                _blocked = _risk.check("shutdown_aether", "", args if isinstance(args, dict) else {})
+                if _blocked is not None:
+                    return _blocked
                 # Unique control flow: returns immediately, bypassing the
                 # trailing state-reset/log lines below (there's nothing left
                 # to reset once the shutdown thread has been started), so

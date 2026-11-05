@@ -111,10 +111,13 @@ def _run_generated_code(description: str, speak: Callable | None = None) -> str:
         if result.returncode == 0 and output:
             return output
         elif result.returncode == 0:
-            return "Task completed successfully."
+            # Exit 0 with no output proves the script ran, not that it did the task.
+            return ("Code ran with exit code 0 but printed nothing; "
+                    "the result is unverified.")
         elif error:
             raise RuntimeError(f"Code error: {error[:400]}")
-        return "Completed."
+        raise RuntimeError(
+            f"Code exited with status {result.returncode} and no error output.")
 
     except subprocess.TimeoutExpired:
         raise RuntimeError("Generated code timed out after 120 seconds.")
@@ -298,8 +301,11 @@ def _call_tool(tool: str, parameters: dict, speak: Callable | None) -> str:
         return run_extra_tool(parameters.get("action", ""), parameters)
 
     else:
-        logger.warning(f"[Executor] ⚠️ Unknown tool '{tool}' — falling back to generated_code")
-        return _run_generated_code(f"Accomplish this task: {parameters}", speak=speak)
+        # Fail closed: an unrecognised tool name (planner typo, hallucinated tool) must
+        # surface as an error the error handler can replan around. It used to be turned
+        # into model-written code, which turned any bad name into arbitrary execution.
+        logger.warning(f"[Executor] Unknown tool '{tool}' -- refusing to guess")
+        raise ValueError(f"Unknown tool '{tool}'.")
 
 
 # ---------------------------------------------------------------------------

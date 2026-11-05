@@ -140,11 +140,17 @@ def export_memory(output_path: str = "") -> str:
 
 # ── Import ────────────────────────────────────────────────────────────────
 
-def import_memory(source_path: str) -> str:
+def import_memory(source_path: str = "", input_path: str = "") -> str:
     """
     Import memories from a previously exported JSON file.
     Merges into existing memory — does NOT overwrite.
+
+    `input_path` is the keyword the tool dispatcher and chat commands pass;
+    `source_path` is the original name, kept so existing callers still work.
     """
+    source_path = source_path or input_path
+    if not source_path:
+        return "No file given: pass the path of an exported memory JSON."
     try:
         src = Path(os.path.expanduser(source_path))
         if not src.exists():

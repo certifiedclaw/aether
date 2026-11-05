@@ -83,7 +83,7 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
     # ── allowed but recorded ────────────────────────────────────────────────
     "open_app":        MONITOR,
     "screen_process":  MONITOR,      # a screenshot is sent to a model
-    "shutdown_aether": MONITOR,
+    "shutdown_aether": ASK,          # kills the process (os._exit); never on model say-so alone
     "game_updater":    {"list": SAFE, "download_status": SAFE, "schedule_status": SAFE,
                         "cancel_schedule": MONITOR, "*": MONITOR},
 

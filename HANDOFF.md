@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 03:39 UTC
+Generated: 2026-11-05 05:15 UTC
+
+## #145 — 2026-11-05 05:15 UTC — Claude Code
+
+Applied aether-runtime-hardening.patch: execution-time tool allowlist, malformed-arg and Stop-in-batch rejection, executor fails closed on unknown tools and unverified silent runs, shutdown_aether gated at ASK, import_memory accepts input_path, bounded command queues (main + dashboard), opt-in metadata-only trace mode. 26 new tests pass; py_compile clean.
+
+**Touched:** `agent/executor.py`, `core/conversation_core.py`, `core/memory_tools.py`, `core/risk.py`, `core/tool_dispatch.py`, `core/trace_log.py`, `dashboard/server.py`, `main.py`, `tests/test_runtime_hardening.py`
+
+**Next steps:** Run the full test suite on the user's machine; consider setting logging.trace_content=metadata if trace privacy matters.
+
+---
 
 ## #144 — 2026-11-05 03:32 UTC — GitHub Copilot (Copilot App)
 

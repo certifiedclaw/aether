@@ -375,7 +375,9 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
         self._tts_ready       = threading.Event()
         self._speaking        = False
         self._speaking_lock   = threading.Lock()
-        self._text_queue:     queue.Queue = queue.Queue()
+        # Bounded: a slow turn holds the conversation lock, and an unbounded queue lets
+        # typed/dashboard/UI input pile up behind it without limit.
+        self._text_queue:     queue.Queue = queue.Queue(maxsize=64)
         self._tts_queue:      queue.Queue = queue.Queue()
         self._cancel_current_turn = threading.Event()
         from core.chat_history import ChatSessionStore
@@ -649,10 +651,23 @@ class AetherLocal(ConversationCoreMixin, ToolDispatchMixin, PromptBuilderMixin, 
             is_speaking = self._speaking
         if is_speaking:
             self._interrupt_speaking(reason="new text prompt")
-        self._text_queue.put(text)
+        self._enqueue_command(text)
 
     def _on_action_command(self, name: str, args: dict) -> None:
-        self._text_queue.put(("action", name, args))
+        self._enqueue_command(("action", name, args))
+
+    def _enqueue_command(self, item) -> bool:
+        """Non-blocking put on the command queue; these callers run on the UI thread.
+        Returns False (and tells the user) instead of blocking when the queue is full."""
+        try:
+            self._text_queue.put_nowait(item)
+            return True
+        except queue.Full:
+            try:
+                self.ui.write_log("WRN: Busy - too many queued requests; this one was dropped.")
+            except Exception:
+                pass
+            return False
 
     def _run_action_from_ui(self, name: str, args: dict) -> None:
         with self._conversation_lock:
