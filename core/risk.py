@@ -72,6 +72,7 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
     "flight_finder":   SAFE,
     "undo":            SAFE,
     "save_memory":     SAFE,
+    "save_relation":   SAFE,         # local knowledge-graph write, same class as save_memory
     "pdf_tool":        SAFE,
     "rag_query":       SAFE,
     "diagnostics":     SAFE,

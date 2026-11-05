@@ -2,7 +2,17 @@
 
 > **Read this before starting work, especially if you're a fresh session or a different LLM with no memory of prior sessions.** Most recent entry first. Rendered from `tools/maintenance/data/handoff.json` — add entries via `python -m tools.maintenance.handoff add`, don't hand-edit this file.
 
-Generated: 2026-11-05 05:27 UTC
+Generated: 2026-11-05 05:30 UTC
+
+## #148 — 2026-11-05 05:30 UTC — Claude Code
+
+Cleared the 6 pre-existing test failures. One real bug: save_relation (knowledge-graph tool) was missing from core/risk.py RISK_TABLE, so it fell to 'unknown means ask' and would have prompted for approval on every call; added as SAFE (same class as save_memory). The other 5 were environment: 3 needed fastapi (installed here, not a repo change), 2 imported main.py without PortAudio, so tests/test_action_launcher.py now stubs sounddevice only when the real one is unavailable. Full suite: 1764 passed, 1 skipped.
+
+**Touched:** `core/risk.py`, `tests/test_action_launcher.py`
+
+**Next steps:** Container backend for real filesystem isolation of generated code; verify the sandbox's Windows job-object memory cap on the PC.
+
+---
 
 ## #147 — 2026-11-05 05:27 UTC — Claude Code
 

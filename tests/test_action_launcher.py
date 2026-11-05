@@ -1,6 +1,8 @@
 import os
 import queue
+import sys
 import threading
+import types
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -148,7 +150,21 @@ def test_action_launcher_builds_form_and_dispatches_values(monkeypatch):
     window.close()
 
 
-def test_direct_action_uses_worker_queue_without_an_llm_turn():
+@pytest.fixture
+def no_portaudio(monkeypatch):
+    """main.py imports sounddevice at module load and (outside headless mode) refuses to
+    start without PortAudio. These tests never touch audio, so stub it where PortAudio
+    is missing (CI, servers) and leave the real module alone where it exists."""
+    try:
+        import sounddevice  # noqa: F401
+    except Exception:
+        import importlib.machinery
+        stub = types.ModuleType("sounddevice")
+        stub.__spec__ = importlib.machinery.ModuleSpec("sounddevice", None)  # main._bootstrap calls find_spec
+        monkeypatch.setitem(sys.modules, "sounddevice", stub)
+
+
+def test_direct_action_uses_worker_queue_without_an_llm_turn(no_portaudio):
     from main import AetherLocal
 
     aether = object.__new__(AetherLocal)
@@ -173,7 +189,7 @@ def test_direct_action_uses_worker_queue_without_an_llm_turn():
     ]
 
 
-def test_new_written_prompt_stops_tts_and_enters_the_message_queue():
+def test_new_written_prompt_stops_tts_and_enters_the_message_queue(no_portaudio):
     from main import AetherLocal
 
     aether = object.__new__(AetherLocal)
