@@ -1139,7 +1139,7 @@ def test_osint_tool_schema_has_authorization_warnings():
     surfaced to the LLM or the user at runtime -- the actual schema the
     model sees before deciding to invoke osint_lookup (main.py's
     TOOL_DECLARATIONS entry) had zero safety/authorization framing on the
-    higher-risk actions (port_scan, breach_check).
+    higher-risk actions (port_scan, lan_audit, breach_check).
 
     Added per-action warnings directly to that schema (not to the
     docstring, since the docstring was never the thing that mattered) --
@@ -1170,9 +1170,18 @@ def test_osint_tool_schema_has_authorization_warnings():
     assert "authoriz" in top_desc.lower(), "top-level description should warn about authorization"
     assert "port_scan" in action_desc and "authoriz" in action_desc.lower(), \
         "port_scan needs an explicit authorization warning"
+    assert "lan_audit" in action_desc and "rfc1918" in action_desc.lower(), \
+        "lan_audit needs a private-subnet scope limit"
+    assert "not verified vulnerabilities" in action_desc.lower(), \
+        "lan_audit must not claim to verify vulnerabilities"
+    assert "threat_intel" in action_desc and "cisa kev" in action_desc.lower(), \
+        "threat_intel must identify its public data sources"
     assert "breach_check" in action_desc and (
         "sensitive" in action_desc.lower() or "private" in action_desc.lower()
     ), "breach_check needs an explicit sensitive-data-handling warning"
+    file_tool = next(d for d in decls if d["name"] == "file_processor")
+    file_desc = file_tool["description"].lower()
+    assert "metadata" in file_desc and "original" in file_desc and "approval" in file_desc
 
 
 def test_confirm_blocking_dialog_thread_safety():
@@ -1331,6 +1340,17 @@ def test_osint_lookup_confirmation_gate():
     stub._safety.set_confirm_callback(lambda msg: True)
     with patch("actions.osint_tools.run_osint", return_value="scan result") as m:
         assert fn(stub, {"action": "port_scan", "target": "1.2.3.4"}) == "scan result"
+        assert m.called
+
+    # lan_audit also requires explicit approval.
+    stub._safety.set_confirm_callback(lambda msg: False)
+    with patch("actions.osint_tools.run_osint", return_value="SHOULD NOT RUN") as m:
+        result = fn(stub, {"action": "lan_audit", "target": "192.168.1.0/24"})
+        assert "cancelled" in result.lower()
+        assert not m.called
+    stub._safety.set_confirm_callback(lambda msg: True)
+    with patch("actions.osint_tools.run_osint", return_value="LAN audit result") as m:
+        assert fn(stub, {"action": "lan_audit", "target": "192.168.1.0/24"}) == "LAN audit result"
         assert m.called
 
     # breach_check denied.

@@ -123,8 +123,9 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
     "file_processor": {
         # "run" executes a .py file: the same hole code_helper had. Other actions
         # are analysis/conversion or perform their own operation-specific check.
-        "run": ASK, "*": MONITOR,
+        "run": ASK, "strip_metadata": ASK, "*": MONITOR,
     },
+    "antivirus": {"status": SAFE, "scan": ASK, "hash_reputation": ASK},
     "memory_tool": {
         "": SAFE, "stats": SAFE, "backup": MONITOR, "export": MONITOR,
         "import": ASK, "prune": ASK,      # both rewrite or delete your memory
@@ -162,7 +163,7 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
         "optimize": ASK, "screen_debug": ASK, "*": SAFE,
     },
     "dev_agent":         ASK,
-    "osint_lookup":      {"port_scan": ASK, "breach_check": ASK, "*": MONITOR},
+    "osint_lookup":      {"port_scan": ASK, "lan_audit": ASK, "breach_check": ASK, "*": MONITOR},
 }
 
 # Tools whose function asks for itself, with a dialog that shows the actual plan/code.
@@ -181,6 +182,7 @@ ENTRY_POINTS = {
     "computer_control": ("actions.computer_control", "computer_control"),
     "browser_control": ("actions.browser_control", "browser_control"),
     "file_processor":  ("actions.file_processor", "file_processor"),
+    "antivirus":       ("actions.antivirus", "antivirus"),
     "game_updater":    ("actions.game_updater", "game_updater"),
     "open_app":        ("actions.open_app", "open_app"),
     "screen_process":  ("actions.screen_processor", "screen_process"),
@@ -231,6 +233,14 @@ _SECRETISH = re.compile(r"pass(word|phrase)?|secret|token|api_?key|credential|^p
 
 def _detail(tool: str, action: str, params: dict) -> str:
     lines = [f"Tool: {tool}" + (f"  Action: {action}" if action else "")]
+    if tool == "antivirus" and action == "scan":
+        lines.append(
+            "The local antivirus may quarantine or remediate the file according to its own policy."
+        )
+    elif tool == "antivirus" and action == "hash_reputation":
+        lines.append(
+            "Only the file's SHA-256 hash will be sent to VirusTotal; file contents will not be uploaded."
+        )
     for k, v in (params or {}).items():
         if k == "action":
             continue

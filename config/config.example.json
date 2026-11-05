@@ -118,7 +118,7 @@
   "response_cache_enabled": false,
   "response_cache_ttl_s":   86400,
   "response_cache_max":     200,
-  "_comment_trace":   "Flight recorder (logs/trace/*.jsonl): every prompt, reply, tool call, timing. View: python -m tools.trace_view. Secrets are redacted.",
+  "_comment_trace":   "Flight recorder (logs/trace/*.jsonl): full prompts/replies, tool data, stdio, subprocesses and text HTTP bodies; binary HTTP bodies are byte counts. Credentials are redacted. Logs contain private conversation data. View: python -m tools.trace_view.",
   "logging.trace_enabled":        true,
   "logging.level":                "DEBUG",
   "logging.trace_keep_sessions":  30,

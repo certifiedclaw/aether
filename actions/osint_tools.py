@@ -1,9 +1,10 @@
 """
 osint_tools.py — Aether v3 OSINT Toolkit
 
-All tools use free public APIs or standard protocols — no API keys required
-for core functionality. Optional API keys (Shodan, HIBP, SecurityTrails) unlock
-richer results but nothing breaks without them.
+Tools use free public APIs or standard protocols — no API keys required for
+core functionality. The LAN audit is limited to explicitly supplied RFC1918
+IPv4 subnets. Optional API keys (Shodan, HIBP, SecurityTrails) unlock richer
+results but nothing breaks without them.
 
 Sources / inspiration:
   crt.sh, HaveIBeenPwned, Shodan, Wayback Machine, GitHub API,
@@ -11,10 +12,10 @@ Sources / inspiration:
   OSINTFramework, theHarvester techniques, SpiderFoot concepts,
   Dorkwright, GoodOldSearch, user-scanner, CrossTrace
 
-ETHICAL NOTICE:  These tools query *publicly available* information only.
-Use responsibly and in accordance with applicable laws. The per-action
+ETHICAL NOTICE: Use responsibly and in accordance with applicable laws.
+Only audit private-network devices you own or are authorized to test. The per-action
 authorization/handling warnings the model actually sees before invoking
-this tool live in main.py's TOOL_DECLARATIONS entry for "osint_lookup"
+this tool live in core/tool_declarations.py's TOOL_DECLARATIONS entry for "osint_lookup"
 (that's the schema passed to the LLM at request time) -- keep this
 docstring's notice and that schema text in sync if either changes.
 """
@@ -777,16 +778,84 @@ def ip_osint(ip_or_host: str) -> str:
 
 
 _MAX_SCAN_PORTS = 2048
+_LAN_AUDIT_PORTS = (22, 53, 80, 139, 443, 445, 554, 631, 8080, 8443, 9100)
+_LAN_AUDIT_TIMEOUT = 0.3
+_RFC1918_NETWORKS = tuple(
+    ipaddress.ip_network(cidr)
+    for cidr in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")
+)
 
 
-def port_scan(host: str, ports: str = "21,22,23,25,53,80,110,143,443,445,3306,3389,5432,5900,6379,8080,8443,9200,27017") -> str:
-    """
-    Quick TCP port scanner. ports = comma-separated list or range like 1-1024.
-    """
-    host = host.strip()
+def lan_audit(subnet: str, ports: str = "") -> str:
+    """Find hosts exposing common TCP services on an explicitly supplied RFC1918 subnet."""
+    try:
+        network = ipaddress.ip_network(str(subnet).strip(), strict=False)
+    except ValueError:
+        return "Invalid subnet: provide a private IPv4 CIDR such as 192.168.1.0/24."
+    if network.version != 4 or not any(network.subnet_of(allowed) for allowed in _RFC1918_NETWORKS):
+        return "LAN audit is limited to RFC1918 private IPv4 subnets."
+    if network.prefixlen < 24:
+        return "Subnet too large: LAN audit is limited to /24 or smaller ranges."
 
-    # Parse ports (bounded: 1-65535, at most _MAX_SCAN_PORTS per call, so a model-supplied
-    # range like 1-999999999 cannot exhaust memory or turn this into a full-range sweep)
+    port_text = ports.strip() if isinstance(ports, str) else ""
+    port_list = _parse_scan_ports(port_text) if port_text else list(_LAN_AUDIT_PORTS)
+    if isinstance(port_list, str):
+        return port_list
+    if len(port_list) > 32:
+        return "Too many ports: LAN audit accepts at most 32 ports."
+
+    hosts = list(network.hosts())
+    if not hosts:
+        return "Subnet contains no usable host addresses."
+
+    def scan_host(address: ipaddress.IPv4Address) -> tuple[str, list[int]]:
+        opened = []
+        for port in port_list:
+            try:
+                with socket.create_connection((str(address), port), timeout=_LAN_AUDIT_TIMEOUT):
+                    opened.append(port)
+            except OSError:
+                continue
+        return str(address), opened
+
+    with ThreadPoolExecutor(max_workers=64) as pool:
+        results = list(pool.map(scan_host, hosts))
+
+    discovered = [(address, opened) for address, opened in results if opened]
+    lines = [
+        f"LAN audit: {network}",
+        f"Checked {len(hosts)} private IPv4 address(es), TCP ports {', '.join(map(str, port_list))}.",
+        "This is a bounded service-exposure check, not a vulnerability assessment.",
+        "",
+    ]
+    if not discovered:
+        lines.append("No hosts responded on the selected common TCP ports.")
+        lines.append("Hosts with firewalls or other services may not be detected.")
+        return "\n".join(lines)
+    lines.append(f"Hosts responding on common ports ({len(discovered)}):")
+    for address, opened in discovered:
+        services = ", ".join(
+            f"{port} ({_COMMON_PORTS.get(port, 'unknown service')})" for port in opened
+        )
+        lines.append(f"  {address}: {services}")
+    lines.extend([
+        "",
+        "Observed: these TCP services accepted a connection from this computer. "
+        "This does not show that they are reachable from the internet.",
+        "Open ports are not, by themselves, confirmed vulnerabilities or proof of risk.",
+        "",
+        "OPSEC triage before changing settings:",
+        "  1. What device or data are you protecting, and who uses this host?",
+        "  2. Who can reach it on this LAN, and is it exposed through router forwarding?",
+        "  3. Is each responding service expected, maintained, and access-controlled?",
+        "  4. What would be the impact if an unauthorized user reached that service?",
+        "  5. If the exposure is unexpected and the impact matters, choose a proportionate "
+        "step (restrict access, disable the service, or update it) and verify afterward.",
+    ])
+    return "\n".join(lines)
+
+
+def _parse_scan_ports(ports: str) -> list[int] | str:
     port_list = []
     try:
         for part in str(ports).split(","):
@@ -807,6 +876,18 @@ def port_scan(host: str, ports: str = "21,22,23,25,53,80,110,143,443,445,3306,33
         return "Invalid ports: use a comma-separated list or ranges like 1-1024."
     if not port_list:
         return "No ports given."
+    return port_list
+
+
+def port_scan(host: str, ports: str = "21,22,23,25,53,80,110,143,443,445,3306,3389,5432,5900,6379,8080,8443,9200,27017") -> str:
+    """
+    Quick TCP port scanner. ports = comma-separated list or range like 1-1024.
+    """
+    host = host.strip()
+
+    port_list = _parse_scan_ports(ports)
+    if isinstance(port_list, str):
+        return port_list
 
     open_ports, closed_ports = [], []
 
@@ -1323,7 +1404,7 @@ def full_person_report(name: str, extras: str = "") -> str:
 def run_osint(action: str, target: str, args: dict = None) -> str:
     """
     Unified entry point called by Aether's _execute_tool dispatcher.
-    action: whois | dns | subdomains | breach_check | port_scan | dork | geoip | username | ssl | tech
+    action: whois | dns | subdomains | breach_check | port_scan | lan_audit | dork | geoip | username | ssl | tech
     """
     args = args or {}
     try:
@@ -1337,6 +1418,11 @@ def run_osint(action: str, target: str, args: dict = None) -> str:
             return email_breach_check(target)
         elif action == "port_scan":
             return port_scan(target, args.get("ports", "80,443,22,21,8080"))
+        elif action == "lan_audit":
+            return lan_audit(target, args.get("ports", ""))
+        elif action == "threat_intel":
+            from actions.threat_intel import threat_intel_brief
+            return threat_intel_brief(target)
         elif action == "dork":
             return generate_dorks(target)
         elif action == "geoip":
@@ -1350,6 +1436,6 @@ def run_osint(action: str, target: str, args: dict = None) -> str:
         elif action == "full_report":
             return full_domain_report(target)
         else:
-            return f"Unknown OSINT action: {action}. Available: whois, dns, subdomains, breach_check, port_scan, dork, geoip, username, ssl, tech, full_report"
+            return f"Unknown OSINT action: {action}. Available: whois, dns, subdomains, breach_check, port_scan, lan_audit, threat_intel, dork, geoip, username, ssl, tech, full_report"
     except Exception as e:
         return f"OSINT error ({action}): {e}"

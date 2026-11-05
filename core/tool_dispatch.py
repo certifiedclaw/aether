@@ -54,6 +54,7 @@ from actions.dev_agent         import dev_agent
 from actions.web_search        import web_search as web_search_action
 from actions.computer_control  import computer_control
 from actions.game_updater      import game_updater
+from actions.antivirus         import antivirus
 
 from core import undo as undo_stack
 
@@ -238,6 +239,17 @@ class ToolDispatchMixin:
         r = file_processor(parameters=args, player=self.ui, speak=self.speak)
         return r or "Done."
 
+    def _tool_antivirus(self, args: dict) -> str:
+        action = str(args.get("action") or "").strip().lower()
+        if (
+            action in ("scan", "hash_reputation")
+            and not args.get("path")
+            and self.ui.current_file
+        ):
+            args["path"] = self.ui.current_file
+        r = antivirus(parameters=args, player=self.ui, speak=self.speak)
+        return r or "Done."
+
     def _tool_computer_control(self, args: dict) -> str:
         r = computer_control(parameters=args, player=self.ui)
         return r or "Done."
@@ -257,16 +269,26 @@ class ToolDispatchMixin:
             action = args.get("action", "")
             target = args.get("target", "")
 
-            # port_scan/breach_check get a blocking confirmation dialog before
+            # Network scans and breach checks get a blocking confirmation dialog before
             # running -- see core/safety.py's _DEFAULT_HIGH_RISK and the
             # authorization warnings on this tool's schema in TOOL_DECLARATIONS.
-            gate_op = {"port_scan": "osint_port_scan", "breach_check": "osint_breach_check"}.get(action)
+            gate_op = {
+                "port_scan": "osint_port_scan",
+                "lan_audit": "osint_lan_audit",
+                "breach_check": "osint_breach_check",
+            }.get(action)
             if gate_op and self._safety.requires_confirmation(gate_op):
                 detail = (f"Action: {action}\nTarget: {target}\n"
                           + (f"Ports: {args.get('ports') or '80,443,22,21,8080'}\n"
-                             if action == "port_scan" else "") + "\n"
+                             if action == "port_scan" else
+                             f"Ports: {args.get('ports') or 'common LAN ports'}\n"
+                             if action == "lan_audit" else "") + "\n"
                           + ("Only scan systems you own or are explicitly authorized to test."
                              if action == "port_scan" else
+                             "Only audit private-network devices you own or are explicitly "
+                             "authorized to test. This checks common TCP service exposure; "
+                             "it does not exploit devices or verify vulnerabilities."
+                             if action == "lan_audit" else
                              "Returns whether this email appears in known breach datasets — "
                              "handle the result as you would any other person's private information."))
                 if not self._safety.request_confirmation(f"OSINT {action}", detail):
@@ -482,6 +504,7 @@ class ToolDispatchMixin:
         "agent_task": _tool_agent_task,
         "web_search": _tool_web_search,
         "file_processor": _tool_file_processor,
+        "antivirus": _tool_antivirus,
         "computer_control": _tool_computer_control,
         "game_updater": _tool_game_updater,
         "flight_finder": _tool_flight_finder,

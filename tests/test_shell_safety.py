@@ -48,7 +48,7 @@ def dev_agent():
 def test_open_vscode_passes_path_as_plain_argument(dev_agent, tmp_path):
     popen = MagicMock()
     with patch.object(dev_agent.shutil, "which", return_value="/usr/bin/code"), \
-         patch.object(dev_agent.subprocess, "Popen", popen):
+         patch.object(dev_agent, "_Popen", popen):
         assert dev_agent._open_vscode(tmp_path) is True
     args, kwargs = popen.call_args
     assert args[0] == ["/usr/bin/code", str(tmp_path)]
@@ -61,7 +61,7 @@ def test_open_vscode_reports_failure_when_code_is_not_installed(dev_agent, tmp_p
     popen = MagicMock()
     with patch.object(dev_agent.shutil, "which", return_value=None), \
          patch.object(dev_agent.os.path, "isfile", return_value=False), \
-         patch.object(dev_agent.subprocess, "Popen", popen):
+         patch.object(dev_agent, "_Popen", popen):
         assert dev_agent._open_vscode(tmp_path) is False
     popen.assert_not_called()
 
@@ -69,7 +69,7 @@ def test_open_vscode_reports_failure_when_code_is_not_installed(dev_agent, tmp_p
 def test_open_vscode_falls_through_to_next_candidate_when_launch_fails(dev_agent, tmp_path):
     popen = MagicMock(side_effect=[OSError("boom"), MagicMock()])
     with patch.object(dev_agent, "_vscode_candidates", return_value=["/a/code", "/b/code"]), \
-         patch.object(dev_agent.subprocess, "Popen", popen):
+         patch.object(dev_agent, "_Popen", popen):
         assert dev_agent._open_vscode(tmp_path) is True
     assert [c.args[0][0] for c in popen.call_args_list] == ["/a/code", "/b/code"]
 
@@ -78,7 +78,7 @@ def test_open_vscode_falls_through_to_next_candidate_when_launch_fails(dev_agent
 def test_open_vscode_refuses_cmd_metacharacters_for_batch_launchers(dev_agent, bad):
     popen = MagicMock()
     with patch.object(dev_agent, "_vscode_candidates", return_value=[r"C:\VS\bin\code.cmd"]), \
-         patch.object(dev_agent.subprocess, "Popen", popen):
+         patch.object(dev_agent, "_Popen", popen):
         assert dev_agent._open_vscode(Path(bad)) is False
     popen.assert_not_called()
 
@@ -88,7 +88,7 @@ def test_open_vscode_allows_same_characters_for_real_executables(dev_agent, tmp_
     popen = MagicMock()
     project_dir = tmp_path / "a & b"
     with patch.object(dev_agent, "_vscode_candidates", return_value=["/usr/bin/code"]), \
-         patch.object(dev_agent.subprocess, "Popen", popen):
+         patch.object(dev_agent, "_Popen", popen):
         assert dev_agent._open_vscode(project_dir) is True
     assert popen.call_args.args[0] == ["/usr/bin/code", str(project_dir)]
 

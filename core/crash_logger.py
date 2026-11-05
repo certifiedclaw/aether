@@ -57,6 +57,11 @@ def sanitize(text: str) -> str:
     the user's home directory / account name, and e-mail addresses."""
     if not text:
         return text
+    try:
+        from core.log_redaction import redact_text
+        text = redact_text(str(text))
+    except Exception:  # noqa: BLE001 - keep the local shape-based fallbacks below
+        text = str(text)
     text = _KEY_SHAPES.sub("[redacted-key]", str(text))
     text = _SECRET_RE.sub(lambda m: m.group(1) + "[redacted]", text)
     text = re.sub(r"[\w.+-]+@[\w-]+\.[\w.-]+", "[email]", text)
@@ -72,7 +77,8 @@ def sanitize(text: str) -> str:
 
 def _sanitize_extra(extra: dict | None) -> dict:
     try:
-        return json.loads(sanitize(json.dumps(extra or {}, default=str)))
+        from core.log_redaction import sanitize_for_logs
+        return sanitize_for_logs(extra or {})
     except Exception:  # noqa: BLE001 - redaction broke the JSON: keep nothing rather than leak
         return {"note": "extra data dropped (could not be sanitized)"}
 
@@ -202,8 +208,9 @@ def log_crash(exc: BaseException,
         report = sanitize_report(report)
         report["sanitized"] = True
 
-        path.write_text(json.dumps(report, indent=2, default=str),
-                        encoding="utf-8")
+        from core.log_redaction import open_private_text
+        with open_private_text(path, "w") as f:
+            f.write(json.dumps(report, indent=2, default=str))
         logger.debug("Crash logged: %s", path)
         return str(path)
 
