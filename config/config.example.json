@@ -81,6 +81,8 @@
   "llm.embed_model": "nomic-embed-text",
 
   "_comment_memory": "── Memory settings ──────────────────────────────────────",
+  "_comment_memory_resources": "Dense embedding and reranker models load in the background only when a relevant memory query or write needs them. Set memory.preload_models=true to load them at startup for faster first retrieval at the cost of idle RAM.",
+  "memory.preload_models": false,
   "memory.db_path":             "data/memory.db",
   "goals.path":                 "data/goals.json",
   "memory.chat_history_limit":  100,
