@@ -354,6 +354,13 @@ class TaskQueue:
     def _run_task(self, task: Task) -> None:
         logger.info(f"[TaskQueue] ▶️ Running: [{task.task_id}] {task.goal[:60]}")
         try:
+            # Its own approval scope: dialogs say this is a background task, a later user
+            # message neither ends its approvals nor can it spend theirs (core/risk.py).
+            try:
+                from core import risk as _risk
+                _risk.begin_turn(f"[background task] {task.goal}", background=True)
+            except Exception:  # noqa: BLE001 - never block a task on the risk layer
+                pass
             executor = self._get_executor()
             result   = executor.execute(
                 goal        = task.goal,

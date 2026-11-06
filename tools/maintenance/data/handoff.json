@@ -1,5 +1,5 @@
 {
-  "next_id": 154,
+  "next_id": 155,
   "entries": [
     {
       "id": 1,
@@ -2198,6 +2198,21 @@
         "tests/test_review_fixes.py"
       ],
       "next_steps": "STILL OPEN: (d) core/risk.py grants (_TURN/_GRANTS/_PLAN_GRANTS) are module-global, not request-scoped; (f) one bearer token can both send commands and approve high-risk actions from a remote client (needs a design decision: re-enter pairing code, or an approver capability); (g) _ensure_crypto_js downloads JS from a CDN with no integrity hash (vendor it or pin a SHA-384); (h) security/middleware.py require_approval not bound to device/capability/endpoint (NOT CHECKED); (i) executor max_retries vs hardcoded loop, recovery records original step, planner has no schema validation (NOT RE-VERIFIED); (j) generated-fix code= vs code_helper file_path (NOT RE-VERIFIED); (k) TaskQueue cancel() reports CANCELLED before the tool stops, stop() does not join; (l) mcp_bridge stdin write before deadline, stderr=DEVNULL, unpinned npx, serial boot, unsanitised tool names; (m-rest) arg previews reach remote dashboard unredacted; (o) COMPLEX_HINTS routes short plan/design/debug prompts HARD, tune if noisy; also consider a trusted-plugin tier if per-call plugin approval is too noisy."
+    },
+    {
+      "id": 154,
+      "timestamp": "2026-11-06 04:07 UTC",
+      "by": "Claude Code",
+      "summary": "Fourth batch from the external review (stacked on #38). (d) core/risk.py approvals are now scoped to the request that got them. Grants, refusals and plan approvals live on a _Turn object held in a ContextVar instead of module globals (_TURN/_GRANTS/_DENIED/_PLAN_GRANTS are gone). begin_turn(text, background=False) returns the turn and binds it to the calling thread. Foreground turn: a newer user message supersedes it (same behaviour as before: old approvals end, a dialog open during a new message cancels). Background turn: not ended by user messages, and it cannot spend or erase theirs. TaskQueue._run_task now calls begin_turn('[background task] <goal>', background=True), so dialogs name the task instead of quoting the user's last message. A thread that never called begin_turn (a helper thread spawned mid-request) falls back to the latest USER turn, so existing behaviour holds; a stale superseded user turn gets a throwaway turn (asks afresh, stores nothing). New: risk.current_turn(), risk.bind_turn(turn) context manager. If you add a thread that runs gated tools on behalf of a request, wrap its body in 'with risk.bind_turn(turn)'. 6 new tests with real threads (5 fail on old code). Also fixed a pre-existing intermittent test failure: core/crash_logger.py let the card-number redaction replace the trace session id (e.g. 20261105-230514 is Luhn-valid) about 1 run in 10; reproduced on pristine master e1a5385; ids are now restored after sanitizing, with a deterministic test. Full suite 1815 passed, 2 skipped.",
+      "files": [
+        "core/risk.py",
+        "agent/task_queue.py",
+        "core/crash_logger.py",
+        "tests/test_review_fixes.py",
+        "tests/test_risk_task.py",
+        "tests/test_crash_reporter.py"
+      ],
+      "next_steps": "STILL OPEN: (f) one bearer token can both send commands and approve high-risk actions from a remote client (needs a design decision: re-enter the pairing code to approve, or an approver capability); (g) _ensure_crypto_js downloads JS from a CDN with no integrity hash (vendor it or pin a SHA-384); (h) security/middleware.py require_approval not bound to device/capability/endpoint (NOT CHECKED); (i) executor max_retries vs hardcoded loop, recovery records original step, planner has no schema validation (NOT RE-VERIFIED); (j) generated-fix code= vs code_helper file_path (NOT RE-VERIFIED); (k) TaskQueue cancel() reports CANCELLED before the tool stops, stop() does not join; (l) mcp_bridge stdin write before deadline, stderr=DEVNULL, unpinned npx, serial boot, unsanitised tool names; (m-rest) arg previews reach remote dashboard unredacted; (o) COMPLEX_HINTS routes short plan/design/debug prompts HARD, tune if noisy; consider a trusted-plugin tier if per-call plugin approval is too noisy. Housekeeping: stacked PRs #36 -> #37 -> #38 -> this one; merge in order."
     }
   ]
 }
