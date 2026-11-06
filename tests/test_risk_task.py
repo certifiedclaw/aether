@@ -175,7 +175,7 @@ def test_new_request_during_the_dialog_cancels_instead_of_carrying_approval_over
     monkeypatch.setattr(risk, "_overrides", lambda: {})
     out = _click()
     assert out.startswith("Cancelled: a new request started")
-    assert risk._GRANTS == {}
+    assert risk.current_turn().grants == {}
 
 
 def test_no_ui_means_denied_and_remembered(monkeypatch):

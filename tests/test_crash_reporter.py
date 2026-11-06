@@ -84,3 +84,12 @@ def test_context_param_and_rotation(crash_dir, monkeypatch):
     assert crash_logger.crash_count() == 3
     latest = sorted(crash_dir.glob("*.json"))[-1]
     assert _load(str(latest))["extra"]["context"] == "STT-5"
+
+
+def test_trace_session_id_is_not_redacted_as_a_card_number(crash_dir, tmp_path, monkeypatch):
+    """'20261105-230514' is Luhn-valid, so the card-number redaction used to replace it and the
+    report no longer linked to its trace (intermittent, depends on the time of day)."""
+    assert trace_log.start({}, trace_dir=tmp_path / "trace", install_hooks=False)
+    monkeypatch.setattr(trace_log, "session_id", lambda: "20261105-230514")
+    data = _load(crash_logger.log_crash(_boom()))
+    assert data["trace"]["session"] == "20261105-230514"
