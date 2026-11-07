@@ -883,14 +883,22 @@ class DashboardServer:
             if not self._auth(req):
                 return JSONResponse({"error": "Unauthorized"}, status_code=401)
             from core.pending_approvals import get_approval_store
-            return JSONResponse({"approvals": get_approval_store().list_pending()})
+            approvals = get_approval_store().list_pending()
+            from security.policy import get_store
+            approvals.extend({**a.to_json(), "id": a.approval_id, "message": a.summary}
+                             for a in get_store().list_pending())
+            return JSONResponse({"approvals": approvals})
 
         @app.post("/api/approvals/{approval_id}/approve")
         async def approve_approval(approval_id: str, req: Request):
             if not self._auth(req):
                 return JSONResponse({"error": "Unauthorized"}, status_code=401)
             from core.pending_approvals import get_approval_store
-            if not get_approval_store().resolve(approval_id, True):
+            resolved = get_approval_store().resolve(approval_id, True)
+            if not resolved:
+                from security.policy import get_store
+                resolved = get_store().resolve(approval_id, "approved")
+            if not resolved:
                 return JSONResponse({"error": "Not found or already resolved"}, status_code=404)
             return JSONResponse({"ok": True})
 
@@ -899,7 +907,11 @@ class DashboardServer:
             if not self._auth(req):
                 return JSONResponse({"error": "Unauthorized"}, status_code=401)
             from core.pending_approvals import get_approval_store
-            if not get_approval_store().resolve(approval_id, False):
+            resolved = get_approval_store().resolve(approval_id, False)
+            if not resolved:
+                from security.policy import get_store
+                resolved = get_store().resolve(approval_id, "denied")
+            if not resolved:
                 return JSONResponse({"error": "Not found or already resolved"}, status_code=404)
             return JSONResponse({"ok": True})
 

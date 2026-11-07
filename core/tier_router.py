@@ -188,6 +188,7 @@ def route_and_generate(
     message: str,
     *,
     has_active_task: bool,
+    follows_turn: bool = False,
     call_ollama: Callable[[str, str], str] = default_call_ollama,   # (model_name, message) -> response
     call_gemini: Callable[[str], str]      = default_call_gemini,   # (message) -> response
     validate: Optional[Callable[[str], bool]] = None,  # response validator (e.g. tool-call check)
@@ -203,7 +204,9 @@ def route_and_generate(
     so this works out of the box; pass your own if you need different
     behavior (e.g. reusing an existing conversation-aware client).
     """
-    decision = classify(message, has_active_task=has_active_task)
+    decision = classify(
+        message, has_active_task=has_active_task, follows_turn=follows_turn
+    )
     escalations = 0
 
     while True:
@@ -212,8 +215,14 @@ def route_and_generate(
         else:
             response = call_ollama(decision.model, message)
 
-        if validate is None or validate(response) or escalations >= max_escalations:
+        if validate is None or validate(response):
             return response, decision
+
+        if escalations >= max_escalations or decision.tier == Tier.HARD:
+            return (
+                "Error: response validation failed after all available routing attempts.",
+                decision,
+            )
 
         escalations += 1
         decision = escalate_to_hard(reason=f"tier {decision.tier.value} failed validation")

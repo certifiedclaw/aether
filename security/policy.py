@@ -154,6 +154,16 @@ class ApprovalStore:
             )
             return a
 
+    def resolve(self, approval_id: str, decision: Literal["approved", "denied"],
+                decided_by: str = "desktop") -> bool:
+        """Resolve a pending approval once; return False if unavailable."""
+        with self._lock:
+            a = self._items.get(approval_id)
+            if not a or a.status != "pending":
+                return False
+            self.decide(approval_id, decision, decided_by)
+            return a.status == decision
+
     def _gc(self, now: float) -> None:
         """Garbage-collect: pending beyond expiry → timeout, decided older
         than _KEPT_AFTER_DECISION → drop."""

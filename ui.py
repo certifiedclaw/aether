@@ -2851,8 +2851,8 @@ class MainWindow(QMainWindow):
         w.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         w.setStyleSheet(f"background: {C.BG};")
         lay = QVBoxLayout(w)
-        lay.setContentsMargins(18, 14, 18, 14)
-        lay.setSpacing(8)
+        lay.setContentsMargins(22, 18, 22, 18)
+        lay.setSpacing(10)
 
         def _section_label(txt):
             l = QLabel(txt)
@@ -2905,7 +2905,10 @@ class MainWindow(QMainWindow):
         self._chat_status_lbl = QLabel("Ready to help")
         self._chat_status_lbl.setAccessibleName("Aether status")
         self._chat_status_lbl.setFont(QFont(FONT_BODY, 9, QFont.Weight.DemiBold))
-        self._chat_status_lbl.setStyleSheet(f"color: {C.GREEN}; background: transparent;")
+        self._chat_status_lbl.setStyleSheet(
+            f"color: {C.GREEN}; background: {C.PANEL}; "
+            f"border: 1px solid {C.BORDER}; border-radius: 10px; padding: 5px 10px;"
+        )
         chat_heading.addWidget(self._chat_status_lbl, alignment=Qt.AlignmentFlag.AlignVCenter)
         chat_lay.addLayout(chat_heading)
 
@@ -2917,9 +2920,10 @@ class MainWindow(QMainWindow):
         self._chat_combo.setStyleSheet(f"""
             QComboBox {{
                 color: {C.TEXT}; background: {C.PANEL};
-                border: 1px solid {C.BORDER}; border-radius: 7px; padding: 6px 10px;
+                border: 1px solid {C.BORDER}; border-radius: 9px; padding: 7px 11px;
             }}
             QComboBox:hover {{ border-color: {C.BORDER_B}; }}
+            QComboBox:focus {{ border: 1px solid {C.PRI}; }}
             QComboBox QAbstractItemView {{
                 color: {C.TEXT}; background: {C.PANEL}; selection-background-color: {C.PANEL2};
             }}
@@ -2935,9 +2939,10 @@ class MainWindow(QMainWindow):
         new_chat_btn.setStyleSheet(f"""
             QPushButton {{
                 color: {C.TEXT}; background: {C.PANEL};
-                border: 1px solid {C.BORDER}; border-radius: 7px; padding: 6px 14px;
+                border: 1px solid {C.BORDER}; border-radius: 9px; padding: 7px 14px;
             }}
             QPushButton:hover {{ color: {C.PRI}; border-color: {C.PRI_DIM}; }}
+            QPushButton:focus {{ border: 1px solid {C.PRI}; }}
         """)
         new_chat_btn.clicked.connect(self._request_new_chat)
         chat_row.addWidget(new_chat_btn)
@@ -2952,8 +2957,8 @@ class MainWindow(QMainWindow):
         self._log.setStyleSheet(f"""
             QTextEdit {{
                 background: {C.PANEL}; color: {C.TEXT};
-                border: 1px solid {C.BORDER}; border-radius: 10px;
-                padding: 14px; selection-background-color: {C.PRI_GHO};
+                border: 1px solid {C.BORDER}; border-radius: 12px;
+                padding: 16px; selection-background-color: {C.PRI_GHO};
             }}
             QScrollBar:vertical {{
                 background: transparent; width: 8px; border: none; margin: 4px 0;
@@ -3072,9 +3077,9 @@ class MainWindow(QMainWindow):
         actions_content_lay.addSpacing(8)
         actions_content_lay.addWidget(_section_label("Quick actions"))
         quick_actions = QGridLayout()
-        quick_actions.setContentsMargins(0, 0, 0, 0)
-        quick_actions.setHorizontalSpacing(5)
-        quick_actions.setVerticalSpacing(5)
+        quick_actions.setContentsMargins(0, 4, 0, 4)
+        quick_actions.setHorizontalSpacing(8)
+        quick_actions.setVerticalSpacing(8)
         self._quick_action_buttons = {}
         for index, (label, name) in enumerate([
             ("Research", "research"),
@@ -3088,15 +3093,17 @@ class MainWindow(QMainWindow):
         ]):
             button = QPushButton(label)
             button.setToolTip(f"Open the {label.split(maxsplit=1)[-1]} form")
-            button.setMinimumHeight(42)
+            button.setMinimumHeight(48)
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             button.setStyleSheet(f"""
                 QPushButton {{
                     background: {C.PANEL2}; color: {C.TEXT};
-                    border: 1px solid {C.BORDER}; border-radius: 8px;
-                    padding: 8px; text-align: left;
+                    border: 1px solid {C.BORDER}; border-radius: 10px;
+                    padding: 9px 11px; text-align: left;
                 }}
-                QPushButton:hover {{ color: {C.PRI}; border: 1px solid {C.PRI_DIM}; }}
+                QPushButton:hover {{ color: {C.PRI}; background: {C.PANEL}; border: 1px solid {C.PRI_DIM}; }}
+                QPushButton:pressed {{ background: {C.PRI_GHO}; }}
+                QPushButton:focus {{ border: 1px solid {C.PRI}; }}
             """)
             button.clicked.connect(
                 lambda _checked=False, selected=name: self._open_named_action(selected)
