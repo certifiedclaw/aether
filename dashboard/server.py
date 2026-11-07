@@ -17,6 +17,7 @@ import secrets
 import socket
 import string
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 _DEPS_OK = False
@@ -465,15 +466,21 @@ def _read(name: str) -> str:
 
 # ── DashboardServer ───────────────────────────────────────────────────────────
 
+@dataclass
+class _Session:
+    """One bearer token's session: AES session key, deadline, and the paired device
+    (if any) it was minted from."""
+    key: str
+    expires: float                 # time.monotonic() deadline
+    device: str | None = None
+
+
 class DashboardServer:
 
     def __init__(self):
         self._host                        = os.environ.get("AETHER_DASHBOARD_HOST", "127.0.0.1").strip() or "127.0.0.1"
         self._ip                          = self._advertised_ip()
-        self._tokens: set[str]            = set()
-        self._token_keys: dict[str, str]  = {}   # auth_token → session_key
-        self._token_expiry: dict[str, float] = {}   # auth_token → time.monotonic() deadline
-        self._token_device: dict[str, str]   = {}   # auth_token → device_token it was minted from
+        self._sessions: dict[str, _Session] = {}    # auth_token → its session
         self._ws_tokens: dict = {}                  # live WebSocket → auth_token (closed on revoke)
         self._ws_tickets: dict[str, tuple[str, str, float]] = {}
         self._aes_cache:  dict[str, tuple]= {}   # session_key → (AES key, MAC key)
@@ -562,11 +569,10 @@ class DashboardServer:
         return self._aes_cache[session_key]
 
     def _decrypt(self, token: str, enc_b64: str) -> str | None:
-        sk = self._token_keys.get(token)
-        if not sk:
+        if not self._token_valid(token):
             return None
         try:
-            aes, mac = self._keys(sk)
+            aes, mac = self._keys(self._sessions[token].key)
             return _decrypt_cbc(aes, enc_b64, mac)
         except Exception:
             return None
@@ -596,39 +602,39 @@ class DashboardServer:
     # ── FastAPI app ───────────────────────────────────────────────────────
 
     def _add_token(self, tok: str, session_key: str, device: str | None = None) -> None:
-        self._tokens.add(tok)
-        self._token_keys[tok] = session_key
-        self._token_expiry[tok] = time.monotonic() + TOKEN_TTL
-        if device:
-            self._token_device[tok] = device
-
-    def _drop_token(self, tok: str) -> None:
-        self._tokens.discard(tok)
-        self._token_keys.pop(tok, None)
-        self._token_expiry.pop(tok, None)
-        self._token_device.pop(tok, None)
+        self._sessions[tok] = _Session(session_key, time.monotonic() + TOKEN_TTL, device)
 
     def _token_valid(self, tok: str) -> bool:
-        """True if tok is live. Expired tokens are dropped on sight. A token with no
-        expiry record (added directly, e.g. by tests) does not expire."""
-        if not tok or tok not in self._tokens:
+        """True if tok has a live session. Expired sessions are dropped on sight."""
+        sess = self._sessions.get(tok)
+        if sess is None:
             return False
-        deadline = self._token_expiry.get(tok)
-        if deadline is not None and deadline <= time.monotonic():
-            self._drop_token(tok)
+        if sess.expires <= time.monotonic():
+            del self._sessions[tok]
             return False
         return True
 
     def _revoke_device_sessions(self) -> tuple[int, list]:
         """Forget every paired device AND every bearer token minted from one.
-        Returns (device count, websockets to close)."""
+        Returns (device count, websockets whose token is no longer valid)."""
         count = len(self._device_sessions)
         self._device_sessions.clear()
-        dead = {t for t, d in self._token_device.items()}
-        for tok in dead:
-            self._drop_token(tok)
-        sockets = [ws for ws, t in self._ws_tokens.items() if t in dead or not self._token_valid(t)]
+        self._sessions = {t: s for t, s in self._sessions.items() if s.device is None}
+        sockets = [ws for ws, t in self._ws_tokens.items() if not self._token_valid(t)]
         return count, sockets
+
+    def _resolve_approval(self, req: Request, approval_id: str, approved: bool) -> JSONResponse:
+        """Resolve a pending approval in whichever store holds it: the desktop-prompt store
+        (core.pending_approvals) or the remote-capability store (security.policy)."""
+        if not self._auth(req):
+            return JSONResponse({"error": "Unauthorized"}, status_code=401)
+        from core.pending_approvals import get_approval_store
+        from security.policy import get_store
+        decision = "approved" if approved else "denied"
+        if not (get_approval_store().resolve(approval_id, approved)
+                or get_store().resolve(approval_id, decision, decided_by="dashboard")):
+            return JSONResponse({"error": "Not found or already resolved"}, status_code=404)
+        return JSONResponse({"ok": True})
 
     def _auth(self, req: Request) -> bool:
         tok = req.headers.get("authorization", "").removeprefix("Bearer ").strip()
@@ -891,29 +897,11 @@ class DashboardServer:
 
         @app.post("/api/approvals/{approval_id}/approve")
         async def approve_approval(approval_id: str, req: Request):
-            if not self._auth(req):
-                return JSONResponse({"error": "Unauthorized"}, status_code=401)
-            from core.pending_approvals import get_approval_store
-            resolved = get_approval_store().resolve(approval_id, True)
-            if not resolved:
-                from security.policy import get_store
-                resolved = get_store().resolve(approval_id, "approved")
-            if not resolved:
-                return JSONResponse({"error": "Not found or already resolved"}, status_code=404)
-            return JSONResponse({"ok": True})
+            return self._resolve_approval(req, approval_id, approved=True)
 
         @app.post("/api/approvals/{approval_id}/deny")
         async def deny_approval(approval_id: str, req: Request):
-            if not self._auth(req):
-                return JSONResponse({"error": "Unauthorized"}, status_code=401)
-            from core.pending_approvals import get_approval_store
-            resolved = get_approval_store().resolve(approval_id, False)
-            if not resolved:
-                from security.policy import get_store
-                resolved = get_store().resolve(approval_id, "denied")
-            if not resolved:
-                return JSONResponse({"error": "Not found or already resolved"}, status_code=404)
-            return JSONResponse({"ok": True})
+            return self._resolve_approval(req, approval_id, approved=False)
 
     # ── LLM backend status (remote-PC / local-CPU fallback) ────────────────
 

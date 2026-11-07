@@ -9,8 +9,9 @@ import threading
 import subprocess
 import tempfile
 import os
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Literal
 
 from agent.planner       import create_plan, replan
 from agent.error_handler import analyze_error, generate_fix, ErrorDecision
@@ -329,21 +330,24 @@ def _call_tool(tool: str, parameters: dict, speak: Callable | None) -> str:
 # AgentExecutor
 # ---------------------------------------------------------------------------
 
-class ExecutionOutcome(str):
-    """A result string that also says how the run ended.
+@dataclass(frozen=True)
+class ExecutionResult:
+    """How a run ended, and what to tell the user. Every return path of
+    AgentExecutor.execute() declares its status; nothing is inferred from the text."""
+    status: Literal["succeeded", "failed", "cancelled"]
+    text: str
 
-    Subclasses str so every existing caller (voice, tests, speak) keeps working;
-    TaskQueue reads `.status` ("succeeded" | "failed" | "cancelled") instead of
-    assuming that any returned string means success. Plain str == succeeded."""
+    @classmethod
+    def succeeded(cls, text: str) -> "ExecutionResult":
+        return cls("succeeded", text)
 
-    def __new__(cls, text: str, status: str = "succeeded"):
-        obj = super().__new__(cls, text)
-        obj.status = status
-        return obj
+    @classmethod
+    def failed(cls, text: str) -> "ExecutionResult":
+        return cls("failed", text)
 
-
-def outcome_status(result) -> str:
-    return getattr(result, "status", "succeeded")
+    @classmethod
+    def cancelled(cls, text: str) -> "ExecutionResult":
+        return cls("cancelled", text)
 
 
 class AgentExecutor:
@@ -355,7 +359,7 @@ class AgentExecutor:
         goal:        str,
         speak:       Callable | None        = None,
         cancel_flag: threading.Event | None = None,
-    ) -> str:
+    ) -> ExecutionResult:
         logger.info(f"\n[Executor] 🎯 Goal: {goal}")
 
         replan_attempts = 0
@@ -368,7 +372,7 @@ class AgentExecutor:
             if not steps:
                 msg = "I couldn't create a valid plan for this task, sir."
                 if speak: speak(msg)
-                return ExecutionOutcome(msg, "failed")
+                return ExecutionResult.failed(msg)
 
             # Chained approvals (#67): one dialog for the whole plan instead of one per step.
             try:
@@ -378,7 +382,7 @@ class AgentExecutor:
                     if not _ok:
                         msg = "Cancelled: the plan was not approved, so nothing was done."
                         if speak: speak(msg)
-                        return ExecutionOutcome(msg, "cancelled")
+                        return ExecutionResult.cancelled(msg)
             except Exception as _e:  # noqa: BLE001 - fall back to per-step approvals
                 logger.warning(f"[Executor] plan approval unavailable, asking per step: {_e}")
 
@@ -389,7 +393,7 @@ class AgentExecutor:
             for step in steps:
                 if cancel_flag and cancel_flag.is_set():
                     if speak: speak("Task cancelled, sir.")
-                    return ExecutionOutcome("Task cancelled.", "cancelled")
+                    return ExecutionResult.cancelled("Task cancelled.")
 
                 step_num = step.get("step", "?")
                 tool     = step.get("tool", "generated_code")
@@ -415,7 +419,7 @@ class AgentExecutor:
 
                     except GeneratedCodeNotRun as e:
                         if speak: speak(str(e))
-                        return str(e)
+                        return ExecutionResult.cancelled(str(e))
 
                     except Exception as e:
                         error_msg = str(e)
@@ -442,7 +446,7 @@ class AgentExecutor:
                         elif decision == ErrorDecision.ABORT:
                             msg = f"Task aborted, sir. {recovery.get('reason', '')}"
                             if speak: speak(msg)
-                            return msg
+                            return ExecutionResult.failed(msg)
 
                         else:  # REPLAN
                             fix_suggestion = recovery.get("fix_suggestion", "")
@@ -469,7 +473,7 @@ class AgentExecutor:
 
                 if cancel_flag and cancel_flag.is_set():
                     if speak: speak("Task cancelled, sir.")
-                    return ExecutionOutcome("Task cancelled.", "cancelled")
+                    return ExecutionResult.cancelled("Task cancelled.")
 
                 if not step_ok and not failed_step:
                     failed_step  = step
@@ -480,12 +484,12 @@ class AgentExecutor:
                     break
 
             if success:
-                return self._summarize(goal, completed_steps, speak)
+                return ExecutionResult.succeeded(self._summarize(goal, completed_steps, speak))
 
             if replan_attempts >= self.MAX_REPLAN_ATTEMPTS:
                 msg = f"Task failed after {replan_attempts} replan attempts, sir."
                 if speak: speak(msg)
-                return ExecutionOutcome(msg, "failed")
+                return ExecutionResult.failed(msg)
 
             if speak: speak("Adjusting my approach, sir.")
             replan_attempts += 1

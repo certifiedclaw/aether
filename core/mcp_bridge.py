@@ -74,6 +74,7 @@ class MCPServerProcess:
         self._lock = threading.Lock()
         self._msg_id = 0
         self._tools: list[dict] = []
+        self._last_restart = float("-inf")      # time.monotonic() of the last restart()
         self._stdout_queue: queue.Queue[bytes | None] = queue.Queue(maxsize=_MCP_STDOUT_QUEUE_SIZE)
 
     # ── Lifecycle ─────────────────────────────────────────────────────────
@@ -164,7 +165,7 @@ class MCPServerProcess:
     def restart(self, min_interval: float = 5.0) -> None:
         """Start a dead server again (rate-limited so a crash-looping server can't spin)."""
         now = time.monotonic()
-        if now - getattr(self, "_last_restart", 0.0) < min_interval:
+        if now - self._last_restart < min_interval:
             raise RuntimeError("restarted too recently")
         self._last_restart = now
         self.stop()

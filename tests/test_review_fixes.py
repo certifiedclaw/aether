@@ -30,7 +30,7 @@ def test_revoke_devices_kills_tokens_minted_from_devices():
     count, _ = d._revoke_device_sessions()
     assert count == 1
     assert not d._token_valid("dev-tok")
-    assert "dev-tok" not in d._tokens and "dev-tok" not in d._token_keys
+    assert "dev-tok" not in d._sessions
     assert d._token_valid("pair-tok")                  # untouched
     assert d._decrypt("dev-tok", "x") is None
 
@@ -56,7 +56,7 @@ def test_tokens_expire(monkeypatch):
     real = time.monotonic
     monkeypatch.setattr(srv.time, "monotonic", lambda: real() + srv.TOKEN_TTL + 1)
     assert not d._token_valid("t")
-    assert "t" not in d._tokens and "t" not in d._token_keys
+    assert "t" not in d._sessions
 
 
 def test_ticket_issued_before_expiry_is_rejected_after(monkeypatch):
@@ -64,7 +64,7 @@ def test_ticket_issued_before_expiry_is_rejected_after(monkeypatch):
     d._add_token("t", "k")
     ticket = d._issue_ws_ticket("t", "main")
     assert ticket
-    d._drop_token("t")
+    d._sessions.pop("t")
     assert d._consume_ws_ticket(ticket, "main") is None
 
 
@@ -99,24 +99,51 @@ def _run(result):
 
 
 def test_failed_outcome_is_marked_failed():
-    t = _run(ex.ExecutionOutcome("Task failed after 2 replan attempts, sir.", "failed"))
+    t = _run(ex.ExecutionResult.failed("Task failed after 2 replan attempts, sir."))
     assert t.status == tq.TaskStatus.FAILED
+    assert "replan attempts" in t.error
 
 
 def test_cancelled_outcome_is_marked_cancelled():
-    t = _run(ex.ExecutionOutcome("Task cancelled.", "cancelled"))
+    t = _run(ex.ExecutionResult.cancelled("Task cancelled."))
     assert t.status == tq.TaskStatus.CANCELLED
 
 
-def test_plain_string_still_completes():
-    t = _run("All done.")
-    assert t.status == tq.TaskStatus.COMPLETED
+def test_succeeded_outcome_completes_with_its_text():
+    t = _run(ex.ExecutionResult.succeeded("All done."))
+    assert t.status == tq.TaskStatus.COMPLETED and t.result == "All done."
 
 
 def test_executor_reports_failed_when_no_plan(monkeypatch):
     monkeypatch.setattr(ex, "create_plan", lambda goal: {"steps": []})
-    out = ex.AgentExecutor().execute("anything")
-    assert ex.outcome_status(out) == "failed"
+    assert ex.AgentExecutor().execute("anything").status == "failed"
+
+
+def test_executor_abort_decision_is_failed_not_completed(monkeypatch):
+    monkeypatch.setattr(ex, "create_plan", lambda goal: {"steps": [
+        {"step": 1, "tool": "x", "description": "d", "parameters": {}}]})
+    monkeypatch.setattr(ex, "_call_tool", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(ex, "analyze_error", lambda *a, **k: {
+        "decision": ex.ErrorDecision.ABORT, "reason": "nope"})
+    out = ex.AgentExecutor().execute("g")
+    assert out.status == "failed" and "aborted" in out.text
+
+
+def test_executor_declined_generated_code_is_cancelled(monkeypatch):
+    monkeypatch.setattr(ex, "create_plan", lambda goal: {"steps": [
+        {"step": 1, "tool": "generated_code", "description": "d", "parameters": {}}]})
+    monkeypatch.setattr(ex, "_call_tool", lambda *a, **k: (_ for _ in ()).throw(
+        ex.GeneratedCodeNotRun("Cancelled: not approved.")))
+    out = ex.AgentExecutor().execute("g")
+    assert out.status == "cancelled"
+
+
+def test_task_fails_closed_when_background_scope_cannot_start(monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError("risk layer down")
+    monkeypatch.setattr(tq.risk, "begin_turn", boom)
+    t = _run(ex.ExecutionResult.succeeded("must not run"))
+    assert t.status == tq.TaskStatus.FAILED and "risk layer down" in t.error
 
 
 # ── 3. prune_memory actually deletes (VACUUM outside the transaction) ────
@@ -434,11 +461,14 @@ def test_helper_thread_without_its_own_turn_shares_the_latest_user_request(monke
 
 def test_stale_user_turn_gets_no_grants(monkeypatch):
     risk, asked = _risk_env(monkeypatch, [True])
-    old = risk.begin_turn("first")
-    risk.begin_turn("second")                                         # supersedes "first" ...
-    with risk.bind_turn(old):                                         # ... a late call from it
-        assert risk.check("computer_control", "click", {}) is None    # asks (approved)
-        assert risk.check("computer_control", "click", {}) is not None  # nothing was stored
+    risk.begin_turn("first")
+    # a newer user message arrives on another thread (as the command loops do) ...
+    t = threading.Thread(target=lambda: risk.begin_turn("second"))
+    t.start()
+    t.join()
+    # ... so a late call from "first" asks afresh and nothing it approves is stored
+    assert risk.check("computer_control", "click", {}) is None
+    assert risk.check("computer_control", "click", {}) is not None
     assert len(asked) == 2
 
 
@@ -461,3 +491,20 @@ def test_task_queue_runs_each_task_in_a_background_turn():
         time.sleep(0.05)
     q.stop()
     assert seen == [(True, "[background task] tidy the downloads folder")]
+
+
+# ── approvals: one endpoint resolves either store ────────────────────────
+
+def test_dashboard_resolves_remote_capability_approvals_and_records_who():
+    from fastapi.testclient import TestClient
+    from security.policy import get_store, Capability
+    d = _server()
+    d._add_token("admin", "k")
+    a = get_store().create(device_id="phone-1", cap=Capability.SHELL, summary="shell: ls",
+                           payload={"cmd": "ls"}, endpoint="POST /api/control/shell")
+    with TestClient(d.app) as c:
+        h = {"Authorization": "Bearer admin"}
+        assert c.post(f"/api/approvals/{a.approval_id}/approve", headers=h).status_code == 200
+        assert get_store().get(a.approval_id).decided_by == "dashboard"
+        assert c.post(f"/api/approvals/{a.approval_id}/deny", headers=h).status_code == 404  # already resolved
+        assert c.post("/api/approvals/nope/approve").status_code == 401

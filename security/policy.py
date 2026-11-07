@@ -49,10 +49,16 @@ class Approval:
     expires: float
     status: ApprovalStatus = "pending"
     decided_at: float | None = None
-    decided_by: str | None = None  # "desktop" or "auto-timeout"
+    decided_by: str | None = None  # "desktop", "dashboard" or "auto-timeout"
 
     def is_expired(self, now: float | None = None) -> bool:
         return (now or time.time()) >= self.expires
+
+    def matches(self, device_id: str, cap: Capability, endpoint: str, payload: dict) -> bool:
+        """Was this approval granted for exactly this request? An approved id is
+        only good for the device, capability, endpoint and body it was requested with."""
+        return (self.device_id == device_id and self.capability == cap
+                and self.endpoint == endpoint and self.payload == payload)
 
     def to_json(self) -> dict:
         return {

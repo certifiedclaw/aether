@@ -134,7 +134,7 @@ def test_dashboard_perf_endpoint(monkeypatch, log):
     ds = srv.DashboardServer()
     c = TestClient(ds.app)
     assert c.get("/api/perf").status_code == 401
-    ds._tokens.add("tok")
+    ds._add_token("tok", "test-key")
     r = c.get("/api/perf?hours=junk", headers={"Authorization": "Bearer tok"})
     assert r.status_code == 200 and r.json()["summary"]["models"][0]["rounds"] == 1
     assert "Performance" in c.get("/perf").text

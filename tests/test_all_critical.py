@@ -354,7 +354,7 @@ def test_agent_executor_cancel_during_retry_wait():
          patch("time.sleep", return_value=None):
         result = ex.AgentExecutor().execute("do a thing", speak=None, cancel_flag=cancel_flag)
 
-    assert result == "Task cancelled."
+    assert result.status == "cancelled" and result.text == "Task cancelled."
     assert call_count["n"] == 1
 
 
@@ -964,7 +964,7 @@ def test_dashboard_build_app_refactor_preserves_behavior():
     r = client.post("/login", json={"pin": key})
     assert r.status_code == 200
     token = r.json()["token"]
-    assert token in ds._tokens
+    assert ds._token_valid(token)
 
     headers = {"Authorization": f"Bearer {token}"}
     assert client.post("/api/command", json={"text": "hello"}, headers=headers).status_code == 200

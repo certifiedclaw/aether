@@ -355,21 +355,6 @@ def begin_turn(user_text: str = "", background: bool = False) -> _Turn:
     return turn
 
 
-class bind_turn:
-    """`with risk.bind_turn(turn):` runs a block (e.g. a helper thread's body) under an
-    existing turn, so its tool calls use that request's approvals."""
-    def __init__(self, turn: _Turn):
-        self._turn, self._token = turn, None
-
-    def __enter__(self):
-        self._token = _CURRENT.set(self._turn)
-        return self._turn
-
-    def __exit__(self, *exc):
-        _CURRENT.reset(self._token)
-        return False
-
-
 def reset_state() -> None:
     """Forget all grants/refusals (tests, and a clean slate on demand)."""
     global _latest

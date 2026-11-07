@@ -45,3 +45,10 @@ def test_escalation_validation_failure_returns_explicit_error():
     assert calls[1][0] == "gemini"
     assert response.startswith("Error: response validation failed")
     assert decision.tier == Tier.HARD
+
+
+def test_complex_hint_beats_the_quick_path_with_or_without_an_active_task():
+    from core.tier_router import classify, Tier
+    for active in (False, True):
+        assert classify("debug this", has_active_task=active).tier == Tier.HARD
+    assert classify("what time is it").tier == Tier.QUICK

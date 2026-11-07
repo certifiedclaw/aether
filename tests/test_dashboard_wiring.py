@@ -130,7 +130,7 @@ def test_slow_llm_status_does_not_block_other_requests(monkeypatch):
     import httpx
     d = _dash(monkeypatch)
     tok = "t" * 20
-    d._tokens.add(tok)
+    d._add_token(tok, "test-key")
     from core import llm_client
     monkeypatch.setattr(llm_client, "get_llm_backend_status", lambda: (time.sleep(1.0), {"mode": "single"})[1])
 

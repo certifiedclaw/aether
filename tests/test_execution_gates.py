@@ -109,7 +109,7 @@ def test_agent_executor_reports_generated_code_denial_as_cancelled(monkeypatch):
 
     result = agent_executor.AgentExecutor().execute("goal")
 
-    assert result.startswith("Cancelled")
+    assert result.status == "cancelled" and result.text.startswith("Cancelled")
 
 
 # ── code_helper ──────────────────────────────────────────────────────────────

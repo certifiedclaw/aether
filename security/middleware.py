@@ -169,13 +169,9 @@ async def require_approval(req: Request, cap: Capability) -> str:
                 detail=f"Approval status: {a.status}",
             )
         device = current_device(req)
-        requested_payload = {key: value for key, value in body.items()
-                             if key != "approval_id"}
         endpoint = f"{req.method} {req.url.path}"
-        if (a.device_id != device.device_id
-                or a.capability != cap
-                or a.endpoint != endpoint
-                or a.payload != requested_payload):
+        payload = {k: v for k, v in body.items() if k != "approval_id"}
+        if not a.matches(device.device_id, cap, endpoint, payload):
             audit("cap.denied", ip=_client_ip(req), device_id=device.device_id,
                   capability=cap.value, approval_id=provided,
                   reason="approval_request_mismatch")

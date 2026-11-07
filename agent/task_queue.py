@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Callable, Any
 import logging
 
+from core import risk
 from core.data_home import resolve_data_path
 
 logger = logging.getLogger("aether")
@@ -356,28 +357,24 @@ class TaskQueue:
         try:
             # Its own approval scope: dialogs say this is a background task, a later user
             # message neither ends its approvals nor can it spend theirs (core/risk.py).
-            try:
-                from core import risk as _risk
-                _risk.begin_turn(f"[background task] {task.goal}", background=True)
-            except Exception:  # noqa: BLE001 - never block a task on the risk layer
-                pass
-            executor = self._get_executor()
-            result   = executor.execute(
+            # No fallback: if the scope cannot be created the task fails (outer except)
+            # rather than running under the user's approvals.
+            risk.begin_turn(f"[background task] {task.goal}", background=True)
+            result = self._get_executor().execute(
                 goal        = task.goal,
                 speak       = task.speak,
                 cancel_flag = task.cancel_flag,
             )
 
             with self._lock:
-                _st = getattr(result, "status", "succeeded")
-                if task.cancel_flag.is_set() or _st == "cancelled":
+                if task.cancel_flag.is_set() or result.status == "cancelled":
                     task.status = TaskStatus.CANCELLED
-                elif _st == "failed":
+                elif result.status == "failed":
                     task.status = TaskStatus.FAILED
-                    task.error  = str(result)
+                    task.error  = result.text
                 else:
                     task.status = TaskStatus.COMPLETED
-                    task.result = result
+                    task.result = result.text
                 self._active_count -= 1
                 self._prune_task_history()
                 try:
@@ -388,7 +385,7 @@ class TaskQueue:
 
             if task.on_complete and not task.cancel_flag.is_set():
                 try:
-                    task.on_complete(task.task_id, result)
+                    task.on_complete(task.task_id, result.text)
                 except Exception as e:
                     logger.warning(f"[TaskQueue] ⚠️ on_complete callback error: {e}")
 

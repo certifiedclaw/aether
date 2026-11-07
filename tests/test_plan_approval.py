@@ -116,4 +116,4 @@ def test_executor_asks_once_when_enabled_and_cancels_on_refusal(ui, monkeypatch)
     risk.begin_turn("x")
     ui.answer = False
     out = ex.AgentExecutor().execute("g", speak=spoken.append)
-    assert "not approved" in out and len(ui.asked) == 1 and spoken
+    assert out.status == "cancelled" and "not approved" in out.text and len(ui.asked) == 1 and spoken
