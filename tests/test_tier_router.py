@@ -52,3 +52,10 @@ def test_complex_hint_beats_the_quick_path_with_or_without_an_active_task():
     for active in (False, True):
         assert classify("debug this", has_active_task=active).tier == Tier.HARD
     assert classify("what time is it").tier == Tier.QUICK
+
+
+def test_short_complex_prompts_route_hard():
+    from core.tier_router import classify, Tier
+    for msg in ("debug this", "analyze my logs", "refactor it"):
+        assert classify(msg).tier == Tier.HARD, msg
+    assert classify("hey").tier == Tier.QUICK

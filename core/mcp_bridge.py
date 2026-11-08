@@ -132,8 +132,6 @@ class MCPServerProcess:
                     return
                 if len(raw) > _MCP_MAX_LINE_BYTES:
                     raise ValueError("MCP response line exceeds the size limit")
-                if MCPServerProcess._is_notification(raw):
-                    continue                      # log/progress/list_changed: nothing waits on these
                 while True:
                     try:
                         response_queue.put_nowait(raw)
@@ -153,14 +151,6 @@ class MCPServerProcess:
                 response_queue.put_nowait(None)
             except queue.Full:
                 pass
-
-    @staticmethod
-    def _is_notification(raw: bytes) -> bool:
-        try:
-            msg = json.loads(raw.decode("utf-8", "replace"))
-        except ValueError:
-            return False
-        return isinstance(msg, dict) and "method" in msg and "id" not in msg
 
     def restart(self, min_interval: float = 5.0) -> None:
         """Start a dead server again (rate-limited so a crash-looping server can't spin)."""

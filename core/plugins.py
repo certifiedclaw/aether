@@ -15,6 +15,8 @@ import hashlib, hmac, importlib.util, inspect, logging, re, sys
 from pathlib import Path
 from typing import Callable
 
+from core import risk
+
 logger = logging.getLogger(__name__)
 
 _NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]{0,63}$")
@@ -183,11 +185,10 @@ class PluginSystem:
             return f"Plugin tool not found: {name}"
         # Plugin code is arbitrary Python: not in RISK_TABLE, so tier_for() fails closed to ASK.
         # Gated here (not in the dispatcher) so every caller is covered.
-        from core import risk as _risk
-        _params = {k: v for k, v in kwargs.items() if k not in ("player", "session_memory")}
-        _blocked = _risk.check(f"plugin.{name}", "", _params)
-        if _blocked is not None:
-            return _blocked
+        params = {k: v for k, v in kwargs.items() if k not in ("player", "session_memory")}
+        blocked = risk.check(f"plugin.{name}", "", params)
+        if blocked is not None:
+            return blocked
         try:
             return str(_call_plugin(fn, kwargs, player=kwargs.pop("player", None),
                                     session_memory=kwargs.pop("session_memory", None)) or "Done.")
