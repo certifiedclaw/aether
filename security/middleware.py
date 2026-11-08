@@ -197,7 +197,7 @@ async def require_approval(req: Request, cap: Capability) -> str:
             "expires_in": int(a.expires - a.created),
             "summary": summary,
             "endpoint": endpoint,
-            "poll_url": f"/api/approvals/{a.approval_id}",
+            "poll_url": f"/api/secure/approvals/{a.approval_id}",
         },
     )
 

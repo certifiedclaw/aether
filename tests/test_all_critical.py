@@ -1000,29 +1000,29 @@ def test_ensure_network_access_refactor_preserves_behavior():
     on this Linux sandbox, so that split is verified structurally
     (compiles, correct control flow, same code moved verbatim) rather
     than by execution."""
-    import dashboard.server as srv
+    import dashboard.firewall as srv
 
-    with patch("dashboard.server._ensure_network_access_linux") as m_linux, \
-         patch("dashboard.server._ensure_network_access_windows") as m_win, \
-         patch("dashboard.server._ensure_network_access_macos") as m_mac, \
+    with patch("dashboard.firewall._ensure_network_access_linux") as m_linux, \
+         patch("dashboard.firewall._ensure_network_access_windows") as m_win, \
+         patch("dashboard.firewall._ensure_network_access_macos") as m_mac, \
          patch("sys.platform", "linux"):
-        srv._ensure_network_access(8000)
+        srv.ensure_network_access(8000)
         assert m_linux.called and m_linux.call_args.args == (8000,)
         assert not m_win.called and not m_mac.called
 
-    with patch("dashboard.server._ensure_network_access_linux") as m_linux, \
-         patch("dashboard.server._ensure_network_access_windows") as m_win, \
-         patch("dashboard.server._ensure_network_access_macos") as m_mac, \
+    with patch("dashboard.firewall._ensure_network_access_linux") as m_linux, \
+         patch("dashboard.firewall._ensure_network_access_windows") as m_win, \
+         patch("dashboard.firewall._ensure_network_access_macos") as m_mac, \
          patch("sys.platform", "darwin"):
-        srv._ensure_network_access(8000)
+        srv.ensure_network_access(8000)
         assert m_mac.called and m_mac.call_args.args == (8000,)
         assert not m_linux.called and not m_win.called
 
-    with patch("dashboard.server._ensure_network_access_linux") as m_linux, \
-         patch("dashboard.server._ensure_network_access_windows") as m_win, \
-         patch("dashboard.server._ensure_network_access_macos") as m_mac, \
+    with patch("dashboard.firewall._ensure_network_access_linux") as m_linux, \
+         patch("dashboard.firewall._ensure_network_access_windows") as m_win, \
+         patch("dashboard.firewall._ensure_network_access_macos") as m_mac, \
          patch("sys.platform", "win32"):
-        srv._ensure_network_access(8000)
+        srv.ensure_network_access(8000)
         assert m_win.called and m_win.call_args.args == (8000,)
         assert not m_linux.called and not m_mac.called
 

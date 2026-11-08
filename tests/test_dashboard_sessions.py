@@ -60,7 +60,7 @@ def test_ticket_issued_before_expiry_is_rejected_after(monkeypatch):
 
 
 def test_windows_firewall_commands_are_scoped_and_never_reclassify():
-    from dashboard.server import _windows_firewall_commands
+    from dashboard.firewall import _windows_firewall_commands
     cmds = _windows_firewall_commands(8765, scoped_exists=False,
                                       legacy_port_exists=True, legacy_prog_exists=True)
     text = "\n".join(cmds)
@@ -76,7 +76,7 @@ def test_windows_firewall_commands_are_scoped_and_never_reclassify():
 def test_windows_setup_script_never_contains_profile_change_or_program_rule(monkeypatch):
     """Drive the real function with subprocess/ctypes mocked and read the .bat it writes."""
     import codecs, subprocess, types
-    from dashboard import server as s
+    from dashboard import firewall as s
     seen = {}
     codecs.register(lambda n: codecs.lookup("latin-1") if n == "mbcs" else None)   # Windows-only codec
 

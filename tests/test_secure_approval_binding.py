@@ -116,3 +116,22 @@ def test_dashboard_lists_and_resolves_secure_approval(monkeypatch):
     assert decided.status_code == 200
     assert repeated.status_code == 404
     assert store.get(approval.approval_id).status == "approved"
+
+
+@pytest.mark.asyncio
+async def test_202_poll_url_exists_on_the_secure_router(monkeypatch):
+    """The URL handed to a remote device must exist where the router is mounted
+    (dashboard/server.py mounts it at /api/secure): 401 (needs a session), never 404."""
+    import httpx
+    from fastapi import FastAPI
+    from dashboard.api_secure import router
+    app = FastAPI()
+    app.include_router(router, prefix="/api/secure")
+    monkeypatch.setattr("security.policy.get_store", lambda: ApprovalStore())
+    with pytest.raises(HTTPException) as error:
+        await require_approval(make_request({"cmd": "dir"}), Capability.SHELL)
+    assert error.value.status_code == 202
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+                                 base_url="http://t") as client:
+        reply = await client.get(error.value.detail["poll_url"])
+    assert reply.status_code == 401
