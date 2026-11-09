@@ -452,12 +452,6 @@
       "at_line": 65
     },
     {
-      "file": "core/chat_commands.py",
-      "function": "_handle_chat_command",
-      "lines": 306,
-      "at_line": 70
-    },
-    {
       "file": "core/listen_loops.py",
       "function": "_listen_whisper",
       "lines": 158,
@@ -487,7 +481,7 @@
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-11-09T01:06:08.301884+00:00",
+    "generated": "2026-11-09T01:17:48.879385+00:00",
     "files_scanned": 269
   }
 }

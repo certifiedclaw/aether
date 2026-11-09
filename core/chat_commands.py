@@ -30,6 +30,51 @@ pattern as the other extracted modules.
 from version import version_string
 
 
+def _is(*names):
+    return lambda lowered: lowered in names
+
+
+def _word(name):
+    """The command alone, or the command followed by a space and arguments."""
+    return lambda lowered: lowered == name or lowered.startswith(name + " ")
+
+
+def _first(*names):
+    return lambda lowered: lowered.split(" ")[0] in names
+
+
+# Ordered: first match wins. Predicates take the stripped, lower-cased text.
+# (/remote is handled before this table: `_cmd_remote()` takes no arguments.)
+_COMMANDS = (
+    (_word("/newchat"), "_cmd_newchat"),
+    (_is("/chats"), "_cmd_chats"),
+    (_word("/searchchats"), "_cmd_searchchats"),
+    (lambda l: l.startswith("/switchchat "), "_cmd_switchchat"),
+    (lambda l: l.startswith("/renamechat "), "_cmd_renamechat"),
+    (lambda l: l.startswith("/deletechat "), "_cmd_deletechat"),
+    (_is("status", "aether status", "/status"), "_cmd_status"),
+    (_is("/clear"), "_cmd_clear"),
+    (_first("/audit"), "_cmd_audit"),
+    (_first("/perf", "/speed"), "_cmd_perf"),
+    (_first("/stats", "/usage"), "_cmd_stats"),
+    (_first("/loganalyze", "/logs"), "_cmd_loganalyze"),
+    (_is("/briefing", "/report"), "_cmd_briefing"),
+    (lambda l: l == "/rules" or l.startswith("/rule "), "_cmd_rules"),
+    (_word("/learned"), "_cmd_learned"),
+    (_word("/memory"), "_cmd_memory"),
+    (_is("/resources", "/governor"), "_cmd_resources"),
+    (_is("/doctor", "/doctor fix"), "_cmd_doctor"),
+    (_is("/selftest", "run self test", "self test"), "_cmd_selftest"),
+    (_is("/crashes", "show crashes", "crash report", "recent crashes"), "_cmd_crashes"),
+    (_is("/backup", "backup memory"), "_cmd_backup"),
+    (_is("/memstats", "memory stats"), "_cmd_memstats"),
+    (_is("/prune", "prune memory"), "_cmd_prune"),
+    (lambda l: l.startswith("/export"), "_cmd_export"),
+    (lambda l: l.startswith("/import"), "_cmd_import"),
+    (_is("/help", "help", "commands"), "_cmd_help"),
+)
+
+
 class ChatCommandsMixin:
     """Owns the built-in slash/text command handler.
 
@@ -73,304 +118,339 @@ class ChatCommandsMixin:
         Returns True if `user_text` was a recognized command and has already
         been fully handled (caller should return immediately), False if it
         wasn't a command and normal LLM processing should continue.
+
+        Each command lives in its own `_cmd_*` method; `_COMMANDS` is matched
+        in order, first match wins (same precedence the old if-chain had).
         """
-        if user_text.strip().lower() in ("/remote", "/pair", "/dashboard"):
+        lowered = user_text.strip().lower()
+        if lowered in ("/remote", "/pair", "/dashboard"):
             return self._cmd_remote()
-        from main import (get_recent_crashes, backup_memory, memory_stats,
-                           prune_memory, export_memory, import_memory,
-                           run_self_test_async)  # lazy: avoids circular import at module load time
+        for matches, method in _COMMANDS:
+            if matches(lowered):
+                return getattr(self, method)(user_text)
+        return False
+
+    def _cmd_newchat(self, user_text: str) -> bool:
         command = user_text.strip()
-        lowered = command.lower()
-        if lowered == "/newchat" or lowered.startswith("/newchat "):
-            self._chat_sessions.save_current(self._conversation)
-            try:
-                session = self._chat_sessions.create(command[len("/newchat"):].strip())
-            except ValueError as exc:
-                self.ui.write_log(f"ERR: {exc}")
-                return True
-            self._active_chat_id = session["id"]
-            self._conversation = []
-            self._clear_chat_memory()
-            self.ui.clear_log()
-            self._refresh_chat_list()
-            self.ui.write_log(f"SYS: Started chat: {session['title']}")
+        self._chat_sessions.save_current(self._conversation)
+        try:
+            session = self._chat_sessions.create(command[len("/newchat"):].strip())
+        except ValueError as exc:
+            self.ui.write_log(f"ERR: {exc}")
             return True
-        if lowered == "/chats":
-            lines = ["SYS: Saved chats (most recent first):"]
-            for session in self._chat_sessions.list_sessions():
-                marker = "  (active)" if session["id"] == self._active_chat_id else ""
-                lines.append(f"- {session['title']}{marker}")
-            self.ui.write_log("\n".join(lines))
+        self._active_chat_id = session["id"]
+        self._conversation = []
+        self._clear_chat_memory()
+        self.ui.clear_log()
+        self._refresh_chat_list()
+        self.ui.write_log(f"SYS: Started chat: {session['title']}")
+        return True
+
+    def _cmd_chats(self, user_text: str) -> bool:
+        lines = ["SYS: Saved chats (most recent first):"]
+        for session in self._chat_sessions.list_sessions():
+            marker = "  (active)" if session["id"] == self._active_chat_id else ""
+            lines.append(f"- {session['title']}{marker}")
+        self.ui.write_log("\n".join(lines))
+        return True
+
+    def _cmd_searchchats(self, user_text: str) -> bool:
+        command = user_text.strip()
+        query = command[len("/searchchats"):].strip()
+        if not query:
+            self.ui.write_log("ERR: Usage: /searchchats <text>")
             return True
-        if lowered == "/searchchats" or lowered.startswith("/searchchats "):
-            query = command[len("/searchchats"):].strip()
-            if not query:
-                self.ui.write_log("ERR: Usage: /searchchats <text>")
-                return True
-            if len(query) > 200:
-                self.ui.write_log("ERR: Search text must be 200 characters or fewer.")
-                return True
-            query = query.casefold()
-            matches = []
-            for session in self._chat_sessions.list_sessions():
-                for message in session.get("messages", []):
-                    if message.get("role") not in ("user", "assistant"):
-                        continue
-                    content = message.get("content")
-                    if not isinstance(content, str) or query not in content.casefold():
-                        continue
-                    snippet = " ".join(content.split())
-                    if len(snippet) > 180:
-                        position = snippet.casefold().find(query)
-                        start = max(0, position - 60)
-                        has_more = start + 180 < len(snippet)
-                        snippet = ("…" if start else "") + snippet[start:start + 180]
-                        if has_more:
-                            snippet += "…"
-                    label = "You" if message["role"] == "user" else "Aether"
-                    matches.append(f"- {session['title']} — {label}: {snippet}")
-                    if len(matches) == 10:
-                        break
+        if len(query) > 200:
+            self.ui.write_log("ERR: Search text must be 200 characters or fewer.")
+            return True
+        query = query.casefold()
+        matches = []
+        for session in self._chat_sessions.list_sessions():
+            for message in session.get("messages", []):
+                if message.get("role") not in ("user", "assistant"):
+                    continue
+                content = message.get("content")
+                if not isinstance(content, str) or query not in content.casefold():
+                    continue
+                snippet = " ".join(content.split())
+                if len(snippet) > 180:
+                    position = snippet.casefold().find(query)
+                    start = max(0, position - 60)
+                    has_more = start + 180 < len(snippet)
+                    snippet = ("…" if start else "") + snippet[start:start + 180]
+                    if has_more:
+                        snippet += "…"
+                label = "You" if message["role"] == "user" else "Aether"
+                matches.append(f"- {session['title']} — {label}: {snippet}")
                 if len(matches) == 10:
                     break
-            if matches:
-                self.ui.write_log("SYS: Chat search results (up to 10):\n" + "\n".join(matches))
-            else:
-                self.ui.write_log("SYS: No saved chat messages matched that search.")
+            if len(matches) == 10:
+                break
+        if matches:
+            self.ui.write_log("SYS: Chat search results (up to 10):\n" + "\n".join(matches))
+        else:
+            self.ui.write_log("SYS: No saved chat messages matched that search.")
+        return True
+
+    def _cmd_switchchat(self, user_text: str) -> bool:
+        command = user_text.strip()
+        title = command[len("/switchchat "):].strip()
+        self._chat_sessions.save_current(self._conversation)
+        session = self._chat_sessions.switch(title)
+        if session is None:
+            self.ui.write_log(f"ERR: No saved chat named '{title}'. Use /chats to list chats.")
             return True
-        if lowered.startswith("/switchchat "):
-            title = command[len("/switchchat "):].strip()
-            self._chat_sessions.save_current(self._conversation)
-            session = self._chat_sessions.switch(title)
-            if session is None:
-                self.ui.write_log(f"ERR: No saved chat named '{title}'. Use /chats to list chats.")
-                return True
-            self._active_chat_id = session["id"]
-            self._conversation = list(session["messages"])
-            self._clear_chat_memory()
-            self.ui.clear_log()
+        self._active_chat_id = session["id"]
+        self._conversation = list(session["messages"])
+        self._clear_chat_memory()
+        self.ui.clear_log()
+        self._refresh_chat_list()
+        self.ui.write_log(f"SYS: Switched to chat: {session['title']}")
+        for message in self._conversation:
+            if message.get("role") in ("user", "assistant") and isinstance(message.get("content"), str):
+                label = "You" if message["role"] == "user" else "Aether"
+                self.ui.write_log(f"{label}: {message['content']}")
+        return True
+
+    def _cmd_renamechat(self, user_text: str) -> bool:
+        command = user_text.strip()
+        title = command[len("/renamechat "):].strip()
+        if not self._chat_sessions.rename_active(title):
+            self.ui.write_log("ERR: Usage: /renamechat <new-name> (renames the active chat)")
+        else:
             self._refresh_chat_list()
-            self.ui.write_log(f"SYS: Switched to chat: {session['title']}")
-            for message in self._conversation:
-                if message.get("role") in ("user", "assistant") and isinstance(message.get("content"), str):
-                    label = "You" if message["role"] == "user" else "Aether"
-                    self.ui.write_log(f"{label}: {message['content']}")
-            return True
-        if lowered.startswith("/renamechat "):
-            title = command[len("/renamechat "):].strip()
-            if not self._chat_sessions.rename_active(title):
-                self.ui.write_log("ERR: Usage: /renamechat <new-name> (renames the active chat)")
-            else:
-                self._refresh_chat_list()
-                self.ui.write_log("SYS: Chat renamed.")
-            return True
-        if lowered.startswith("/deletechat "):
-            title = command[len("/deletechat "):].strip()
-            deleting_active = title.casefold() == self._chat_sessions.active_title.casefold()
-            if not self._chat_sessions.delete(title):
-                self.ui.write_log("ERR: Could not delete that chat. The last remaining chat cannot be deleted.")
-            else:
-                active = self._chat_sessions.active_session
-                self._active_chat_id = active["id"]
-                self._conversation = list(active["messages"])
-                if deleting_active:
-                    self._clear_chat_memory()
-                self._render_chat_history()
-                self._refresh_chat_list()
-                self.ui.write_log(f"SYS: Deleted chat: {title}")
-            return True
-        if user_text.strip().lower() in ("status", "aether status", "/status"):
-            self._execute_tool("diagnostics", {})
-            return True
-        if user_text.strip().lower() == "/clear":
-            with self._conversation_lock:
-                self._conversation.clear()
-            self._clear_chat_memory()
-            self.ui.write_log("SYS: Chat history cleared.")
-            self.speak("History cleared.")
-            return True
-        if user_text.strip().lower().split(" ")[0] == "/audit":
-            try:
-                from core import audit_log
-                arg = user_text.strip()[len("/audit"):].strip()
-                if arg.lower() == "verify":
-                    ok, msg = audit_log.verify()
-                    self.ui.write_log(f"SYS: Audit log: {'OK' if ok else 'PROBLEM'} - {msg}")
-                else:
-                    self.ui.write_log("SYS: " + audit_log.render(audit_log.read(**audit_log.parse_query(arg))))
-            except Exception as e:  # noqa: BLE001
-                self.ui.write_log(f"SYS: Audit log unavailable: {type(e).__name__}: {e}")
-            return True
-        if user_text.strip().lower().split(" ")[0] in ("/perf", "/speed"):
-            def _perf():
-                try:
-                    from core import perf_stats
-                    arg = user_text.strip().split(" ", 1)[1].strip() if " " in user_text.strip() else ""
-                    hours = float(arg) if arg.replace(".", "", 1).isdigit() else 24.0
-                    self.ui.write_log("SYS: " + perf_stats.render(perf_stats.full_report(hours)))
-                except Exception as e:  # noqa: BLE001
-                    self.ui.write_log(f"SYS: Performance report unavailable: {type(e).__name__}: {e}")
-            import threading as _th    # probes Ollama /api/ps; keep it off the command loop
-            _th.Thread(target=_perf, daemon=True, name="aether-perf").start()
-            return True
-        if user_text.strip().lower().split(" ")[0] in ("/stats", "/usage"):
-            try:
-                from core import usage_stats
-                arg = user_text.strip().split(" ", 1)[1].strip() if " " in user_text.strip() else ""
-                self.ui.write_log("SYS: " + usage_stats.report(float(arg) if arg.replace(".", "", 1).isdigit() else 7.0))
-            except Exception as e:  # noqa: BLE001
-                self.ui.write_log(f"SYS: Usage stats unavailable: {type(e).__name__}: {e}")
-            return True
-        if user_text.strip().lower().split(" ")[0] in ("/loganalyze", "/logs"):
-            try:
-                from core import log_analyzer
-                arg = user_text.strip().split(" ", 1)[1].strip() if " " in user_text.strip() else ""
-                self.ui.write_log("SYS: " + log_analyzer.report(float(arg) if arg.replace(".", "", 1).isdigit() else 24.0))
-            except Exception as e:  # noqa: BLE001
-                self.ui.write_log(f"SYS: Log analysis unavailable: {type(e).__name__}: {e}")
-            return True
-        if user_text.strip().lower() in ("/briefing", "/report"):
-            def _brief(kind=user_text.strip().lower().lstrip("/")):
-                try:
-                    from core import reports
-                    from memory.config_manager import load_api_keys
-                    goals = getattr(self, "_goals", None)
-                    ctx = {"goals": goals.list_active} if goals else {}
-                    self.ui.write_log("SYS: " + reports.preview(kind, load_api_keys(), ctx))
-                except Exception as e:  # noqa: BLE001
-                    self.ui.write_log(f"SYS: Report unavailable: {type(e).__name__}: {e}")
-            import threading as _th    # probes the network; keep it off the command loop
-            _th.Thread(target=_brief, daemon=True, name="aether-briefing").start()
-            return True
-        if user_text.strip().lower() == "/rules" or user_text.strip().lower().startswith("/rule "):
-            try:
-                from core import rules
-                self.ui.write_log("SYS: " + (rules.handle_command(user_text) or ""))
-            except Exception as e:  # noqa: BLE001
-                self.ui.write_log(f"SYS: Rules unavailable: {type(e).__name__}: {e}")
-            return True
-        if user_text.strip().lower() == "/learned" or user_text.strip().lower().startswith("/learned "):
-            try:
-                from core import behavior_rules
-                self.ui.write_log("SYS: " + behavior_rules.handle_command(user_text))
-            except Exception as e:  # noqa: BLE001
-                self.ui.write_log(f"SYS: Learned rules unavailable: {type(e).__name__}: {e}")
-            return True
-        if user_text.strip().lower() == "/memory" or user_text.strip().lower().startswith("/memory "):
-            try:
-                from core import memory_panel
-                self.ui.write_log("SYS: " + memory_panel.handle_command(user_text))
-            except Exception as e:  # noqa: BLE001
-                self.ui.write_log(f"SYS: Memory panel unavailable: {type(e).__name__}: {e}")
-            return True
-        if user_text.strip().lower() in ("/resources", "/governor"):
-            try:
-                from core.resource_governor import get_governor
-                self.ui.write_log("SYS: " + get_governor().status())
-            except Exception as e:  # noqa: BLE001
-                self.ui.write_log(f"SYS: Resource status unavailable: {type(e).__name__}: {e}")
-            return True
-        if user_text.strip().lower() in ("/doctor", "/doctor fix"):
-            # Backgrounded like /selftest: the checks probe Ollama/remote hosts with real timeouts.
-            apply = user_text.strip().lower().endswith("fix")
-            self.ui.write_log("SYS: Running doctor" + (" (applying safe fixes)" if apply else "") + "…")
+            self.ui.write_log("SYS: Chat renamed.")
+        return True
 
-            def _doctor():
-                try:
-                    from core import doctor
+    def _cmd_deletechat(self, user_text: str) -> bool:
+        command = user_text.strip()
+        title = command[len("/deletechat "):].strip()
+        deleting_active = title.casefold() == self._chat_sessions.active_title.casefold()
+        if not self._chat_sessions.delete(title):
+            self.ui.write_log("ERR: Could not delete that chat. The last remaining chat cannot be deleted.")
+        else:
+            active = self._chat_sessions.active_session
+            self._active_chat_id = active["id"]
+            self._conversation = list(active["messages"])
+            if deleting_active:
+                self._clear_chat_memory()
+            self._render_chat_history()
+            self._refresh_chat_list()
+            self.ui.write_log(f"SYS: Deleted chat: {title}")
+        return True
+
+    def _cmd_status(self, user_text: str) -> bool:
+        self._execute_tool("diagnostics", {})
+        return True
+
+    def _cmd_clear(self, user_text: str) -> bool:
+        with self._conversation_lock:
+            self._conversation.clear()
+        self._clear_chat_memory()
+        self.ui.write_log("SYS: Chat history cleared.")
+        self.speak("History cleared.")
+        return True
+
+    def _cmd_audit(self, user_text: str) -> bool:
+        try:
+            from core import audit_log
+            arg = user_text.strip()[len("/audit"):].strip()
+            if arg.lower() == "verify":
+                ok, msg = audit_log.verify()
+                self.ui.write_log(f"SYS: Audit log: {'OK' if ok else 'PROBLEM'} - {msg}")
+            else:
+                self.ui.write_log("SYS: " + audit_log.render(audit_log.read(**audit_log.parse_query(arg))))
+        except Exception as e:  # noqa: BLE001
+            self.ui.write_log(f"SYS: Audit log unavailable: {type(e).__name__}: {e}")
+        return True
+
+    def _cmd_perf(self, user_text: str) -> bool:
+        def _perf():
+            try:
+                from core import perf_stats
+                arg = user_text.strip().split(" ", 1)[1].strip() if " " in user_text.strip() else ""
+                hours = float(arg) if arg.replace(".", "", 1).isdigit() else 24.0
+                self.ui.write_log("SYS: " + perf_stats.render(perf_stats.full_report(hours)))
+            except Exception as e:  # noqa: BLE001
+                self.ui.write_log(f"SYS: Performance report unavailable: {type(e).__name__}: {e}")
+        import threading as _th    # probes Ollama /api/ps; keep it off the command loop
+        _th.Thread(target=_perf, daemon=True, name="aether-perf").start()
+        return True
+
+    def _cmd_stats(self, user_text: str) -> bool:
+        try:
+            from core import usage_stats
+            arg = user_text.strip().split(" ", 1)[1].strip() if " " in user_text.strip() else ""
+            self.ui.write_log("SYS: " + usage_stats.report(float(arg) if arg.replace(".", "", 1).isdigit() else 7.0))
+        except Exception as e:  # noqa: BLE001
+            self.ui.write_log(f"SYS: Usage stats unavailable: {type(e).__name__}: {e}")
+        return True
+
+    def _cmd_loganalyze(self, user_text: str) -> bool:
+        try:
+            from core import log_analyzer
+            arg = user_text.strip().split(" ", 1)[1].strip() if " " in user_text.strip() else ""
+            self.ui.write_log("SYS: " + log_analyzer.report(float(arg) if arg.replace(".", "", 1).isdigit() else 24.0))
+        except Exception as e:  # noqa: BLE001
+            self.ui.write_log(f"SYS: Log analysis unavailable: {type(e).__name__}: {e}")
+        return True
+
+    def _cmd_briefing(self, user_text: str) -> bool:
+        def _brief(kind=user_text.strip().lower().lstrip("/")):
+            try:
+                from core import reports
+                from memory.config_manager import load_api_keys
+                goals = getattr(self, "_goals", None)
+                ctx = {"goals": goals.list_active} if goals else {}
+                self.ui.write_log("SYS: " + reports.preview(kind, load_api_keys(), ctx))
+            except Exception as e:  # noqa: BLE001
+                self.ui.write_log(f"SYS: Report unavailable: {type(e).__name__}: {e}")
+        import threading as _th    # probes the network; keep it off the command loop
+        _th.Thread(target=_brief, daemon=True, name="aether-briefing").start()
+        return True
+
+    def _cmd_rules(self, user_text: str) -> bool:
+        try:
+            from core import rules
+            self.ui.write_log("SYS: " + (rules.handle_command(user_text) or ""))
+        except Exception as e:  # noqa: BLE001
+            self.ui.write_log(f"SYS: Rules unavailable: {type(e).__name__}: {e}")
+        return True
+
+    def _cmd_learned(self, user_text: str) -> bool:
+        try:
+            from core import behavior_rules
+            self.ui.write_log("SYS: " + behavior_rules.handle_command(user_text))
+        except Exception as e:  # noqa: BLE001
+            self.ui.write_log(f"SYS: Learned rules unavailable: {type(e).__name__}: {e}")
+        return True
+
+    def _cmd_memory(self, user_text: str) -> bool:
+        try:
+            from core import memory_panel
+            self.ui.write_log("SYS: " + memory_panel.handle_command(user_text))
+        except Exception as e:  # noqa: BLE001
+            self.ui.write_log(f"SYS: Memory panel unavailable: {type(e).__name__}: {e}")
+        return True
+
+    def _cmd_resources(self, user_text: str) -> bool:
+        try:
+            from core.resource_governor import get_governor
+            self.ui.write_log("SYS: " + get_governor().status())
+        except Exception as e:  # noqa: BLE001
+            self.ui.write_log(f"SYS: Resource status unavailable: {type(e).__name__}: {e}")
+        return True
+
+    def _cmd_doctor(self, user_text: str) -> bool:
+        apply = user_text.strip().lower().endswith("fix")
+        self.ui.write_log("SYS: Running doctor" + (" (applying safe fixes)" if apply else "") + "…")
+
+        def _doctor():
+            try:
+                from core import doctor
+                found = doctor.run_checks()
+                fixed = doctor.apply_fixes(found) if apply else None
+                if fixed:
                     found = doctor.run_checks()
-                    fixed = doctor.apply_fixes(found) if apply else None
-                    if fixed:
-                        found = doctor.run_checks()
-                    self.ui.write_log(doctor.render(found, fixed))
-                except Exception as e:  # noqa: BLE001 - a diagnostic must never take the app down
-                    self.ui.write_log(f"SYS: Doctor failed: {type(e).__name__}: {e}")
+                self.ui.write_log(doctor.render(found, fixed))
+            except Exception as e:  # noqa: BLE001 - a diagnostic must never take the app down
+                self.ui.write_log(f"SYS: Doctor failed: {type(e).__name__}: {e}")
 
-            import threading as _th
-            _th.Thread(target=_doctor, daemon=True, name="aether-doctor").start()
-            return True
-        if user_text.strip().lower() in ("/selftest", "run self test", "self test"):
-            # Backgrounded: self-test hits Ollama/LLM/audio devices with
-            # real timeouts (up to ~30s for the LLM check alone), and this
-            # handler runs on the shared command loop — running it inline
-            # would stall every other command until it finished.
-            self.ui.write_log("SYS: Running self-test in the background…")
+        import threading as _th
+        _th.Thread(target=_doctor, daemon=True, name="aether-doctor").start()
+        return True
 
-            def _on_done(result):
-                report = result.format() if result else "Self-test module not available."
-                self.ui.write_log(report)
-                self.speak("Self-test complete. Check the log for results.")
+    def _cmd_selftest(self, user_text: str) -> bool:
+        from main import run_self_test_async  # lazy: avoids circular import at module load time
+        self.ui.write_log("SYS: Running self-test in the background…")
 
-            run_self_test_async(_on_done, aether=self)
-            return True
-        if user_text.strip().lower() in ("/crashes", "show crashes", "crash report", "recent crashes"):
-            report = get_recent_crashes(5)
+        def _on_done(result):
+            report = result.format() if result else "Self-test module not available."
             self.ui.write_log(report)
+            self.speak("Self-test complete. Check the log for results.")
+
+        run_self_test_async(_on_done, aether=self)
+        return True
+
+    def _cmd_crashes(self, user_text: str) -> bool:
+        from main import get_recent_crashes  # lazy: avoids circular import at module load time
+        report = get_recent_crashes(5)
+        self.ui.write_log(report)
+        return True
+
+    def _cmd_backup(self, user_text: str) -> bool:
+        from main import backup_memory  # lazy: avoids circular import at module load time
+        result = backup_memory()
+        self.ui.write_log(result)
+        self.speak("Memory backed up.")
+        return True
+
+    def _cmd_memstats(self, user_text: str) -> bool:
+        from main import memory_stats  # lazy: avoids circular import at module load time
+        result = memory_stats()
+        self.ui.write_log(result)
+        return True
+
+    def _cmd_prune(self, user_text: str) -> bool:
+        from main import prune_memory  # lazy: avoids circular import at module load time
+        result = prune_memory()
+        self.ui.write_log(result)
+        return True
+
+    def _cmd_export(self, user_text: str) -> bool:
+        from main import export_memory  # lazy: avoids circular import at module load time
+        parts = user_text.strip().split(maxsplit=1)
+        path  = parts[1].strip() if len(parts) > 1 else ""
+        result = export_memory(output_path=path)
+        self.ui.write_log(result)
+        self.speak("Memory exported.")
+        return True
+
+    def _cmd_import(self, user_text: str) -> bool:
+        from main import import_memory  # lazy: avoids circular import at module load time
+        parts = user_text.strip().split(maxsplit=1)
+        path  = parts[1].strip() if len(parts) > 1 else ""
+        if not path:
+            self.ui.write_log("ERR: Usage — /import <path to export file>")
+            self.speak("Please provide the path to the export file.")
             return True
-        if user_text.strip().lower() in ("/backup", "backup memory"):
-            result = backup_memory()
-            self.ui.write_log(result)
-            self.speak("Memory backed up.")
-            return True
-        if user_text.strip().lower() in ("/memstats", "memory stats"):
-            result = memory_stats()
-            self.ui.write_log(result)
-            return True
-        if user_text.strip().lower() in ("/prune", "prune memory"):
-            result = prune_memory()
-            self.ui.write_log(result)
-            return True
-        if user_text.strip().lower().startswith("/export"):
-            parts = user_text.strip().split(maxsplit=1)
-            path  = parts[1].strip() if len(parts) > 1 else ""
-            result = export_memory(output_path=path)
-            self.ui.write_log(result)
-            self.speak("Memory exported.")
-            return True
-        if user_text.strip().lower().startswith("/import"):
-            parts = user_text.strip().split(maxsplit=1)
-            path  = parts[1].strip() if len(parts) > 1 else ""
-            if not path:
-                self.ui.write_log("ERR: Usage — /import <path to export file>")
-                self.speak("Please provide the path to the export file.")
-                return True
-            result = import_memory(input_path=path)
-            self.ui.write_log(result)
-            self.speak("Memory imported.")
-            return True
-        if user_text.strip().lower() in ("/help", "help", "commands"):
-            help_text = (
-                f"── {version_string()} · Chat Commands ────────────────\n"
-                "/selftest          Run full system self-test\n"
-                "/crashes           Show recent crash logs\n"
-                "/status            Full system diagnostic\n"
-                "/audit [N] [tool=x] [decision=denied] [hours=24] [words]  Show recent tool calls and approvals; /audit verify checks the log hasn't been tampered with\n"
-                "/perf [hours]      Speed per model (median/p95 time, tokens/s), memory use, cloud tokens today\n"
-                "/stats [days]     Your usage: rounds per day, busiest hours, top tools (local only)\n"
-                "/loganalyze [hours]  Group the warnings/errors in aether.log and show what repeats\n"
-                "/briefing, /report  Preview the daily briefing / weekly server report (scheduled via briefing_time, weekly_report_day)\n"
-                "/learned         What Aether learned from your corrections (rules it offered to save); /learned add|edit|forget|off|on\n"
-                "/rules, /rule add <sentence>  Plain-language rules, e.g. /rule add when the disk is below 10% notify me (also /rule on|off|remove <id>)\n"
-                "/memory [words]   See what Aether remembers; /memory forget <id>, /memory edit <id> <text>, /memory add <category> <key> <value>, /memory relation <subject> <predicate> <object>, /memory resolve <g:id> (also at the dashboard's /memory page)\n"
-                "/remote            Show the web dashboard address and a one-time pairing code (phone or browser)\n"
-                "/resources         Show whether background jobs are paused because the machine is busy\n"
-                "/doctor            Find install problems and how to fix them (/doctor fix applies safe fixes)\n"
-                "/backup            Snapshot memory to zip\n"
-                "/memstats          Memory system statistics\n"
-                "/prune             Remove duplicate/old memories\n"
-                "/export [path]     Export memories to JSON file\n"
-                "/import <path>     Restore memories from export file\n"
-                "/clear             Clear chat history\n"
-                "/newchat [name]    Start a new saved chat\n"
-                "/chats             List saved chats\n"
-                "/switchchat <name> Switch to a saved chat\n"
-                "/renamechat <name>  Rename the active chat\n"
-                "/deletechat <name> Delete a saved chat\n"
-                "/searchchats <text> Search saved conversations\n"
-                "/help              Show this command list\n"
-                "─────────────────────────────────────────────────────\n"
-                "Hotkeys: F4 mute · F11 fullscreen · Ctrl+Alt+A show/hide · Esc collapse"
-            )
-            self.ui.write_log(help_text)
-            return True
-        return False
+        result = import_memory(input_path=path)
+        self.ui.write_log(result)
+        self.speak("Memory imported.")
+        return True
+
+    def _cmd_help(self, user_text: str) -> bool:
+        help_text = (
+            f"── {version_string()} · Chat Commands ────────────────\n"
+            "/selftest          Run full system self-test\n"
+            "/crashes           Show recent crash logs\n"
+            "/status            Full system diagnostic\n"
+            "/audit [N] [tool=x] [decision=denied] [hours=24] [words]  Show recent tool calls and approvals; /audit verify checks the log hasn't been tampered with\n"
+            "/perf [hours]      Speed per model (median/p95 time, tokens/s), memory use, cloud tokens today\n"
+            "/stats [days]     Your usage: rounds per day, busiest hours, top tools (local only)\n"
+            "/loganalyze [hours]  Group the warnings/errors in aether.log and show what repeats\n"
+            "/briefing, /report  Preview the daily briefing / weekly server report (scheduled via briefing_time, weekly_report_day)\n"
+            "/learned         What Aether learned from your corrections (rules it offered to save); /learned add|edit|forget|off|on\n"
+            "/rules, /rule add <sentence>  Plain-language rules, e.g. /rule add when the disk is below 10% notify me (also /rule on|off|remove <id>)\n"
+            "/memory [words]   See what Aether remembers; /memory forget <id>, /memory edit <id> <text>, /memory add <category> <key> <value>, /memory relation <subject> <predicate> <object>, /memory resolve <g:id> (also at the dashboard's /memory page)\n"
+            "/remote            Show the web dashboard address and a one-time pairing code (phone or browser)\n"
+            "/resources         Show whether background jobs are paused because the machine is busy\n"
+            "/doctor            Find install problems and how to fix them (/doctor fix applies safe fixes)\n"
+            "/backup            Snapshot memory to zip\n"
+            "/memstats          Memory system statistics\n"
+            "/prune             Remove duplicate/old memories\n"
+            "/export [path]     Export memories to JSON file\n"
+            "/import <path>     Restore memories from export file\n"
+            "/clear             Clear chat history\n"
+            "/newchat [name]    Start a new saved chat\n"
+            "/chats             List saved chats\n"
+            "/switchchat <name> Switch to a saved chat\n"
+            "/renamechat <name>  Rename the active chat\n"
+            "/deletechat <name> Delete a saved chat\n"
+            "/searchchats <text> Search saved conversations\n"
+            "/help              Show this command list\n"
+            "─────────────────────────────────────────────────────\n"
+            "Hotkeys: F4 mute · F11 fullscreen · Ctrl+Alt+A show/hide · Esc collapse"
+        )
+        self.ui.write_log(help_text)
+        return True

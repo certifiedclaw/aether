@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.health_check` (or `run_all`) to refresh. Fix things here, don't edit this file directly.
 
-Generated: 2026-11-09T01:06:08.301884+00:00
+Generated: 2026-11-09T01:14:50.122548+00:00
 Files scanned: 269
 
 ## Summary
@@ -12,7 +12,7 @@ Files scanned: 269
 | Files that fail to parse | 0 |
 | Bare `except:` clauses | 0 |
 | Files over 600 lines | 19 |
-| Functions over 80 lines | 67 |
+| Functions over 80 lines | 66 |
 | Stray `print()` calls (outside scripts) | 0 |
 | TODO / FIXME / XXX comments | 0 |
 | Unreadable files | 0 |
@@ -40,7 +40,6 @@ Files scanned: 269
 
 ## Functions over 80 lines
 - `core/conversation_core.py:735` — `_process_message_inner()` (700 lines)
-- `core/chat_commands.py:70` — `_handle_chat_command()` (306 lines)
 - `ui.py:2848` — `_build_right_panel()` (285 lines)
 - `ui.py:3206` — `_open_action_catalog()` (205 lines)
 - `core/llm_client.py:1397` — `_call_llm_stream_impl()` (192 lines)
