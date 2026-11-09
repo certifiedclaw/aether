@@ -2480,6 +2480,59 @@ def _section_label(txt):
     return label
 
 
+_ACTION_FRIENDLY_NAMES = {
+    "open_app": "Open an app or website",
+    "web_search": "Research the web",
+    "langchain": "Multi-step research (web and Wikipedia)",
+    "weather_report": "Check weather",
+    "send_message": "Send a message",
+    "reminder": "Set a reminder",
+    "youtube_video": "YouTube videos",
+    "screen_process": "Analyze screen or camera",
+    "computer_settings": "Computer settings and controls",
+    "browser_control": "Control a web browser",
+    "file_controller": "Manage files and folders",
+    "desktop_control": "Manage the desktop",
+    "code_helper": "Write or work with code",
+    "dev_agent": "Build a software project",
+    "agent_task": "Run a multi-step task",
+    "computer_control": "Control mouse and keyboard",
+    "game_updater": "Manage game updates",
+    "flight_finder": "Find flights",
+    "file_processor": "Analyze an uploaded file",
+    "osint_lookup": "Authorized OSINT lookup",
+    "pdf_tool": "Work with a PDF",
+    "rag_query": "Search indexed documents",
+    "undo": "Undo a file operation",
+    "shutdown_aether": "Shut down Aether",
+    "save_memory": "Save a memory",
+}
+
+_QUICK_COMMANDS = [
+    ("/help", "List chat commands"),
+    ("/status", "Run system diagnostics"),
+    ("/doctor", "Check installation and runtime health"),
+    ("/doctor fix", "Apply safe doctor fixes"),
+    ("/selftest", "Run subsystem self-tests"),
+    ("/crashes", "Show recent crash reports"),
+    ("/audit", "Review recent tool calls and approvals"),
+    ("/audit verify", "Verify the audit log chain"),
+    ("/perf", "Show model speed and resource statistics"),
+    ("/resources", "Show resource governor status"),
+    ("/backup", "Back up memory"),
+    ("/memstats", "Show memory statistics"),
+    ("/prune", "Remove duplicate and old memories"),
+    ("/clear", "Clear chat history"),
+    ("/newchat", "Start a new saved chat"),
+    ("/chats", "List saved chats"),
+]
+
+
+def _action_display_name(name: str) -> str:
+    """Label shown for a tool in the action catalog (friendly name, else prettified id)."""
+    return _ACTION_FRIENDLY_NAMES.get(name, name.replace("_", " ").capitalize())
+
+
 class MainWindow(QMainWindow):
     _log_sig     = pyqtSignal(str)
     _clear_log_sig = pyqtSignal()
@@ -3220,14 +3273,25 @@ class MainWindow(QMainWindow):
         )
 
     def _open_action_catalog(self) -> None:
+        entries = self._fetch_action_entries()
+        if entries is None:
+            return
+        if not entries and not _QUICK_COMMANDS:
+            QMessageBox.information(self, "Actions", "No actions are currently available.")
+            return
+        dialog = self._build_action_dialog(entries)
+        dialog.exec()
+
+    def _fetch_action_entries(self) -> list | None:
+        """Tool schemas for the catalog, sorted by display name; None if a message was shown instead."""
         if not self.on_action_catalog:
             QMessageBox.information(self, "Actions", "Aether's action catalog is not ready yet.")
-            return
+            return None
         try:
             tools = self.on_action_catalog()
         except Exception as exc:
             QMessageBox.critical(self, "Actions unavailable", str(exc))
-            return
+            return None
 
         entries = []
         for tool in tools or []:
@@ -3235,62 +3299,14 @@ class MainWindow(QMainWindow):
             name = function.get("name")
             if name:
                 entries.append(function)
-        friendly_names = {
-            "open_app": "Open an app or website",
-            "web_search": "Research the web",
-            "langchain": "Multi-step research (web and Wikipedia)",
-            "weather_report": "Check weather",
-            "send_message": "Send a message",
-            "reminder": "Set a reminder",
-            "youtube_video": "YouTube videos",
-            "screen_process": "Analyze screen or camera",
-            "computer_settings": "Computer settings and controls",
-            "browser_control": "Control a web browser",
-            "file_controller": "Manage files and folders",
-            "desktop_control": "Manage the desktop",
-            "code_helper": "Write or work with code",
-            "dev_agent": "Build a software project",
-            "agent_task": "Run a multi-step task",
-            "computer_control": "Control mouse and keyboard",
-            "game_updater": "Manage game updates",
-            "flight_finder": "Find flights",
-            "file_processor": "Analyze an uploaded file",
-            "osint_lookup": "Authorized OSINT lookup",
-            "pdf_tool": "Work with a PDF",
-            "rag_query": "Search indexed documents",
-            "undo": "Undo a file operation",
-            "shutdown_aether": "Shut down Aether",
-            "save_memory": "Save a memory",
-        }
         entries.sort(
-            key=lambda item: friendly_names.get(
-                item["name"], item["name"].replace("_", " ").capitalize()
-            ).casefold()
+            key=lambda item: _action_display_name(item["name"]).casefold()
         )
-        quick_commands = [
-            ("/help", "List chat commands"),
-            ("/status", "Run system diagnostics"),
-            ("/doctor", "Check installation and runtime health"),
-            ("/doctor fix", "Apply safe doctor fixes"),
-            ("/selftest", "Run subsystem self-tests"),
-            ("/crashes", "Show recent crash reports"),
-            ("/audit", "Review recent tool calls and approvals"),
-            ("/audit verify", "Verify the audit log chain"),
-            ("/perf", "Show model speed and resource statistics"),
-            ("/resources", "Show resource governor status"),
-            ("/backup", "Back up memory"),
-            ("/memstats", "Show memory statistics"),
-            ("/prune", "Remove duplicate and old memories"),
-            ("/clear", "Clear chat history"),
-            ("/newchat", "Start a new saved chat"),
-            ("/chats", "List saved chats"),
-        ]
-        if not entries and not quick_commands:
-            QMessageBox.information(self, "Actions", "No actions are currently available.")
-            return
+        return entries
 
+    def _build_action_dialog(self, entries: list) -> QDialog:
         dialog = QDialog(self)
-        dialog.setWindowTitle(f"Aether actions and commands ({len(entries) + len(quick_commands)})")
+        dialog.setWindowTitle(f"Aether actions and commands ({len(entries) + len(_QUICK_COMMANDS)})")
         dialog.resize(560, 620)
         dialog.setStyleSheet(f"""
             QDialog {{ background: {C.DARK}; color: {C.TEXT}; }}
@@ -3341,8 +3357,37 @@ class MainWindow(QMainWindow):
         buttons_layout.setContentsMargins(6, 6, 6, 6)
         buttons_layout.setSpacing(5)
 
+        action_buttons = self._fill_action_buttons(dialog, buttons_layout, entries)
+        buttons_layout.addStretch()
+        scroll.setWidget(container)
+        layout.addWidget(scroll, stretch=1)
+        def _filter_actions(query: str = "") -> None:
+            needle = query.casefold().strip()
+            selected_category = categories.currentText()
+            for button, searchable, category in action_buttons:
+                category_matches = (
+                    selected_category == "All categories"
+                    or category == selected_category
+                )
+                button.setVisible(category_matches and (not needle or needle in searchable))
+
+        search.textChanged.connect(_filter_actions)
+        categories.currentTextChanged.connect(lambda _category: _filter_actions(search.text()))
+        _filter_actions()
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.reject)
+        layout.addWidget(close_btn)
+        return dialog
+
+    def _fill_action_buttons(self, dialog: QDialog, buttons_layout: QVBoxLayout, entries: list) -> list:
+        """One button per chat command and per tool; returns (button, searchable text, category) rows."""
         action_buttons = []
-        for command, description in quick_commands:
+        self._add_quick_command_buttons(dialog, buttons_layout, action_buttons)
+        self._add_tool_buttons(dialog, buttons_layout, entries, action_buttons)
+        return action_buttons
+
+    def _add_quick_command_buttons(self, dialog: QDialog, buttons_layout: QVBoxLayout, action_buttons: list) -> None:
+        for command, description in _QUICK_COMMANDS:
             button = QPushButton(f"{command}\n{description}")
             button.setAccessibleName(f"Command {command}")
             button.setToolTip(description)
@@ -3370,10 +3415,11 @@ class MainWindow(QMainWindow):
                 (button, f"{command} {description}".casefold(), "Chat commands")
             )
 
+    def _add_tool_buttons(self, dialog: QDialog, buttons_layout: QVBoxLayout, entries: list, action_buttons: list) -> None:
         for function in entries:
             name = function["name"]
             description = str(function.get("description", "")).strip()
-            display_name = friendly_names.get(name, name.replace("_", " ").capitalize())
+            display_name = _action_display_name(name)
             summary = description if len(description) <= 110 else description[:107].rstrip() + "…"
             button = QPushButton(f"{display_name}\n{summary}")
             button.setAccessibleName(display_name)
@@ -3404,27 +3450,6 @@ class MainWindow(QMainWindow):
                     self._action_category(name),
                 )
             )
-        buttons_layout.addStretch()
-        scroll.setWidget(container)
-        layout.addWidget(scroll, stretch=1)
-
-        def _filter_actions(query: str = "") -> None:
-            needle = query.casefold().strip()
-            selected_category = categories.currentText()
-            for button, searchable, category in action_buttons:
-                category_matches = (
-                    selected_category == "All categories"
-                    or category == selected_category
-                )
-                button.setVisible(category_matches and (not needle or needle in searchable))
-
-        search.textChanged.connect(_filter_actions)
-        categories.currentTextChanged.connect(lambda _category: _filter_actions(search.text()))
-        _filter_actions()
-        close_btn = QPushButton("Close")
-        close_btn.clicked.connect(dialog.reject)
-        layout.addWidget(close_btn)
-        dialog.exec()
 
     @staticmethod
     def _action_category(name: str) -> str:
