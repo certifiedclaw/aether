@@ -354,7 +354,7 @@ def test_agent_executor_cancel_during_retry_wait():
          patch("time.sleep", return_value=None):
         result = ex.AgentExecutor().execute("do a thing", speak=None, cancel_flag=cancel_flag)
 
-    assert result == "Task cancelled."
+    assert result.status == "cancelled" and result.text == "Task cancelled."
     assert call_count["n"] == 1
 
 
@@ -490,7 +490,7 @@ def test_task_queue_history_pruning_bounded(tmp_path):
         assert tid in q._tasks, "a still-pending task was incorrectly pruned"
 
 # ------------------------------- 17. PLUGIN HOT-RELOAD -------------------------------
-def test_plugin_system_reload_exists_and_works():
+def test_plugin_system_reload_exists_and_works(monkeypatch):
     """Roadmap #5: plugin_watcher.py calls plugin_loader.reload() on every
     filesystem change, but PluginSystem never defined that method -- hot-
     reload silently failed 100% of the time (caught by plugin_watcher's own
@@ -521,6 +521,8 @@ def test_plugin_system_reload_exists_and_works():
             "PLUGIN_NAME = \"greet\"\nPLUGIN_TOOLS = {\"say_hi\": lambda: \"hi!\"}\n")
         approve("greet.py")
         assert p.reload() == 1
+        from core import safety as _safety
+        monkeypatch.setattr(_safety, "confirm_action", lambda op, detail="": True)  # plugin calls now ask first
         assert p.execute_tool("say_hi") == "hi!"
 
         # editing an existing plugin must take effect, not serve a stale cached module
@@ -962,7 +964,7 @@ def test_dashboard_build_app_refactor_preserves_behavior():
     r = client.post("/login", json={"pin": key})
     assert r.status_code == 200
     token = r.json()["token"]
-    assert token in ds._tokens
+    assert ds._token_valid(token)
 
     headers = {"Authorization": f"Bearer {token}"}
     assert client.post("/api/command", json={"text": "hello"}, headers=headers).status_code == 200
@@ -998,29 +1000,29 @@ def test_ensure_network_access_refactor_preserves_behavior():
     on this Linux sandbox, so that split is verified structurally
     (compiles, correct control flow, same code moved verbatim) rather
     than by execution."""
-    import dashboard.server as srv
+    import dashboard.firewall as srv
 
-    with patch("dashboard.server._ensure_network_access_linux") as m_linux, \
-         patch("dashboard.server._ensure_network_access_windows") as m_win, \
-         patch("dashboard.server._ensure_network_access_macos") as m_mac, \
+    with patch("dashboard.firewall._ensure_network_access_linux") as m_linux, \
+         patch("dashboard.firewall._ensure_network_access_windows") as m_win, \
+         patch("dashboard.firewall._ensure_network_access_macos") as m_mac, \
          patch("sys.platform", "linux"):
-        srv._ensure_network_access(8000)
+        srv.ensure_network_access(8000)
         assert m_linux.called and m_linux.call_args.args == (8000,)
         assert not m_win.called and not m_mac.called
 
-    with patch("dashboard.server._ensure_network_access_linux") as m_linux, \
-         patch("dashboard.server._ensure_network_access_windows") as m_win, \
-         patch("dashboard.server._ensure_network_access_macos") as m_mac, \
+    with patch("dashboard.firewall._ensure_network_access_linux") as m_linux, \
+         patch("dashboard.firewall._ensure_network_access_windows") as m_win, \
+         patch("dashboard.firewall._ensure_network_access_macos") as m_mac, \
          patch("sys.platform", "darwin"):
-        srv._ensure_network_access(8000)
+        srv.ensure_network_access(8000)
         assert m_mac.called and m_mac.call_args.args == (8000,)
         assert not m_linux.called and not m_win.called
 
-    with patch("dashboard.server._ensure_network_access_linux") as m_linux, \
-         patch("dashboard.server._ensure_network_access_windows") as m_win, \
-         patch("dashboard.server._ensure_network_access_macos") as m_mac, \
+    with patch("dashboard.firewall._ensure_network_access_linux") as m_linux, \
+         patch("dashboard.firewall._ensure_network_access_windows") as m_win, \
+         patch("dashboard.firewall._ensure_network_access_macos") as m_mac, \
          patch("sys.platform", "win32"):
-        srv._ensure_network_access(8000)
+        srv.ensure_network_access(8000)
         assert m_win.called and m_win.call_args.args == (8000,)
         assert not m_linux.called and not m_mac.called
 

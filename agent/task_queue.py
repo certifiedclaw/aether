@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Callable, Any
 import logging
 
+from core import risk
 from core.data_home import resolve_data_path
 
 logger = logging.getLogger("aether")
@@ -354,19 +355,26 @@ class TaskQueue:
     def _run_task(self, task: Task) -> None:
         logger.info(f"[TaskQueue] ▶️ Running: [{task.task_id}] {task.goal[:60]}")
         try:
-            executor = self._get_executor()
-            result   = executor.execute(
+            # Its own approval scope: dialogs say this is a background task, a later user
+            # message neither ends its approvals nor can it spend theirs (core/risk.py).
+            # No fallback: if the scope cannot be created the task fails (outer except)
+            # rather than running under the user's approvals.
+            risk.begin_turn(f"[background task] {task.goal}", background=True)
+            result = self._get_executor().execute(
                 goal        = task.goal,
                 speak       = task.speak,
                 cancel_flag = task.cancel_flag,
             )
 
             with self._lock:
-                if task.cancel_flag.is_set():
+                if task.cancel_flag.is_set() or result.status == "cancelled":
                     task.status = TaskStatus.CANCELLED
+                elif result.status == "failed":
+                    task.status = TaskStatus.FAILED
+                    task.error  = result.text
                 else:
                     task.status = TaskStatus.COMPLETED
-                    task.result = result
+                    task.result = result.text
                 self._active_count -= 1
                 self._prune_task_history()
                 try:
@@ -377,11 +385,11 @@ class TaskQueue:
 
             if task.on_complete and not task.cancel_flag.is_set():
                 try:
-                    task.on_complete(task.task_id, result)
+                    task.on_complete(task.task_id, result.text)
                 except Exception as e:
                     logger.warning(f"[TaskQueue] ⚠️ on_complete callback error: {e}")
 
-            logger.info(f"[TaskQueue] ✅ Completed: [{task.task_id}]")
+            logger.info(f"[TaskQueue] {task.status.value}: [{task.task_id}]")
 
         except Exception as e:
             with self._lock:

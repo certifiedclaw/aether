@@ -42,6 +42,8 @@ from __future__ import annotations
 import functools
 import logging
 import re
+import contextvars
+import itertools
 import threading
 import time
 
@@ -96,10 +98,11 @@ RISK_TABLE: dict[str, str | dict[str, str]] = {
     "file_controller": {
         "": SAFE, "list": SAFE, "find": SAFE, "info": SAFE, "read": SAFE,
         "disk_usage": SAFE, "largest": SAFE,
-        # Mutations here remain reversible through undo or the Recycle Bin.
-        "create_file": MONITOR, "create_folder": MONITOR, "write": MONITOR,
-        "copy": MONITOR, "move": MONITOR, "rename": MONITOR,
-        "delete": MONITOR,
+        # Undo/Recycle Bin coverage is partial (no undo for folder creation, copies, overwriting
+        # moves, or large/binary writes), so mutations ask. Plan approval (#67) covers a whole plan.
+        "create_file": ASK, "create_folder": ASK, "write": ASK,
+        "copy": ASK, "move": ASK, "rename": ASK,
+        "delete": ASK,
         "organize_desktop": ASK,  # batch-moves desktop files; show an approval prompt
     },
     "computer_control": {
@@ -277,11 +280,30 @@ def _find_params(args: tuple, kwargs: dict) -> dict:
 
 # ── TASK tier: one approval per user request ─────────────────────────────────
 _STATE_LOCK = threading.Lock()
-_TURN = 0                      # increments at every new user request
-_TURN_TEXT = ""                # what the user actually said, shown in the dialog
-_GRANTS: dict[str, dict] = {}  # tool -> {"turn", "expires", "left"}
-_DENIED: dict[str, int] = {}   # tool -> turn in which the user said no
-_PLAN_GRANTS: list[dict] = []  # exact steps the user approved as part of one plan (#67)
+
+
+class _Turn:
+    """One request's approval state. Grants, refusals and plan approvals live HERE, not in
+    module globals, so a background task and a user's message each have their own and can
+    neither consume nor erase the other's."""
+    __slots__ = ("id", "text", "background", "superseded", "grants", "denied", "plan_grants")
+
+    def __init__(self, text: str = "", background: bool = False):
+        self.id = next(_TURN_IDS)
+        self.text = text                    # what the user actually said, shown in the dialog
+        self.background = background        # a queued task: a later user message does not end it
+        self.superseded = False             # a newer user request began (foreground turns only)
+        self.grants: dict[str, dict] = {}   # tool -> {"expires", "left"}
+        self.denied: set[str] = set()       # tools the user refused for this request
+        self.plan_grants: list[dict] = []   # exact steps approved as part of one plan (#67)
+
+    def alive(self) -> bool:
+        return self.background or not self.superseded
+
+
+_TURN_IDS = itertools.count(1)
+_CURRENT: "contextvars.ContextVar[_Turn | None]" = contextvars.ContextVar("aether_risk_turn", default=None)
+_latest = _Turn("")                 # most recent USER request; the fallback for threads with no bound turn
 _TOOL_LOCKS: dict[str, threading.Lock] = {}
 
 _TASK_WHAT = {"computer_control": "mouse and keyboard", "browser_control": "web browser"}
@@ -297,32 +319,48 @@ def _audit(tool: str, action: str, tier: str, decision: str, params: dict, note:
         pass
     try:
         from core import audit_log
-        audit_log.record(tool, action, tier, decision, params, note=note, turn=_TURN_TEXT)
+        audit_log.record(tool, action, tier, decision, params, note=note, turn=current_turn().text)
     except Exception:  # noqa: BLE001 - auditing must not break the gate
         pass
 
 
-def begin_turn(user_text: str = "") -> None:
-    """Call when a new user request starts. Ends every earlier approval and refusal, so
-    permission given for one request can never leak into the next."""
-    global _TURN, _TURN_TEXT
+def current_turn() -> _Turn:
+    """The turn this call belongs to. A thread that began its own turn (begin_turn) uses it;
+    a thread that never did (a helper thread spawned mid-request) shares the latest user
+    request. A user turn that a newer request has replaced gets a throwaway turn, so late
+    calls from the old request ask afresh and nothing they approve is stored."""
+    t = _CURRENT.get()
+    if t is None:
+        return _latest
+    if t.alive():
+        return t
+    return _Turn(t.text)
+
+
+def begin_turn(user_text: str = "", background: bool = False) -> _Turn:
+    """Start a request in THIS thread and return its turn.
+
+    Foreground (a user message): ends every earlier user request's approvals and refusals,
+    so permission given for one request can never leak into the next. Background (a queued
+    task): gets its own approvals, is not ended by later user messages, and cannot use or
+    erase theirs."""
+    global _latest
     one_line = " ".join(str(user_text or "").split())
+    turn = _Turn(one_line[:200], background=background)
     with _STATE_LOCK:
-        _TURN += 1
-        _TURN_TEXT = one_line[:200]
-        _GRANTS.clear()
-        _DENIED.clear()
-        _PLAN_GRANTS.clear()
+        if not background:
+            _latest.superseded = True
+            _latest = turn
+    _CURRENT.set(turn)
+    return turn
 
 
 def reset_state() -> None:
     """Forget all grants/refusals (tests, and a clean slate on demand)."""
-    global _TURN, _TURN_TEXT
+    global _latest
     with _STATE_LOCK:
-        _TURN, _TURN_TEXT = 0, ""
-        _GRANTS.clear()
-        _DENIED.clear()
-        _PLAN_GRANTS.clear()
+        _latest = _Turn("")
+    _CURRENT.set(None)
 
 
 def _cfg_int(key: str, default: int, lo: int, hi: int) -> int:
@@ -409,17 +447,16 @@ def request_plan_approval(goal: str, steps: list, confirm=None) -> tuple[bool, i
               + "\n".join(lines))
     if confirm is None:
         from core.safety import confirm_action as confirm
-    with _STATE_LOCK:
-        turn = _TURN
+    turn = current_turn()
     approved = bool(confirm(f"Approve this {len(steps)}-step plan?", detail))
     with _STATE_LOCK:
-        if _TURN != turn:
+        if not turn.alive():
             _audit("plan", goal[:60], ASK, "denied", {}, "new request started while waiting")
             return False, len(gated)
         if approved:
             exp = time.monotonic() + ttl
             for _i, tool, action, params in gated:
-                _PLAN_GRANTS.append({"turn": turn, "expires": exp, "key": _plan_key(tool, action, params)})
+                turn.plan_grants.append({"expires": exp, "key": _plan_key(tool, action, params)})
     _audit("plan", goal[:60], ASK, "approved" if approved else "denied", {"steps": len(steps)},
            f"{len(gated)} gated step(s)")
     return approved, len(gated)
@@ -428,11 +465,12 @@ def request_plan_approval(goal: str, steps: list, confirm=None) -> tuple[bool, i
 def _consume_plan_grant(tool: str, action: str, params: dict) -> bool:
     key = _plan_key(tool, action, params)
     now = time.monotonic()
+    turn = current_turn()
     with _STATE_LOCK:
-        _PLAN_GRANTS[:] = [g for g in _PLAN_GRANTS if g["turn"] == _TURN and g["expires"] > now]
-        for g in _PLAN_GRANTS:
+        turn.plan_grants[:] = [g for g in turn.plan_grants if g["expires"] > now]
+        for g in turn.plan_grants:
             if g["key"] == key:
-                _PLAN_GRANTS.remove(g)
+                turn.plan_grants.remove(g)
                 return True
     return False
 
@@ -446,17 +484,17 @@ def _check_task(tool: str, action: str, params: dict, label: str) -> str | None:
     # one lock PER TOOL, held across the dialog: concurrent calls wait for the answer
     # instead of each popping their own dialog
     with _tool_lock(tool):
+        turn = current_turn()
         with _STATE_LOCK:
-            turn = _TURN
-            if _DENIED.get(tool) == turn:
+            if tool in turn.denied:
                 _audit(tool, action, TASK, "denied", params, "already refused this request")
                 return f"Cancelled: you did not approve {tool} for this request."
-            g = _GRANTS.get(tool)
-            if g and g["turn"] == turn and g["expires"] > time.monotonic() and g["left"] > 0:
+            g = turn.grants.get(tool)
+            if g and g["expires"] > time.monotonic() and g["left"] > 0:
                 g["left"] -= 1
                 covered, said = True, ""
             else:
-                covered, said = False, _TURN_TEXT
+                covered, said = False, turn.text
         if covered:
             logger.info("RISK task-grant %s params=%s", label, sorted((params or {}).keys()))
             _audit(tool, action, TASK, "allowed", params, "covered by this request's approval")
@@ -474,14 +512,14 @@ def _check_task(tool: str, action: str, params: dict, label: str) -> str | None:
         approved = confirm_action(f"{tool}: control for this request", detail)
 
         with _STATE_LOCK:
-            if _TURN != turn:
+            if not turn.alive():
                 _audit(tool, action, TASK, "denied", params, "new request started while waiting")
                 return "Cancelled: a new request started while waiting, so nothing was done."
             if approved:
-                _GRANTS[tool] = {"turn": turn, "expires": time.monotonic() + ttl, "left": cap - 1}
+                turn.grants[tool] = {"expires": time.monotonic() + ttl, "left": cap - 1}
                 _audit(tool, action, TASK, "approved", params, f"grant: {cap} actions / {ttl}s")
                 return None
-            _DENIED[tool] = turn
+            turn.denied.add(tool)
         _audit(tool, action, TASK, "denied", params)
         return f"Cancelled: you did not approve {label}, so nothing was done."
 

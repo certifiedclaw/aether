@@ -1,5 +1,5 @@
 {
-  "next_id": 151,
+  "next_id": 156,
   "entries": [
     {
       "id": 1,
@@ -2154,6 +2154,87 @@
         "tests/test_sandbox.py"
       ],
       "next_steps": "Behavioral check on the real model: does it still call tools normally with wrapped results, and does a page containing injected instructions get ignored? Then: conversation lock held for whole turn, history trimming can split tool-call groups, main.py pip install at import."
+    },
+    {
+      "id": 151,
+      "timestamp": "2026-11-05 22:28 UTC",
+      "by": "Claude Code",
+      "summary": "External review triage (static reviews of agent/security/MCP, each claim checked against HEAD e1a5385). Already fixed before this session: import_memory input_path kwarg; unknown tool no longer falls back to generated code; _run_generated_code nonzero exit raises; sandbox + docker backend exist (#147/#149). PATCHED this session (tests/test_review_fixes.py, 15 tests, 12 fail on old code): (1) dashboard bearer tokens now expire (TOKEN_TTL 12h) and /api/revoke-devices drops every token minted from a device and closes its /ws sockets; (2) executor returns ExecutionOutcome(str) with .status, TaskQueue maps failed->FAILED, cancelled->CANCELLED (was always COMPLETED); (3) prune_memory commits before VACUUM (it was failing inside the open transaction); (4) tier_router checks COMPLEX_HINTS before the short-prompt QUICK path; (5) MCP bridge: reader no longer dies on a full queue (drops notifications / oldest), server-initiated requests are answered -32601 instead of mistaken for the reply, isError raises, non-dict blocks skipped, dead servers restart on demand (5s rate limit), [MCP] error strings now count as failures in _is_failed_result. Full suite passes.",
+      "files": [
+        "dashboard/server.py",
+        "agent/executor.py",
+        "agent/task_queue.py",
+        "core/memory_tools.py",
+        "core/tier_router.py",
+        "core/mcp_bridge.py",
+        "core/conversation_core.py",
+        "tests/test_review_fixes.py"
+      ],
+      "next_steps": "STILL OPEN from the review, verified real at HEAD e1a5385 unless noted: (a) core/risk.py file_controller create_file/create_folder/write/copy/move/rename/delete are MONITOR (no approval); consider ASK or a per-task workspace grant. (b) actions/file_controller.py:324 shutil.copytree without symlinks=True follows nested symlinks out of the allowed root. (c) dashboard/server.py ~235 Windows setup runs Set-NetConnectionProfile Public->Private and adds unscoped inbound rules; make opt-in, scope to profile+remote address. (d) core/risk.py grants (_TURN/_GRANTS/_PLAN_GRANTS) are module-global, not request-scoped; concurrent turns can consume each other's grants. (e) Plugin tools: tool_dispatch plugin branch calls no risk.check; risk.py docstring says @gated covers plugins but core/plugins.py has no gate; UNCONFIRMED, check whether plugin entry functions are wrapped at load. (f) One bearer token can both send commands and approve high-risk actions (/api/command, /ws, approvals); require a separate step for remote approvals. (g) _ensure_crypto_js downloads JS from a CDN with no integrity hash; vendor or pin. (h) security/middleware.py require_approval(approval_id) may not bind approval to device/capability/endpoint; NOT CHECKED. (i) agent/executor.py: error_handler max_retries ignored vs hardcoded retry loop; recovery appends original step not fixed_step; planner has no schema validation (tool registered, 5-step cap, params). NOT RE-VERIFIED. (j) agent: generated-fix passes code= to code_helper run which needs file_path; NOT RE-VERIFIED. (k) TaskQueue cancel() reports CANCELLED before the active tool stops; stop() does not join workers. (l) mcp_bridge: stdin write happens before the deadline; stderr=DEVNULL hides crashes; unpinned npx in docs; tool names unsanitised in prompt; _boot_servers serial. (m) conversation_core: _wrap_untrusted should also escape an opening <tool_result; log previews of args reach remote dashboard clients unredacted. (n) /ws/phone-audio sockets are not in _ws_tokens so a revoke does not close them. (o) Behaviour note: short prompts containing plan/design/debug/analyze now route HARD, which costs latency on casual 'what is the plan' style messages; tune COMPLEX_HINTS if noisy. Suggested order: (a) (b) (d) (e) (f) (c)."
+    },
+    {
+      "id": 152,
+      "timestamp": "2026-11-05 22:37 UTC",
+      "by": "Claude Code",
+      "summary": "Second batch from the external review (stacked on PR #36). (a) core/risk.py: file_controller create_file/create_folder/write/copy/move/rename/delete are now ASK (were MONITOR); undo coverage was partial. Plan approval (#67) still covers whole plans. (b) actions/file_controller.py copy_file: shutil.copytree(symlinks=True) so nested symlinks are not followed out of the allowed roots. (e) CONFIRMED and fixed: plugin tools had no approval gate (risk.py docstring claimed @gated covered plugins; no plugin or PluginSystem.execute_tool applied it). PluginSystem.execute_tool now calls risk.check('plugin.<name>') which fails closed to ASK. Behaviour change: every plugin tool call asks once per turn/params; if that is too noisy add per-plugin entries to RISK_TABLE or a trusted-plugin tier. Tests in tests/test_review_fixes.py section 6 (9 tests, all fail on old code); test_all_critical plugin reload test now approves. Full suite 1804 passed, 2 skipped.",
+      "files": [
+        "core/risk.py",
+        "core/plugins.py",
+        "actions/file_controller.py",
+        "tests/test_review_fixes.py",
+        "tests/test_risk.py",
+        "tests/test_all_critical.py"
+      ],
+      "next_steps": "STILL OPEN: (d) core/risk.py grants (_TURN/_GRANTS/_PLAN_GRANTS) are module-global, not request-scoped; (f) one bearer token can both send commands and approve high-risk actions from a remote client; (c) Windows setup Set-NetConnectionProfile Public->Private + unscoped inbound rules (dashboard/server.py ~235); (g) _ensure_crypto_js CDN download without integrity hash; (h) security/middleware.py require_approval not bound to device/capability/endpoint (NOT CHECKED); (i) executor max_retries vs hardcoded loop, recovery records original step, planner has no schema validation (NOT RE-VERIFIED); (j) generated-fix code= vs code_helper file_path (NOT RE-VERIFIED); (k) TaskQueue cancel() reports CANCELLED before the tool stops, stop() does not join; (l) mcp_bridge stdin write before deadline, stderr=DEVNULL, unpinned npx, serial boot, unsanitised tool names; (m) _wrap_untrusted should escape an opening <tool_result, arg previews reach remote dashboard unredacted; (n) /ws/phone-audio sockets are not closed on revoke; (o) COMPLEX_HINTS now routes short plan/design/debug prompts HARD; tune if noisy. Suggested next: (d), (f), (c)."
+    },
+    {
+      "id": 153,
+      "timestamp": "2026-11-05 22:44 UTC",
+      "by": "Claude Code",
+      "summary": "Third batch from the external review (stacked on #37). (c) dashboard/server.py Windows setup no longer runs Set-NetConnectionProfile (Public->Private) and no longer adds a program-wide rule. It now adds one inbound rule for the dashboard port, limited to profile=private,domain and remoteip=LocalSubnet,100.64.0.0/10 (LAN + Tailscale), named 'AETHER Dashboard Port N (scoped)'; the old unscoped port rule and 'AETHER Dashboard Python' rule are deleted when found. A Public-classed network is reported in the console, never changed. Logic is in the pure _windows_firewall_commands(). NOT RUN ON WINDOWS: tested by mocking subprocess and reading the generated .bat. If phone access over Tailscale or a non-/24 LAN stops working, check _FW_REMOTE_SCOPE. (n) /ws/phone-audio sockets are now tracked so /api/revoke-devices closes them. (m-part) _wrap_untrusted also defuses an opening <tool_result so tool output cannot forge a second block. 4 new tests (all fail on old code). Full suite 1808 passed, 2 skipped.",
+      "files": [
+        "dashboard/server.py",
+        "core/conversation_core.py",
+        "tests/test_review_fixes.py"
+      ],
+      "next_steps": "STILL OPEN: (d) core/risk.py grants (_TURN/_GRANTS/_PLAN_GRANTS) are module-global, not request-scoped; (f) one bearer token can both send commands and approve high-risk actions from a remote client (needs a design decision: re-enter pairing code, or an approver capability); (g) _ensure_crypto_js downloads JS from a CDN with no integrity hash (vendor it or pin a SHA-384); (h) security/middleware.py require_approval not bound to device/capability/endpoint (NOT CHECKED); (i) executor max_retries vs hardcoded loop, recovery records original step, planner has no schema validation (NOT RE-VERIFIED); (j) generated-fix code= vs code_helper file_path (NOT RE-VERIFIED); (k) TaskQueue cancel() reports CANCELLED before the tool stops, stop() does not join; (l) mcp_bridge stdin write before deadline, stderr=DEVNULL, unpinned npx, serial boot, unsanitised tool names; (m-rest) arg previews reach remote dashboard unredacted; (o) COMPLEX_HINTS routes short plan/design/debug prompts HARD, tune if noisy; also consider a trusted-plugin tier if per-call plugin approval is too noisy."
+    },
+    {
+      "id": 154,
+      "timestamp": "2026-11-06 04:07 UTC",
+      "by": "Claude Code",
+      "summary": "Fourth batch from the external review (stacked on #38). (d) core/risk.py approvals are now scoped to the request that got them. Grants, refusals and plan approvals live on a _Turn object held in a ContextVar instead of module globals (_TURN/_GRANTS/_DENIED/_PLAN_GRANTS are gone). begin_turn(text, background=False) returns the turn and binds it to the calling thread. Foreground turn: a newer user message supersedes it (same behaviour as before: old approvals end, a dialog open during a new message cancels). Background turn: not ended by user messages, and it cannot spend or erase theirs. TaskQueue._run_task now calls begin_turn('[background task] <goal>', background=True), so dialogs name the task instead of quoting the user's last message. A thread that never called begin_turn (a helper thread spawned mid-request) falls back to the latest USER turn, so existing behaviour holds; a stale superseded user turn gets a throwaway turn (asks afresh, stores nothing). New: risk.current_turn(), risk.bind_turn(turn) context manager. If you add a thread that runs gated tools on behalf of a request, wrap its body in 'with risk.bind_turn(turn)'. 6 new tests with real threads (5 fail on old code). Also fixed a pre-existing intermittent test failure: core/crash_logger.py let the card-number redaction replace the trace session id (e.g. 20261105-230514 is Luhn-valid) about 1 run in 10; reproduced on pristine master e1a5385; ids are now restored after sanitizing, with a deterministic test. Full suite 1815 passed, 2 skipped.",
+      "files": [
+        "core/risk.py",
+        "agent/task_queue.py",
+        "core/crash_logger.py",
+        "tests/test_review_fixes.py",
+        "tests/test_risk_task.py",
+        "tests/test_crash_reporter.py"
+      ],
+      "next_steps": "STILL OPEN: (f) one bearer token can both send commands and approve high-risk actions from a remote client (needs a design decision: re-enter the pairing code to approve, or an approver capability); (g) _ensure_crypto_js downloads JS from a CDN with no integrity hash (vendor it or pin a SHA-384); (h) security/middleware.py require_approval not bound to device/capability/endpoint (NOT CHECKED); (i) executor max_retries vs hardcoded loop, recovery records original step, planner has no schema validation (NOT RE-VERIFIED); (j) generated-fix code= vs code_helper file_path (NOT RE-VERIFIED); (k) TaskQueue cancel() reports CANCELLED before the tool stops, stop() does not join; (l) mcp_bridge stdin write before deadline, stderr=DEVNULL, unpinned npx, serial boot, unsanitised tool names; (m-rest) arg previews reach remote dashboard unredacted; (o) COMPLEX_HINTS routes short plan/design/debug prompts HARD, tune if noisy; consider a trusted-plugin tier if per-call plugin approval is too noisy. Housekeeping: stacked PRs #36 -> #37 -> #38 -> this one; merge in order."
+    },
+    {
+      "id": 155,
+      "timestamp": "2026-11-08 02:17 UTC",
+      "by": "Claude (claude.ai chat)",
+      "summary": "Maintainability review of branch scope-risk-grants, then refactors (3 commits, suite 1720 passed; the only failures are 4 pre-existing environment ones in test_action_launcher x2, test_ui_prefs, test_voice_browser_fixes, plus an intermittent test_listen_mode that fails ~half the time on the untouched branch). SUPERSEDES earlier notes here: (1) risk.bind_turn() NO LONGER EXISTS. Nothing in production used it: tool calls run on the thread that called begin_turn and every command loop in main.py begins its own turn. Do not add it back speculatively; if you really add a thread that runs gated tools on behalf of a request, design the propagation then. Threads that never began a turn still fall back to the latest user turn. (2) agent.executor.ExecutionOutcome(str) and outcome_status() are gone; AgentExecutor.execute() returns ExecutionResult(status, text) with status succeeded|failed|cancelled, and every return path declares one. This fixed a real bug: ErrorDecision.ABORT and declined generated code returned plain strings that TaskQueue recorded as COMPLETED. TaskQueue stores result.text. (3) Dashboard bearer sessions are one _Session(key, expires, device) per token in DashboardServer._sessions; _tokens/_token_keys/_token_expiry/_token_device and _drop_token are gone, and a session can no longer lack an expiry. Tests must mint tokens with _add_token, never by poking a set. (4) tests/test_review_fixes.py was split by topic: test_dashboard_sessions, test_executor_results, test_prune_memory, test_mcp_bridge_live, test_tool_gates, test_risk_turns (router test now in test_tier_router.py); earlier entries naming test_review_fixes.py are historical. (5) OS-firewall setup moved verbatim to dashboard/firewall.py (entry point ensure_network_access); server.py 1405->1169 lines. (6) A failing risk.begin_turn in conversation_core now logs and calls risk.reset_state() so the thread cannot reuse the previous request's approvals; the turn still runs (test_risk_task pins that). TaskQueue._run_task does NOT swallow begin_turn errors: the task fails. (7) Fixed a pre-existing bug: the 202 approval response told remote devices to poll /api/approvals/{id}; the secure router is mounted at /api/secure so the real URL is /api/secure/approvals/{id}. (8) Dashboard /api/approvals/{id}/approve|deny resolve either core.pending_approvals or security.policy approvals through one _resolve_approval(); dashboard decisions are recorded decided_by=dashboard. The dashboard login and the secure router use independent pairing PINs, so a scoped remote device cannot self-approve unless the operator also gives it a dashboard pairing code. api_secure.py's docstring was corrected to say so. Also: Approval.matches(), one COMPLEX_HINTS check in tier_router, single '[mcp] ' failure prefix, MCP reader no longer parses lines twice (the discard-oldest queue handles idle chatter), _last_restart initialised in __init__.",
+      "files": [
+        "agent/executor.py",
+        "agent/task_queue.py",
+        "core/risk.py",
+        "core/conversation_core.py",
+        "core/mcp_bridge.py",
+        "core/plugins.py",
+        "core/tier_router.py",
+        "dashboard/server.py",
+        "dashboard/firewall.py",
+        "dashboard/api_secure.py",
+        "security/middleware.py",
+        "security/policy.py",
+        "tests/"
+      ],
+      "next_steps": "Open: (a) cc56a5f mixes routing, approvals and a desktop restyle in one commit; consider splitting before merge. (b) _FAILURE_PREFIXES in conversation_core is still a string-prefix heuristic over ~30 free-text tools; typing it means changing every action's return and is its own project. (c) ui.py (~4150 lines) and conversation_core.py (~1740) are still the largest files. (d) Decide whether security.policy approvals should be decidable only from the desktop UI in-process, as api_secure.py originally intended, or stay decidable by the authenticated dashboard operator as now."
     }
   ]
 }

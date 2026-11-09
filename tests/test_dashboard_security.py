@@ -131,7 +131,7 @@ def test_upload_preflight_rejects_oversized_request_before_parsing(tmp_path):
 
     dashboard = srv.DashboardServer()
     dashboard._uploads_dir = tmp_path
-    dashboard._tokens.add("valid-test-token")
+    dashboard._add_token("valid-test-token", "test-key")
     oversized_length = srv.MAX_UPLOAD_MB * 1024 * 1024 + 1024 * 1024 + 1
 
     with TestClient(dashboard.app) as client:
@@ -152,7 +152,7 @@ def test_websocket_tickets_are_authenticated_purpose_bound_and_one_time():
     from fastapi.testclient import TestClient
 
     dashboard = srv.DashboardServer()
-    dashboard._tokens.add("valid-test-token")
+    dashboard._add_token("valid-test-token", "test-key")
 
     with TestClient(dashboard.app) as client:
         assert client.post("/api/ws-ticket", json={"purpose": "main"}).status_code == 401
@@ -178,7 +178,7 @@ def test_download_requires_bearer_header_not_query_token(tmp_path):
 
     dashboard = srv.DashboardServer()
     dashboard._uploads_dir = tmp_path
-    dashboard._tokens.add("valid-test-token")
+    dashboard._add_token("valid-test-token", "test-key")
     (tmp_path / "notes.txt").write_text("private data", encoding="utf-8")
 
     with TestClient(dashboard.app) as client:

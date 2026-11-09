@@ -18,16 +18,15 @@ Scope of this first cut — deliberately narrow:
     GET  /me                        — identify the calling device + its caps
     GET  /approvals/{approval_id}   — poll a HIGH-risk request you made
 
-What's deliberately NOT here yet: device management (list/revoke/grant),
-and deciding (approve/deny) a pending approval. Per capabilities.py's own
-docstring, the desktop UI is "a separate, always-trusted device... because
-the user is literally sitting in front of it" — i.e. those actions belong
-in-process inside the PyQt6 app (ui.py) calling security.tokens /
-security.policy directly, not over HTTP. There is no documented flow for a
-remote device to ever obtain Capability.ADMIN, so an HTTP endpoint gated on
-it today would be dead code guarding nothing -- worse, an easy thing to
-wire up wrong later. Left for a follow-up once the desktop-UI side of that
-wiring exists to review against.
+What's deliberately NOT here yet: device management (list/revoke/grant), and any
+approve/deny endpoint on THIS router. A remote device must never decide its own
+(or anyone's) approval, and there is no documented flow for one to obtain
+Capability.ADMIN. Pending approvals are decided by the operator, not by the
+requesting device: through the legacy dashboard's /api/approvals/{id}/approve|deny
+(dashboard/server.py), whose authentication is a separate credential from this
+router's (its pairing codes are not shared with security/tokens.py), or in-process
+from the desktop UI. Keep it that way: a decision endpoint here would be an easy
+thing to wire up wrong.
 
 Pairing/reauth are rate-limited using the same per-IP counters
 security/tokens.py already tracks for exactly this purpose.

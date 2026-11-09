@@ -74,6 +74,7 @@ class MCPServerProcess:
         self._lock = threading.Lock()
         self._msg_id = 0
         self._tools: list[dict] = []
+        self._last_restart = float("-inf")      # time.monotonic() of the last restart()
         self._stdout_queue: queue.Queue[bytes | None] = queue.Queue(maxsize=_MCP_STDOUT_QUEUE_SIZE)
 
     # ── Lifecycle ─────────────────────────────────────────────────────────
@@ -131,8 +132,16 @@ class MCPServerProcess:
                     return
                 if len(raw) > _MCP_MAX_LINE_BYTES:
                     raise ValueError("MCP response line exceeds the size limit")
-                response_queue.put(raw, timeout=1)
-        except (queue.Full, OSError, ValueError) as exc:
+                while True:
+                    try:
+                        response_queue.put_nowait(raw)
+                        break
+                    except queue.Full:            # idle chatter: discard the oldest, keep reading
+                        try:
+                            response_queue.get_nowait()
+                        except queue.Empty:
+                            pass
+        except (OSError, ValueError) as exc:
             logger.error("MCP stdout reader stopped: %s", exc)
             try:
                 proc.terminate()
@@ -142,6 +151,15 @@ class MCPServerProcess:
                 response_queue.put_nowait(None)
             except queue.Full:
                 pass
+
+    def restart(self, min_interval: float = 5.0) -> None:
+        """Start a dead server again (rate-limited so a crash-looping server can't spin)."""
+        now = time.monotonic()
+        if now - self._last_restart < min_interval:
+            raise RuntimeError("restarted too recently")
+        self._last_restart = now
+        self.stop()
+        self.start()
 
     def is_alive(self) -> bool:
         return self._proc is not None and self._proc.poll() is None
@@ -187,10 +205,24 @@ class MCPServerProcess:
                     continue
                 if not isinstance(resp, dict):
                     continue
+                if "method" in resp:
+                    # server-initiated request (ping, roots/list, sampling): never our reply.
+                    if "id" in resp:
+                        self._reply_unsupported(resp["id"])
+                    continue
                 if resp.get("id") == msg_id:
                     if "error" in resp:
                         raise RuntimeError(f"MCP error from '{self.name}': {resp['error']}")
                     return resp.get("result")
+
+    def _reply_unsupported(self, req_id) -> None:
+        try:
+            msg = {"jsonrpc": "2.0", "id": req_id,
+                   "error": {"code": -32601, "message": "Method not supported by this client"}}
+            self._proc.stdin.write((json.dumps(msg) + "\n").encode())
+            self._proc.stdin.flush()
+        except Exception:
+            pass
 
     def _initialize(self) -> None:
         self._send("initialize", {
@@ -236,11 +268,16 @@ class MCPServerProcess:
         content = result.get("content", [])
         parts = []
         for block in content:
+            if not isinstance(block, dict):
+                continue
             if block.get("type") == "text":
                 parts.append(block.get("text", ""))
             elif block.get("type") == "resource":
                 parts.append(str(block.get("resource", {}).get("text", "")))
-        return "\n".join(parts) or "Done."
+        text = "\n".join(parts) or "Done."
+        if result.get("isError"):
+            raise RuntimeError(f"tool reported an error: {text[:400]}")
+        return text
 
     def has_tool(self, tool_name: str) -> bool:
         return any(isinstance(tool, dict) and tool.get("name") == tool_name
@@ -288,7 +325,11 @@ class MCPBridge:
             available = list(self._servers.keys())
             return f"[MCP] Unknown server '{server}'. Available: {available}"
         if not srv.is_alive():
-            return f"[MCP] Server '{server}' is not running."
+            try:
+                srv.restart()
+                logger.info("MCP: server '%s' restarted on demand", server)
+            except Exception as e:
+                return f"[MCP] Server '{server}' is not running and could not be restarted: {e}"
         if not isinstance(args, dict):
             return "[MCP] Tool arguments must be an object."
         if not srv.has_tool(tool):

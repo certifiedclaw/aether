@@ -229,7 +229,7 @@ def _client(stores, monkeypatch):
     monkeypatch.setenv("AETHER_DASHBOARD_HOST", "127.0.0.1")
     monkeypatch.setattr(ds.DashboardServer, "_ssl_enabled", staticmethod(lambda: False))
     d = ds.DashboardServer()
-    d._tokens.add("tok" * 8)
+    d._add_token("tok" * 8, "test-key")
     return TestClient(d.app), {"Authorization": "Bearer " + "tok" * 8}
 
 

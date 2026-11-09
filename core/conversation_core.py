@@ -355,12 +355,15 @@ def _wrap_untrusted(tool: str, result) -> str:
     (a closing tag inside it is defused so it cannot fake the end), and prompt.txt says the
     contents never carry authority. This is a hint to the model, not a boundary: the
     enforcement that matters is the per-turn tool allowlist and the risk gates."""
-    text = str(result).replace("</tool_result", "<\\/tool_result")
+    text = (str(result).replace("</tool_result", "<\\/tool_result")
+            .replace("<tool_result", "<\\tool_result"))
     name = re.sub(r"[^A-Za-z0-9_.:-]", "_", str(tool))[:64]
     return f'<tool_result tool="{name}" trust="untrusted">\n{text}\n</tool_result>'
 
 
-_FAILURE_PREFIXES = ("error", "denied", "cancelled", "skipped", "blocked", "[loop guard]")
+# "[mcp] " is the MCP bridge's own error prefix; a successful MCP call returns the server's
+# text unprefixed.
+_FAILURE_PREFIXES = ("error", "denied", "cancelled", "skipped", "blocked", "[loop guard]", "[mcp] ")
 
 
 def _is_failed_result(result) -> bool:
@@ -737,14 +740,18 @@ class ConversationCoreMixin:
         # "task" tier). "[SYSTEM_ALERT]" is only a text prefix that the dashboard, a mic
         # transcript or pasted text can also produce, so an alert turn must NOT inherit
         # the user's earlier approval: it starts its own turn, labelled as an alert.
+        # A broken risk layer must not brick the assistant, but this thread would otherwise
+        # keep the previous request's live approvals: drop all approval state instead, so
+        # every gated call asks afresh.
+        from core import risk as _risk
         try:
-            from core import risk as _risk
             if str(user_text).lstrip().startswith("[SYSTEM_ALERT]"):
                 _risk.begin_turn("[system alert - not a user request]")
             else:
                 _risk.begin_turn(user_text)
-        except Exception:  # noqa: BLE001 - never let this break a turn
-            pass
+        except Exception:  # noqa: BLE001 - see above
+            logger.exception("risk.begin_turn failed; approvals dropped for this request")
+            _risk.reset_state()
         # Track message in observability
         self._obs.count("messages.received")
         # ── Handle built-in chat commands ────────────────────────

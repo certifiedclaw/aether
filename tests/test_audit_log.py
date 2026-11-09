@@ -152,7 +152,7 @@ def test_dashboard_audit_endpoint_requires_auth_and_filters(monkeypatch):
     ds = srv.DashboardServer()
     c = TestClient(ds.app)
     assert c.get("/api/audit").status_code == 401
-    ds._tokens.add("tok")
+    ds._add_token("tok", "test-key")
     h = {"Authorization": "Bearer tok"}
     r = c.get("/api/audit?decision=denied", headers=h)
     assert r.status_code == 200
