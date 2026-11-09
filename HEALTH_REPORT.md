@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.health_check` (or `run_all`) to refresh. Fix things here, don't edit this file directly.
 
-Generated: 2026-11-09T01:14:50.122548+00:00
+Generated: 2026-11-09T01:23:31.335155+00:00
 Files scanned: 269
 
 ## Summary
@@ -12,13 +12,13 @@ Files scanned: 269
 | Files that fail to parse | 0 |
 | Bare `except:` clauses | 0 |
 | Files over 600 lines | 19 |
-| Functions over 80 lines | 66 |
+| Functions over 80 lines | 65 |
 | Stray `print()` calls (outside scripts) | 0 |
 | TODO / FIXME / XXX comments | 0 |
 | Unreadable files | 0 |
 
 ## Files over 600 lines
-- `ui.py` — 4149 lines
+- `ui.py` — 4165 lines
 - `tests/test_all_critical.py` — 2160 lines
 - `core/conversation_core.py` — 1741 lines
 - `core/llm_client.py` — 1589 lines
@@ -40,8 +40,7 @@ Files scanned: 269
 
 ## Functions over 80 lines
 - `core/conversation_core.py:735` — `_process_message_inner()` (700 lines)
-- `ui.py:2848` — `_build_right_panel()` (285 lines)
-- `ui.py:3206` — `_open_action_catalog()` (205 lines)
+- `ui.py:3222` — `_open_action_catalog()` (205 lines)
 - `core/llm_client.py:1397` — `_call_llm_stream_impl()` (192 lines)
 - `core/llm_client.py:975` — `_stream_openai_once()` (188 lines)
 - `ui.py:1645` — `_build_llm_section()` (180 lines)
@@ -49,7 +48,7 @@ Files scanned: 269
 - `actions/dev_agent.py:402` — `_build_project()` (154 lines)
 - `actions/computer_control.py:354` — `computer_control()` (154 lines)
 - `main.py:984` — `run()` (153 lines)
-- `ui.py:3447` — `_open_action_form()` (149 lines)
+- `ui.py:3463` — `_open_action_form()` (149 lines)
 - `main.py:1144` — `main()` (145 lines)
 - `ui.py:498` — `paintEvent()` (140 lines)
 - `actions/extra_tools.py:937` — `run_extra_tool()` (140 lines)
@@ -80,7 +79,7 @@ Files scanned: 269
 - `core/llm_client.py:1464` — `_do_stream()` (95 lines)
 - `agent/executor.py:51` — `_run_generated_code()` (94 lines)
 - `core/echo.py:197` — `is_user_speech()` (94 lines)
-- `ui.py:2484` — `__init__()` (93 lines)
+- `ui.py:2492` — `__init__()` (93 lines)
 - `desktop_mate.py:578` — `_draw_eyes()` (93 lines)
 - `ui.py:1827` — `_build_tts_section()` (92 lines)
 - `desktop_mate.py:699` — `_draw_extras()` (92 lines)

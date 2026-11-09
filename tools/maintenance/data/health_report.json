@@ -7,7 +7,7 @@
     },
     {
       "file": "ui.py",
-      "lines": 4149
+      "lines": 4165
     },
     {
       "file": "desktop_mate.py",
@@ -131,25 +131,19 @@
       "file": "ui.py",
       "function": "__init__",
       "lines": 93,
-      "at_line": 2484
-    },
-    {
-      "file": "ui.py",
-      "function": "_build_right_panel",
-      "lines": 285,
-      "at_line": 2848
+      "at_line": 2492
     },
     {
       "file": "ui.py",
       "function": "_open_action_catalog",
       "lines": 205,
-      "at_line": 3206
+      "at_line": 3222
     },
     {
       "file": "ui.py",
       "function": "_open_action_form",
       "lines": 149,
-      "at_line": 3447
+      "at_line": 3463
     },
     {
       "file": "desktop_mate.py",
@@ -481,7 +475,7 @@
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-11-09T01:17:48.879385+00:00",
+    "generated": "2026-11-09T01:23:31.335155+00:00",
     "files_scanned": 269
   }
 }

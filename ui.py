@@ -2472,6 +2472,14 @@ class StartupPanel(QWidget):
         self._status_lbl.setStyleSheet(f"color: {col}; background: transparent;")
 
 
+def _section_label(txt):
+    """Small dim caption above a group of controls (right panel)."""
+    label = QLabel(txt)
+    label.setFont(QFont(FONT_BODY, 9, QFont.Weight.DemiBold))
+    label.setStyleSheet(f"color: {C.TEXT_DIM}; background: transparent;")
+    return label
+
+
 class MainWindow(QMainWindow):
     _log_sig     = pyqtSignal(str)
     _clear_log_sig = pyqtSignal()
@@ -2854,12 +2862,6 @@ class MainWindow(QMainWindow):
         lay.setContentsMargins(22, 18, 22, 18)
         lay.setSpacing(10)
 
-        def _section_label(txt):
-            l = QLabel(txt)
-            l.setFont(QFont(FONT_BODY, 9, QFont.Weight.DemiBold))
-            l.setStyleSheet(f"color: {C.TEXT_DIM}; background: transparent;")
-            return l
-
         self._right_tabs = QTabWidget()
         self._right_tabs.setDocumentMode(True)
         self._right_tabs.tabBar().setDrawBase(False)
@@ -2880,14 +2882,26 @@ class MainWindow(QMainWindow):
             }}
             QTabBar::tab:hover:!selected {{ color: {C.TEXT_MED}; }}
         """)
+        self._right_tabs.addTab(self._build_chat_tab(), "Chat")
+        self._right_tabs.addTab(self._build_actions_tab(), "Actions")
+        lay.addWidget(self._right_tabs, stretch=1)
+        return w
 
+    def _build_chat_tab(self) -> QWidget:
         chat_tab = QWidget()
         chat_tab.setStyleSheet("background: transparent;")
         chat_lay = QVBoxLayout(chat_tab)
         self._chat_layout = chat_lay
         chat_lay.setContentsMargins(0, 10, 0, 0)
         chat_lay.setSpacing(10)
+        self._build_chat_heading(chat_lay)
+        self._build_chat_selector(chat_lay)
+        self._build_chat_log(chat_lay)
+        self._build_chat_input(chat_lay)
+        self._build_chat_controls(chat_lay)
+        return chat_tab
 
+    def _build_chat_heading(self, chat_lay: QVBoxLayout) -> None:
         chat_heading = QHBoxLayout()
         title_block = QVBoxLayout()
         title_block.setSpacing(1)
@@ -2912,6 +2926,7 @@ class MainWindow(QMainWindow):
         chat_heading.addWidget(self._chat_status_lbl, alignment=Qt.AlignmentFlag.AlignVCenter)
         chat_lay.addLayout(chat_heading)
 
+    def _build_chat_selector(self, chat_lay: QVBoxLayout) -> None:
         chat_row = QHBoxLayout()
         self._chat_combo = QComboBox()
         self._chat_combo.setToolTip("Select a saved conversation")
@@ -2949,6 +2964,7 @@ class MainWindow(QMainWindow):
         chat_row.addStretch()
         chat_lay.addLayout(chat_row)
 
+    def _build_chat_log(self, chat_lay: QVBoxLayout) -> None:
         self.orb = PresenceLine()
         chat_lay.addWidget(self.orb)
 
@@ -2985,6 +3001,7 @@ class MainWindow(QMainWindow):
         self._stats_bar.on_summary = self._reply_summary.setText
         chat_lay.addWidget(self._reply_summary)
 
+    def _build_chat_input(self, chat_lay: QVBoxLayout) -> None:
         input_heading = QHBoxLayout()
         input_heading.addWidget(_section_label("Message"))
         input_heading.addStretch()
@@ -2997,6 +3014,7 @@ class MainWindow(QMainWindow):
         chat_lay.addLayout(self._build_input_row())
         self._build_prompt_suggestions(chat_lay)
 
+    def _build_chat_controls(self, chat_lay: QVBoxLayout) -> None:
         chat_controls = QHBoxLayout()
         chat_controls.setSpacing(8)
         self._mute_btn = QPushButton("Microphone active")
@@ -3048,8 +3066,8 @@ class MainWindow(QMainWindow):
         cfg_btn.clicked.connect(self._show_config)
         chat_controls.addWidget(cfg_btn)
         chat_lay.addLayout(chat_controls)
-        self._right_tabs.addTab(chat_tab, "Chat")
 
+    def _build_actions_tab(self) -> QWidget:
         actions_tab = QWidget()
         actions_tab.setStyleSheet("background: transparent;")
         actions_lay = QVBoxLayout(actions_tab)
@@ -3128,9 +3146,7 @@ class MainWindow(QMainWindow):
         actions_content_lay.addStretch()
         actions_scroll.setWidget(actions_content)
         actions_lay.addWidget(actions_scroll)
-        self._right_tabs.addTab(actions_tab, "Actions")
-        lay.addWidget(self._right_tabs, stretch=1)
-        return w
+        return actions_tab
 
     def _open_named_action(self, name: str) -> None:
         if not self.on_action_catalog:
