@@ -33,8 +33,11 @@ PRINT_OK_FILES = {"main.py", "self_test.py", "evaluator.py", "dump.py", "code_du
                   # CLI entry points whose job is to print a report to the terminal
                   "doctor.py", "diagnostics.py", "config_validator.py", "observability.py",
                   "portable_bundle.py", "first_run.py", "__main__.py",
-                  # dashboard startup/firewall banner: console output the user reads, asserted by tests
-                  "server.py"}
+                  # dashboard startup banner and OS-firewall setup (moved to firewall.py): console
+                  # output the operator reads (UAC prompt notice, manual fallback commands), asserted by tests
+                  "server.py", "firewall.py",
+                  # `python -m core.updater check|apply|log` prints its result; main() is the CLI
+                  "updater.py"}
 PRINT_OK_DIRS = {"tools", "tests"}   # command-line scripts and tests: print() is their output
 TODO_RE = re.compile(r"#\s*(TODO|FIXME|XXX)\b[:\-]?\s*(.*)", re.IGNORECASE)
 

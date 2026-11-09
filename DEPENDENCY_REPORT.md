@@ -2,7 +2,7 @@
 
 > **Auto-generated.** Rerun `python -m tools.maintenance.dep_watcher` (or `run_all`) to refresh. Requires internet access.
 
-Generated: 2026-11-05T00:57:53.908229+00:00
+Generated: 2026-11-09T01:03:56.097262+00:00
 
 Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 3 versions behind" — it reports the latest available so you can decide whether to pin and bump.
 
@@ -10,15 +10,15 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 
 | Component | Latest | Source | Why it matters |
 |---|---|---|---|
-| [Ollama](https://github.com/ollama/ollama) | v0.40.14 | GitHub release | local LLM runtime — core/llm_client.py talks to it |
-| [faster-whisper (engine)](https://github.com/SYSTRAN/faster-whisper) | v1.2.1 | GitHub release | default STT engine per requirements.txt |
+| [Ollama](https://github.com/ollama/ollama) | v0.40.15 | GitHub release (web) | local LLM runtime — core/llm_client.py talks to it |
+| [faster-whisper (engine)](https://github.com/SYSTRAN/faster-whisper) | v1.2.1 | GitHub release (web) | default STT engine per requirements.txt |
 | [Kokoro TTS](https://github.com/hexgrad/kokoro) | 0.9.4 | PyPI kokoro | offline TTS option, alternative to edge-tts |
 
 ## Python packages (from requirements.txt)
 
 | Package | Latest on PyPI | Notes |
 |---|---|---|
-| fastapi | 0.162.0 |  |
+| fastapi | 0.162.2 |  |
 | uvicorn | 0.54.0 |  |
 | cryptography | 50.0.2 |  |
 | python-multipart | 0.0.33 |  |
@@ -42,16 +42,16 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 | comtypes | 1.4.17 |  |
 | pycaw | 20260927 |  |
 | win10toast | 0.9 |  |
-| youtube-transcript-api | 1.2.4 |  |
+| youtube-transcript-api | 1.2.5 |  |
 | python-pptx | 1.0.2 |  |
-| miniaudio | 1.71 |  |
+| miniaudio | 1.72 |  |
 | faster-whisper | 1.2.1 |  |
 | edge-tts | 7.3.1 |  |
 | sentence-transformers | 6.2.0 |  |
 | PyMuPDF | 2.1 |  |
 | python-whois | 0.9.6 |  |
 | dnspython | 2.9.2 |  |
-| watchdog | 7.0.0 |  |
+| watchdog | 7.1.0 |  |
 | keyboard | 0.13.5 |  |
 | python-docx | 1.2.0 |  |
 | langchain | 1.4.9 | Fast-moving API; pin a version once Aether's LangChain tool wiring is stable. |
@@ -63,7 +63,7 @@ Note: `requirements.txt` doesn't pin exact versions, so this can't flag "you're 
 | qrcode | 8.2 |  |
 | wikipedia-api | 0.16.0 |  |
 | google-generativeai | 0.8.6 |  |
-| google-genai | 2.34.0 |  |
+| google-genai | 3.0.0 |  |
 
 ## Flagged for extra attention
 - **langchain** — Fast-moving API; pin a version once Aether's LangChain tool wiring is stable.

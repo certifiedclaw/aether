@@ -2472,6 +2472,67 @@ class StartupPanel(QWidget):
         self._status_lbl.setStyleSheet(f"color: {col}; background: transparent;")
 
 
+def _section_label(txt):
+    """Small dim caption above a group of controls (right panel)."""
+    label = QLabel(txt)
+    label.setFont(QFont(FONT_BODY, 9, QFont.Weight.DemiBold))
+    label.setStyleSheet(f"color: {C.TEXT_DIM}; background: transparent;")
+    return label
+
+
+_ACTION_FRIENDLY_NAMES = {
+    "open_app": "Open an app or website",
+    "web_search": "Research the web",
+    "langchain": "Multi-step research (web and Wikipedia)",
+    "weather_report": "Check weather",
+    "send_message": "Send a message",
+    "reminder": "Set a reminder",
+    "youtube_video": "YouTube videos",
+    "screen_process": "Analyze screen or camera",
+    "computer_settings": "Computer settings and controls",
+    "browser_control": "Control a web browser",
+    "file_controller": "Manage files and folders",
+    "desktop_control": "Manage the desktop",
+    "code_helper": "Write or work with code",
+    "dev_agent": "Build a software project",
+    "agent_task": "Run a multi-step task",
+    "computer_control": "Control mouse and keyboard",
+    "game_updater": "Manage game updates",
+    "flight_finder": "Find flights",
+    "file_processor": "Analyze an uploaded file",
+    "osint_lookup": "Authorized OSINT lookup",
+    "pdf_tool": "Work with a PDF",
+    "rag_query": "Search indexed documents",
+    "undo": "Undo a file operation",
+    "shutdown_aether": "Shut down Aether",
+    "save_memory": "Save a memory",
+}
+
+_QUICK_COMMANDS = [
+    ("/help", "List chat commands"),
+    ("/status", "Run system diagnostics"),
+    ("/doctor", "Check installation and runtime health"),
+    ("/doctor fix", "Apply safe doctor fixes"),
+    ("/selftest", "Run subsystem self-tests"),
+    ("/crashes", "Show recent crash reports"),
+    ("/audit", "Review recent tool calls and approvals"),
+    ("/audit verify", "Verify the audit log chain"),
+    ("/perf", "Show model speed and resource statistics"),
+    ("/resources", "Show resource governor status"),
+    ("/backup", "Back up memory"),
+    ("/memstats", "Show memory statistics"),
+    ("/prune", "Remove duplicate and old memories"),
+    ("/clear", "Clear chat history"),
+    ("/newchat", "Start a new saved chat"),
+    ("/chats", "List saved chats"),
+]
+
+
+def _action_display_name(name: str) -> str:
+    """Label shown for a tool in the action catalog (friendly name, else prettified id)."""
+    return _ACTION_FRIENDLY_NAMES.get(name, name.replace("_", " ").capitalize())
+
+
 class MainWindow(QMainWindow):
     _log_sig     = pyqtSignal(str)
     _clear_log_sig = pyqtSignal()
@@ -2854,12 +2915,6 @@ class MainWindow(QMainWindow):
         lay.setContentsMargins(22, 18, 22, 18)
         lay.setSpacing(10)
 
-        def _section_label(txt):
-            l = QLabel(txt)
-            l.setFont(QFont(FONT_BODY, 9, QFont.Weight.DemiBold))
-            l.setStyleSheet(f"color: {C.TEXT_DIM}; background: transparent;")
-            return l
-
         self._right_tabs = QTabWidget()
         self._right_tabs.setDocumentMode(True)
         self._right_tabs.tabBar().setDrawBase(False)
@@ -2880,14 +2935,26 @@ class MainWindow(QMainWindow):
             }}
             QTabBar::tab:hover:!selected {{ color: {C.TEXT_MED}; }}
         """)
+        self._right_tabs.addTab(self._build_chat_tab(), "Chat")
+        self._right_tabs.addTab(self._build_actions_tab(), "Actions")
+        lay.addWidget(self._right_tabs, stretch=1)
+        return w
 
+    def _build_chat_tab(self) -> QWidget:
         chat_tab = QWidget()
         chat_tab.setStyleSheet("background: transparent;")
         chat_lay = QVBoxLayout(chat_tab)
         self._chat_layout = chat_lay
         chat_lay.setContentsMargins(0, 10, 0, 0)
         chat_lay.setSpacing(10)
+        self._build_chat_heading(chat_lay)
+        self._build_chat_selector(chat_lay)
+        self._build_chat_log(chat_lay)
+        self._build_chat_input(chat_lay)
+        self._build_chat_controls(chat_lay)
+        return chat_tab
 
+    def _build_chat_heading(self, chat_lay: QVBoxLayout) -> None:
         chat_heading = QHBoxLayout()
         title_block = QVBoxLayout()
         title_block.setSpacing(1)
@@ -2912,6 +2979,7 @@ class MainWindow(QMainWindow):
         chat_heading.addWidget(self._chat_status_lbl, alignment=Qt.AlignmentFlag.AlignVCenter)
         chat_lay.addLayout(chat_heading)
 
+    def _build_chat_selector(self, chat_lay: QVBoxLayout) -> None:
         chat_row = QHBoxLayout()
         self._chat_combo = QComboBox()
         self._chat_combo.setToolTip("Select a saved conversation")
@@ -2949,6 +3017,7 @@ class MainWindow(QMainWindow):
         chat_row.addStretch()
         chat_lay.addLayout(chat_row)
 
+    def _build_chat_log(self, chat_lay: QVBoxLayout) -> None:
         self.orb = PresenceLine()
         chat_lay.addWidget(self.orb)
 
@@ -2985,6 +3054,7 @@ class MainWindow(QMainWindow):
         self._stats_bar.on_summary = self._reply_summary.setText
         chat_lay.addWidget(self._reply_summary)
 
+    def _build_chat_input(self, chat_lay: QVBoxLayout) -> None:
         input_heading = QHBoxLayout()
         input_heading.addWidget(_section_label("Message"))
         input_heading.addStretch()
@@ -2997,6 +3067,7 @@ class MainWindow(QMainWindow):
         chat_lay.addLayout(self._build_input_row())
         self._build_prompt_suggestions(chat_lay)
 
+    def _build_chat_controls(self, chat_lay: QVBoxLayout) -> None:
         chat_controls = QHBoxLayout()
         chat_controls.setSpacing(8)
         self._mute_btn = QPushButton("Microphone active")
@@ -3048,8 +3119,8 @@ class MainWindow(QMainWindow):
         cfg_btn.clicked.connect(self._show_config)
         chat_controls.addWidget(cfg_btn)
         chat_lay.addLayout(chat_controls)
-        self._right_tabs.addTab(chat_tab, "Chat")
 
+    def _build_actions_tab(self) -> QWidget:
         actions_tab = QWidget()
         actions_tab.setStyleSheet("background: transparent;")
         actions_lay = QVBoxLayout(actions_tab)
@@ -3128,9 +3199,7 @@ class MainWindow(QMainWindow):
         actions_content_lay.addStretch()
         actions_scroll.setWidget(actions_content)
         actions_lay.addWidget(actions_scroll)
-        self._right_tabs.addTab(actions_tab, "Actions")
-        lay.addWidget(self._right_tabs, stretch=1)
-        return w
+        return actions_tab
 
     def _open_named_action(self, name: str) -> None:
         if not self.on_action_catalog:
@@ -3204,14 +3273,25 @@ class MainWindow(QMainWindow):
         )
 
     def _open_action_catalog(self) -> None:
+        entries = self._fetch_action_entries()
+        if entries is None:
+            return
+        if not entries and not _QUICK_COMMANDS:
+            QMessageBox.information(self, "Actions", "No actions are currently available.")
+            return
+        dialog = self._build_action_dialog(entries)
+        dialog.exec()
+
+    def _fetch_action_entries(self) -> list | None:
+        """Tool schemas for the catalog, sorted by display name; None if a message was shown instead."""
         if not self.on_action_catalog:
             QMessageBox.information(self, "Actions", "Aether's action catalog is not ready yet.")
-            return
+            return None
         try:
             tools = self.on_action_catalog()
         except Exception as exc:
             QMessageBox.critical(self, "Actions unavailable", str(exc))
-            return
+            return None
 
         entries = []
         for tool in tools or []:
@@ -3219,62 +3299,14 @@ class MainWindow(QMainWindow):
             name = function.get("name")
             if name:
                 entries.append(function)
-        friendly_names = {
-            "open_app": "Open an app or website",
-            "web_search": "Research the web",
-            "langchain": "Multi-step research (web and Wikipedia)",
-            "weather_report": "Check weather",
-            "send_message": "Send a message",
-            "reminder": "Set a reminder",
-            "youtube_video": "YouTube videos",
-            "screen_process": "Analyze screen or camera",
-            "computer_settings": "Computer settings and controls",
-            "browser_control": "Control a web browser",
-            "file_controller": "Manage files and folders",
-            "desktop_control": "Manage the desktop",
-            "code_helper": "Write or work with code",
-            "dev_agent": "Build a software project",
-            "agent_task": "Run a multi-step task",
-            "computer_control": "Control mouse and keyboard",
-            "game_updater": "Manage game updates",
-            "flight_finder": "Find flights",
-            "file_processor": "Analyze an uploaded file",
-            "osint_lookup": "Authorized OSINT lookup",
-            "pdf_tool": "Work with a PDF",
-            "rag_query": "Search indexed documents",
-            "undo": "Undo a file operation",
-            "shutdown_aether": "Shut down Aether",
-            "save_memory": "Save a memory",
-        }
         entries.sort(
-            key=lambda item: friendly_names.get(
-                item["name"], item["name"].replace("_", " ").capitalize()
-            ).casefold()
+            key=lambda item: _action_display_name(item["name"]).casefold()
         )
-        quick_commands = [
-            ("/help", "List chat commands"),
-            ("/status", "Run system diagnostics"),
-            ("/doctor", "Check installation and runtime health"),
-            ("/doctor fix", "Apply safe doctor fixes"),
-            ("/selftest", "Run subsystem self-tests"),
-            ("/crashes", "Show recent crash reports"),
-            ("/audit", "Review recent tool calls and approvals"),
-            ("/audit verify", "Verify the audit log chain"),
-            ("/perf", "Show model speed and resource statistics"),
-            ("/resources", "Show resource governor status"),
-            ("/backup", "Back up memory"),
-            ("/memstats", "Show memory statistics"),
-            ("/prune", "Remove duplicate and old memories"),
-            ("/clear", "Clear chat history"),
-            ("/newchat", "Start a new saved chat"),
-            ("/chats", "List saved chats"),
-        ]
-        if not entries and not quick_commands:
-            QMessageBox.information(self, "Actions", "No actions are currently available.")
-            return
+        return entries
 
+    def _build_action_dialog(self, entries: list) -> QDialog:
         dialog = QDialog(self)
-        dialog.setWindowTitle(f"Aether actions and commands ({len(entries) + len(quick_commands)})")
+        dialog.setWindowTitle(f"Aether actions and commands ({len(entries) + len(_QUICK_COMMANDS)})")
         dialog.resize(560, 620)
         dialog.setStyleSheet(f"""
             QDialog {{ background: {C.DARK}; color: {C.TEXT}; }}
@@ -3325,8 +3357,37 @@ class MainWindow(QMainWindow):
         buttons_layout.setContentsMargins(6, 6, 6, 6)
         buttons_layout.setSpacing(5)
 
+        action_buttons = self._fill_action_buttons(dialog, buttons_layout, entries)
+        buttons_layout.addStretch()
+        scroll.setWidget(container)
+        layout.addWidget(scroll, stretch=1)
+        def _filter_actions(query: str = "") -> None:
+            needle = query.casefold().strip()
+            selected_category = categories.currentText()
+            for button, searchable, category in action_buttons:
+                category_matches = (
+                    selected_category == "All categories"
+                    or category == selected_category
+                )
+                button.setVisible(category_matches and (not needle or needle in searchable))
+
+        search.textChanged.connect(_filter_actions)
+        categories.currentTextChanged.connect(lambda _category: _filter_actions(search.text()))
+        _filter_actions()
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.reject)
+        layout.addWidget(close_btn)
+        return dialog
+
+    def _fill_action_buttons(self, dialog: QDialog, buttons_layout: QVBoxLayout, entries: list) -> list:
+        """One button per chat command and per tool; returns (button, searchable text, category) rows."""
         action_buttons = []
-        for command, description in quick_commands:
+        self._add_quick_command_buttons(dialog, buttons_layout, action_buttons)
+        self._add_tool_buttons(dialog, buttons_layout, entries, action_buttons)
+        return action_buttons
+
+    def _add_quick_command_buttons(self, dialog: QDialog, buttons_layout: QVBoxLayout, action_buttons: list) -> None:
+        for command, description in _QUICK_COMMANDS:
             button = QPushButton(f"{command}\n{description}")
             button.setAccessibleName(f"Command {command}")
             button.setToolTip(description)
@@ -3354,10 +3415,11 @@ class MainWindow(QMainWindow):
                 (button, f"{command} {description}".casefold(), "Chat commands")
             )
 
+    def _add_tool_buttons(self, dialog: QDialog, buttons_layout: QVBoxLayout, entries: list, action_buttons: list) -> None:
         for function in entries:
             name = function["name"]
             description = str(function.get("description", "")).strip()
-            display_name = friendly_names.get(name, name.replace("_", " ").capitalize())
+            display_name = _action_display_name(name)
             summary = description if len(description) <= 110 else description[:107].rstrip() + "…"
             button = QPushButton(f"{display_name}\n{summary}")
             button.setAccessibleName(display_name)
@@ -3388,27 +3450,6 @@ class MainWindow(QMainWindow):
                     self._action_category(name),
                 )
             )
-        buttons_layout.addStretch()
-        scroll.setWidget(container)
-        layout.addWidget(scroll, stretch=1)
-
-        def _filter_actions(query: str = "") -> None:
-            needle = query.casefold().strip()
-            selected_category = categories.currentText()
-            for button, searchable, category in action_buttons:
-                category_matches = (
-                    selected_category == "All categories"
-                    or category == selected_category
-                )
-                button.setVisible(category_matches and (not needle or needle in searchable))
-
-        search.textChanged.connect(_filter_actions)
-        categories.currentTextChanged.connect(lambda _category: _filter_actions(search.text()))
-        _filter_actions()
-        close_btn = QPushButton("Close")
-        close_btn.clicked.connect(dialog.reject)
-        layout.addWidget(close_btn)
-        dialog.exec()
 
     @staticmethod
     def _action_category(name: str) -> str:

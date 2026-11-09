@@ -2,112 +2,100 @@
   "todos": [],
   "large_files": [
     {
+      "file": "main.py",
+      "lines": 1292
+    },
+    {
+      "file": "ui.py",
+      "lines": 4190
+    },
+    {
       "file": "desktop_mate.py",
       "lines": 835
     },
     {
-      "file": "main.py",
-      "lines": 1277
-    },
-    {
-      "file": "ui.py",
-      "lines": 4142
-    },
-    {
-      "file": "actions\\browser_control.py",
-      "lines": 941
-    },
-    {
-      "file": "actions\\computer_settings.py",
-      "lines": 755
-    },
-    {
-      "file": "actions\\desktop.py",
-      "lines": 655
-    },
-    {
-      "file": "actions\\extra_tools.py",
+      "file": "actions/extra_tools.py",
       "lines": 1077
     },
     {
-      "file": "actions\\file_controller.py",
-      "lines": 651
+      "file": "actions/browser_control.py",
+      "lines": 941
     },
     {
-      "file": "actions\\file_processor.py",
+      "file": "actions/computer_settings.py",
+      "lines": 755
+    },
+    {
+      "file": "actions/file_processor.py",
       "lines": 1036
     },
     {
-      "file": "actions\\game_updater.py",
+      "file": "actions/file_controller.py",
+      "lines": 653
+    },
+    {
+      "file": "actions/game_updater.py",
       "lines": 1052
     },
     {
-      "file": "actions\\osint_tools.py",
+      "file": "actions/osint_tools.py",
       "lines": 1441
     },
     {
-      "file": "core\\conversation_core.py",
-      "lines": 1665
+      "file": "actions/desktop.py",
+      "lines": 655
     },
     {
-      "file": "core\\llm_client.py",
+      "file": "tests/test_invariants.py",
+      "lines": 674
+    },
+    {
+      "file": "tests/test_all_critical.py",
+      "lines": 2160
+    },
+    {
+      "file": "dashboard/server.py",
+      "lines": 1169
+    },
+    {
+      "file": "core/llm_client.py",
       "lines": 1589
     },
     {
-      "file": "core\\tool_declarations.py",
+      "file": "core/conversation_core.py",
+      "lines": 1741
+    },
+    {
+      "file": "core/tool_declarations.py",
       "lines": 656
     },
     {
-      "file": "core\\trace_log.py",
-      "lines": 1083
-    },
-    {
-      "file": "core\\updater.py",
+      "file": "core/updater.py",
       "lines": 738
     },
     {
-      "file": "dashboard\\server.py",
-      "lines": 1342
-    },
-    {
-      "file": "tests\\test_all_critical.py",
-      "lines": 2158
-    },
-    {
-      "file": "tests\\test_invariants.py",
-      "lines": 674
+      "file": "core/trace_log.py",
+      "lines": 1107
     }
   ],
   "large_functions": [
     {
-      "file": "desktop_mate.py",
-      "function": "_draw_eyes",
-      "lines": 93,
-      "at_line": 578
-    },
-    {
-      "file": "desktop_mate.py",
-      "function": "_draw_extras",
-      "lines": 92,
-      "at_line": 699
-    },
-    {
       "file": "main.py",
       "function": "main",
       "lines": 145,
-      "at_line": 1129
+      "at_line": 1144
     },
     {
       "file": "main.py",
       "function": "run",
       "lines": 153,
-      "at_line": 969
+      "at_line": 984
     },
     {
       "file": "main.py",
       "function": "runner",
       "lines": 87,
-      "at_line": 1184
+      "at_line": 1199
     },
     {
       "file": "ui.py",
@@ -143,376 +131,345 @@
       "file": "ui.py",
       "function": "__init__",
       "lines": 93,
-      "at_line": 2484
-    },
-    {
-      "file": "ui.py",
-      "function": "_build_right_panel",
-      "lines": 278,
-      "at_line": 2848
-    },
-    {
-      "file": "ui.py",
-      "function": "_open_action_catalog",
-      "lines": 205,
-      "at_line": 3199
+      "at_line": 2545
     },
     {
       "file": "ui.py",
       "function": "_open_action_form",
       "lines": 149,
-      "at_line": 3440
+      "at_line": 3488
     },
     {
-      "file": "actions\\browser_control.py",
-      "function": "browser_control",
-      "lines": 87,
-      "at_line": 847
+      "file": "desktop_mate.py",
+      "function": "_draw_eyes",
+      "lines": 93,
+      "at_line": 578
     },
     {
-      "file": "actions\\browser_control.py",
-      "function": "_launch",
-      "lines": 104,
-      "at_line": 449
-    },
-    {
-      "file": "actions\\code_helper.py",
-      "function": "_screen_debug_action",
+      "file": "desktop_mate.py",
+      "function": "_draw_extras",
       "lines": 92,
-      "at_line": 431
+      "at_line": 699
     },
     {
-      "file": "actions\\computer_control.py",
-      "function": "computer_control",
-      "lines": 154,
-      "at_line": 354
-    },
-    {
-      "file": "actions\\computer_settings.py",
-      "function": "computer_settings",
-      "lines": 86,
-      "at_line": 669
-    },
-    {
-      "file": "actions\\deep_research.py",
-      "function": "deep_research",
-      "lines": 117,
-      "at_line": 329
-    },
-    {
-      "file": "actions\\desktop.py",
-      "function": "set_wallpaper",
-      "lines": 89,
-      "at_line": 302
-    },
-    {
-      "file": "actions\\desktop.py",
-      "function": "desktop_control",
-      "lines": 86,
-      "at_line": 569
-    },
-    {
-      "file": "actions\\dev_agent.py",
-      "function": "_build_project",
-      "lines": 154,
-      "at_line": 402
-    },
-    {
-      "file": "actions\\extra_tools.py",
-      "function": "run_extra_tool",
-      "lines": 140,
-      "at_line": 937
-    },
-    {
-      "file": "actions\\file_processor.py",
-      "function": "_process_image",
-      "lines": 95,
-      "at_line": 162
-    },
-    {
-      "file": "actions\\file_processor.py",
-      "function": "_process_data",
-      "lines": 95,
-      "at_line": 399
-    },
-    {
-      "file": "actions\\file_processor.py",
-      "function": "_process_video",
-      "lines": 127,
-      "at_line": 668
-    },
-    {
-      "file": "actions\\file_processor.py",
-      "function": "_process_archive",
-      "lines": 97,
-      "at_line": 797
-    },
-    {
-      "file": "actions\\game_updater.py",
-      "function": "game_updater",
-      "lines": 115,
-      "at_line": 930
-    },
-    {
-      "file": "actions\\osint_tools.py",
-      "function": "tech_stack",
-      "lines": 127,
-      "at_line": 565
-    },
-    {
-      "file": "actions\\osint_tools.py",
-      "function": "github_user_osint",
-      "lines": 81,
-      "at_line": 1033
-    },
-    {
-      "file": "actions\\osint_tools.py",
-      "function": "extract_metadata",
-      "lines": 88,
-      "at_line": 1139
-    },
-    {
-      "file": "actions\\reminder.py",
-      "function": "_write_notify_script",
-      "lines": 98,
-      "at_line": 40
-    },
-    {
-      "file": "actions\\threat_intel.py",
+      "file": "actions/threat_intel.py",
       "function": "threat_intel_brief",
       "lines": 97,
       "at_line": 54
     },
     {
-      "file": "agent\\executor.py",
-      "function": "_run_generated_code",
-      "lines": 83,
-      "at_line": 41
+      "file": "actions/reminder.py",
+      "function": "_write_notify_script",
+      "lines": 98,
+      "at_line": 40
     },
     {
-      "file": "agent\\executor.py",
-      "function": "execute",
-      "lines": 139,
-      "at_line": 313
+      "file": "actions/code_helper.py",
+      "function": "_screen_debug_action",
+      "lines": 92,
+      "at_line": 431
     },
     {
-      "file": "core\\chat_commands.py",
-      "function": "_handle_chat_command",
-      "lines": 306,
-      "at_line": 70
+      "file": "actions/extra_tools.py",
+      "function": "run_extra_tool",
+      "lines": 140,
+      "at_line": 937
     },
     {
-      "file": "core\\conversation_core.py",
-      "function": "_prepare_conversation_messages",
-      "lines": 134,
-      "at_line": 358
+      "file": "actions/dev_agent.py",
+      "function": "_build_project",
+      "lines": 154,
+      "at_line": 402
     },
     {
-      "file": "core\\conversation_core.py",
-      "function": "_execute_tool_calls",
-      "lines": 96,
-      "at_line": 494
+      "file": "actions/browser_control.py",
+      "function": "browser_control",
+      "lines": 87,
+      "at_line": 847
     },
     {
-      "file": "core\\conversation_core.py",
-      "function": "_process_message_inner",
-      "lines": 690,
+      "file": "actions/browser_control.py",
+      "function": "_launch",
+      "lines": 104,
+      "at_line": 449
+    },
+    {
+      "file": "actions/computer_settings.py",
+      "function": "computer_settings",
+      "lines": 86,
       "at_line": 669
     },
     {
-      "file": "core\\diagnostics.py",
-      "function": "run_all",
-      "lines": 91,
-      "at_line": 22
-    },
-    {
-      "file": "core\\echo.py",
-      "function": "is_user_speech",
-      "lines": 94,
-      "at_line": 197
-    },
-    {
-      "file": "core\\listen_loops.py",
-      "function": "_listen_whisper",
-      "lines": 158,
-      "at_line": 142
-    },
-    {
-      "file": "core\\llm_client.py",
-      "function": "_call_llm_impl",
-      "lines": 112,
-      "at_line": 672
-    },
-    {
-      "file": "core\\llm_client.py",
-      "function": "_stream_openai_once",
-      "lines": 188,
-      "at_line": 975
-    },
-    {
-      "file": "core\\llm_client.py",
-      "function": "_call_llm_stream_impl",
-      "lines": 192,
-      "at_line": 1397
-    },
-    {
-      "file": "core\\llm_client.py",
-      "function": "_do_stream",
+      "file": "actions/file_processor.py",
+      "function": "_process_image",
       "lines": 95,
-      "at_line": 1464
+      "at_line": 162
     },
     {
-      "file": "core\\portable_bundle.py",
-      "function": "_write_bundle",
-      "lines": 101,
-      "at_line": 65
+      "file": "actions/file_processor.py",
+      "function": "_process_data",
+      "lines": 95,
+      "at_line": 399
     },
     {
-      "file": "core\\prompt_builder.py",
-      "function": "_build_system_prompt",
-      "lines": 92,
-      "at_line": 212
+      "file": "actions/file_processor.py",
+      "function": "_process_video",
+      "lines": 127,
+      "at_line": 668
     },
     {
-      "file": "core\\smart_context.py",
-      "function": "compress_if_needed",
-      "lines": 96,
-      "at_line": 55
+      "file": "actions/file_processor.py",
+      "function": "_process_archive",
+      "lines": 97,
+      "at_line": 797
     },
     {
-      "file": "core\\updater.py",
-      "function": "_run_tests",
-      "lines": 84,
-      "at_line": 510
+      "file": "actions/game_updater.py",
+      "function": "game_updater",
+      "lines": 115,
+      "at_line": 930
     },
     {
-      "file": "dashboard\\openai_api.py",
-      "function": "build_router",
-      "lines": 92,
-      "at_line": 94
+      "file": "actions/osint_tools.py",
+      "function": "tech_stack",
+      "lines": 127,
+      "at_line": 565
     },
     {
-      "file": "dashboard\\server.py",
-      "function": "_ensure_network_access_windows",
-      "lines": 123,
-      "at_line": 190
+      "file": "actions/osint_tools.py",
+      "function": "github_user_osint",
+      "lines": 81,
+      "at_line": 1033
     },
     {
-      "file": "dashboard\\server.py",
-      "function": "_register_auth_routes",
-      "lines": 130,
-      "at_line": 687
+      "file": "actions/osint_tools.py",
+      "function": "extract_metadata",
+      "lines": 88,
+      "at_line": 1139
     },
     {
-      "file": "dashboard\\server.py",
-      "function": "_register_file_routes",
-      "lines": 104,
-      "at_line": 1048
+      "file": "actions/deep_research.py",
+      "function": "deep_research",
+      "lines": 117,
+      "at_line": 329
     },
     {
-      "file": "integrations\\langchain_tools.py",
+      "file": "actions/desktop.py",
+      "function": "set_wallpaper",
+      "lines": 89,
+      "at_line": 302
+    },
+    {
+      "file": "actions/desktop.py",
+      "function": "desktop_control",
+      "lines": 86,
+      "at_line": 569
+    },
+    {
+      "file": "actions/computer_control.py",
+      "function": "computer_control",
+      "lines": 154,
+      "at_line": 354
+    },
+    {
+      "file": "agent/executor.py",
+      "function": "_run_generated_code",
+      "lines": 94,
+      "at_line": 51
+    },
+    {
+      "file": "agent/executor.py",
+      "function": "_call_tool",
+      "lines": 81,
+      "at_line": 245
+    },
+    {
+      "file": "agent/executor.py",
+      "function": "execute",
+      "lines": 139,
+      "at_line": 357
+    },
+    {
+      "file": "integrations/langchain_tools.py",
       "function": "lc_research_agent",
       "lines": 87,
       "at_line": 253
     },
     {
-      "file": "memory\\hybrid_memory.py",
-      "function": "_retrieve",
-      "lines": 86,
-      "at_line": 318
-    },
-    {
-      "file": "memory\\memory_manager.py",
-      "function": "format_memory_for_prompt",
-      "lines": 88,
-      "at_line": 130
-    },
-    {
-      "file": "tests\\test_action_launcher.py",
-      "function": "test_action_launcher_builds_form_and_dispatches_values",
-      "lines": 138,
-      "at_line": 10
-    },
-    {
-      "file": "tests\\test_action_launcher.py",
-      "function": "test_chat_input_is_discoverable_and_does_not_drop_unsent_text",
-      "lines": 100,
-      "at_line": 211
-    },
-    {
-      "file": "tests\\test_all_critical.py",
-      "function": "test_setup_overlay_refactor_preserves_behavior",
-      "lines": 115,
-      "at_line": 762
-    },
-    {
-      "file": "tests\\test_all_critical.py",
-      "function": "test_confirm_blocking_dialog_thread_safety",
-      "lines": 102,
-      "at_line": 1189
-    },
-    {
-      "file": "tests\\test_listen_mode.py",
+      "file": "tests/test_listen_mode.py",
       "function": "_harness",
       "lines": 81,
       "at_line": 163
     },
     {
-      "file": "tools\\eval_harness.py",
+      "file": "tests/test_action_launcher.py",
+      "function": "test_action_launcher_builds_form_and_dispatches_values",
+      "lines": 138,
+      "at_line": 12
+    },
+    {
+      "file": "tests/test_action_launcher.py",
+      "function": "test_chat_input_is_discoverable_and_does_not_drop_unsent_text",
+      "lines": 100,
+      "at_line": 227
+    },
+    {
+      "file": "tests/test_all_critical.py",
+      "function": "test_setup_overlay_refactor_preserves_behavior",
+      "lines": 115,
+      "at_line": 764
+    },
+    {
+      "file": "tests/test_all_critical.py",
+      "function": "test_confirm_blocking_dialog_thread_safety",
+      "lines": 102,
+      "at_line": 1191
+    },
+    {
+      "file": "tools/live_grader.py",
+      "function": "grade_overall",
+      "lines": 86,
+      "at_line": 132
+    },
+    {
+      "file": "tools/eval_harness.py",
       "function": "run_tool_call_suite",
       "lines": 85,
       "at_line": 125
     },
     {
-      "file": "tools\\live_grader.py",
-      "function": "grade_overall",
+      "file": "dashboard/firewall.py",
+      "function": "_ensure_network_access_windows",
+      "lines": 108,
+      "at_line": 56
+    },
+    {
+      "file": "dashboard/openai_api.py",
+      "function": "build_router",
+      "lines": 92,
+      "at_line": 94
+    },
+    {
+      "file": "dashboard/server.py",
+      "function": "_register_auth_routes",
+      "lines": 131,
+      "at_line": 508
+    },
+    {
+      "file": "dashboard/server.py",
+      "function": "_register_file_routes",
+      "lines": 104,
+      "at_line": 869
+    },
+    {
+      "file": "core/diagnostics.py",
+      "function": "run_all",
+      "lines": 91,
+      "at_line": 22
+    },
+    {
+      "file": "core/llm_client.py",
+      "function": "_call_llm_impl",
+      "lines": 112,
+      "at_line": 672
+    },
+    {
+      "file": "core/llm_client.py",
+      "function": "_stream_openai_once",
+      "lines": 188,
+      "at_line": 975
+    },
+    {
+      "file": "core/llm_client.py",
+      "function": "_call_llm_stream_impl",
+      "lines": 192,
+      "at_line": 1397
+    },
+    {
+      "file": "core/llm_client.py",
+      "function": "_do_stream",
+      "lines": 95,
+      "at_line": 1464
+    },
+    {
+      "file": "core/echo.py",
+      "function": "is_user_speech",
+      "lines": 94,
+      "at_line": 197
+    },
+    {
+      "file": "core/smart_context.py",
+      "function": "compress_if_needed",
+      "lines": 96,
+      "at_line": 55
+    },
+    {
+      "file": "core/conversation_core.py",
+      "function": "_prepare_conversation_messages",
+      "lines": 134,
+      "at_line": 385
+    },
+    {
+      "file": "core/conversation_core.py",
+      "function": "_execute_tool_calls",
+      "lines": 135,
+      "at_line": 521
+    },
+    {
+      "file": "core/conversation_core.py",
+      "function": "_process_message_inner",
+      "lines": 700,
+      "at_line": 735
+    },
+    {
+      "file": "core/memory_tools.py",
+      "function": "import_memory",
+      "lines": 82,
+      "at_line": 143
+    },
+    {
+      "file": "core/updater.py",
+      "function": "_run_tests",
+      "lines": 84,
+      "at_line": 510
+    },
+    {
+      "file": "core/portable_bundle.py",
+      "function": "_write_bundle",
+      "lines": 101,
+      "at_line": 65
+    },
+    {
+      "file": "core/listen_loops.py",
+      "function": "_listen_whisper",
+      "lines": 158,
+      "at_line": 142
+    },
+    {
+      "file": "core/prompt_builder.py",
+      "function": "_build_system_prompt",
+      "lines": 92,
+      "at_line": 212
+    },
+    {
+      "file": "memory/hybrid_memory.py",
+      "function": "_retrieve",
       "lines": 86,
-      "at_line": 132
+      "at_line": 318
+    },
+    {
+      "file": "memory/memory_manager.py",
+      "function": "format_memory_for_prompt",
+      "lines": 88,
+      "at_line": 130
     }
   ],
   "bare_except": [],
-  "print_calls": [
-    {
-      "file": "core\\updater.py",
-      "line": 705
-    },
-    {
-      "file": "core\\updater.py",
-      "line": 708
-    },
-    {
-      "file": "core\\updater.py",
-      "line": 711
-    },
-    {
-      "file": "core\\updater.py",
-      "line": 721
-    },
-    {
-      "file": "core\\updater.py",
-      "line": 724
-    },
-    {
-      "file": "core\\updater.py",
-      "line": 726
-    },
-    {
-      "file": "core\\updater.py",
-      "line": 729
-    },
-    {
-      "file": "core\\updater.py",
-      "line": 731
-    },
-    {
-      "file": "core\\updater.py",
-      "line": 733
-    }
-  ],
+  "print_calls": [],
   "syntax_errors": [],
   "unreadable": [],
   "_meta": {
-    "generated": "2026-11-05T03:38:51.696304+00:00",
-    "files_scanned": 257
+    "generated": "2026-11-09T01:27:25.635723+00:00",
+    "files_scanned": 269
   }
 }

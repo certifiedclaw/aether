@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-11-05T03:39:02.401481+00:00",
+    "generated": "2026-11-09T01:03:56.097262+00:00",
     "pip_packages": 46
   },
   "pip": [
     {
       "package": "fastapi",
-      "latest": "0.162.0",
+      "latest": "0.162.2",
       "note": null
     },
     {
@@ -126,7 +126,7 @@
     },
     {
       "package": "youtube-transcript-api",
-      "latest": "1.2.4",
+      "latest": "1.2.5",
       "note": null
     },
     {
@@ -136,7 +136,7 @@
     },
     {
       "package": "miniaudio",
-      "latest": "1.71",
+      "latest": "1.72",
       "note": null
     },
     {
@@ -171,7 +171,7 @@
     },
     {
       "package": "watchdog",
-      "latest": "7.0.0",
+      "latest": "7.1.0",
       "note": null
     },
     {
@@ -231,7 +231,7 @@
     },
     {
       "package": "google-genai",
-      "latest": "2.34.0",
+      "latest": "3.0.0",
       "note": null
     }
   ],
@@ -240,15 +240,15 @@
       "repo": "ollama/ollama",
       "label": "Ollama",
       "why": "local LLM runtime \u2014 core/llm_client.py talks to it",
-      "latest": "v0.40.14",
-      "source": "GitHub release"
+      "latest": "v0.40.15",
+      "source": "GitHub release (web)"
     },
     {
       "repo": "SYSTRAN/faster-whisper",
       "label": "faster-whisper (engine)",
       "why": "default STT engine per requirements.txt",
       "latest": "v1.2.1",
-      "source": "GitHub release"
+      "source": "GitHub release (web)"
     },
     {
       "repo": "hexgrad/kokoro",
