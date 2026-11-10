@@ -17,20 +17,23 @@
       --muted:   #5e6a7e;
       --green:   #22c55e;
       --gdim:    rgba(34,197,94,0.14);
+      --panel:   #0d111b;
     }
     html, body {
       height: 100%; background: var(--bg); color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       display: flex; flex-direction: column; overflow: hidden;
     }
+    button, input { font: inherit; }
+    button:focus-visible, input:focus-visible, label:focus-visible { outline:2px solid #a5b4fc; outline-offset:2px; }
 
     /* ── HEADER ── */
     header {
       flex-shrink: 0; display: flex; align-items: center; gap: 10px;
       padding: 12px 16px; border-bottom: 1px solid var(--border);
-      background: rgba(7,9,15,0.95);
+      background: rgba(10,13,22,0.97); backdrop-filter:blur(14px);
     }
-    .logo { font-size: 15px; font-weight: 700; letter-spacing: 6px; }
+    .logo { font-size: 15px; font-weight: 800; letter-spacing: 5px; }
     .logo em { color: var(--accent); font-style: normal; }
     .pill {
       display: flex; align-items: center; gap: 6px; padding: 4px 11px;
@@ -62,19 +65,29 @@
     .llm-badge.local  { background: rgba(234,179,8,0.12); border-color: rgba(234,179,8,0.3); color: #eab308; }
 
     /* ── PENDING APPROVALS ── */
-    #approval-banner { flex-shrink: 0; display: none; flex-direction: column; gap: 6px; padding: 10px 16px; background: rgba(234,179,8,0.08); border-bottom: 1px solid rgba(234,179,8,0.25); }
+    #approval-banner { flex-shrink: 0; display: none; flex-direction: column; gap: 8px; padding: 12px 16px; max-height: 34vh; overflow-y: auto; background: rgba(234,179,8,0.055); border-bottom: 1px solid rgba(234,179,8,0.2); }
     #approval-banner.shown { display: flex; }
-    .approval-item { display: flex; align-items: center; gap: 10px; font-size: 13px; }
-    .approval-msg { flex: 1; color: var(--text); white-space: pre-wrap; }
-    .approval-btn { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; }
+    .approval-heading { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#fbbf24; }
+    .approval-item { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border: 1px solid rgba(234,179,8,0.2); border-radius: 10px; background: rgba(7,9,15,0.72); font-size: 13px; }
+    .approval-copy { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+    .approval-msg { color: var(--text); white-space: pre-wrap; overflow-wrap:anywhere; }
+    .approval-meta { color:var(--muted); font-size:10px; letter-spacing:.3px; }
+    .approval-actions { display:flex; gap:7px; flex-shrink:0; }
+    .approval-btn { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 7px 12px; border-radius: 7px; border: 1px solid var(--border); cursor: pointer; transition:filter .15s,opacity .15s; }
+    .approval-btn:hover { filter:brightness(1.2); }
+    .approval-btn:disabled { opacity:.5; cursor:wait; }
     .approval-approve { background: var(--gdim); border-color: rgba(34,197,94,0.35); color: var(--green); }
     .approval-deny    { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); color: #ef4444; }
+    @media (max-width:560px) { .approval-item { align-items:stretch; flex-direction:column; } .approval-actions { justify-content:flex-end; } }
 
     /* ── FEED ── */
-    main { flex: 1; overflow-y: auto; padding: 14px 16px 8px; display: flex; flex-direction: column; gap: 10px; }
+    main { flex: 1; overflow-y: auto; padding: clamp(14px,3vw,26px) max(16px,calc((100vw - 900px)/2)); display: flex; flex-direction: column; gap: 12px; scroll-behavior:smooth; }
+    #feed:empty { justify-content:center; }
+    #feed:empty::before { content:"AETHER\A\AAsk a question, send a command, or attach a file to get started."; white-space:pre-line; align-self:center; max-width:360px; padding:30px 34px; border:1px solid var(--border); border-radius:20px; background:radial-gradient(ellipse at top,rgba(99,102,241,.12),transparent 75%),var(--surface); color:var(--muted); text-align:center; line-height:1.8; font-size:13px; }
+    #feed:empty::first-line { color:var(--text); font-size:20px; font-weight:750; letter-spacing:3px; }
     main::-webkit-scrollbar { width: 3px; }
     main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-    .msg { max-width: 82%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.55; animation: pop 0.18s ease; }
+    .msg { max-width: min(82%,720px); padding: 11px 15px; border-radius: 15px; font-size: 14px; line-height: 1.6; animation: pop 0.18s ease; box-shadow:0 5px 20px rgba(0,0,0,.12); }
     @keyframes pop { from { opacity:0; transform:translateY(4px); } }
     .msg-j   { align-self:flex-start; background:var(--adim);   border:1px solid rgba(99,102,241,0.18); border-bottom-left-radius:4px; }
     .msg-u   { align-self:flex-end;   background:var(--surface); border:1px solid var(--border);        border-bottom-right-radius:4px; }
@@ -88,6 +101,10 @@
     .lbl { font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; opacity:0.45; margin-bottom:4px; }
     .msg-j .lbl { color:var(--accent); }
     .msg-u .lbl { color:var(--muted); text-align:right; }
+    .msg-j { border-left:2px solid rgba(129,140,248,.55); }
+    .msg-u { background:rgba(255,255,255,.055); }
+    #inp:disabled { opacity:.65; cursor:wait; }
+    .btn-send:focus-visible { outline-color:#c7d2fe; }
 
     /* ── FILE CARD ── */
     .msg-file {
@@ -111,9 +128,9 @@
     .fc-dl:hover { opacity: 0.8; }
 
     /* ── FOOTER ── */
-    footer { flex-shrink:0; padding:10px 14px; border-top:1px solid var(--border); background:rgba(7,9,15,0.95); display:flex; gap:8px; align-items:center; }
-    #inp { flex:1; padding:11px 14px; background:var(--surface); border:1.5px solid var(--border); border-radius:12px; color:var(--text); font-size:14px; outline:none; transition:border-color 0.15s; }
-    #inp:focus { border-color: var(--accent); }
+    footer { flex-shrink:0; padding:12px max(14px,calc((100vw - 900px)/2)); border-top:1px solid var(--border); background:rgba(10,13,22,0.97); backdrop-filter:blur(14px); display:flex; gap:8px; align-items:center; }
+    #inp { flex:1; min-width:0; padding:12px 15px; background:var(--panel); border:1px solid var(--border); border-radius:13px; color:var(--text); font-size:14px; outline:none; transition:border-color 0.15s,box-shadow .15s; }
+    #inp:focus { border-color: var(--accent); box-shadow:0 0 0 3px rgba(99,102,241,.13); }
     #inp::placeholder { color: var(--muted); }
     .btn { padding:11px 15px; border:none; border-radius:12px; font-size:11px; font-weight:700; letter-spacing:1.5px; cursor:pointer; transition:opacity 0.15s,transform 0.1s; }
     .btn:active { transform: scale(0.96); }
@@ -156,6 +173,18 @@
       pointer-events:none; white-space:nowrap;
     }
     #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    @media (max-width:600px) {
+      header { gap:7px; padding:10px; }
+      .logo { letter-spacing:3px; font-size:13px; }
+      .pill { padding:4px 8px; letter-spacing:.7px; }
+      .enc-badge { display:none !important; }
+      .url { font-size:9px; padding:4px 6px; }
+      footer { padding:9px; gap:6px; }
+      #inp { padding:11px 10px; font-size:13px; }
+      .btn-attach,#mic-btn { padding:10px; }
+      .btn-send,.btn-wake { padding:10px 11px; font-size:10px; }
+      .msg { max-width:90%; }
+    }
   </style>
 </head>
 <body>
@@ -546,20 +575,28 @@
           return;
         }
         banner.className = 'shown';
-        banner.innerHTML = approvals.map(a => `
-          <div class="approval-item" data-id="${esc(a.id)}">
-            <span class="approval-msg">⚠ Approval needed: ${esc(a.message)}</span>
-            <button class="approval-btn approval-approve" onclick="resolveApproval('${esc(a.id)}', true)">APPROVE</button>
-            <button class="approval-btn approval-deny" onclick="resolveApproval('${esc(a.id)}', false)">DENY</button>
-          </div>
-        `).join('');
+        banner.innerHTML = `<div class="approval-heading">⚠ ${approvals.length} request${approvals.length === 1 ? '' : 's'} need your decision</div>` + approvals.map(a => {
+          const id = a.id || a.approval_id;
+          const message = a.message || a.summary || 'A protected action is waiting for approval.';
+          const meta = [a.capability, a.endpoint].filter(Boolean).join(' · ');
+          return `
+          <div class="approval-item" data-id="${esc(id)}">
+            <div class="approval-copy"><span class="approval-msg">${esc(message)}</span>${meta ? `<span class="approval-meta">${esc(meta)}</span>` : ''}</div>
+            <div class="approval-actions"><button class="approval-btn approval-deny" onclick="resolveApproval(this, false)">DENY</button><button class="approval-btn approval-approve" onclick="resolveApproval(this, true)">APPROVE</button></div>
+          </div>`;
+        }).join('');
       } catch (e) { /* dashboard keeps working even if this fails */ }
     }
-    async function resolveApproval(id, approved) {
+    async function resolveApproval(button, approved) {
+      const item = button.closest('.approval-item');
+      const id = item?.dataset.id;
+      if (!id) return;
+      item.querySelectorAll('button').forEach(b => b.disabled = true);
       try {
-        await _authFetch(`/api/approvals/${id}/${approved ? 'approve' : 'deny'}`, { method: 'POST' });
+        const response = await _authFetch(`/api/approvals/${encodeURIComponent(id)}/${approved ? 'approve' : 'deny'}`, { method: 'POST' });
+        if (!response.ok) throw new Error('Approval update failed');
         toast(approved ? 'Approved' : 'Denied');
-      } catch (e) { toast('Failed to send response'); }
+      } catch (e) { toast('Could not update approval'); }
       pollApprovals();
     }
     pollApprovals();
